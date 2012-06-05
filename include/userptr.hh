@@ -14,6 +14,7 @@ public:
   userptr() = default;
   userptr(const userptr<T> &o) = default;
   userptr(userptr<T> &&o) = default;
+  userptr& operator=(const userptr& o) = default;
 
   T* unsafe_get() const
   {

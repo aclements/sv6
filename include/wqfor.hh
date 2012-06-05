@@ -1,3 +1,18 @@
+// Default copy_value
+template <typename T>
+static inline T
+copy_value(T &it)
+{
+  return it;
+}
+
+// Default free_value
+template <typename T>
+static inline void
+free_value(T &it, T &v)
+{
+}
+
 template <typename IT, typename BODY>
 struct forwork : public work {
   forwork(IT &it, bool (*cond)(IT &it), BODY &body, wframe &frame) 
@@ -69,19 +84,4 @@ wq_for_serial(IT &init, bool (*cond)(IT &it), BODY body)
     body(v);
     free_value(init, v);
   }
-}
-
-// Default copy_value
-template <typename T>
-static inline T
-copy_value(T &it)
-{
-  return it;
-}
-
-// Default free_value
-template <typename T>
-static inline void
-free_value(T &it, T &v)
-{
 }

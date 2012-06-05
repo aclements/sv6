@@ -9,6 +9,7 @@ MTRACE	   ?= $(QEMU)
 HW	   ?= qemu
 EXCEPTIONS ?= y
 RUN	   ?= $(empty)
+PYTHON     ?= python
 O  	   = o.$(HW)
 
 ifdef USE_CLANG
@@ -19,7 +20,7 @@ CFLAGS   = -no-integrated-as
 else
 CC  = $(TOOLPREFIX)gcc
 CXX = $(TOOLPREFIX)g++
-CXXFLAGS = 
+CXXFLAGS = -Wno-delete-non-virtual-dtor
 CFLAGS =
 ASFLAGS =
 endif
@@ -45,7 +46,7 @@ all:
 define SYSCALLGEN
 	@echo "  GEN    $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)python tools/syscalls.py $(1) kernel/*.cc > $@.tmp
+	$(Q)$(PYTHON) tools/syscalls.py $(1) kernel/*.cc > $@.tmp
 	$(Q)cmp -s $@.tmp $@ || mv $@.tmp $@
 endef
 

@@ -227,6 +227,7 @@ struct radix_iterator {
   radix_iterator() = default;
   radix_iterator(const radix_iterator &o) = default;
   radix_iterator(radix_iterator &&o) = default;
+  radix_iterator& operator=(const radix_iterator &o) = default;
 
   // Move to the next non-null entry in the collection, or end.
   radix_iterator &operator++() {
