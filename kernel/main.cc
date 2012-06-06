@@ -148,6 +148,12 @@ cmain(u64 mbmagic, u64 mbaddr)
   for (const uptr *ctorva = ectors; ctorva > sctors; ) {
     ((void(*)()) *--ctorva)();
   }
+  // GCC-4.7 switched to using init_array for global constructors.
+  // Unlike ctors, this is in forward order.
+  extern const uptr __init_array_start[], __init_array_end[];
+  for (const uptr *initva = __init_array_start; initva < __init_array_end; initva++) {
+    ((void(*)()) *initva)();
+  }
 
   initacpi();
 
