@@ -63,7 +63,6 @@ OBJS = \
 ifeq ($(EXCEPTIONS),y)
 OBJS += \
 	gcceh/unwind-dw2.o \
-	gcceh/unwind-dw2-fde-glibc.o \
 	gccsup/eh_personality.o \
 	gccsup/eh_catch.o \
 	gccsup/eh_throw.o \
@@ -78,6 +77,14 @@ OBJS += \
 	gccsup/fundamental_type_info.o \
 	gccsup/pointer_type_info.o \
 	gccsup/pbase_type_info.o
+endif
+
+#Use the corresponding object files for gcc 4.7 / 4.6
+LIBGCCEH := $(shell $(CC) -print-file-name=libgcc_eh.a)
+ifeq ($(shell ar t $(LIBGCCEH) unwind-dw2-fde-dip.o),unwind-dw2-fde-dip.o)
+     OBJS += gcceh/unwind-dw2-fde-dip.o
+else ifeq ($(shell ar t $(LIBGCCEH) unwind-dw2-fde-glibc.o),unwind-dw2-fde-glibc.o)
+     OBJS += gcceh/unwind-dw2-fde-glibc.o
 endif
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
@@ -100,7 +107,7 @@ $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	$(Q)$(LD) $(LDFLAGS) -T kernel/kernel.ld -z max-page-size=4096 -e start \
 		-o $@ $(O)/kernel/boot.o $(OBJS) -L$(O) $(LFLAGS)
 
-LIBGCCEH := $(shell $(CC) -print-file-name=libgcc_eh.a)
+
 $(O)/kernel/gcceh/%: $(LIBGCCEH)
 	@echo "  AR     $@"
 	$(Q)mkdir -p $(@D)
