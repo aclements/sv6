@@ -142,18 +142,14 @@ cmain(u64 mbmagic, u64 mbaddr)
   initmp();
   inittls();       // thread local storage
 
-  // Some global constructors require mycpu()->id (via myid())
-  // which we setup in inittls
-  extern const uptr sctors[], ectors[];
-  for (const uptr *ctorva = ectors; ctorva > sctors; ) {
-    ((void(*)()) *--ctorva)();
-  }
-  // GCC-4.7 switched to using init_array for global constructors.
-  // Unlike ctors, this is in forward order.
-  extern const uptr __init_array_start[], __init_array_end[];
-  for (const uptr *initva = __init_array_start; initva < __init_array_end; initva++) {
-    ((void(*)()) *initva)();
-  }
+  // Some global constructors require mycpu()->id (via myid()) which
+  // we setup in inittls.  (Note that gcc 4.7 eliminated the .ctors
+  // section entirely, but gcc has supported .init_array for some
+  // time.)
+  extern void (*__init_array_start[])(int, char **, char **);
+  extern void (*__init_array_end[])(int, char **, char **);
+  for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
+      (*__init_array_start[i])(0, nullptr, nullptr);
 
   initacpi();
 
