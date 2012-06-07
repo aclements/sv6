@@ -77,7 +77,6 @@ OBJS += \
 	gccsup/fundamental_type_info.o \
 	gccsup/pointer_type_info.o \
 	gccsup/pbase_type_info.o
-endif
 
 #Use the corresponding object files for gcc 4.7 / 4.6
 LIBGCCEH := $(shell $(CC) -print-file-name=libgcc_eh.a)
@@ -86,6 +85,9 @@ ifeq ($(shell ar t $(LIBGCCEH) unwind-dw2-fde-dip.o),unwind-dw2-fde-dip.o)
 else ifeq ($(shell ar t $(LIBGCCEH) unwind-dw2-fde-glibc.o),unwind-dw2-fde-glibc.o)
      OBJS += gcceh/unwind-dw2-fde-glibc.o
 endif
+
+endif
+
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
