@@ -4,5 +4,5 @@
 #include <typeinfo>
 #include <exception>
 //#include <initializer_list>
-//#include <type_traits>
+#include <type_traits>
 //#include <atomic>
