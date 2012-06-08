@@ -34,6 +34,16 @@
 
 #include <bits/c++config.h>
 
+// XXX GCC 4.7 puts these in bits/atomic_lockfree_defines.h, which
+// doesn't exist in GCC 4.6.  We should probably either give up on GCC
+// 4.6, or use our bug-fixed header only on 4.6.
+#ifndef _GLIBCXX_ATOMIC_BUILTINS_1
+#define _GLIBCXX_ATOMIC_BUILTINS_1 1
+#define _GLIBCXX_ATOMIC_BUILTINS_2 1
+#define _GLIBCXX_ATOMIC_BUILTINS_4 1
+#define _GLIBCXX_ATOMIC_BUILTINS_8 1
+#endif
+
 namespace std _GLIBCXX_VISIBILITY(default)
 {
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
