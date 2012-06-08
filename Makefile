@@ -30,13 +30,13 @@ NM = $(TOOLPREFIX)nm
 OBJCOPY = $(TOOLPREFIX)objcopy
 STRIP = $(TOOLPREFIX)strip
 
-INCLUDES  = -iquote include -iquote$(O)/include -Istdinc -I$(QEMUSRC) -include param.h -include include/compiler.h
+INCLUDES  = --sysroot=$(O)/sysroot -iquote include -iquote$(O)/include -Istdinc -I$(QEMUSRC) -include param.h -include include/compiler.h
 COMFLAGS  = -static -g -MD -MP -m64 -O3 -Wall -Werror -DHW_$(HW) -DXV6 \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
 	    -mno-sse -mcx16 -mno-red-zone $(INCLUDES)
-COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -nostdinc -I$(shell $(CC) -print-file-name=include)
+COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
-CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare -nostdinc++ $(CXXFLAGS)
+CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare $(CXXFLAGS)
 ASFLAGS   = -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h -Wa,--divide
 LDFLAGS   = -m elf_x86_64
 
@@ -57,17 +57,17 @@ include kernel/Makefrag
 include tools/Makefrag
 -include user/Makefrag.$(HW)
 
-$(O)/%.o: %.c
+$(O)/%.o: %.c $(O)/sysroot
 	@echo "  CC     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
 
-$(O)/%.o: %.cc
+$(O)/%.o: %.cc $(O)/sysroot
 	@echo "  CXX    $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-$(O)/%.o: $(O)/%.cc
+$(O)/%.o: $(O)/%.cc $(O)/sysroot
 	@echo "  CXX    $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
@@ -81,6 +81,18 @@ $(O)/%.o: $(O)/%.S
 	@echo "  CC     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(ASFLAGS) -c -o $@ $<
+
+# Construct an alternate "system include root" by copying headers from
+# the host that are part of C++'s freestanding implementation.  These
+# headers are distributed across several directories, so we reproduce
+# that directory tree here and let GCC use its standard (large)
+# include path, but re-rooted at this new directory.
+$(O)/sysroot: include/host_hdrs.hh
+	rm -rf $@.tmp $@
+	mkdir $@.tmp
+	tar c $$($(CXX) -E -H -std=c++0x $< -o /dev/null 2>&1 \
+		| awk '/^[.]/ {print $$2}') | tar xC $@.tmp
+	mv $@.tmp $@
 
 xv6memfs.img: bootblock kernelmemfs
 	dd if=/dev/zero of=xv6memfs.img count=10000
