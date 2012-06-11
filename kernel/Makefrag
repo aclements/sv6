@@ -60,36 +60,19 @@ OBJS = \
 	pstream.o \
 	distref.o
 
-ifeq ($(EXCEPTIONS),y)
-OBJS += \
-	gcceh/unwind-dw2.o \
-	gccsup/eh_personality.o \
-	gccsup/eh_catch.o \
-	gccsup/eh_throw.o \
-	gccsup/eh_call.o \
-	gccsup/eh_exception.o \
-	gccsup/eh_alloc.o \
-	gccsup/eh_terminate.o \
-	gccsup/tinfo.o \
-	gccsup/class_type_info.o \
-	gccsup/si_class_type_info.o \
-	gccsup/vmi_class_type_info.o \
-	gccsup/fundamental_type_info.o \
-	gccsup/pointer_type_info.o \
-	gccsup/pbase_type_info.o
-
-#Use the corresponding object files for gcc 4.7 / 4.6
-LIBGCCEH := $(shell $(CC) -print-file-name=libgcc_eh.a)
-ifeq ($(shell ar t $(LIBGCCEH) unwind-dw2-fde-dip.o),unwind-dw2-fde-dip.o)
-     OBJS += gcceh/unwind-dw2-fde-dip.o
-else ifeq ($(shell ar t $(LIBGCCEH) unwind-dw2-fde-glibc.o),unwind-dw2-fde-glibc.o)
-     OBJS += gcceh/unwind-dw2-fde-glibc.o
-endif
-
-endif
-
-
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
+
+ifeq ($(EXCEPTIONS),y)
+# Include C++ support libraries for stack unwinding and RTTI.  Some of
+# the objects in these archives depend on symbols we don't define, but
+# we provide our own definitions for any symbols we do use from such
+# objects, so the linker ignores these objects entirely.  If you start
+# getting "multiple definition" and "undefined reference" errors,
+# there's probably a new ABI symbol we need to define ourselves.
+OBJS += $(shell $(CC) -print-file-name=libgcc_eh.a) \
+	$(shell $(CC) -print-file-name=libsupc++.a)
+endif
+
 
 KERN = $(O)/kernel.elf
 ALL += $(KERN)
@@ -108,18 +91,6 @@ $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	$(Q)mkdir -p $(@D)
 	$(Q)$(LD) $(LDFLAGS) -T kernel/kernel.ld -z max-page-size=4096 -e start \
 		-o $@ $(O)/kernel/boot.o $(OBJS) -L$(O) $(LFLAGS)
-
-
-$(O)/kernel/gcceh/%: $(LIBGCCEH)
-	@echo "  AR     $@"
-	$(Q)mkdir -p $(@D)
-	$(Q)( cd $(@D) && ar x $< $(@F) )
-
-LIBSUPCPP := $(shell $(CC) -print-file-name=libsupc++.a)
-$(O)/kernel/gccsup/%: $(LIBSUPCPP)
-	@echo "  AR     $@"
-	$(Q)mkdir -p $(@D)
-	$(Q)( cd $(@D) && ar x $< $(@F) )
 
 $(O)/kernel/%.o: lib/%.cc
 	@echo "  CXX    $@"
