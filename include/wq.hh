@@ -15,6 +15,12 @@ void            exitwq(void);
 
 struct work {
   virtual void run() = 0;
+
+private:  
+  friend class wq;
+
+  struct work *prev;
+  struct work *next;
 };
 
 struct cwork : public work {
@@ -41,8 +47,6 @@ struct wframe {
   volatile int v_;
 };
 
-#define NSLOTS (1 << WQSHIFT)
-
 class wq {
 public:
   wq();
@@ -60,15 +64,13 @@ private:
   void declen(int c);
 
   struct wqueue {
-    work *w[NSLOTS];
-    volatile int head __mpalign__;
-    volatile int tail;
+    work *head;
+    work *tail;
     wqlock_t lock;
   };
 
   struct stat {
     u64 push;
-    u64 full;
     u64 pop;
     u64 steal;
   };

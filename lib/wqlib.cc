@@ -28,8 +28,8 @@ wq::wq(void)
   int i;
 
   for (i = 0; i < NCPU; i++) {
-    q_[i].head = 0;
-    q_[i].tail = 0;
+    q_[i].head = nullptr;
+    q_[i].tail = nullptr;
     wqlock_init(&q_[i].lock);
   }
 
@@ -45,11 +45,10 @@ wq::dump(void)
 {
   int i;
   for (i = 0; i < NCPU; i++) {
-    xprintf("push %lu full %lu pop %lu steal %lu\n",
-            stat_[i].push, stat_[i].full,
+    xprintf("push %lu pop %lu steal %lu\n",
+            stat_[i].push,
             stat_[i].pop, stat_[i].steal);
     stat_[i].push = 0;
-    stat_[i].full = 0;
     stat_[i].pop = 0;
     stat_[i].steal = 0;
   }
@@ -75,22 +74,22 @@ int
 wq::push(work *w, int c)
 {
   struct wqueue* q = &q_[c];
-  int i;
+
+  if (w->next != nullptr || w->prev != nullptr)
+    return -1;
 
   wqlock_acquire(&q->lock);
-  i = q->head;
-  if ((i - q->tail) == NSLOTS) {
-    stat_[c].full++;
-    wqlock_release(&q->lock);
-    return -1;
+  w->prev = q->tail;
+  if (q->tail != nullptr) {
+    q->tail->next = w;
+  } else {
+    q->head = w;
   }
-  i = i & (NSLOTS-1);
-  q->w[i] = w;
-  barrier();
-  q->head++;
+  q->tail = w;
   inclen(c);
-  stat_[c].push++;
   wqlock_release(&q->lock);
+
+  stat_[c].push++;
   return 0;
 }
 
@@ -99,24 +98,29 @@ wq::pop(int c)
 {
   struct wqueue *q = &q_[c];
   work *w;
-  int i;
 
-  i = q->head;
-  if ((i - q->tail) == 0)
-    return 0;
-  
-  wqlock_acquire(&q->lock);
-  i = q->head;
-  if ((i - q->tail) == 0) {
-    wqlock_release(&q->lock);
-    return 0;
+  w = q->head;
+  if (w == nullptr) {
+    return nullptr;
   }
-  i = (i-1) & (NSLOTS-1);
-  w = q->w[i];
-  q->head--;
+
+  wqlock_acquire(&q->lock);
+  w = q->head;
+  if (w == nullptr) {
+    wqlock_release(&q->lock);
+    return nullptr;
+  }
+  assert(w->prev == nullptr);
+  q->head = w->next;
+  if (w->next != nullptr) {
+    w->next->prev = nullptr;
+  } else {
+    q->tail = nullptr;
+  }
   declen(c);
   wqlock_release(&q->lock);
 
+  w->next = nullptr;
   stat_->pop++;
   return w;
 }
@@ -126,25 +130,29 @@ wq::steal(int c)
 {
   struct wqueue *q = &q_[c];
   work *w;
-  int i;
 
-  i = q->tail;
-  if ((i - q->head) == 0)
+  w = q->tail;
+  if (w == nullptr)
     return nullptr;
 
   if (wqlock_tryacquire(&q->lock) == 0)
     return nullptr;
-  i = q->tail;
-  if ((i - q->head) == 0) {
+  w = q->tail;
+  if (w == nullptr) {
     wqlock_release(&q->lock);
     return nullptr;
   }
-  i = i & (NSLOTS-1);
-  w = q->w[i];
-  q->tail++;
+  assert(w->next == nullptr);
+  q->tail = w->prev;
+  if (w->prev != nullptr) {
+    w->prev->next = nullptr;
+  } else {
+    q->head = nullptr;
+  }
   declen(c);
   wqlock_release(&q->lock);
 
+  w->prev = nullptr;
   stat_->steal++;
   return w;
 }
