@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stddef.h>
+#include <sys/types.h>
+
 typedef unsigned char   u8;
 typedef char            s8;
 typedef unsigned short  u16;
@@ -20,11 +23,3 @@ typedef u64             pme_t;
 
 // Logical CPU ID type
 typedef u8              cpuid_t;
-
-#ifdef XV6
-// POSIX types
-typedef s64             ssize_t;
-typedef u64             size_t;
-typedef u64             off_t;
-typedef s64             ptrdiff_t;
-#endif
