@@ -1,6 +1,12 @@
 *~
 _*
-o.*
+*.o
+*.d
+*.sym
+*.asym
+*.asm
+*.out
+o.qemu/
 .gdbinit
 /mtrace.out
 /mtrace.txt

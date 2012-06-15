@@ -195,7 +195,7 @@ gc_end_epoch(void)
 {
   if (myproc() == nullptr) return;
   u64 e = --myproc()->epoch;
-  if ((e & 0xff) == 0 && gc_state[mycpu()->id].ndelayed > NGC) 
+  if ((e & 0xff) == 0 && gc_state[mycpu()->id].ndelayed > NGC)
     cv_wakeup(&gc_state[mycpu()->id].cv);
 }
 
@@ -217,6 +217,7 @@ static void
 gc_worker(void *x)
 {
   struct spinlock wl;
+  u64 t0, t1;
 
   if (VERBOSE)
     cprintf("gc_worker: %d\n", mycpu()->id);
@@ -224,15 +225,18 @@ gc_worker(void *x)
   initlock(&wl, "rcu_gc_worker dummy", LOCKSTAT_GC);   // dummy lock
   for (;;) {
     u64 i;
+    int ngc = 0;
     acquire(&wl);
     cv_sleepto(&gc_state[mycpu()->id].cv, &wl,
                nsectime() + ((u64)GCINTERVAL)*1000000ull);
     release(&wl);
+    t0 = rdtsc();
     gc_state[mycpu()->id].nrun++;
     u64 global = global_epoch;
     myproc()->epoch = global_epoch.load() << 8;      // move the gc thread to next epoch
     for (i = gc_state[mycpu()->id].min_epoch; i < global-2; i++) {
       int nfree = gc_free_tofreelist(&gc_state[mycpu()->id].tofree[i%NEPOCH].head, i);
+      ngc += nfree;
       gc_state[mycpu()->id].tofree[i%NEPOCH].epoch += NEPOCH;
       gc_state[mycpu()->id].ndelayed -= nfree;
       if (0 && nfree > 0) {
@@ -242,6 +246,10 @@ gc_worker(void *x)
     }
     gc_state[mycpu()->id].min_epoch = i;
     gc_delayfreelist();
+    t1 = rdtsc();
+    if (0 && ngc > 0) {
+      cprintf("%d: ngc %d in %lu cycles\n", mycpu()->id, ngc, t1-t0);
+    }
   }
 }
 
