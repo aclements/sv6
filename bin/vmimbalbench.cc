@@ -21,6 +21,8 @@
 // assert((USERTOP - STARTADDR) == a good bajillion or so);
 #define STARTADDR 0x0000000040000000ULL
 
+#define MAXCPU 256
+
 // How many pages to alloc at once? Don't want to do all of them, 
 // because then they can't be freed before more allocs occur.
 #define PAGESIZE 4096ULL
@@ -33,11 +35,11 @@ static int consumercpu = 0;
 
 // Consumers alloc pages; producers free pages allocated by consumers.
 // These will be shared by threads but written only when parsing args
-static u64 consumers = 0;
+static bool consumers[MAXCPU] = { false };
 // Set of producers per consumer; consumer-producers ==> one-to-many.
 // Producer processor #s may be assigned to multiple consumers.
-static u64 producermap[64];
-static pthread_t tids[64];
+static bool producermap[MAXCPU][MAXCPU];
+static pthread_t tids[MAXCPU];
 
 // Last address allocated by this cpu's consumer.
 static volatile u64 alloctop = STARTADDR;
@@ -102,15 +104,17 @@ parse_list(const char * const list)
       item = list + i + 1;
       n = 0;
       int cpu = atoi(buf);
-      if ((cpu < 0 || cpu >= 64)) {
+      if ((cpu < 0 || cpu >= MAXCPU)) {
         die("CPU out of range: %d\n", cpu);
       }
       if (consumer == -1) {
         consumer = cpu;
-        consumers |= (1ULL << consumer);
-        producermap[consumer] = 0;
+        consumers[cpu] = true;
+        for (int j = 0; j < MAXCPU; j++) {
+          producermap[consumer][j] = false;
+        }
       } else {
-        producermap[consumer] |= (1ULL << cpu);
+        producermap[consumer][cpu] = true;
       }
     } else {
       n++;
@@ -138,7 +142,7 @@ die_usage_with_err(char * argv[], const char * const err) {
 int
 main(int argc, char * argv[])
 {
-  if ((argc < 3) || (argc > 66)) {
+  if ((argc < 3) || (argc > MAXCPU + 2)) {
     die_usage_with_err(argv, "(bad number of args!)");
   }
   npages = atoi(argv[1]);
@@ -151,8 +155,8 @@ main(int argc, char * argv[])
     parse_list(argv[i]);
   }
   // For each consumer, we create a process, creating threads for the producers. Tricky, tricky.
-  for (int i = 0; i < 64; i++) {
-    if (!(consumers & (1ULL << i))) {
+  for (int i = 0; i < MAXCPU; i++) {
+    if (!consumers[i]) {
       continue;
     }
     int pid = fork(0);
@@ -164,8 +168,8 @@ main(int argc, char * argv[])
         die("sys_setaffinity(%d) failed", consumercpu);
       }
       //Create producer threads, then run consumer
-      for (int j = 0; j < 64; j++) {
-        if (!(producermap[i] & (1ULL << j))) {
+      for (int j = 0; j < MAXCPU; j++) {
+        if (!(producermap[i][j])) {
           continue;
         }
         if (pthread_create(&tids[j], nullptr, &producer, (void *)(u64)j) < 0) {
@@ -173,7 +177,7 @@ main(int argc, char * argv[])
         }
       }
       consumer();
-      for (int j = 0; j < 64; j++) {
+      for (int j = 0; j < MAXCPU; j++) {
 #if defined(LINUX)
         int r = xpthread_join(tids[j]);
         if (r < 0) {
