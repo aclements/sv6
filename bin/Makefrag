@@ -40,7 +40,8 @@ UPROGS= \
 	avar \
 	schedbench \
         filebench \
-	gcbench
+	gcbench \
+        vmimbalbench
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS += \
