@@ -8,6 +8,7 @@ extern "C" {
 #include "memlayout.h"
 #include "userptr.hh"
 #include <stdarg.h>
+#include <cassert>
 
 #define KCSEG (2<<3)  /* kernel code segment */
 #define KDSEG (3<<3)  /* kernel data segment */
@@ -71,8 +72,6 @@ void            kerneltrap(struct trapframe *tf) __noret__;
 void            vsnprintf(char *buf, u32 n, const char *fmt, va_list ap);
 void            snprintf(char *buf, u32 n, const char *fmt, ...);
 void            printtrace(u64 rbp);
-
-#define assert(c)   if (!(c)) { cprintf("%s:%d: ", __FILE__, __LINE__); panic("assertion failure"); }
 
 // e1000.c
 extern int e1000irq;

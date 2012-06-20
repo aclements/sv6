@@ -92,7 +92,7 @@ $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	$(Q)$(LD) $(LDFLAGS) -T kernel/kernel.ld -z max-page-size=4096 -e start \
 		-o $@ $(O)/kernel/boot.o $(OBJS) -L$(O) $(LFLAGS)
 
-$(O)/kernel/%.o: lib/%.cc
+$(O)/kernel/%.o: lib/%.cc $(O)/sysroot
 	@echo "  CXX    $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
@@ -107,14 +107,14 @@ $(O)/kernel/initcode: $(O)/lib/sysstubs.o
 
 $(O)/kernel/bootother: TTEXT = 0x7000
 
-$(O)/kernel/%: kernel/%.S
+$(O)/kernel/%: kernel/%.S $(O)/sysroot
 	@echo "  CC     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(CFLAGS) -nostdinc -I. -c $< -o $@.o
 	$(Q)$(LD) $(LDFLAGS) -N -e start -Ttext $(TTEXT) -o $@.out $@.o $(LDEXTRA)
 	$(Q)$(OBJCOPY) -S -O binary $@.out $@
 
-$(O)/kernel/asmdefines.S: kernel/asmdefines.c
+$(O)/kernel/asmdefines.S: kernel/asmdefines.c $(O)/sysroot
 	@echo "  CXX    $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) -S $(CXXFLAGS) -o $@ $<
