@@ -91,7 +91,7 @@ update_range(radix_entry cur, radix_ptr *ptr, CB cb,
   assert(level_size(level) == cur_end - cur_start);
   // Assert that our ranges intersect; if this fails, we got the loop
   // below wrong.
-  assert(cur_start < end && start < cur_end)
+  assert(cur_start < end && start < cur_end);
 
   // If our range is not strictly contained in the target, ensure we
   // are at a node.
