@@ -4,6 +4,7 @@
 // contain compiler-specific code that we can't simply reproduce
 // ourselves.
 #include <cstddef>
+#include <cstdint>
 #include <typeinfo>
 #include <exception>
 //#include <initializer_list>
@@ -12,3 +13,4 @@
 
 // Likewise for C [C11 4/6].
 #include <stddef.h>
+#include <stdint.h>
