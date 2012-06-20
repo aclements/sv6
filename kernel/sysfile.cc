@@ -422,6 +422,7 @@ sys_openat(int dirfd, const char *path, int omode)
   f->off = 0;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+  f->append = !!(omode & O_APPEND);
   return fd;
 }
 

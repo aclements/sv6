@@ -17,7 +17,7 @@ file::alloc(void)
 
 file::file(void)
   : rcu_freed("file"), 
-    type(file::FD_NONE), readable(0), writable(0), 
+    type(file::FD_NONE), readable(0), writable(0), append(0), 
     socket(0), pipe(nullptr), ip(nullptr), off(0)
 {
 }
@@ -110,6 +110,8 @@ file::write(const char *addr, int n)
     return pipewrite(pipe, addr, n);
   if(type == file::FD_INODE){
     ilock(ip, 1);
+    if (append)
+      off = ip->size;
     if(ip->type == 0 || ip->type == T_DIR)
       panic("filewrite but 0 or T_DIR");
     if((r = writei(ip, addr, off, n)) > 0)

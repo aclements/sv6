@@ -23,6 +23,7 @@ struct file : public referenced, public rcu_freed {
 
   char readable;
   char writable;
+  char append;
 
   int socket;
   struct pipe *pipe;
