@@ -1,0 +1,5 @@
+// -*- c++ -*-
+// C++11 19.3
+#pragma once
+
+#include <assert.h>
