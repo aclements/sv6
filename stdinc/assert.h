@@ -8,7 +8,7 @@
   ((c) ? ((void)0)                                                      \
    : die("Assertion failed: %s, function %s, file %s, line %d",         \
          #c, __PRETTY_FUNCTION__, __FILE__, __LINE__))
-#elif defined(XV6_KERNEL)
+#elif defined(XV6_KERNEL) || defined(LWIP)
 #  define assert(c)                                                     \
   ((c) ? ((void)0)                                                      \
    : panic("Assertion failed: %s, function %s, file %s, line %d",       \
