@@ -92,6 +92,10 @@ inituart(void)
   picenable(irq_com);
   ioapicenable(irq_com, 0);
 
+  // Clean up the serial console (beginning of line, erase down)
+  for (const char *p="\r\x1b[J"; *p; p++)
+    uartputc(*p);
+
   // Announce that we're here.
   for (const char *p=DEBUG?"xv6 DEBUG\n":"xv6\n"; *p; p++)
     uartputc(*p);
