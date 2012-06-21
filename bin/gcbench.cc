@@ -14,14 +14,14 @@ static int sec = 2;
 void
 child()
 {
+  u64 nsec = sec*2*1000*1000*1000L;  // use 2 instead of float 2.5!
   if (setaffinity(cpu) < 0) {
     die("sys_setaffinity(%d) failed", 0);
   }
-
   u64 t0 = rdtsc();
   u64 t1;
   do {
-    for(int i = 0; i < 1000; i++){
+    for(int i = 0; i < 1000; i++) {
       int fd;
       if((fd = open("cat", 0)) < 0){
         fprintf(1, "cat: cannot open %s\n", "cat");
@@ -30,7 +30,7 @@ child()
       close(fd);
     }
     t1 = rdtsc();
-  } while((t1 - t0) < sec * 2.5*1000*1000*1000);
+  } while((t1 - t0) < nsec);
 }
 
 int
@@ -44,6 +44,7 @@ main(int argc, char *argv[])
   if (argc > 2)
     sec = atoi(argv[2]);
 
+  printf("%s: %d\n", argv[0], nproc);
   for (int i = 0; i < nproc; i++) {
     int pid = fork(0);
     if (pid < 0)
@@ -55,7 +56,8 @@ main(int argc, char *argv[])
       cpu++;
     }
   }
-
-  wait();
+  for (int i = 0; i < nproc; i++)
+    wait();
+  printf("done done\n");
   exit();
 }
