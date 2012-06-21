@@ -125,8 +125,7 @@ main(int ac, char **av)
 
   //the_bench[n++] = new LoopsBench("/dirbench", 1000, 6);
   //the_bench[n++] = new LoopsBench("/filebench", 100000, 6);
-  the_bench[n++] = new LoopsBench("/mapbench", 10000, 6);
-
+  //the_bench[n++] = new LoopsBench("/mapbench", 10000, 6);
   //the_bench[n++] = CMD("filebench", "6", "10000");
   //the_bench[n++] = CMD("filebench", "48", "10000");
 
@@ -142,6 +141,7 @@ main(int ac, char **av)
   //the_bench[n++] = CMD("mapbench", "1");
   //the_bench[n++] = CMD("mapbench", "2");
   //the_bench[n++] = CMD("mapbench", "16");
+  the_bench[n++] = CMD("gcbench", "16");
   
   for (int i = 0; i < n; i++)
     the_bench[i]->run();
