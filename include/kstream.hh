@@ -15,6 +15,9 @@ protected:
 
 extern console_stream console;
 
+// Warning stream
+extern console_stream swarn;
+
 // Errors caused by user processes (page faults, failed system calls,
 // etc.)
 extern console_stream uerr;

@@ -357,7 +357,7 @@ console_stream::write(sbuf buf)
     consputc(buf.base[i]);
 }
 
-console_stream console;
+console_stream console, swarn;
 console_stream uerr(false);
 
 void
