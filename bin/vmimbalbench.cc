@@ -159,7 +159,7 @@ main(int argc, char * argv[])
     if (!consumers[i]) {
       continue;
     }
-    int pid = fork(0);
+    int pid = xfork();
     if (pid < 0)
       die("time_this: fork failed %s", argv[0]);
     if (pid == 0) {
@@ -189,9 +189,9 @@ main(int argc, char * argv[])
         xpthread_join(tids[j]);
 #endif
       }
-      exit();
+      xexit();
     }
   }
-  wait();
-  exit();
+  xwait();
+  xexit();
 }
