@@ -2,6 +2,7 @@
 #include "gc.hh"
 #include "atomic_util.hh"
 #include "ns.hh"
+#include "percpu.hh"
 
 using std::atomic;
 
@@ -213,6 +214,40 @@ gc_wakeup(void)
     cv_wakeup(&gc_state[i].cv);
 }
 
+// #define BARRIER
+
+#ifdef BARRIER
+std::atomic<int> barrier0, barrier1;
+int gen[16];
+int barrier_val;
+
+static void
+set_barrier(int n)
+{
+  barrier_val = n;
+  barrier0 = barrier_val;
+  barrier1 = barrier_val;
+}
+
+static void
+mybarrier()
+{
+  int mygen = gen[mycpu()->id];
+  // cprintf("%d: enter barrier %d\n", mycpu()->id, mygen);
+  std::atomic<int> *barrier = (mygen % 2 == 0) ? &barrier0 : &barrier1;
+  int slot = --(*barrier);
+  if (slot == 1) {
+    std::atomic<int> *pbarrier = (mygen % 2 == 0) ? &barrier1 : &barrier0;
+    (*pbarrier) = barrier_val;
+    --(*barrier);
+  } else {
+    while (*barrier) ;
+  }
+  gen[mycpu()->id]++;
+  // cprintf("%d: leave barrier\n", mycpu()->id);
+}
+#endif
+
 static void
 gc_worker(void *x)
 {
@@ -230,6 +265,9 @@ gc_worker(void *x)
     cv_sleepto(&gc_state[mycpu()->id].cv, &wl,
                nsectime() + ((u64)GCINTERVAL)*1000000ull);
     release(&wl);
+#ifdef BARRIER
+    mybarrier();
+#endif
     t0 = rdtsc();
     gc_state[mycpu()->id].nrun++;
     u64 global = global_epoch;
@@ -264,7 +302,9 @@ initgc(void)
 {
   initlock(&gc_lock.l, "gc", LOCKSTAT_GC);
   global_epoch = NEPOCH-2;
-
+#ifdef BARRIER
+  set_barrier(ncpu+1);
+#endif
   for (int i = 0; i < ncpu; i++) {
     for (int j = 0; j < NEPOCH; j++) {
       gc_state[i].delayed[j].epoch = j;
