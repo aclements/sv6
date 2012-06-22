@@ -79,6 +79,11 @@ initxapic(void)
 {
   u64 count;
 
+  u32 edx;
+  cpuid(CPUID_FEATURES, nullptr, nullptr, nullptr, &edx);
+  if (!(edx & FEATURE_EDX_APIC))
+    panic("No LAPIC");
+
   // Enable local APIC; set spurious interrupt vector.
   xapicw(SVR, ENABLE | (T_IRQ0 + IRQ_SPURIOUS));
 
