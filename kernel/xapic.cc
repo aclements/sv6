@@ -84,7 +84,8 @@ initxapic(void)
   if (!(edx & FEATURE_EDX_APIC))
     panic("No LAPIC");
 
-  // Enable local APIC; set spurious interrupt vector.
+  // Enable local APIC, do not suppress EOI broadcast, set spurious
+  // interrupt vector.
   xapicw(SVR, ENABLE | (T_IRQ0 + IRQ_SPURIOUS));
 
   if (xapichz == 0) {
