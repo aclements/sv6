@@ -140,7 +140,7 @@ public:
     return *this;
   }
 
-  integer_formatter &pad(char pad)
+  integer_formatter &pad(char pad = '0')
   {
     pad_ = pad;
     return *this;
