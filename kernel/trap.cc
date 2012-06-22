@@ -140,7 +140,9 @@ trap(struct trapframe *tf)
   case T_IRQ0 + IRQ_SPURIOUS:
     cprintf("cpu%d: spurious interrupt at %x:%lx\n",
             mycpu()->id, tf->cs, tf->rip);
-    lapiceoi();
+    // [Intel SDM 10.9 Spurious Interrupt] The spurious interrupt
+    // vector handler should return without an EOI.
+    //lapiceoi();
     break;
   case T_IRQ0 + IRQ_ERROR:
     cprintf("cpu%d: lapic error?\n", mycpu()->id);
