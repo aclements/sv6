@@ -13,6 +13,7 @@
 // Output stream types should be implemented as subclasses of
 // print_stream.
 
+#include <initializer_list>
 #include <utility>
 
 struct sbuf
@@ -177,3 +178,134 @@ integer_formatter shex(T v)
 {
   return sfmt(v).base(16).alt();
 }
+
+/**
+ * Flags pretty-printer.
+ *
+ * This decodes a bitmap of flags into symbolic form.  Any
+ * unrecognized bits are included in a trailing hex value.
+ */
+class sflags
+{
+public:
+  /**
+   * A symbolic flag value.
+   */
+  struct flag
+  {
+    const char *name_;
+    unsigned long long mask_;
+    unsigned long long test_;
+
+    /**
+     * Construct a flag that's set if <code>(v & test)</code>.
+     * Generally this is only appropriate for single-bit flags.
+     */
+    constexpr flag(const char *name, unsigned long long test)
+      : name_(name), mask_(test), test_(test) { }
+    /**
+     * Construct a flag that's set if <code>(v & mask) == test</code>.
+     */
+    constexpr flag(const char *name, unsigned long long mask,
+                   unsigned long long test)
+      : name_(name), mask_(mask), test_(test) { }
+  };
+
+private:
+  unsigned long long val_;
+  std::initializer_list<flag> flags_;
+  friend void to_stream(print_stream *s, const sflags &f);
+
+public:
+  /**
+   * Construct a flags printer that decodes @c v using @c flags.  This
+   * is designed to be used with uniform initialization syntax, e.g.
+   * <code>sflags(x, {{"X", 1}, {"Y", 2}})</code>.
+   */
+  constexpr sflags(unsigned long long v, std::initializer_list<flag> flags)
+    : val_(v), flags_(flags) { }
+};
+
+void to_stream(print_stream *s, const sflags &f);
+
+/**
+ * Enum pretty-printer.
+ *
+ * This decodes enumerated values into symbol form.  Unrecognized
+ * values are printed as decimal numbers.
+ */
+class senum
+{
+public:
+  /**
+   * A symbolic enumeration value.
+   */
+  struct enum_value
+  {
+    bool next_;
+    unsigned long long value_;
+    const char *name_;
+
+    /**
+     * An enumeration whose value is one higher than the previous
+     * value (or zero if this is the first).  This allows for implicit
+     * conversion so strings can be used directly in an enumeration
+     * values list.
+     */
+    constexpr enum_value(const char *name)
+      : next_(true), value_(0), name_(name) { }
+
+    /**
+     * An enumeration with a specific value.
+     */
+    constexpr enum_value(const char *name, unsigned long long value)
+      : next_(false), value_(value), name_(name) { }
+  };
+
+private:
+  unsigned long long val_;
+  std::initializer_list<enum_value> values_;
+  friend void to_stream(print_stream *s, const senum &e);
+
+public:
+  /**
+   * Construct an enumeration printer that decodes @c v.  This is
+   * designed to be used with uniform initialization syntax, e.g.
+   * <code>senum(x, {"A", "B", {"D", 3}})</code>.
+   */
+  constexpr senum(unsigned long long v,
+                  std::initializer_list<enum_value> values)
+    : val_(v), values_(values) { }
+};
+
+void to_stream(print_stream *s, const senum &f);
+
+/**
+ * Hex dump pretty-printer.
+ *
+ * The hex dump includes a trailing newline, so this should not be
+ * used as the last argument to println.
+ */
+class shexdump
+{
+  const void *base_;
+  size_t len_;
+  uintptr_t start_;
+  friend void to_stream(print_stream *s, const shexdump &f);
+
+public:
+  /**
+   * Construct a hex dump printer where the starting offset displayed
+   * in the dump is base's virtual address.
+   */
+  shexdump(const void *base, size_t len)
+    : base_(base), len_(len), start_((uintptr_t)base) { }
+
+  /**
+   * Construct a hex dump printer with an explicit starting offset.
+   */
+  constexpr shexdump(const void *base, size_t len, uintptr_t start)
+    : base_(base), len_(len), start_(start) { }
+};
+
+void to_stream(print_stream *s, const shexdump &f);
