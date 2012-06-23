@@ -83,9 +83,8 @@ sys_wqwait(void)
 //
 uwq_worker::uwq_worker(uwq* u, proc* p)
   : uwq_(u), proc_(p), running_(false),
-    lock_("worker_lock")
+    lock_("worker_lock"), cv_("worker_cv")
 {
-  initcondvar(&cv_, "worker_cv");
 }
 
 void

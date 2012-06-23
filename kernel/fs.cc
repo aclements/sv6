@@ -352,7 +352,7 @@ inode::alloc(u32 dev, u32 inum)
   ip->inum = inum;
   snprintf(ip->lockname, sizeof(ip->lockname), "cv:ino:%d", ip->inum);
   ip->lock = spinlock(ip->lockname+3, LOCKSTAT_FS);
-  initcondvar(&ip->cv, ip->lockname);
+  ip->cv = condvar(ip->lockname);
   
   return ip;
 }

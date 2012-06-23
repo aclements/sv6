@@ -31,7 +31,7 @@ sys_mbox_new(sys_mbox_t *mbox, int size)
   mbox->head = 0;
   mbox->tail = 0;
   mbox->invalid = 0;
-  initcondvar(&mbox->c, "lwIP mbox");
+  new (&mbox->c) condvar("lwIP mbox");
 
   return ERR_OK;
 }
@@ -79,6 +79,7 @@ sys_mbox_free(sys_mbox_t *mbox)
 {
   if (mbox->head != mbox->tail)
     panic("sys_mbox_free");
+  mbox->c.~condvar();
 }
 
 u32_t
@@ -129,7 +130,7 @@ sys_arch_mbox_tryfetch(sys_mbox_t *mbox, void **msg)
 err_t
 sys_sem_new(sys_sem_t *sem, u8_t count)
 {
-  initcondvar(&sem->c, "lwIP condvar");
+  new (&sem->c) condvar("lwIP condvar");
   sem->count = count;
   sem->invalid = 0;
   return ERR_OK;
@@ -138,6 +139,7 @@ sys_sem_new(sys_sem_t *sem, u8_t count)
 void
 sys_sem_free(sys_sem_t *sem)
 {
+  sem->c.~condvar();
 }
 
 void

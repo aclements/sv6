@@ -131,11 +131,3 @@ cv_wakeup(struct condvar *cv)
   }
   release(&cv->lock);
 }
-
-void
-initcondvar(struct condvar *cv, const char *n)
-{
-  // cv's memory may be uninitialized
-  new (&cv->lock) spinlock(n, LOCKSTAT_CONDVAR);
-  LIST_INIT(&cv->waiters);
-}

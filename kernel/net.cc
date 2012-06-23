@@ -98,7 +98,7 @@ start_timer(struct timer_thread *t, void (*func)(void),
 
   t->nsec = 1000000000 / 1000*msec;
   t->func = func;
-  initcondvar(&t->waitcv, name);
+  t->waitcv = condvar(name);
   t->waitlk = spinlock(name, LOCKSTAT_NET);
   p = threadalloc(net_timer, t);
   if (p == nullptr)
@@ -205,7 +205,7 @@ initnet_worker(void *x)
   // This DHCP code is useful for debugging, but isn't necessary
   // for the lwIP DHCP client.
   struct spinlock lk("dhcp sleep");
-  struct condvar cv;
+  struct condvar cv("dhcp cv sleep");
   int dhcp_state = 0;
   const char *dhcp_states[] = {
     [DHCP_RENEWING]  = "renewing",
@@ -213,8 +213,6 @@ initnet_worker(void *x)
     [DHCP_CHECKING]  = "checking",
     [DHCP_BOUND]     = "bound",
   };
-
-  initcondvar(&cv, "dhcp cv sleep");
 
   for (;;) {
     if (dhcp_state != nif.dhcp->state) {

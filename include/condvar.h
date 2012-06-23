@@ -11,7 +11,6 @@ struct condvar {
   // from an initialized condvar before being used.  This is
   // constexpr, so it can be used for global condvars without
   // incurring a static constructor.
-  // XXX(austin) Remove initcondvar.
   constexpr condvar()
     : lock(), waiters{} { }
 

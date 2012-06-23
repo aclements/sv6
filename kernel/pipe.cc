@@ -38,7 +38,7 @@ pipealloc(struct file **f0, struct file **f1)
   p->nwrite = 0;
   p->nread = 0;
   new (&p->lock) spinlock("pipe", LOCKSTAT_PIPE);
-  initcondvar(&p->cv, "pipe");
+  new (&p->cv) condvar("pipe");
   (*f0)->type = file::FD_PIPE;
   (*f0)->readable = 1;
   (*f0)->writable = 0;
@@ -52,6 +52,7 @@ pipealloc(struct file **f0, struct file **f1)
 //PAGEBREAK: 20
  bad:
   if(p) {
+    p->cv.~condvar();
     p->lock.~spinlock();
     kmfree((char*)p, sizeof(*p));
   }

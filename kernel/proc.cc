@@ -74,7 +74,7 @@ proc::proc(int npid) :
 {
   snprintf(lockname, sizeof(lockname), "cv:proc:%d", pid);
   lock = spinlock(lockname+3, LOCKSTAT_PROC);
-  initcondvar(&cv, lockname);
+  cv = condvar(lockname);
 
   memset(&childq, 0, sizeof(childq));
   memset(&child_next, 0, sizeof(child_next));

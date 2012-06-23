@@ -311,7 +311,7 @@ initgc(void)
       gc_state[i].delayed[j].epoch = j;
       gc_state[i].tofree[j].epoch = j;
     }
-    initcondvar(&gc_state[i].cv, "gc_cv");
+    gc_state[i].cv = condvar("gc_cv");
   }
 
   for (int c = 0; c < ncpu; c++) {

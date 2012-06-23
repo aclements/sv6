@@ -68,10 +68,9 @@ int
 sys_nsleep(u64 nsec)
 {
   struct spinlock lock("sleep_lock");
-  struct condvar cv;
+  struct condvar cv("sleep_cv");
   u64 nsecto;
 
-  initcondvar(&cv, "sleep_cv");
   acquire(&lock);
 
   auto cleanup = scoped_cleanup([&lock, &cv]() { 

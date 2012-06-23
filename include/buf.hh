@@ -19,7 +19,7 @@ struct buf : public rcu_freed {
   buf(u32 d, u64 s) : rcu_freed("buf"), dev(d), sector(s) {
     snprintf(lockname, sizeof(lockname), "cv:buf:%d", sector);
     lock = spinlock(lockname+3, LOCKSTAT_BIO);
-    initcondvar(&cv, lockname);
+    cv = condvar(lockname);
   }
 
   virtual void do_gc() { delete this; }
