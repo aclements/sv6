@@ -1,6 +1,9 @@
 #pragma once
 #include "types.h"
 #include "lockstat.h"
+#ifdef __cplusplus
+#include "cpputil.hh"           // For NEW_DELETE_OPS
+#endif
 
 #if LOCKSTAT
 extern struct klockstat klockstat_lazy;
@@ -61,6 +64,8 @@ struct spinlock {
 #if LOCKSTAT
   ~spinlock();
 #endif
+
+  NEW_DELETE_OPS(spinlock);
 #endif // __cplusplus
 };
 
