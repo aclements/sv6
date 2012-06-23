@@ -1,4 +1,5 @@
 #pragma once
+#include "types.h"
 #include "lockstat.h"
 
 #if LOCKSTAT
