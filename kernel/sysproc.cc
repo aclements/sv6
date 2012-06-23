@@ -71,12 +71,7 @@ sys_nsleep(u64 nsec)
   struct condvar cv("sleep_cv");
   u64 nsecto;
 
-  acquire(&lock);
-
-  auto cleanup = scoped_cleanup([&lock, &cv]() { 
-    release(&lock);
-  });
-
+  scoped_acquire l(&lock);
   nsecto = nsectime()+nsec;
   while (nsecto > nsectime()) {
     if (myproc()->killed)
