@@ -201,12 +201,6 @@ void            scheddump(void);
 int             steal(void);
 void            addrun(struct proc*);
 
-// spinlock.c
-void            acquire(struct spinlock*);
-int             tryacquire(struct spinlock*);
-int             holding(struct spinlock*);
-void            release(struct spinlock*);
-
 // syscall.c
 int             argcheckptr(const void *argval, int);
 int             argcheckstr(const char*);

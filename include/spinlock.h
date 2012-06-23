@@ -69,6 +69,11 @@ struct spinlock {
 #endif // __cplusplus
 };
 
+void            acquire(struct spinlock*);
+int             tryacquire(struct spinlock*);
+int             holding(struct spinlock*);
+void            release(struct spinlock*);
+
 #if SPINLOCK_DEBUG
 #define lockname(s) ((s)->name ?: "null")
 #else
