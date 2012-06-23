@@ -2,7 +2,7 @@
 #include "lockstat.h"
 
 #if LOCKSTAT
-extern klockstat klockstat_lazy;
+extern struct klockstat klockstat_lazy;
 #endif
 
 // Mutual exclusion lock.
