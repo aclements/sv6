@@ -46,6 +46,17 @@ operator delete[](void* p) noexcept
   kmfree(x-1, x[-1] + sizeof(u64));
 }
 
+void *
+operator new(std::size_t nbytes, void* buf) noexcept
+{
+  return buf;
+}
+
+void
+operator delete(void* ptr, void*) noexcept
+{
+}
+
 void
 __cxa_pure_virtual(void)
 {
