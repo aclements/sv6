@@ -142,5 +142,5 @@ initcondvar(struct condvar *cv, const char *n)
 void
 destroycondvar(struct condvar *cv)
 {
-  destroylock(&cv->lock);
+  cv->lock.~spinlock();
 }

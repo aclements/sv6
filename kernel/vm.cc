@@ -271,7 +271,6 @@ vmap::~vmap()
 {
   if (kshared)
     ksfree(slab_kshared, kshared);
-  destroylock(&brklock_);
 }
 
 void

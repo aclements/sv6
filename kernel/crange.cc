@@ -91,7 +91,6 @@ range::~range()
   for (int l = 0; l < nlevel; l++) {
     next[l] = (struct range *) 0xDEADBEEF;
   }
-  destroylock(&lock);
 }
 
 void

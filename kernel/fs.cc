@@ -281,7 +281,6 @@ inode::~inode()
     iaddrs.store(nullptr);
   }
 
-  destroylock(&lock);
   destroycondvar(&cv);
 }
 

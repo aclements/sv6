@@ -39,10 +39,6 @@ class spinlock {
     initlock(&_lk, "sperflk", 0);
   }
 
-  ~spinlock() {
-    destroylock(&_lk);
-  }
-
   void acquire() {
     ::acquire(&_lk);
   }

@@ -24,7 +24,6 @@ struct buf : public rcu_freed {
 
   ~buf() {
     destroycondvar(&cv);
-    destroylock(&lock);
   }
 
   virtual void do_gc() { delete this; }

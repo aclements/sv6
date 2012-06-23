@@ -310,14 +310,6 @@ spinlock::spinlock(spinlock &&o) = default;
 spinlock &spinlock::operator=(spinlock &&o) = default;
 #endif
 
-void
-destroylock(struct spinlock *lk)
-{
-#if LOCKSTAT
-  lockstat_stop(lk);
-#endif
-}
-
 int
 tryacquire(struct spinlock *lk)
 {
