@@ -4,6 +4,7 @@
 
 #include <type_traits>
 #include <utility>
+#include <new>
 
 using std::pair;
 using std::make_pair;
@@ -82,17 +83,9 @@ namespace std {
     s.next_width = sw._n;
     return s;
   }
-
-  class bad_alloc {};
 }
 
 /* C++ runtime */
-void *operator new(unsigned long nbytes);
-void *operator new(unsigned long nbytes, void *buf);
-void *operator new[](unsigned long nbytes);
-void operator delete(void *p);
-void operator delete[](void *p);
-
 /* Ref: http://sourcery.mentor.com/public/cxx-abi/abi.html */
 extern "C" void __cxa_pure_virtual(void);
 extern "C" int  __cxa_guard_acquire(s64 *guard_object);

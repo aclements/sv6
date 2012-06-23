@@ -1,3 +1,5 @@
+#include <new>
+
 #include "types.h"
 #include "kernel.hh"
 #include "cpputil.hh"
@@ -8,8 +10,10 @@
 #include "cpu.hh"
 #include "elf.hh"
 
+const std::nothrow_t std::nothrow;
+
 void*
-operator new(unsigned long nbytes)
+operator new(std::size_t nbytes)
 {
   panic("global operator new");
 
@@ -19,7 +23,7 @@ operator new(unsigned long nbytes)
 }
 
 void
-operator delete(void* p)
+operator delete(void* p) noexcept
 {
   panic("global operator delete");
 
@@ -28,7 +32,7 @@ operator delete(void* p)
 }
 
 void*
-operator new[](unsigned long nbytes)
+operator new[](std::size_t nbytes)
 {
   u64* x = (u64*) kmalloc(nbytes + sizeof(u64), "array");
   *x = nbytes;
@@ -36,7 +40,7 @@ operator new[](unsigned long nbytes)
 }
 
 void
-operator delete[](void* p)
+operator delete[](void* p) noexcept
 {
   u64* x = (u64*) p;
   kmfree(x-1, x[-1] + sizeof(u64));
