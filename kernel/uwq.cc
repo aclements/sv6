@@ -82,9 +82,9 @@ sys_wqwait(void)
 // uwq_worker
 //
 uwq_worker::uwq_worker(uwq* u, proc* p)
-  : uwq_(u), proc_(p), running_(false)
+  : uwq_(u), proc_(p), running_(false),
+    lock_("worker_lock")
 {
-  initlock(&lock_, "worker_lock", 0);
   initcondvar(&cv_, "worker_cv");
 }
 
@@ -150,14 +150,12 @@ uwq::alloc(proc_pgmap* pgmap, vmap* vmap, filetable *ftable, uptr uentry)
 
 uwq::uwq(proc_pgmap* pgmap, vmap* vmap,
          filetable* ftable, uwq_ipcbuf* ipc, uptr uentry) 
-  : rcu_freed("uwq"),
+  : rcu_freed("uwq"), lock_("uwq_lock"),
     pgmap_(pgmap), vmap_(vmap), ftable_(ftable), ipc_(ipc),
     uentry_(uentry), ustack_(UWQSTACK), uref_(0)
 {
   for (int i = 0; i < NELEM(ipc_->len); i++)
     ipc_->len[i].v_ = 0;
-
-  initlock(&lock_, "uwq_lock", 0);
 
   for (int i = 0; i < NWORKERS; i++)
     worker_[i].store(nullptr);

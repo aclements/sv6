@@ -10,10 +10,12 @@ extern "C" {
 
 #define DIE panic(__func__)
 
-static struct {
+static struct lwprot {
   struct spinlock lk;
   struct cpu *cpu;
   u64 depth;
+
+  lwprot() : lk("lwIP lwprot", true) { }
 } lwprot;
 
 //
@@ -258,7 +260,6 @@ lwip_core_sleep(struct condvar *c)
 void
 lwip_core_init(void)
 {
-  initlock(&lwprot.lk, "lwIP lwprot", 1);
 }
 
 void

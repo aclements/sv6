@@ -12,7 +12,7 @@
 int e1000irq;
 int e1000init;
 
-static struct {
+static struct e1000 {
   u32 membase;
   u32 iobase;
   u16 pcidevid;
@@ -29,6 +29,8 @@ static struct {
   struct wiseman_rxdesc rxd[RX_RING_SIZE] __attribute__((aligned (16)));
 
   struct spinlock lk;
+
+  e1000() : lk("e1000", true) { }
 } e1000;
 
 struct eerd {
@@ -303,7 +305,6 @@ e1000attach(struct pci_func *pcif)
 
   pci_func_enable(pcif);
   
-  initlock(&e1000.lk, "e1000", 1);
   e1000.membase = pcif->reg_base[0];
   e1000.iobase = pcif->reg_base[2];
   e1000.pcidevid = PCI_PRODUCT(pcif->dev_id);

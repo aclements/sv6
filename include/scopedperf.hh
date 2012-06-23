@@ -35,9 +35,7 @@ class always_disabled {
  */
 class spinlock {
  public:
-  spinlock() {
-    initlock(&_lk, "sperflk", 0);
-  }
+  spinlock() : _lk("sperflk") { }
 
   void acquire() {
     ::acquire(&_lk);

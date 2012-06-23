@@ -26,7 +26,6 @@ struct spinlock {
   // move-assigned from an initialized spinlock before being used.
   // This is constexpr, so it can be used for global spinlocks without
   // incurring a static constructor.
-  // XXX(austin) Remove initlock in favor of this and move.
   constexpr spinlock()
     : locked(0)
 #if SPINLOCK_DEBUG

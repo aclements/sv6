@@ -266,15 +266,6 @@ initlockstat(void)
 }
 #endif
 
-void
-initlock(struct spinlock *lk, const char *name, int lockstat)
-{
-  // This is often used with uninitialized memory, so use placement
-  // new.  It can also be used with default-constructed locks, but
-  // that's fine.  It should never be used with an initialized lock.
-  new (lk) spinlock(name, lockstat);
-}
-
 #if LOCKSTAT
 spinlock::spinlock(spinlock &&o)
   : locked(o.locked),

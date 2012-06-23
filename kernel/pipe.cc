@@ -30,13 +30,14 @@ pipealloc(struct file **f0, struct file **f1)
   *f0 = *f1 = 0;
   if((*f0 = file::alloc()) == 0 || (*f1 = file::alloc()) == 0)
     goto bad;
+  // XXX Use new
   if((p = (pipe*)kmalloc(sizeof(*p), "pipe")) == 0)
     goto bad;
   p->readopen = 1;
   p->writeopen = 1;
   p->nwrite = 0;
   p->nread = 0;
-  initlock(&p->lock, "pipe", LOCKSTAT_PIPE);
+  new (&p->lock) spinlock("pipe", LOCKSTAT_PIPE);
   initcondvar(&p->cv, "pipe");
   (*f0)->type = file::FD_PIPE;
   (*f0)->readable = 1;

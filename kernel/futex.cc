@@ -68,10 +68,8 @@ struct nscache {
 percpu<nscache, percpu_safety::internal> nscache_;
 
 nscache::nscache(void)
+  : lock_("nscache::lock_", LOCKSTAT_FUTEX), head_(0), tail_(0)
 {
-  initlock(&lock_, "nscache::lock_", LOCKSTAT_FUTEX);
-  head_ = 0;
-  tail_ = 0;
 }
 
 xns<u32, proc*, proc::hash>*

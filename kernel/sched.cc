@@ -48,8 +48,8 @@ percpu<schedule> schedule_;
 static bool cansteal(proc* p, bool nonexec);
 
 schedule::schedule(void)
+  : lock_("schedule::lock_", LOCKSTAT_SCHED)
 {
-  initlock(&lock_, "schedule::lock_", LOCKSTAT_SCHED);
   head_.next = &head_;
   head_.prev = &head_;
   ncansteal_ = 0;

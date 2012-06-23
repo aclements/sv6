@@ -67,11 +67,10 @@ sys_sbrk(int n)
 int
 sys_nsleep(u64 nsec)
 {
-  struct spinlock lock;
+  struct spinlock lock("sleep_lock");
   struct condvar cv;
   u64 nsecto;
 
-  initlock(&lock, "sleep_lock", 0);
   initcondvar(&cv, "sleep_cv");
   acquire(&lock);
 

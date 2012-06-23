@@ -59,7 +59,7 @@ class xns : public rcu_freed {
       table[i].chain = 0;
     for (int i = 0; i < NCPU; i++) {
       percore[i] = nullptr;
-      initlock(&percore_lock[i], "xns_lock", LOCKSTAT_NS);
+      percore_lock[i] = spinlock("xns_lock", LOCKSTAT_NS);
     }
   }
 

@@ -154,7 +154,7 @@ initidle(void)
   }
 
   SLIST_INIT(&idlem->zombies);
-  initlock(&idlem->lock, "idle_lock", LOCKSTAT_IDLE);
+  idlem->lock = spinlock("idle_lock", LOCKSTAT_IDLE);
 
   snprintf(p->name, sizeof(p->name), "idle_%u", myid());
   mycpu()->proc = p;

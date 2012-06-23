@@ -135,7 +135,8 @@ cv_wakeup(struct condvar *cv)
 void
 initcondvar(struct condvar *cv, const char *n)
 {
-  initlock(&cv->lock, n, LOCKSTAT_CONDVAR);
+  // cv's memory may be uninitialized
+  new (&cv->lock) spinlock(n, LOCKSTAT_CONDVAR);
   LIST_INIT(&cv->waiters);
 }
 

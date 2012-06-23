@@ -43,7 +43,10 @@ static struct gc_state {
   int cnt;
 } __mpalign__ gc_state[NCPU] __mpalign__;
 
-static struct { struct spinlock l __mpalign__; } gc_lock;
+static struct gc_lock {
+  struct spinlock l __mpalign__;
+  gc_lock() : l("gc", LOCKSTAT_GC) { }
+} gc_lock;
 atomic<u64> global_epoch __mpalign__;
 
 static int
@@ -251,13 +254,12 @@ mybarrier()
 static void
 gc_worker(void *x)
 {
-  struct spinlock wl;
+  struct spinlock wl("rcu_gc_worker dummy", LOCKSTAT_GC); // dummy lock
   u64 t0, t1;
 
   if (VERBOSE)
     cprintf("gc_worker: %d\n", mycpu()->id);
 
-  initlock(&wl, "rcu_gc_worker dummy", LOCKSTAT_GC);   // dummy lock
   for (;;) {
     u64 i;
     int ngc = 0;
@@ -300,7 +302,6 @@ initprocgc(struct proc *p)
 void
 initgc(void)
 {
-  initlock(&gc_lock.l, "gc", LOCKSTAT_GC);
   global_epoch = NEPOCH-2;
 #ifdef BARRIER
   set_barrier(ncpu+1);

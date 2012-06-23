@@ -5,6 +5,8 @@
 #include "cpu.hh"
 #include "kalloc.hh"
 
+#include <new>
+
 static inline void*
 allocwq(unsigned long nbytes)
 {
@@ -38,7 +40,7 @@ wqlock_release(wqlock_t *lock)
 static inline void
 wqlock_init(wqlock_t *lock) 
 {
-  initlock(lock, "wq lock", LOCKSTAT_WQ);
+  new (lock) spinlock("wq lock", LOCKSTAT_WQ);
 }
 
 #define xprintf      cprintf 

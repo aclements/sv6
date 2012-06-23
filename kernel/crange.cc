@@ -109,12 +109,11 @@ range::range(crange *crarg, u64 k, u64 sz, int nl)
   : rcu_freed("range_delayed"),
     key(k), size(sz), curlevel(0),
     nlevel(nl ?: range_draw_nlevel(crarg->nlevel)),
-    cr(crarg)
+    cr(crarg), lock("crange", LOCKSTAT_CRANGE)
 {
   dprintf("range::range: %lu %lu %d\n", k, sz, nl);
   assert(cr->nlevel > 0);
   assert(sizeof(next) / sizeof(next[0]) >= nlevel);
-  initlock(&lock, "crange", LOCKSTAT_CRANGE);
 }
 
 // 

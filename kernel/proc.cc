@@ -67,13 +67,13 @@ proc::proc(int npid) :
   pid(npid), parent(0), tf(0), context(0), killed(0),
   ftable(0), cwd(0), tsc(0), curcycles(0), cpuid(0), epoch(0),
   cpu_pin(0), oncv(0), cv_wakeup(0),
+  futex_lock("proc::futex_lock", LOCKSTAT_PROC),
   user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
   uaccess_(0), upath(0), uargv(userptr<const char>(nullptr)),
   exception_inuse(0), magic(PROC_MAGIC), pgmap(0), state_(EMBRYO)
 {
   snprintf(lockname, sizeof(lockname), "cv:proc:%d", pid);
-  initlock(&lock, lockname+3, LOCKSTAT_PROC);
-  initlock(&futex_lock, "proc::futex_lock", LOCKSTAT_PROC);
+  lock = spinlock(lockname+3, LOCKSTAT_PROC);
   initcondvar(&cv, lockname);
 
   memset(&childq, 0, sizeof(childq));
