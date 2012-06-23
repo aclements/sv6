@@ -22,10 +22,6 @@ struct buf : public rcu_freed {
     initcondvar(&cv, lockname);
   }
 
-  ~buf() {
-    destroycondvar(&cv);
-  }
-
   virtual void do_gc() { delete this; }
   NEW_DELETE_OPS(buf)
 };

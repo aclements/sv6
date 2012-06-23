@@ -76,7 +76,6 @@ sys_nsleep(u64 nsec)
 
   auto cleanup = scoped_cleanup([&lock, &cv]() { 
     release(&lock);
-    destroycondvar(&cv);
   });
 
   nsecto = nsectime()+nsec;

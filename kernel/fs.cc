@@ -280,8 +280,6 @@ inode::~inode()
     kmfree((void*)iaddrs.load(), IADDRSSZ);
     iaddrs.store(nullptr);
   }
-
-  destroycondvar(&cv);
 }
 
 static inode*
