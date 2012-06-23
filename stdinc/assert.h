@@ -9,6 +9,8 @@
    : die("Assertion failed: %s, function %s, file %s, line %d",         \
          #c, __PRETTY_FUNCTION__, __FILE__, __LINE__))
 #elif defined(XV6_KERNEL) || defined(LWIP)
+void panic(const char*, ...)
+  __noret__ __attribute__((format(printf, 1, 2)));
 #  define assert(c)                                                     \
   ((c) ? ((void)0)                                                      \
    : panic("Assertion failed: %s, function %s, file %s, line %d",       \
