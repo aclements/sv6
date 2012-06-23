@@ -55,8 +55,12 @@ struct spinlock {
 
   // Spinlocks can be moved (though moving a locked spinlock is
   // obviously not recommended).
-  spinlock(spinlock &&o) = default;
-  spinlock &operator=(spinlock &&o) = default;
+  spinlock(spinlock &&o);
+  spinlock &operator=(spinlock &&o);
+
+#if LOCKSTAT
+  ~spinlock();
+#endif
 #endif // __cplusplus
 };
 

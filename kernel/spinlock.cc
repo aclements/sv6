@@ -160,8 +160,10 @@ lockstat_init(struct spinlock *lk, bool lazy)
 static void
 lockstat_stop(struct spinlock *lk)
 {
-  if (lk->stat != nullptr)
+  if (lk->stat != nullptr) {
     lk->stat->magic = 0;
+    lk->stat = nullptr;
+  }
 }
 
 void
@@ -272,6 +274,41 @@ initlock(struct spinlock *lk, const char *name, int lockstat)
   // that's fine.  It should never be used with an initialized lock.
   new (lk) spinlock(name, lockstat);
 }
+
+#if LOCKSTAT
+spinlock::spinlock(spinlock &&o)
+  : locked(o.locked),
+#if SPINLOCK_DEBUG
+    name(o.name), cpu(o.cpu),
+#endif
+    stat(o.stat)
+{
+  memcpy(&pcs, &o.pcs, sizeof(pcs));
+  lockstat_stop(&o);
+}
+
+spinlock &
+spinlock::operator=(spinlock &&o)
+{
+  lockstat_stop(this);
+  locked = o.locked;
+  name = o.name;
+  cpu = o.cpu;
+  memcpy(&pcs, &o.pcs, sizeof(pcs));
+  stat = o.stat;
+  o.stat = nullptr;
+  return *this;
+}
+
+spinlock::~spinlock()
+{
+  lockstat_stop(this);
+}
+#else
+// Without lockstat, the default move methods are fine
+spinlock::spinlock(spinlock &&o) = default;
+spinlock &spinlock::operator=(spinlock &&o) = default;
+#endif
 
 void
 destroylock(struct spinlock *lk)
