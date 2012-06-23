@@ -22,8 +22,11 @@ struct spinlock {
 #endif
 
 #ifdef __cplusplus
-  // Create a spinlock that will later be initialized by initlock.
-  // XXX(austin) Remove this and initlock in favor of the other ctor.
+  // Construct an uninitialized spinlock.  This should be
+  // move-assigned from an initialized spinlock before being used.
+  // This is constexpr, so it can be used for global spinlocks without
+  // incurring a static constructor.
+  // XXX(austin) Remove initlock in favor of this and move.
   constexpr spinlock()
     : locked(0)
 #if SPINLOCK_DEBUG
@@ -45,6 +48,15 @@ struct spinlock {
     , stat(lockstat ? nullptr : &klockstat_lazy)
 #endif
   { }
+
+  // Spinlocks cannot be copied.
+  spinlock(const spinlock &o) = delete;
+  spinlock &operator=(const spinlock &o) = delete;
+
+  // Spinlocks can be moved (though moving a locked spinlock is
+  // obviously not recommended).
+  spinlock(spinlock &&o) = default;
+  spinlock &operator=(spinlock &&o) = default;
 #endif // __cplusplus
 };
 
