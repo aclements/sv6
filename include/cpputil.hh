@@ -33,8 +33,6 @@ class scoped_acquire {
   void acquire(spinlock *l) { assert(!_l); ::acquire(l); _l = l; }
 };
 
-class retryable {};
-
 namespace std {
   struct ostream { int next_width; };
   extern ostream cout;
@@ -85,7 +83,7 @@ namespace std {
     return s;
   }
 
-  class bad_alloc : public retryable {};
+  class bad_alloc {};
 }
 
 /* C++ runtime */

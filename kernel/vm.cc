@@ -788,7 +788,7 @@ pagefault(vmap *vmap, uptr va, u32 err, proc_pgmap* pgmap)
 #endif
       return vmap->pagefault(va, err, pgmap);
 #if EXCEPTIONS
-    } catch (retryable& e) {
+    } catch (std::bad_alloc& e) {
       cprintf("%d: pagefault retry\n", myproc()->pid);
       gc_wakeup();
       yield();
@@ -837,7 +837,7 @@ pagelookup(vmap* vmap, uptr va)
 #endif
       return vmap->pagelookup(va);
 #if EXCEPTIONS
-    } catch (retryable& e) {
+    } catch (std::bad_alloc& e) {
       cprintf("%d: pagelookup retry\n", myproc()->pid);
       gc_wakeup();
       yield();
