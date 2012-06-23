@@ -53,13 +53,6 @@ void            bwrite(struct buf*);
 // cga.c
 void            cgaputc(int c);
 
-// condvar.c
-void            cv_sleep(struct condvar *cv, struct spinlock*);
-void            cv_sleepto(struct condvar *cv, struct spinlock*, u64);
-void            cv_wakeup(struct condvar *cv);
-void            timerintr(void);
-u64             nsectime(void);
-
 // console.c
 void            cprintf(const char*, ...) __attribute__((format(printf, 1, 2)));
 void            __cprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));

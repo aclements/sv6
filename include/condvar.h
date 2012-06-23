@@ -32,3 +32,9 @@ struct condvar {
   NEW_DELETE_OPS(condvar);
 #endif // __cplusplus
 };
+
+void            cv_sleep(struct condvar *cv, struct spinlock*);
+void            cv_sleepto(struct condvar *cv, struct spinlock*, u64);
+void            cv_wakeup(struct condvar *cv);
+void            timerintr(void);
+u64             nsectime(void);
