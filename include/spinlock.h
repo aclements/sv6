@@ -1,6 +1,7 @@
 #pragma once
 #include "types.h"
 #include "lockstat.h"
+#include <assert.h>
 #ifdef __cplusplus
 #include "cpputil.hh"           // For NEW_DELETE_OPS
 #endif
@@ -78,4 +79,17 @@ void            release(struct spinlock*);
 #define lockname(s) ((s)->name ?: "null")
 #else
 #define lockname(s) ("unknown")
+#endif
+
+#ifdef __cplusplus
+class scoped_acquire {
+ private:
+  spinlock *_l;
+
+ public:
+  scoped_acquire(spinlock *l) : _l(0) { acquire(l); }
+  ~scoped_acquire() { release(); }
+  void release() { if (_l) { ::release(_l); _l = 0; } }
+  void acquire(spinlock *l) { assert(!_l); ::acquire(l); _l = l; }
+};
 #endif

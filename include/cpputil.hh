@@ -23,17 +23,6 @@ class strbuf {
   }
 };
 
-class scoped_acquire {
- private:
-  spinlock *_l;
-
- public:
-  scoped_acquire(spinlock *l) : _l(0) { acquire(l); }
-  ~scoped_acquire() { release(); }
-  void release() { if (_l) { ::release(_l); _l = 0; } }
-  void acquire(spinlock *l) { assert(!_l); ::acquire(l); _l = l; }
-};
-
 namespace std {
   struct ostream { int next_width; };
   extern ostream cout;
