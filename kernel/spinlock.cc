@@ -267,16 +267,10 @@ initlockstat(void)
 void
 initlock(struct spinlock *lk, const char *name, int lockstat)
 {
-#if SPINLOCK_DEBUG
-  lk->name = name;
-  lk->cpu = 0;
-#endif
-#if LOCKSTAT
-  lk->stat = (struct klockstat*) nullptr;
-  if (lockstat)
-    lockstat_init(lk, false);
-#endif
-  lk->locked = 0;
+  // This is often used with uninitialized memory, so use placement
+  // new.  It can also be used with default-constructed locks, but
+  // that's fine.  It should never be used with an initialized lock.
+  new (lk) spinlock(name, lockstat);
 }
 
 void
