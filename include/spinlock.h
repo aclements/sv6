@@ -45,7 +45,7 @@ struct spinlock {
     , name(name), cpu(nullptr), pcs{}
 #endif
 #if LOCKSTAT
-    , stat(lockstat ? nullptr : &klockstat_lazy)
+    , stat(lockstat ? &klockstat_lazy : nullptr)
 #endif
   { }
 
