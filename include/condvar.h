@@ -1,6 +1,9 @@
 #pragma once
 
 #include "queue.h"
+#ifdef __cplusplus
+#include "cpputil.hh"           // For NEW_DELETE_OPS
+#endif
 
 struct condvar {
   struct spinlock lock;
@@ -25,5 +28,7 @@ struct condvar {
   // Condvars can be moved.
   condvar(condvar &&o) = default;
   condvar &operator=(condvar &&o) = default;
+
+  NEW_DELETE_OPS(condvar);
 #endif // __cplusplus
 };
