@@ -95,9 +95,14 @@ extern "C" int  __cxa_atexit(void (*f)(void *), void *p, void *d);
 extern void *__dso_handle;
 
 #define NEW_DELETE_OPS(classname)                                   \
-  static void* operator new(unsigned long nbytes) {                 \
+  static void* operator new(unsigned long nbytes,                   \
+                            const std::nothrow_t&) noexcept {       \
     assert(nbytes == sizeof(classname));                            \
-    void* p = kmalloc(sizeof(classname), #classname);               \
+    return kmalloc(sizeof(classname), #classname);                  \
+  }                                                                 \
+                                                                    \
+  static void* operator new(unsigned long nbytes) {                 \
+    void *p = classname::operator new(nbytes, std::nothrow);        \
     if (p == nullptr)                                               \
       throw_bad_alloc();                                            \
     return p;                                                       \
@@ -108,8 +113,13 @@ extern void *__dso_handle;
     return buf;                                                     \
   }                                                                 \
                                                                     \
-  static void operator delete(void *p) {                            \
+  static void operator delete(void *p,                              \
+                              const std::nothrow_t&) noexcept {     \
     kmfree(p, sizeof(classname));                                   \
+  }                                                                 \
+                                                                    \
+  static void operator delete(void *p) {                            \
+    classname::operator delete(p, std::nothrow);                    \
   }
 
 template<class T>
