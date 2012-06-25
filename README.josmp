@@ -1,25 +1,10 @@
-## Save the IPMI password in ./.passwd.josmp
 ## To build and run xv6 on josmp:
 
-ssh root@pdos ed /tftpboot/josmp/pxelinux.cfg <<EOM
-/^default /s/^/#/
-/^# *default xv6/s/^# *//
-wq
-EOM
-
-ssh root@josmp reboot
-
-make HW=josmp rsync reboot
+make HW=josmp rsync reboot-xv6
 
 ---
 
 ## To restore booting into local Linux:
 
-ssh root@pdos ed /tftpboot/josmp/pxelinux.cfg <<EOM
-/^default /s/^/#/
-/^# *default localboot/s/^# *//
-wq
-EOM
-
-make HW=josmp reboot
+make HW=josmp reboot-linux
 
