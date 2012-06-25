@@ -116,10 +116,10 @@ releasing(struct spinlock *lk)
 
 // Check whether this cpu is holding the lock.
 #if SPINLOCK_DEBUG
-int
-holding(struct spinlock *lock)
+bool
+spinlock::holding()
 {
-  return lock->locked && lock->cpu == mycpu();
+  return locked && cpu == mycpu();
 }
 #endif
 
@@ -301,17 +301,17 @@ spinlock::spinlock(spinlock &&o) = default;
 spinlock &spinlock::operator=(spinlock &&o) = default;
 #endif
 
-int
-tryacquire(struct spinlock *lk)
+bool
+spinlock::try_acquire()
 {
   pushcli();
-  locking(lk);
-  if (xchg32(&lk->locked, 1) != 0) {
+  locking(this);
+  if (xchg32(&locked, 1) != 0) {
       popcli();
-      return 0;
+      return false;
   }
-  locked(lk, 0);
-  return 1;
+  ::locked(this, 0);
+  return true;
 }
 
 // Acquire the lock.
@@ -319,26 +319,26 @@ tryacquire(struct spinlock *lk)
 // Holding a lock for a long time may cause
 // other CPUs to waste time spinning to acquire it.
 void
-acquire(struct spinlock *lk)
+spinlock::acquire()
 {
   u64 retries;
 
   pushcli();
-  locking(lk);
+  locking(this);
 
   retries = 0;
-  while(xchg32(&lk->locked, 1) != 0) {
+  while(xchg32(&locked, 1) != 0) {
     retries++;
     nop_pause();
   }
-  locked(lk, retries);
+  ::locked(this, retries);
 }
 
 // Release the lock.
 void
-release(struct spinlock *lk)
+spinlock::release()
 {
-  releasing(lk);
+  releasing(this);
 
   // The xchg serializes, so that reads before release are
   // not reordered after it.  The 1996 PentiumPro manual (Volume 3,
@@ -349,7 +349,7 @@ release(struct spinlock *lk)
   // after a store. So lock->locked = 0 would work here.
   // The xchg being asm volatile ensures gcc emits it after
   // the above assignments (and after the critical section).
-  xchg32(&lk->locked, 0);
+  xchg32(&locked, 0);
 
   popcli();
 }
