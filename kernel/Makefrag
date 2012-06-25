@@ -73,6 +73,9 @@ OBJS += $(shell $(CC) -print-file-name=libgcc_eh.a) \
 	$(shell $(CC) -print-file-name=libsupc++.a)
 endif
 
+# Include ACPICA fragment after we've set up the kernel object list,
+# but before the kernel build rules
+include kernel/Makefrag.acpica
 
 KERN = $(O)/kernel.elf
 ALL += $(KERN)

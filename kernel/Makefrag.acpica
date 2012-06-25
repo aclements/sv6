@@ -1,0 +1,38 @@
+ACPICA := kernel/acpica
+
+ACPICA_SRCS := $(shell find $(ACPICA)/source/components -name "*.c")
+ACPICA_OBJS := $(addprefix $(O)/, $(ACPICA_SRCS:.c=.o))
+
+CFLAGS += -I$(ACPICA)/source/include
+CXXFLAGS += -I$(ACPICA)/source/include
+ACPICA_ACENV := $(ACPICA)/source/include/platform/acenv.h
+
+ACPICA_CFLAGS :=
+
+$(O)/$(ACPICA)/%.o: CFLAGS+=$(ACPICA_CFLAGS)
+
+-include $(ACPICA_OBJS:.o=.d)
+
+# ACPICA's source tree is *almost* but not quite designed to be used
+# completely untouched.  Unfortunately, acenv.h hard-codes the various
+# platforms, so wedge xv6 in.
+$(ACPICA_ACENV): $(ACPICA_ACENV).gen
+	@echo "  TWEAK  $@"
+	$(Q)cp $< $@
+$(ACPICA_ACENV).gen: kernel/Makefrag.acpica always
+	$(Q)sed 's/#if \(defined(_LINUX)\)/#if defined(XV6)\n#include "acpica-xv6.h"\n#elif \1/' $(ACPICA_ACENV) > $@.tmp
+	$(Q)cmp $@.tmp $@ || mv $@.tmp $@
+.PHONY: always
+
+# Make sure we tweak acenv.h before building any kernel object that
+# may include it.  We use an order-only dependency because most of
+# them don't actually include it.
+$(OBJS): | $(ACPICA_ACENV)
+
+$(O)/libacpica.a: $(ACPICA_OBJS)
+	@echo "  AR     $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AR) r $@ $^
+
+LDEPS += $(O)/libacpica.a
+LFLAGS += -lacpica
