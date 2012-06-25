@@ -58,7 +58,8 @@ OBJS = \
 	incbin.o \
 	sysvectors.o \
 	pstream.o \
-	distref.o
+	distref.o \
+	semaphore.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
