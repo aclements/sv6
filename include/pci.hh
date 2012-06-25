@@ -26,3 +26,7 @@ struct pci_bus {
 int  pci_init(void);
 void pci_func_enable(struct pci_func *f);
 void pci_msi_enable(struct pci_func *f, u8 irqnum);
+
+u32 pci_conf_read(u32 seg, u32 bus, u32 dev, u32 func, u32 offset, int width);
+void pci_conf_write(u32 seg, u32 bus, u32 dev, u32 func, u32 offset,
+                    u32 val, int width);

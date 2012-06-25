@@ -72,16 +72,17 @@ pci_print_func(struct pci_func *f)
 }
 
 static void
-pci_conf1_set_addr(u32 bus,
+pci_conf1_set_addr(u32 seg,
+                   u32 bus,
 		   u32 dev,
 		   u32 func,
 		   u32 offset)
 {
-  if (!(bus < 256 &&
+  if (!(seg == 0 &&
+        bus < 256 &&
         dev < 32 &&
         func < 8 &&
-        offset < 256 &&
-        (offset&0x3) == 0))
+        offset < 256))
     panic("pci_conf1_set_addr");
   
   u32 v = (1 << 31) |		// config-space
@@ -89,18 +90,50 @@ pci_conf1_set_addr(u32 bus,
   outl(pci_conf1_addr_ioport, v);
 }
 
+u32
+pci_conf_read(u32 seg, u32 bus, u32 dev, u32 func, u32 offset, int width)
+{
+  pci_conf1_set_addr(seg, bus, dev, func, offset);
+  switch (width) {
+  case 8:
+    return inb(pci_conf1_data_ioport + (offset & 3));
+  case 16:
+    return inw(pci_conf1_data_ioport + (offset & 2));
+  case 32:
+    return inl(pci_conf1_data_ioport);
+  }
+  panic("pci_conf_read: bad width %d", width);
+}
+
 static u32
 pci_conf_read(struct pci_func *f, u32 off)
 {
-  pci_conf1_set_addr(f->bus->busno, f->dev, f->func, off);
-  return inl(pci_conf1_data_ioport);
+  return pci_conf_read(0, f->bus->busno, f->dev, f->func, off, 32);
+}
+
+void
+pci_conf_write(u32 seg, u32 bus, u32 dev, u32 func, u32 offset,
+               u32 val, int width)
+{
+  pci_conf1_set_addr(seg, bus, dev, func, offset);
+  switch (width) {
+  case 8:
+    outb(pci_conf1_data_ioport, val + (offset & 3));
+    return;
+  case 16:
+    outl(pci_conf1_data_ioport, val + (offset & 2));
+    return;
+  case 32:
+    outw(pci_conf1_data_ioport, val);
+    return;
+  }
+  panic("pci_conf_write: bad width %d", width);
 }
 
 static void
 pci_conf_write(struct pci_func *f, u32 off, u32 v)
 {
-  pci_conf1_set_addr(f->bus->busno, f->dev, f->func, off);
-  outl(pci_conf1_data_ioport, v);
+  pci_conf_write(0, f->bus->busno, f->dev, f->func, off, v, 32);
 }
 
 static int __attribute__((warn_unused_result))
