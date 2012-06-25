@@ -28,13 +28,22 @@ inb(u16 port)
   return data;
 }
 
+static inline u16
+inw(u16 port)
+{
+  u16 data = 0;
+
+  __asm volatile("inw %1,%0" : "=a" (data) : "d" (port));
+  return data;
+}
+
 static inline u32
 inl(u16 port)
 {
-    u32 data = 0;
+  u32 data = 0;
 
-    __asm volatile("inl %w1,%0" : "=a" (data) : "d" (port));
-    return data;
+  __asm volatile("inl %w1,%0" : "=a" (data) : "d" (port));
+  return data;
 }
 
 static inline void
@@ -44,9 +53,15 @@ outb(u16 port, u8 data)
 }
 
 static inline void
+outw(u16 port, u16 data)
+{
+  __asm volatile("outw %0,%1" : : "a" (data), "d" (port));
+}
+
+static inline void
 outl(u16 port, u32 data)
 {
-    __asm volatile("outl %0,%w1" : : "a" (data), "d" (port));
+  __asm volatile("outl %0,%w1" : : "a" (data), "d" (port));
 }
 
 static inline void
