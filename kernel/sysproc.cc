@@ -81,7 +81,7 @@ sys_nsleep(u64 nsec)
   while (nsecto > nsectime()) {
     if (myproc()->killed)
       return -1;
-    cv_sleepto(&cv, &lock, nsecto);
+    cv.sleep_to(&lock, nsecto);
   }
   return 0;
 }

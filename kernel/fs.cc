@@ -296,7 +296,7 @@ __iget(u32 dev, u32 inum, bool* haveref)
     if (!(ip->flags & I_VALID)) {
       acquire(&ip->lock);
       while((ip->flags & I_VALID) == 0)
-        cv_sleep(&ip->cv, &ip->lock);
+        ip->cv.sleep(&ip->lock);
       release(&ip->lock);
     }
     *haveref = false;
@@ -466,7 +466,7 @@ ilock(struct inode *ip, int writer)
 
   acquire(&ip->lock);
   while(ip->flags & (I_BUSYW | (writer ? I_BUSYR : 0)))
-    cv_sleep(&ip->cv, &ip->lock);
+    ip->cv.sleep(&ip->lock);
   ip->flags |= I_BUSYR | (writer ? I_BUSYW : 0);
   ip->readbusy++;
   release(&ip->lock);
@@ -485,7 +485,7 @@ iunlock(struct inode *ip)
   acquire(&ip->lock);
   int lastreader = (--ip->readbusy);
   ip->flags &= ~(I_BUSYW | ((lastreader==0) ? I_BUSYR : 0));
-  cv_wakeup(&ip->cv);
+  ip->cv.wake_all();
   release(&ip->lock);
 }
 

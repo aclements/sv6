@@ -157,7 +157,7 @@ forkret(void)
 
   // Just for the first process. can't do it earlier
   // b/c file system code needs a process context
-  // in which to call cv_sleep().
+  // in which to call condvar::sleep().
   if(myproc()->cwd == nullptr) {
     mtstart(forkret, myproc());
     myproc()->cwd = namei(myproc()->cwd, "/");
@@ -208,12 +208,12 @@ exit(void)
 
   // Kernel threads might not have a parent
   if (myproc()->parent != nullptr)
-    cv_wakeup(&(myproc()->parent->cv));
+    myproc()->parent->cv.wake_all();
   else
     idlezombie(myproc());
 
   if (wakeupinit)
-    cv_wakeup(&bootproc->cv); 
+    bootproc->cv.wake_all();
 
   // Jump into the scheduler, never to return.
   myproc()->set_state(ZOMBIE);
@@ -373,13 +373,13 @@ proc::kill(void)
   killed = 1;
   if(get_state() == SLEEPING) {
     // XXX
-    // we need to wake p up if it is cv_sleep()ing.
+    // we need to wake p up if it is condvar::sleep()ing.
     // can't change p from SLEEPING to RUNNABLE since that
     //   would make some condvar->waiters a dangling reference,
     //   and the non-zero p->cv_next will cause a future panic.
-    // can't call cv_wakeup(p->oncv) since that results in
+    // can't call p->oncv.wake_all() since that results in
     //   deadlock (addrun() acquires p->lock).
-    // can't release p->lock then call cv_wakeup() since the
+    // can't release p->lock then call wake_all() since the
     //   cv might be deallocated while we're using it
     //   (pipes dynamically allocate condvars).
   }
@@ -576,7 +576,7 @@ wait(void)
     }
 
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
-    cv_sleep(&myproc()->cv, &myproc()->lock);  
+    myproc()->cv.sleep(&myproc()->lock);
 
     release(&myproc()->lock);
   }

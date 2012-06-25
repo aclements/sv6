@@ -295,7 +295,7 @@ consoleintr(int (*getc)(void))
         consputc(c);
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
           input.w = input.e;
-          cv_wakeup(&input.cv);
+          input.cv.wake_all();
         }
       }
       break;
@@ -320,7 +320,7 @@ consoleread(struct inode *ip, char *dst, u32 off, u32 n)
         ilock(ip, 1);
         return -1;
       }
-      cv_sleep(&input.cv, &input.lock);
+      input.cv.sleep(&input.lock);
     }
     c = input.buf[input.r++ % INPUT_BUF];
     if(c == C('D')){  // EOF

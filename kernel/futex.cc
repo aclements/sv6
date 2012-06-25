@@ -220,7 +220,7 @@ futexwait(futexkey_t key, u64 val, u64 timer)
   }
 
   u64 nsecto = timer == 0 ? 0 : timer+nsectime();
-  cv_sleepto(&myproc()->cv, &myproc()->futex_lock, nsecto);
+  myproc()->cv.sleep_to(&myproc()->futex_lock, nsecto);
 
   assert(fa->nspid_->remove(myproc()->pid, nullptr));
   return 0;
@@ -252,7 +252,7 @@ futexwake(futexkey_t key, u64 nwake)
 
   fa->nspid_->enumerate([&nwoke, &nwake](u32 pid, proc* p) {
     acquire(&p->futex_lock);
-    cv_wakeup(&p->cv);
+    p->cv.wake_all();
     release(&p->futex_lock);
     ++nwoke;
     if (nwoke >= nwake)

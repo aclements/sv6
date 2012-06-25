@@ -30,11 +30,12 @@ struct condvar {
   condvar &operator=(condvar &&o) = default;
 
   NEW_DELETE_OPS(condvar);
+
+  void sleep(struct spinlock *);
+  void sleep_to(struct spinlock*, u64);
+  void wake_all();
 #endif // __cplusplus
 };
 
-void            cv_sleep(struct condvar *cv, struct spinlock*);
-void            cv_sleepto(struct condvar *cv, struct spinlock*, u64);
-void            cv_wakeup(struct condvar *cv);
 void            timerintr(void);
 u64             nsectime(void);

@@ -366,7 +366,7 @@ sys_openat(int dirfd, const char *path, int omode)
       struct inode *pip = nameiparent(cwd, path, dummy);
       if(pip){
         acquire(&pip->lock);
-        cv_wakeup(&pip->cv);
+        pip->cv.wake_all();
         release(&pip->lock);
       }
     }
@@ -382,9 +382,9 @@ sys_openat(int dirfd, const char *path, int omode)
         if(pip == 0)
           return -1;
         cprintf("O_WAIT waiting %s %p %d...\n", path, pip, pip->inum);
-        // XXX wait for cv_wakeup above
+        // XXX wait for pip->cv.wake_all above
         acquire(&pip->lock);
-        cv_sleep(&pip->cv, &pip->lock);
+        pip->cv.sleep(&pip->lock);
         release(&pip->lock);
         cprintf("O_WAIT done\n");
         iput(pip);

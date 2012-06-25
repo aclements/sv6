@@ -200,7 +200,7 @@ gc_end_epoch(void)
   if (myproc() == nullptr) return;
   u64 e = --myproc()->epoch;
   if ((e & 0xff) == 0 && gc_state[mycpu()->id].ndelayed > NGC)
-    cv_wakeup(&gc_state[mycpu()->id].cv);
+    gc_state[mycpu()->id].cv.wake_all();
 }
 
 void gc_dumpstat(void)
@@ -214,7 +214,7 @@ void
 gc_wakeup(void)
 {
   for (int i = 0; i < NCPU; i++)
-    cv_wakeup(&gc_state[i].cv);
+    gc_state[i].cv.wake_all();
 }
 
 // #define BARRIER
@@ -264,8 +264,8 @@ gc_worker(void *x)
     u64 i;
     int ngc = 0;
     acquire(&wl);
-    cv_sleepto(&gc_state[mycpu()->id].cv, &wl,
-               nsectime() + ((u64)GCINTERVAL)*1000000ull);
+    gc_state[mycpu()->id].cv.sleep_to(
+      &wl, nsectime() + ((u64)GCINTERVAL)*1000000ull);
     release(&wl);
 #ifdef BARRIER
     mybarrier();

@@ -108,7 +108,7 @@ distref_worker::run()
   if (--nworkers == 0) {
     // We're the last worker.  Wake up the main thread.
     acquire(&wake_lock);
-    cv_wakeup(&wake_cv);
+    wake_cv.wake_all();
     release(&wake_lock);
   }
 }
@@ -202,8 +202,7 @@ distref_thread(void *x)
 {
   for (;;) {
     acquire(&wake_lock);
-    cv_sleepto(&wake_cv, &wake_lock,
-               nsectime() + ((u64)GCINTERVAL)*1000000ull);
+    wake_cv.sleep_to(&wake_lock, nsectime() + ((u64)GCINTERVAL)*1000000ull);
     release(&wake_lock);
 
     // Phase 1: Reconcile reference counts
@@ -215,7 +214,7 @@ distref_thread(void *x)
     // Barrier
     acquire(&wake_lock);
     while (nworkers)
-      cv_sleep(&wake_cv, &wake_lock);
+      wake_cv.sleep(&wake_lock);
     release(&wake_lock);
 
     // Phase 2: Free garbage
@@ -227,7 +226,7 @@ distref_thread(void *x)
     // Barrier
     acquire(&wake_lock);
     while (nworkers)
-      cv_sleep(&wake_cv, &wake_lock);
+      wake_cv.sleep(&wake_lock);
     release(&wake_lock);
   }
 }
@@ -235,7 +234,7 @@ distref_thread(void *x)
 static void
 distref_wakeup()
 {
-  cv_wakeup(&wake_cv);
+  wake_cv.wake_all();
 }
 
 void

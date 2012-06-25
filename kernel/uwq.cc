@@ -105,7 +105,7 @@ uwq_worker::wait(void)
     this->exit();
 
   running_ = false;
-  cv_sleep(&cv_, &lock_);
+  cv_.sleep(&lock_);
 
   if (!uwq_->valid())
     this->exit();
@@ -204,7 +204,7 @@ uwq::tryworker(void)
       release(&p->lock);
 
       w->running_ = true;
-      cv_wakeup(&w->cv_);
+      w->cv_.wake_all();
       return true;
     }
   }
@@ -254,7 +254,7 @@ uwq::finish(void)
       uwq_worker* w = worker_[i];
       gcnow = false;
       acquire(&w->lock_);
-      cv_wakeup(&w->cv_);
+      w->cv_.wake_all();
       release(&w->lock_);
     }
   }

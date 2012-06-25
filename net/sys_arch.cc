@@ -56,7 +56,7 @@ sys_mbox_trypost(sys_mbox_t *mbox, void *msg)
   if (mbox->head - mbox->tail < MBOXSLOTS) {
     mbox->msg[mbox->head % MBOXSLOTS] = msg;
     mbox->head++;    
-    cv_wakeup(&mbox->c);
+    mbox->c.wake_all();
     r = ERR_OK;
   }
 
@@ -71,7 +71,7 @@ sys_mbox_post(sys_mbox_t *mbox, void *msg)
 
   mbox->msg[mbox->head % MBOXSLOTS] = msg;
   mbox->head++;
-  cv_wakeup(&mbox->c);
+  mbox->c.wake_all();
 }
 
 void
@@ -158,7 +158,7 @@ void
 sys_sem_signal(sys_sem_t *sem)
 {
   sem->count++;
-  cv_wakeup(&sem->c);
+  sem->c.wake_all();
 }
 
 u32_t
@@ -256,7 +256,7 @@ lwip_core_lock(void)
 void
 lwip_core_sleep(struct condvar *c)
 {
-  cv_sleep(c, &lwprot.lk);
+  c->sleep(&lwprot.lk);
 }
 
 void

@@ -85,7 +85,7 @@ net_timer(void *x)
     t->func();
     lwip_core_unlock();
     acquire(&t->waitlk);
-    cv_sleepto(&t->waitcv, &t->waitlk, cur + t->nsec);
+    t->waitcv.sleepto(&t->waitlk, cur + t->nsec);
     release(&t->waitlk);
   }
 }
@@ -235,7 +235,7 @@ initnet_worker(void *x)
 
     lwip_core_unlock();    
     acquire(&lk);
-    cv_sleepto(&cv, &lk, nsectime() + 1000000000);
+    cv.sleepto(&lk, nsectime() + 1000000000);
     release(&lk);
     lwip_core_lock();
   }

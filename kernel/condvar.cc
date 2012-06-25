@@ -64,7 +64,8 @@ timerintr(void)
   } while (again);
 }
 
-void cv_sleepto(struct condvar *cv, struct spinlock *lk, u64 timeout)
+void
+condvar::sleep_to(struct spinlock *lk, u64 timeout)
 {
   if(myproc() == 0)
     panic("sleep");
@@ -73,61 +74,57 @@ void cv_sleepto(struct condvar *cv, struct spinlock *lk, u64 timeout)
     panic("sleep without lk");
 
   // Must acquire cv_lock to avoid sleep/wakeup race
-  acquire(&cv->lock); 
+  lock.acquire();
 
-  release(lk);
+  lk->release();
 
-  acquire(&myproc()->lock);
+  myproc()->lock.acquire();
 
   if(myproc()->oncv)
-    panic("cv_sleep oncv");
+    panic("condvar::sleep_to oncv");
 
-  LIST_INSERT_HEAD(&cv->waiters, myproc(), cv_waiters);
-  myproc()->oncv = cv;
+  LIST_INSERT_HEAD(&waiters, myproc(), cv_waiters);
+  myproc()->oncv = this;
   myproc()->set_state(SLEEPING);
 
   if (timeout) {
-    acquire(&sleepers_lock);
+    scoped_acquire l(&sleepers_lock);
     myproc()->cv_wakeup = timeout;
     LIST_INSERT_HEAD(&sleepers, myproc(), cv_sleep);
-    release(&sleepers_lock); 
  }
 
-  release(&cv->lock);
+  lock.release();
   sched();
   // Reacquire original lock.
-  acquire(lk);
+  lk->acquire();
 }
 
 void
-cv_sleep(struct condvar *cv, struct spinlock *lk)
+condvar::sleep(struct spinlock *lk)
 {
-  cv_sleepto(cv, lk, 0);
+  sleep_to(lk, 0);
 }
 
 // Wake up all processes sleeping on this condvar.
 void
-cv_wakeup(struct condvar *cv)
+condvar::wake_all()
 {
   struct proc *p, *tmp;
 
-  acquire(&cv->lock);
-  LIST_FOREACH_SAFE(p, &cv->waiters, cv_waiters, tmp) {
-    acquire(&p->lock);
+  scoped_acquire cv_l(&lock);
+  LIST_FOREACH_SAFE(p, &waiters, cv_waiters, tmp) {
+    scoped_acquire p_l(&p->lock);
     if (p->get_state() != SLEEPING)
-      panic("cv_wakeup: pid %u name %s state %u",
+      panic("condvar::wake_all: pid %u name %s state %u",
             p->pid, p->name, p->get_state());
-    if (p->oncv != cv)
-      panic("cv_wakeup: pid %u name %s p->cv %p cv %p",
-            p->pid, p->name, p->oncv, cv);
+    if (p->oncv != this)
+      panic("condvar::wake_all: pid %u name %s p->cv %p cv %p",
+            p->pid, p->name, p->oncv, this);
     if (p->cv_wakeup) {
-      acquire(&sleepers_lock);
+      scoped_acquire s_l(&sleepers_lock);
       LIST_REMOVE(p, cv_sleep);
       p->cv_wakeup = 0;
-      release(&sleepers_lock);
     }
     wakeup(p);
-    release(&p->lock);
   }
-  release(&cv->lock);
 }

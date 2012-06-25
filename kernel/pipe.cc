@@ -72,7 +72,7 @@ pipeclose(struct pipe *p, int writable)
   } else {
     p->readopen = 0;
   }
-  cv_wakeup(&p->cv);
+  p->cv.wake_all();
   if(p->readopen == 0 && p->writeopen == 0){
     release(&p->lock);
     p->lock.~spinlock();
@@ -94,12 +94,12 @@ pipewrite(struct pipe *p, const char *addr, int n)
         release(&p->lock);
         return -1;
       }
-      cv_wakeup(&p->cv);
-      cv_sleep(&p->cv, &p->lock); //DOC: pipewrite-sleep
+      p->cv.wake_all();
+      p->cv.sleep(&p->lock); //DOC: pipewrite-sleep
     }
     p->data[p->nwrite++ % PIPESIZE] = addr[i];
   }
-  cv_wakeup(&p->cv);  //DOC: pipewrite-wakeup1
+  p->cv.wake_all();  //DOC: pipewrite-wakeup1
   release(&p->lock);
   return n;
 }
@@ -115,14 +115,14 @@ piperead(struct pipe *p, char *addr, int n)
       release(&p->lock);
       return -1;
     }
-    cv_sleep(&p->cv, &p->lock); //DOC: piperead-sleep
+    p->cv.sleep(&p->lock); //DOC: piperead-sleep
   }
   for(i = 0; i < n; i++){  //DOC: piperead-copy
     if(p->nread == p->nwrite)
       break;
     addr[i] = p->data[p->nread++ % PIPESIZE];
   }
-  cv_wakeup(&p->cv);  //DOC: piperead-wakeup
+  p->cv.wake_all();  //DOC: piperead-wakeup
   release(&p->lock);
   return i;
 }

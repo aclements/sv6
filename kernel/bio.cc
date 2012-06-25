@@ -58,7 +58,7 @@ bget(u32 dev, u64 sector, int *writer)
     if (*writer || !(b->flags & B_VALID)) {
       acquire(&b->lock);
       if (b->flags & B_BUSY) {
-	cv_sleep(&b->cv, &b->lock);
+	b->cv.sleep(&b->lock);
 	release(&b->lock);
 	goto loop;
       }
@@ -98,7 +98,7 @@ bread(u32 dev, u64 sector, int writer)
     acquire(&b->lock);
     b->flags &= ~B_BUSY;
     release(&b->lock);
-    cv_wakeup(&b->cv);
+    b->cv.wake_all();
   }
   return b;
 }
@@ -125,7 +125,7 @@ brelse(struct buf *b, int writer)
     acquire(&b->lock);
     b->flags &= ~B_BUSY;
     release(&b->lock);
-    cv_wakeup(&b->cv);
+    b->cv.wake_all();
   }
 }
 
