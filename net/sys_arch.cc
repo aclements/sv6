@@ -1,3 +1,8 @@
+// We have to include these before lwip/sys.h so that they don't get
+// recursively included in the extern "C" block.
+#include "spinlock.h"
+#include "condvar.h"
+
 extern "C" {
 #include "lwip/sys.h"
 #include "arch/sys_arch.h"

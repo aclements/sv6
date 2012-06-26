@@ -85,7 +85,7 @@ net_timer(void *x)
     t->func();
     lwip_core_unlock();
     acquire(&t->waitlk);
-    t->waitcv.sleepto(&t->waitlk, cur + t->nsec);
+    t->waitcv.sleep_to(&t->waitlk, cur + t->nsec);
     release(&t->waitlk);
   }
 }
