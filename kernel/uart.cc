@@ -9,6 +9,53 @@
 #define COM2    0x2f8
 #define COM1    0x3f8
 
+#define COM_IN_RECEIVE             0      // DLAB = 0, in
+#define COM_OUT_TRANSMIT           0      // DLAB = 0, out
+#define COM_INT_EN                 1      // DLAB = 0
+# define COM_INT_RECEIVE            0x01
+# define COM_INT_TRANSMIT           0x02
+# define COM_INT_LINE               0x04
+# define COM_INT_MODEM              0x08
+#define COM_DIVISOR_LSB            0      // DLAB = 1
+#define COM_DIVISOR_MSB            1      // DLAB = 1
+#define COM_IN_IIR                 2
+# define COM_IN_IIR_NOT_PENDING     0x01
+# define COM_IN_IIR_ID_MASK         0x0E
+#define COM_OUT_FIFO_CTL           2
+# define COM_OUT_FIFO_ENABLE        0x01
+# define COM_OUT_FIFO_RECV_RESET    0x02
+# define COM_OUT_FIFO_XMIT_RESET    0x04
+# define COM_OUT_FIFO_DMA           0x08
+# define COM_OUT_FIFO_TRIGGER_MASK  0xC0
+# define COM_OUT_FIFO_TRIGGER_1     (0<<6)
+# define COM_OUT_FIFO_TRIGGER_4     (1<<6)
+# define COM_OUT_FIFO_TRIGGER_8     (2<<6)
+# define COM_OUT_FIFO_TRIGGER_14    (3<<6)
+#define COM_LINE_CTL               3
+# define COM_LINE_LEN_MASK          0x03
+# define COM_LINE_LEN_5             0
+# define COM_LINE_LEN_6             1
+# define COM_LINE_LEN_7             2
+# define COM_LINE_LEN_8             3
+# define COM_LINE_STOP_BITS         0x04
+# define COM_LINE_PARITY            0x08
+# define COM_LINE_EVEN_PARITY       0x10
+# define COM_LINE_STICK_PARITY      0x20
+# define COM_LINE_BREAK_CTL         0x40
+# define COM_LINE_DLAB              0x80
+#define COM_MODEM_CTL              4
+#define COM_LINE_STATUS            5
+# define COM_LINE_DATA_READY        0x01
+# define COM_LINE_OVERRUN_ERR       0x02
+# define COM_LINE_PARITY_ERR        0x04
+# define COM_LINE_FRAMING_ERR       0x08
+# define COM_LINE_BREAK             0x10
+# define COM_LINE_XMIT_HOLDING      0x20
+# define COM_LINE_XMIT_EMPTY        0x40
+# define COM_LINE_FIFO_ERR          0x80
+#define COM_MODEM_STATUS           6
+#define COM_SCRATCH                7
+
 static int com;
 static int irq_com;
 static int uart;    // is there a uart?
@@ -20,9 +67,10 @@ uartputc(char c)
 
   if (!uart)
     return;
-  for (i = 0; i < 128 && !(inb(com+5) & 0x20); i++)
+  for (i = 0; i < 128 && !(inb(com+COM_LINE_STATUS) & COM_LINE_XMIT_HOLDING);
+       i++)
     microdelay(10);
-  outb(com+0, c);
+  outb(com+COM_OUT_TRANSMIT, c);
 }
 
 static int
@@ -30,9 +78,9 @@ uartgetc(void)
 {
   if (!uart)
     return -1;
-  if (!(inb(com+5) & 0x01))
+  if (!(inb(com+COM_LINE_STATUS) & COM_LINE_DATA_READY))
     return -1;
-  return inb(com+0);
+  return inb(com+COM_IN_RECEIVE);
 }
 
 void
@@ -65,19 +113,19 @@ inituart(void)
     irq_com = conf[i].irq;
 
     // Turn off the FIFO
-    outb(com+2, 0);
+    outb(com+COM_OUT_FIFO_CTL, 0);
     // 19200 baud
-    outb(com+3, 0x80);    // Unlock divisor
-    outb(com+0, 115200/baud);
-    outb(com+1, 0);
+    outb(com+COM_LINE_CTL, COM_LINE_DLAB);    // Unlock divisor
+    outb(com+COM_DIVISOR_LSB, 115200/baud);
+    outb(com+COM_DIVISOR_MSB, 0);
     // 8 bits, one stop bit, no parity
-    outb(com+3, 0x03);    // Lock divisor, 8 data bits.
-    outb(com+1, 0x01);    // Enable receive interrupts.
+    outb(com+COM_LINE_CTL, COM_LINE_LEN_8); // Lock divisor, 8 data bits.
+    outb(com+COM_INT_EN, COM_INT_RECEIVE); // Enable receive interrupts.
     // Data terminal ready
-    outb(com+4, 0x0);
+    outb(com+COM_MODEM_CTL, 0x0);
     
     // If status is 0xFF, no serial port.
-    if(inb(com+5) != 0xFF)
+    if(inb(com+COM_LINE_STATUS) != 0xFF)
       break;
   }
   if (i == 2)
@@ -87,8 +135,8 @@ inituart(void)
 
   // Acknowledge pre-existing interrupt conditions;
   // enable interrupts.
-  inb(com+2);
-  inb(com+0);
+  inb(com+COM_IN_IIR);
+  inb(com+COM_IN_RECEIVE);
   picenable(irq_com);
   ioapicenable(irq_com, 0);
 
