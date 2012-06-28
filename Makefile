@@ -147,10 +147,13 @@ rsync: $(KERN)
 ifneq ($(HW),tom)
 IPMIOPTS = -A MD5 -U ADMIN
 endif
-reboot-xv6:
+reboot-xv6: setup-xv6
 	ssh amsterdam.csail.mit.edu \
-	sed -i .bak "'s/^default /#&/;/^# *default xv6/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg \&\& \
 	ipmitool -I lanplus $(IPMIOPTS) -H $(HW)adm.csail.mit.edu -f/home/am6/mpdev/.ipmipassword power reset
+
+setup-xv6:
+	ssh amsterdam.csail.mit.edu \
+	sed -i .bak "'s/^default /#&/;/^# *default xv6/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg
 
 reboot-linux:
 	ssh amsterdam.csail.mit.edu \
