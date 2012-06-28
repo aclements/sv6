@@ -70,7 +70,13 @@ uartputc(char c)
   for (i = 0; i < 128 && !(inb(com+COM_LINE_STATUS) & COM_LINE_XMIT_HOLDING);
        i++)
     microdelay(10);
+#ifdef UART_SEND_DELAY_USEC
+  microdelay(UART_SEND_DELAY_USEC);
+#endif
   outb(com+COM_OUT_TRANSMIT, c);
+#ifdef UART_SEND_DELAY_USEC
+  microdelay(UART_SEND_DELAY_USEC);
+#endif
 }
 
 static int

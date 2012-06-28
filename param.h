@@ -45,6 +45,8 @@
 #define NCPU          48  // maximum number of CPUs
 #define MTRACE        0
 #define PERFSIZE      (1<<20ull)
+// tom's IPMI SOL console looses sync if we don't delay
+#define UART_SEND_DELAY_USEC 1000
 #elif defined(HW_ben)
 #define DEBUG         0
 #define NCPU          80  // maximum number of CPUs
