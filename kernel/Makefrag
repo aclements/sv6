@@ -1,4 +1,5 @@
 OBJS = \
+	acpi.o \
 	acpiosl.o \
 	async.o \
 	bio.o \

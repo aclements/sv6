@@ -41,6 +41,7 @@ void initcpprt(void);
 void initfutex(void);
 void initcmdline(void);
 void initdistref(void);
+void initacpitables(void);
 void idleloop(void);
 
 #define IO_RTC  0x70
@@ -140,6 +141,9 @@ cmain(u64 mbmagic, u64 mbaddr)
   initpg();
   inithz();        // CPU Hz, microdelay
   inittls(&cpus[0]);       // thread local storage
+
+  initacpitables();        // Requires initpg, inittls
+
   initpic();       // interrupt controller
   initioapic();
   inituartcons();          // Requires initpic, initioapic
