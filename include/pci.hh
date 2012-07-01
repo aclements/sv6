@@ -16,6 +16,8 @@ struct pci_func {
   u32 reg_base[6];
   u32 reg_size[6];
   u8 irq_line;
+  // Interrupt pin.  0=none, 1=INTA, .. 4=INTB
+  u8 int_pin;
   u8 msi_capreg;
 };
 

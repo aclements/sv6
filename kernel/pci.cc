@@ -67,11 +67,11 @@ pci_print_func(struct pci_func *f)
   if (PCI_CLASS(f->dev_class) < sizeof(pci_class) / sizeof(pci_class[0]))
     classname = pci_class[PCI_CLASS(f->dev_class)];
 
-  cprintf("PCI: %x:%x.%d: %x:%x: class: %x.%x (%s) irq: %d\n",
+  cprintf("PCI: %x:%x.%d: %x:%x: class: %x.%x (%s) irq: %d int: %c\n",
           f->bus->busno, f->dev, f->func,
           PCI_VENDOR(f->dev_id), PCI_PRODUCT(f->dev_id),
           PCI_CLASS(f->dev_class), PCI_SUBCLASS(f->dev_class), classname,
-          f->irq_line);
+          f->irq_line, "-ABCD"[f->int_pin]);
 }
 
 void
@@ -270,6 +270,7 @@ pci_scan_bus(struct pci_bus *bus)
       
       u32 intr = pci_conf_read(&af, PCI_INTERRUPT_REG);
       af.irq_line = PCI_INTERRUPT_LINE(intr);
+      af.int_pin = PCI_INTERRUPT_PIN(intr);
 
       u32 cmd_status = pci_conf_read(&af, PCI_COMMAND_STATUS_REG);
       if (cmd_status & PCI_STATUS_CAPLIST_SUPPORT)
