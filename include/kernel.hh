@@ -141,7 +141,6 @@ void            halt(void) __attribute__((noreturn));
 
 // mp.c
 extern int      ncpu;
-int             mpbcpu(void);
 
 // net.c
 void            netfree(void *va);

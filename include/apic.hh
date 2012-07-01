@@ -1,3 +1,7 @@
+#pragma once
+
+#include "amd64.h"
+
 #if defined(HW_ben)
 #define lapicstartap   x2apicstartap
 #define lapiceoi       x2apiceoi

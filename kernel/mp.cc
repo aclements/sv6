@@ -10,18 +10,11 @@
 #include "kstream.hh"
 
 struct cpu cpus[NCPU];
-static struct cpu *bcpu __mpalign__;
 int ismp __mpalign__;
 int ncpu __mpalign__;
 u8 ioapicid __mpalign__;
 
 static console_stream verbose(true);
-
-int
-mpbcpu(void)
-{
-  return bcpu-cpus;
-}
 
 void
 to_stream(print_stream *s, const mpconf &m)
@@ -175,7 +168,6 @@ initmp(void)
   struct mp *mp;
   struct mpconf *conf;
 
-  bcpu = &cpus[0];
   if ((conf = mpconfig(&mp)) == 0)
     return;
   ismp = 1;
@@ -189,8 +181,7 @@ initmp(void)
       if (proc->flags & MPPROC_EN) {
         if (ncpu == NCPU)
           panic("initmp: too many CPUs");
-        if(proc->flags & MPPROC_BP)
-          bcpu = &cpus[ncpu];
+        assert(!!(proc->flags & MPPROC_BP) == (ncpu == 0));
         cpus[ncpu].id = ncpu;
         cpus[ncpu].hwid = HWID(proc->apicid);
         ncpu++;

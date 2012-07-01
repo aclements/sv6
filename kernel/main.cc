@@ -18,7 +18,7 @@ void initcga(void);
 void initconsole(void);
 void initpg(void);
 void initmp(void);
-void inittls(void);
+void inittls(struct cpu *);
 void initnmi(void);
 void inittrap(void);
 void initseg(void);
@@ -46,11 +46,13 @@ void idleloop(void);
 #define IO_RTC  0x70
 
 static volatile int bstate;
+static cpuid_t bcpuid;
 
 void
 mpboot(void)
 {
-  inittls();
+  inittls(&cpus[bcpuid]);
+
   initseg();
   initlapic();
   initsamp();
@@ -120,6 +122,7 @@ bootothers(void)
     *(u32*)(code-64) = 0;
 
     bstate = 0;
+    bcpuid = c->id;
     lapicstartap(c->hwid, v2p(code));
     // Wait for cpu to finish mpmain()
     while(bstate == 0)
@@ -136,12 +139,12 @@ cmain(u64 mbmagic, u64 mbaddr)
   inituart();
   initpg();
   inithz();        // CPU Hz, microdelay
+  inittls(&cpus[0]);       // thread local storage
   initpic();       // interrupt controller
   initioapic();
   inituartcons();          // Requires initpic, initioapic
   initcga();
   initmp();
-  inittls();       // thread local storage
 
   // Some global constructors require mycpu()->id (via myid()) which
   // we setup in inittls.  (Note that gcc 4.7 eliminated the .ctors

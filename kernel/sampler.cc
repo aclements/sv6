@@ -299,7 +299,7 @@ sampwrite(struct inode *ip, const char *buf, u32 off, u32 n)
 void
 initsamp(void)
 {
-  if (myid() == mpbcpu()) {
+  if (myid() == 0) {
     u32 name[4];
     char *s = (char *)name;
     name[3] = 0;
