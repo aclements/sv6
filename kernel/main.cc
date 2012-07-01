@@ -19,7 +19,6 @@ void initconsole(void);
 void initpg(void);
 void initmp(void);
 void inittls(void);
-void initacpi(void);
 void initnmi(void);
 void inittrap(void);
 void initseg(void);
@@ -152,8 +151,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   extern void (*__init_array_end[])(int, char **, char **);
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
       (*__init_array_start[i])(0, nullptr, nullptr);
-
-  initacpi();
 
   initseg();
   inittrap();
