@@ -42,6 +42,7 @@ void initcmdline(void);
 void initdistref(void);
 void initacpitables(void);
 void initcpus(void);
+void initlapic(void);
 void idleloop(void);
 
 #define IO_RTC  0x70
@@ -124,7 +125,7 @@ bootothers(void)
 
     bstate = 0;
     bcpuid = c->id;
-    lapicstartap(c->hwid, v2p(code));
+    lapic->start_ap(c, v2p(code));
     // Wait for cpu to finish mpmain()
     while(bstate == 0)
       ;
@@ -143,7 +144,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   inittls(&cpus[0]);       // thread local storage
 
   initacpitables();        // Requires initpg, inittls
-  initcpus();              // Suggests initacpitables
+  initlapic();             // Requires initpg
+  initcpus();              // Requires initlapic, suggests initacpitables
 
   initpic();       // interrupt controller
   initioapic();
@@ -161,7 +163,6 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   initseg();
   inittrap();
-  initlapic();
   initcmdline();
   initkalloc(mbaddr);
   initwq();        // (after kalloc)

@@ -244,7 +244,7 @@ tlbflush(u64 myreq)
 
   for (int i = 0; i < ncpu; i++)
     if (cpus[i].tlbflush_done < myreq)
-      lapic_tlbflush(cpus[i].hwid);
+      lapic->send_tlbflush(&cpus[i]);
 
   for (int i = 0; i < ncpu; i++)
     while (cpus[i].tlbflush_done < myreq)

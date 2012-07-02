@@ -128,7 +128,7 @@ sampstart(void)
   for(struct cpu *c = cpus; c < cpus+ncpu; c++) {
     if(c == cpus+mycpu()->id)
       continue;
-    lapic_sampconf(c->hwid);
+    lapic->send_sampconf(c);
   }
   sampconf();
   popcli();
@@ -163,7 +163,7 @@ sampintr(struct trapframe *tf)
   // NMIs are disabled until the next iret.
 
   // Linux unmasks LAPIC.PC after every interrupt (perf_event.c)
-  lapicpc(0);
+  lapic->mask_pc(false);
   // Only level-triggered interrupts require an lapiceoi.
 
   cnt = rdpmc(0);

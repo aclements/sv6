@@ -80,6 +80,12 @@ do_pagefault(struct trapframe *tf)
   return -1;
 }
 
+static inline void
+lapiceoi()
+{
+  lapic->eoi();
+}
+
 void
 trap(struct trapframe *tf)
 {

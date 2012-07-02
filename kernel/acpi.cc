@@ -105,7 +105,7 @@ initcpus_acpi(void)
   verbose.println("acpi: Initializing CPUs");
 
   // Reserve CPU 0 for the BSP, since we're already committed to that
-  hwid_t my_apicid = lapicid();
+  hwid_t my_apicid = lapic->id();
   ncpu = 1;
 
   // Create CPUs
