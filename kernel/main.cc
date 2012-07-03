@@ -13,6 +13,7 @@
 void initpic(void);
 void initioapic(void);
 void inituart(void);
+void inituartcons(void);
 void initcga(void);
 void initconsole(void);
 void initpg(void);
@@ -133,11 +134,12 @@ cmain(u64 mbmagic, u64 mbaddr)
 {
   extern u64 cpuhz;
 
+  inituart();
   initpg();
   inithz();        // CPU Hz, microdelay
   initpic();       // interrupt controller
   initioapic();
-  inituart();
+  inituartcons();          // Requires initpic, initioapic
   initcga();
   initmp();
   inittls();       // thread local storage

@@ -139,13 +139,6 @@ inituart(void)
 
   uart = 1;
 
-  // Acknowledge pre-existing interrupt conditions;
-  // enable interrupts.
-  inb(com+COM_IN_IIR);
-  inb(com+COM_IN_RECEIVE);
-  picenable(irq_com);
-  ioapicenable(irq_com, 0);
-
   // Clean up the serial console (beginning of line, erase down)
   for (const char *p="\r\x1b[J"; *p; p++)
     uartputc(*p);
@@ -153,4 +146,15 @@ inituart(void)
   // Announce that we're here.
   for (const char *p=DEBUG?"xv6 DEBUG\n":"xv6\n"; *p; p++)
     uartputc(*p);
+}
+
+void
+inituartcons(void)
+{
+  // Acknowledge pre-existing interrupt conditions;
+  // enable interrupts.
+  inb(com+COM_IN_IIR);
+  inb(com+COM_IN_RECEIVE);
+  picenable(irq_com);
+  ioapicenable(irq_com, 0);
 }
