@@ -13,6 +13,7 @@ struct cpu cpus[NCPU];
 int ncpu __mpalign__;
 
 bool initlapic_xapic(void);
+bool initlapic_x2apic(void);
 bool initcpus_acpi(void);
 
 class null_lapic : public abstract_lapic
@@ -50,7 +51,7 @@ initlapic(void)
 
   if (bsp) {
     // Figure out what type of LAPIC we have.
-    if (!initlapic_xapic()) {
+    if (!initlapic_x2apic() && !initlapic_xapic()) {
       static null_lapic apic;
       verbose.println("mp: No LAPIC");
       lapic = &apic;

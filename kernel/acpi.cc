@@ -117,6 +117,11 @@ initcpus_acpi(void)
       if (!(lapic.LapicFlags & ACPI_MADT_ENABLED))
         continue;
       lapicid = lapic.Id;
+    } else if (sub.Type == ACPI_MADT_TYPE_LOCAL_X2APIC) {
+      auto &lapic = *(ACPI_MADT_LOCAL_X2APIC*)&sub;
+      if (!(lapic.LapicFlags & ACPI_MADT_ENABLED))
+        continue;
+      lapicid = lapic.LocalApicId;
     } else {
       continue;
     }

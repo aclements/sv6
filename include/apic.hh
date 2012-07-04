@@ -3,17 +3,6 @@
 #include "traps.h"
 #include "amd64.h"
 
-// XXX Obsolete
-#if defined(HW_ben)
-#define lapicstartap   x2apicstartap
-#define lapiceoi       x2apiceoi
-#define lapic_tlbflush x2apic_tlbflush
-#define lapic_sampconf x2apic_sampconf
-#define lapicpc        x2apicpc
-#define lapicid        x2apicid
-#define initlapic      initx2apic
-#endif
-
 // Abstract base class for local APICs
 class abstract_lapic
 {
@@ -50,12 +39,3 @@ public:
 };
 
 extern abstract_lapic *lapic;
-
-// x2apic.cc
-void            x2apicstartap(hwid_t, u32 addr);
-void            x2apiceoi(void);
-void            x2apic_tlbflush(hwid_t);
-void            x2apic_sampconf(hwid_t);
-void            x2apicpc(char mask);
-hwid_t          x2apicid(void);
-void            initx2apic(void);

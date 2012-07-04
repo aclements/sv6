@@ -81,6 +81,7 @@
 // CPUID function 0x00000001
 #define CPUID_FEATURES      0x00000001
 #define FEATURE_ECX_MWAIT   (1 << 3)
+#define FEATURE_ECX_X2APIC  (1 << 21)
 #define FEATURE_EBX_APIC(x) (((x) >> 24) & 0xff)
 #define FEATURE_EDX_APIC    (1 << 9) // "APIC on chip"
 

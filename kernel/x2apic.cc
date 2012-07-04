@@ -4,6 +4,8 @@
 #include "kernel.hh"
 #include "traps.h"
 #include "cpu.hh"
+#include "apic.hh"
+#include "kstream.hh"
 
 #define ID      0x802   // ID
 #define VER     0x803   // Version
@@ -36,7 +38,22 @@
 #define TCCR    0x839   // Timer Current Count
 #define TDCR    0x83e   // Timer Divide Configuration
 
+static console_stream verbose(true);
+
 static u64 x2apichz;
+
+class x2apic_lapic : public abstract_lapic
+{
+public:
+  void cpu_init();
+  hwid_t id();
+  void eoi();
+  void send_ipi(struct cpu *c, int ino);
+  void mask_pc(bool mask);
+  void start_ap(struct cpu *c, u32 addr);
+private:
+  void clearintr();
+};
 
 static int
 x2apicmaxlvt(void)
@@ -48,7 +65,7 @@ x2apicmaxlvt(void)
 }
 
 void
-x2apiceoi(void)
+x2apic_lapic::eoi()
 {
   writemsr(EOI, 0);
 }
@@ -63,7 +80,7 @@ x2apicwait(void)
 // Code closely follows native_cpu_up, do_boot_cpu,
 // and wakeup_secondary_cpu_via_init in Linux v3.3
 void
-x2apicstartap(hwid_t id, u32 addr)
+x2apic_lapic::start_ap(struct cpu *c, u32 addr)
 {
   int i;
 
@@ -81,10 +98,10 @@ x2apicstartap(hwid_t id, u32 addr)
   // "Universal startup algorithm."
   // Send INIT (level-triggered) interrupt to reset other CPU.
   // Asserting INIT
-  writemsr(ICR, (((u64)id.num)<<32) | INIT | LEVEL | ASSERT);
+  writemsr(ICR, (((u64)c->hwid.num)<<32) | INIT | LEVEL | ASSERT);
   microdelay(10000);
   // Deasserting INIT
-  writemsr(ICR, (((u64)id.num)<<32) | INIT | LEVEL);
+  writemsr(ICR, (((u64)c->hwid.num)<<32) | INIT | LEVEL);
   x2apicwait();
 
   // Send startup IPI (twice!) to enter bootstrap code.
@@ -96,7 +113,7 @@ x2apicstartap(hwid_t id, u32 addr)
     readmsr(ESR);
 
     // Kick the target chip
-    writemsr(ICR, (((u64)id.num)<<32) | STARTUP | (addr>>12));
+    writemsr(ICR, (((u64)c->hwid.num)<<32) | STARTUP | (addr>>12));
     // Linux gives 300 usecs to accept the IPI..
     microdelay(300);
     x2apicwait();
@@ -113,32 +130,26 @@ x2apicstartap(hwid_t id, u32 addr)
 }
 
 void
-x2apic_tlbflush(hwid_t id)
-{
-  panic("x2apic_tlbflush");
-}
-
-void
-x2apic_sampconf(hwid_t id)
-{
-  panic("x2apic_sampconf");
-}
-
-void
-x2apicpc(char mask)
+x2apic_lapic::mask_pc(bool mask)
 {
   writemsr(PCINT, mask ? MASKED : MT_NMI);
 }
 
+void
+x2apic_lapic::send_ipi(struct cpu *c, int ino)
+{
+  panic("x2apic_lapic::send_ipi not implemented");
+}
+
 hwid_t
-x2apicid(void)
+x2apic_lapic::id()
 {
   u64 id = readmsr(ID);
   return HWID((u32)id);
 }
 
-static void
-clearintr(void)
+void
+x2apic_lapic::clearintr()
 {
   // Clear any pending interrupts.  Linux does this.
   unsigned int value, queued;
@@ -156,7 +167,7 @@ clearintr(void)
       value = readmsr(ISR + i*0x1);
       for (j = 31; j >= 0; j--) {
         if (value & (1<<j)) {
-          x2apiceoi();
+          eoi();
           acked++;
         }
       }
@@ -173,21 +184,14 @@ clearintr(void)
 
 // Code closely follows setup_local_APIC in Linux v3.3
 void
-initx2apic(void)
+x2apic_lapic::cpu_init()
 {
   u64 count;
   u32 value;
   int maxlvt;
 
-  // BIOS sanity checking
-  if (!(readmsr(MSR_APIC_BAR) & APIC_BAR_X2APIC_EN) ||
-      !(readmsr(MSR_APIC_BAR) & APIC_BAR_XAPIC_EN))
-  {
-    panic("initx2apic: not enabled");
-  }
-
   // Enable performance counter overflow interrupts for sampler.cc
-  x2apicpc(0);
+  mask_pc(false);
 
   // Enable interrupts on the APIC (but not on the processor).
   value = readmsr(TPR);
@@ -252,4 +256,25 @@ initx2apic(void)
   writemsr(EOI, 0);
 
   return;
+}
+
+bool
+initlapic_x2apic(void)
+{
+  u32 edx;
+  cpuid(CPUID_FEATURES, nullptr, nullptr, nullptr, &edx);
+  if (!(edx & FEATURE_ECX_X2APIC))
+    return false;
+
+  // According to [Intel SDM 3A 10.12.8.1], if the BIOS initializes
+  // logical processors with APIC IDs greater than 255, then it should
+  // enable the x2APIC.
+  u64 apic_bar = readmsr(MSR_APIC_BAR);
+  if (!(apic_bar & APIC_BAR_X2APIC_EN) || !(apic_bar & APIC_BAR_XAPIC_EN))
+    return false;
+
+  verbose.println("x2apic: Using x2APIC LAPIC");
+  static x2apic_lapic apic;
+  lapic = &apic;
+  return true;
 }
