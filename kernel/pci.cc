@@ -6,6 +6,8 @@
 #include "traps.h"
 #include "kstream.hh"
 
+static console_stream verbose(true);
+
 extern int e1000attach(struct pci_func *pcif);
 extern int e1000eattach(struct pci_func *pcif);
 
@@ -243,6 +245,8 @@ pci_msi_enable(struct pci_func *f, u8 irqnum)
 static int
 pci_scan_bus(struct pci_bus *bus)
 {
+  verbose.println("pci: Scanning bus ", shex(bus->busno));
+
   int totaldev = 0;
   struct pci_func df;
   memset(&df, 0, sizeof(df));
@@ -363,8 +367,11 @@ pci_func_enable(struct pci_func *f)
 void
 initpci(void)
 {
-  static struct pci_bus root_bus;
-  memset(&root_bus, 0, sizeof(root_bus));
+  if (!acpi_pci_scan_roots(pci_scan_bus)) {
+    // Assume a single root bus
+    static struct pci_bus root_bus;
+    memset(&root_bus, 0, sizeof(root_bus));
 
-  pci_scan_bus(&root_bus);
+    pci_scan_bus(&root_bus);
+  }
 }

@@ -181,7 +181,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initsamp();
   initlockstat();
   initacpi();              // Requires initacpitables, initkalloc?
-  initpci();
+  initpci();               // Suggests initacpi
   initnet();
 
   if (VERBOSE)

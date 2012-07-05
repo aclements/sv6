@@ -4,6 +4,7 @@
 #include "bits.hh"
 #include "cpu.hh"
 #include "apic.hh"
+#include "pci.hh"
 #include "kstream.hh"
 #include <iterator>
 
@@ -74,7 +75,7 @@ public:
   }
 };
 
-static bool have_tables;
+static bool have_tables, have_acpi;
 static acpi_table<ACPI_TABLE_MADT> madt;
 
 void
@@ -225,4 +226,54 @@ initacpi(void)
   r = AcpiEvaluateObject(NULL, (char*)"\\_PIC", &arg_list, NULL);
   if (ACPI_FAILURE(r) && (r != AE_NOT_FOUND))
     panic("acpi: Error evaluating _PIC: %s", AcpiFormatException(r));
+
+  have_acpi = true;
+}
+
+static ACPI_STATUS
+pci_root_cb(ACPI_HANDLE object, UINT32 nesting_level,
+            void *context, void **return_value)
+{
+  auto scan = (int (*)(struct pci_bus *bus))(context);
+  struct pci_bus bus = {};
+
+  ACPI_STATUS r;
+  ACPI_OBJECT out;
+  ACPI_BUFFER outbuf{sizeof(out), &out};
+  r = AcpiEvaluateObject(object, (char*)"_BBN", nullptr, &outbuf);
+  if (ACPI_FAILURE(r) && (r != AE_NOT_FOUND))
+    panic("acpi: Error evaluating _BBN: %s", AcpiFormatException(r));
+  if (r == AE_OK) {
+    if (outbuf.Length != sizeof(out)) {
+      swarn.println("acpi: _BBN method returned void");
+      return AE_OK;
+    } else if (out.Type != ACPI_TYPE_INTEGER) {
+      swarn.println("acpi: _BBN method returned unexpected type");
+      return AE_OK;
+    } else {
+      bus.busno = out.Integer.Value;
+    }
+  }
+  bus.acpi_handle = object;
+
+  scan(&bus);
+  return AE_OK;
+}
+
+// Call scan for each of the PCI root buses.  Returns true if
+// enumeration via ACPI was possible, or false otherwise (meaning a
+// fallback mechanism should be used).
+bool
+acpi_pci_scan_roots(int (*scan)(struct pci_bus *bus))
+{
+  if (!have_acpi)
+    return false;
+
+  // See http://www.acpi.info/acpi_faq.htm for information on scanning
+  // multiple roots
+  verbose.println("acpi: Using ACPI for PCI root enumeration");
+
+  AcpiGetDevices((char*)"PNP0A03", pci_root_cb, (void*)scan, nullptr);
+
+  return true;
 }

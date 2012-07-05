@@ -21,6 +21,7 @@ struct pci_func {
 struct pci_bus {
   struct pci_func *parent_bridge;
   u32 busno;
+  void *acpi_handle;
 };
 
 int  pci_init(void);

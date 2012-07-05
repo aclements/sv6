@@ -47,6 +47,7 @@ class print_stream;
 
 // acpi.c
 bool            acpi_setup_ioapic(class ioapic *apic);
+bool            acpi_pci_scan_roots(int (*scan)(struct pci_bus *bus));
 
 // acpidbg.c
 typedef void *ACPI_HANDLE;
