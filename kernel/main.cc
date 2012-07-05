@@ -43,6 +43,7 @@ void initdistref(void);
 void initacpitables(void);
 void initcpus(void);
 void initlapic(void);
+void initacpi(void);
 void idleloop(void);
 
 #define IO_RTC  0x70
@@ -179,6 +180,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initfutex();
   initsamp();
   initlockstat();
+  initacpi();              // Requires initacpitables, initkalloc?
   initpci();
   initnet();
 

@@ -74,6 +74,7 @@ public:
   }
 };
 
+static bool have_tables;
 static acpi_table<ACPI_TABLE_MADT> madt;
 
 void
@@ -86,6 +87,8 @@ initacpitables(void)
   // boot.
   if (ACPI_FAILURE(r = AcpiInitializeTables(nullptr, 16, FALSE)))
     panic("acpi: AcpiInitializeTables failed: %s", AcpiFormatException(r));
+
+  have_tables = true;
 
   // Get the MADT
   ACPI_TABLE_HEADER *madtp;
@@ -190,4 +193,36 @@ acpi_setup_ioapic(ioapic *apic)
   }
 
   return haveioapic;
+}
+
+void
+initacpi(void)
+{
+  if (!have_tables)
+    return;
+
+  // Perform the ACPICA initialization sequence [ACPICA 4.2]
+  ACPI_STATUS r;
+
+  if (ACPI_FAILURE(r = AcpiInitializeSubsystem()))
+    panic("acpi: AcpiInitializeSubsystem failed: %s", AcpiFormatException(r));
+
+  if (ACPI_FAILURE(r = AcpiLoadTables()))
+    panic("acpi: AcpiLoadTables failed: %s", AcpiFormatException(r));
+
+  if (ACPI_FAILURE(r = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION)))
+    panic("acpi: AcpiEnableSubsystem failed: %s", AcpiFormatException(r));
+
+  // XXX Install OS handlers
+
+  if (ACPI_FAILURE(r = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION)))
+    panic("acpi: AcpiInitializeObjects failed: %s", AcpiFormatException(r));
+
+  // Inform ACPI that we're using IOAPIC mode [ACPI5.0 5.8.1]
+  union acpi_object args[1] = { { ACPI_TYPE_INTEGER } };
+  struct acpi_object_list arg_list = { NELEM(args), args };
+  args[0].Integer.Value = 1;    // APIC IRQ model
+  r = AcpiEvaluateObject(NULL, (char*)"\\_PIC", &arg_list, NULL);
+  if (ACPI_FAILURE(r) && (r != AE_NOT_FOUND))
+    panic("acpi: Error evaluating _PIC: %s", AcpiFormatException(r));
 }
