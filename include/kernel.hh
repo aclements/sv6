@@ -43,9 +43,23 @@ struct proc;
 struct vmap;
 struct pipe;
 struct work;
+class print_stream;
 
 // acpi.c
 bool            acpi_setup_ioapic(class ioapic *apic);
+
+// acpidbg.c
+typedef void *ACPI_HANDLE;
+struct sacpi_handle
+{
+  ACPI_HANDLE handle;
+};
+sacpi_handle    sacpi(ACPI_HANDLE handle);
+void            to_stream(print_stream *s, const sacpi_handle &o);
+void            to_stream(print_stream *s, const struct acpi_device_info &o);
+void            to_stream(print_stream *s, const struct acpi_pci_routing_table &o);
+void            to_stream(print_stream *s, const struct acpi_resource &r);
+void            to_stream(print_stream *s, const struct acpi_resource_source &r);
 
 // bio.c
 void            binit(void);
