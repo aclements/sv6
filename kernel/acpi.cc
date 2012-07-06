@@ -13,6 +13,7 @@ extern "C" {
 }
 
 static console_stream verbose(true);
+static console_stream verbose2(true);
 
 // ACPI table with a generic subtable layout.  This provides a
 // convenient iterator for traversing the subtables.
@@ -398,4 +399,81 @@ acpi_pci_resolve_handle(struct pci_bus *bus)
     bus->acpi_handle = acpi_pci_resolve_handle(bus->parent_bridge);
 
   return bus->acpi_handle;
+}
+
+// Resolve the pin of device on bus to an IRQ.  Pin should be an
+// 0-based ACPI-style pin number.
+static irq
+acpi_pci_resolve_pin_irq(struct pci_bus *bus, int device, int pin)
+{
+  if (bus->acpi_handle) {
+    // There's an ACPI object for this bus.  Does the bus have an
+    // interrupt routing table?
+    ACPI_STATUS r;
+    ACPI_BUFFER buf{ACPI_ALLOCATE_BUFFER};
+    if (ACPI_FAILURE(r = AcpiGetIrqRoutingTable(bus->acpi_handle, &buf)) &&
+        r != AE_NOT_FOUND)
+      panic("AcpiGetIrqRoutingTable failed: %s", AcpiFormatException(r));
+    if (r == AE_OK) {
+      // We have a routing table.  Find the entry for this device's
+      // pin.
+      acpi_deleter bufd(buf.Pointer);
+      verbose2.println("acpi: Found _PRT on ", sacpi(bus->acpi_handle));
+      // [ACPI5.0 6.2.12]
+      for (auto &entry : acpi_array<ACPI_PCI_ROUTING_TABLE>(buf)) {
+        if ((entry.Address >> 16) == device && entry.Pin == pin) {
+          // Found the entry
+          verbose2.println("acpi: Matching entry: ", entry);
+          if (!entry.Source[0]) {
+            // Hard-wired interrupt routing
+            irq res(irq::default_pci());
+            res.gsi = entry.SourceIndex;
+            return res;
+          }
+          // PCI interrupt link device
+          swarn.println("acpi: PCI interrupt link devices not implemented");
+          return irq();
+        }
+      }
+      swarn.println("acpi: PCI routing table entry missing");
+      return irq();
+    }
+  }
+
+  if (bus->parent_bridge) {
+    // Resolve the IRQ via the parent bus.  Since we're crossing a
+    // bridge, swizzle the pin number.  See
+    // http://people.freebsd.org/~jhb/papers/bsdcan/2007/article/node5.html
+    // and
+    // http://blogs.msdn.com/b/ntdebugging/archive/2011/09/01/determining-the-interrupt-line-for-a-particular-pci-e-slot.aspx
+    // XXX(austin) I have no idea if this is actually right
+    verbose2.println("acpi: Traversing bridge ", *bus->parent_bridge,
+                     " (new pin ", "ABCD"[(pin + device) % 4], ")");
+    return acpi_pci_resolve_pin_irq(bus->parent_bridge->bus,
+                                    bus->parent_bridge->dev,
+                                    (pin + device) % 4);
+  }
+
+  return irq();
+}
+
+// Resolve the IRQ of the given PCI function.  If necessary, this
+// configures and enables the appropriate PCI interrupt link device.
+// Returns irq() if the PCI function has no IRQ.
+irq
+acpi_pci_resolve_irq(struct pci_func *func)
+{
+  if (func->int_pin == 0)
+    // The function does not use a PCI interrupt line
+    return irq();
+  int acpi_pin = func->int_pin - 1;
+  verbose2.println("acpi: Resolving IRQ of ", *func, " pin ", "ABCD"[acpi_pin]);
+
+  // Resolve ACPI objects up to the root
+  acpi_pci_resolve_handle(func);
+
+  irq irq = acpi_pci_resolve_pin_irq(func->bus, func->dev, acpi_pin);
+  if (!irq.valid())
+    swarn.println("acpi: No interrupt routing found for PCI device ", *func);
+  return irq;
 }
