@@ -46,11 +46,13 @@ struct work;
 class print_stream;
 
 // acpi.c
+typedef void *ACPI_HANDLE;
 bool            acpi_setup_ioapic(class ioapic *apic);
 bool            acpi_pci_scan_roots(int (*scan)(struct pci_bus *bus));
+ACPI_HANDLE     acpi_pci_resolve_handle(struct pci_func *func);
+ACPI_HANDLE     acpi_pci_resolve_handle(struct pci_bus *bus);
 
 // acpidbg.c
-typedef void *ACPI_HANDLE;
 struct sacpi_handle
 {
   ACPI_HANDLE handle;

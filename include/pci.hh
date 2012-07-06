@@ -5,6 +5,7 @@ struct pci_bus;
 
 struct pci_func {
   struct pci_bus *bus;	// Primary bus for bridges
+  void *acpi_handle;
 
   u32 dev;
   u32 func;

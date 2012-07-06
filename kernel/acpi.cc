@@ -277,3 +277,52 @@ acpi_pci_scan_roots(int (*scan)(struct pci_bus *bus))
 
   return true;
 }
+
+// Find the ACPI handle (if any) associated with func.
+ACPI_HANDLE
+acpi_pci_resolve_handle(struct pci_func *func)
+{
+  ACPI_STATUS r;
+
+  if (!have_acpi || func->acpi_handle)
+    return func->acpi_handle;
+
+  // Get the parent object
+  ACPI_HANDLE parent = acpi_pci_resolve_handle(func->bus);
+  if (!parent)
+    return nullptr;
+
+  // Walk children of the bus, looking for func's address
+  ACPI_HANDLE child = nullptr;
+  ACPI_DEVICE_INFO *devinfo;
+  while ((r = AcpiGetNextObject(ACPI_TYPE_DEVICE, parent, child,
+                                &child)) == AE_OK) {
+    if (ACPI_FAILURE(r = AcpiGetObjectInfo(child, &devinfo)))
+      panic("AcpiGetObjectInfo failed: %s", AcpiFormatException(r));
+    if ((devinfo->Valid & ACPI_VALID_ADR) &&
+        ((devinfo->Address >> 16) == func->dev) &&
+        (((devinfo->Address & 0xFFFF) == func->func ||
+          (devinfo->Address & 0xFFFF) == 0xFFFF))) {
+      // XXX On QEMU, one device can have multiple ACPI objects.  I
+      // haven't seen this on real hardware, though.
+      verbose.println("acpi: PCI device ", *func,
+                      " has ACPI handle ", sacpi(child));
+      func->acpi_handle = child;
+    }
+    AcpiOsFree(devinfo);
+  }
+  if (r != AE_NOT_FOUND)
+    panic("AcpiGetNextObject failed: %s", AcpiFormatException(r));
+
+  return func->acpi_handle;
+}
+
+// Find the ACPI handle (if any) associated with bus.
+ACPI_HANDLE
+acpi_pci_resolve_handle(struct pci_bus *bus)
+{
+  if (!bus->acpi_handle && bus->parent_bridge)
+    bus->acpi_handle = acpi_pci_resolve_handle(bus->parent_bridge);
+
+  return bus->acpi_handle;
+}
