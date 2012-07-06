@@ -4,6 +4,7 @@
 #include "pci.hh"
 #include "pcireg.hh"
 #include "traps.h"
+#include "kstream.hh"
 
 extern int e1000attach(struct pci_func *pcif);
 extern int e1000eattach(struct pci_func *pcif);
@@ -69,6 +70,14 @@ pci_print_func(struct pci_func *f)
           PCI_VENDOR(f->dev_id), PCI_PRODUCT(f->dev_id),
           PCI_CLASS(f->dev_class), PCI_SUBCLASS(f->dev_class), classname,
           f->irq_line);
+}
+
+void
+to_stream(print_stream *s, const struct pci_func &f)
+{
+  s->print(sfmt(f.bus->busno).base(16).width(2).pad(), ':',
+           sfmt(f.dev).base(16).width(2).pad(), '.',
+           sfmt(f.func).base(16).width(2).pad());
 }
 
 static void
