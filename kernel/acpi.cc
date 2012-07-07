@@ -75,6 +75,79 @@ public:
   }
 };
 
+// ACPI array with generic variable-size elements.  Almost, but not
+// quite the same as a acpi_table.  Alas.
+template<typename T>
+class acpi_array
+{
+  T *first_;
+
+public:
+  constexpr acpi_array(T *first) : first_(first) { }
+  acpi_array(const ACPI_BUFFER &buf) : first_((T*)buf.Pointer) { }
+
+  class iterator
+  {
+    T *pos_;
+  public:
+    constexpr iterator(T *pos) : pos_(pos) { }
+    constexpr iterator() : pos_(nullptr) { }
+
+    T &operator*() const
+    {
+      return *pos_;
+    }
+
+    T *operator->() const
+    {
+      return pos_;
+    }
+
+    iterator &operator++()
+    {
+      pos_ = (T*)((char*)pos_ + pos_->Length);
+      return *this;
+    }
+
+    bool operator==(const iterator &o)
+    {
+      bool isend1 = !pos_ || pos_->Length == 0;
+      bool isend2 = !o.pos_ || o.pos_->Length == 0;
+      if (isend1 || isend2)
+        return isend1 && isend2;
+      return pos_ == o.pos_;
+    }
+
+    bool operator!=(const iterator &o)
+    {
+      return !(*this == o);
+    }
+  };
+
+  iterator begin() const
+  {
+    return iterator(first_);
+  }
+
+  iterator end() const
+  {
+    return iterator();
+  }
+};
+
+class acpi_deleter
+{
+  void *p_;
+
+public:
+  acpi_deleter(void *p) : p_(p) { }
+  ~acpi_deleter()
+  {
+    AcpiOsFree(p_);
+  }
+  acpi_deleter(acpi_deleter &&o) = delete;
+};
+
 static bool have_tables, have_acpi;
 static acpi_table<ACPI_TABLE_MADT> madt;
 
