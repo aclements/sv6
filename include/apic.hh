@@ -3,6 +3,9 @@
 #include "traps.h"
 #include "amd64.h"
 
+extern class abstract_lapic *lapic;
+extern class abstract_extpic *extpic;
+
 // Abstract base class for local APICs
 class abstract_lapic
 {
@@ -38,4 +41,89 @@ public:
   virtual void start_ap(struct cpu *c, u32 addr) = 0;
 };
 
-extern abstract_lapic *lapic;
+struct pci_func;
+struct irq;
+
+// Abstract base class for external programmable interrupt controllers
+// (the PIC responsible for routing hardware IRQs).  This could be a
+// dual 8259A PIC or a collection of I/O APICs.
+class abstract_extpic
+{
+public:
+  // Return the IRQ for a legacy ISA IRQ.  Does not unmask it.
+  virtual irq map_isa_irq(int isa_irq) = 0;
+
+  // Return the IRQ for a PCI function.  Does not unmask it, but does
+  // configure and enable any necessary PCI interrupt link devices to
+  // route the interrupt.
+  virtual irq map_pci_irq(struct pci_func *f) = 0;
+
+protected:
+  friend struct irq;
+  virtual void enable_irq(const struct irq &, bool enable) = 0;
+  virtual void eoi_irq(const struct irq &) = 0;
+};
+
+// Abstract base class for I/O APICs.
+class ioapic : public abstract_extpic
+{
+public:
+  // Register an IOAPIC with registers at physical address address and
+  // whose pin 0 corresponds to global system interrupt irq_base.
+  virtual void register_base(int irq_base, paddr address) = 0;
+
+  // Register an IRQ override that maps ISA IRQ isa_irq to global
+  // system interrupt override.irq with the polarity and triggering of
+  // override.  Ignores override.vector.
+  virtual void register_isa_irq_override(int isa_irq, irq override) = 0;
+
+  // Register a non-maskable interrupt source.  Ignores
+  // override.vector.
+  virtual void register_nmi(irq nmi) = 0;
+};
+
+struct irq
+{
+  int vector;                   // CPU interrupt vector
+  int gsi;                      // IRQ/ACPI GSI/virtual IOAPIC pin
+  bool active_low;              // active-high if false
+  bool level_triggered;         // edge-triggered if false
+
+  // Construct an invalid IRQ.  At least GSI must be set to make it
+  // valid.
+  constexpr irq()
+    : vector(-1), gsi(-1), active_low(false), level_triggered(false) { }
+
+private:
+  constexpr irq(int vector, int gsi, bool active_low, bool level_triggered)
+    : vector(vector), gsi(gsi), active_low(active_low),
+      level_triggered(level_triggered) { }
+
+public:
+  static constexpr struct irq default_isa()
+  {
+    return irq{-1, -1, false, false};
+  }
+
+  static constexpr struct irq default_pci()
+  {
+    return irq{-1, -1, true, true};
+  }
+
+  bool valid() const
+  {
+    return gsi != -1;
+  }
+
+  // Mask or unmask this IRQ
+  void enable(bool enable = true)
+  {
+    extpic->enable_irq(*this, enable);
+  }
+
+  // Acknowledge this IRQ
+  void eoi()
+  {
+    extpic->eoi_irq(*this);
+  }
+};

@@ -44,6 +44,9 @@ struct vmap;
 struct pipe;
 struct work;
 
+// acpi.c
+bool            acpi_setup_ioapic(class ioapic *apic);
+
 // bio.c
 void            binit(void);
 struct buf*     bread(u32, u64, int writer);
@@ -65,7 +68,7 @@ void            snprintf(char *buf, u32 n, const char *fmt, ...);
 void            printtrace(u64 rbp);
 
 // e1000.c
-extern int e1000irq;
+extern struct irq e1000irq;
 extern int e1000init;
 void            e1000intr(void);
 int             e1000tx(void *buf, u32 len);
@@ -116,9 +119,6 @@ void            iderw(struct buf*);
 // idle.cc
 struct proc *   idleproc(void);
 void            idlezombie(struct proc*);
-
-// ioapic.c
-void            ioapicenable(int irq, int cpu);
 
 // kalloc.c
 char*           kalloc(const char *name);

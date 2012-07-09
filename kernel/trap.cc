@@ -166,7 +166,7 @@ trap(struct trapframe *tf)
     sampconf();  
     break;
   default:
-    if (tf->trapno == T_IRQ0+e1000irq) {
+    if (tf->trapno == e1000irq.vector) {
       e1000intr();
       lapiceoi();
       piceoi();

@@ -5,6 +5,7 @@
 #include "kernel.hh"
 #include "amd64.h"
 #include "traps.h"
+#include "apic.hh"
 
 #define COM2    0x2f8
 #define COM1    0x3f8
@@ -155,6 +156,5 @@ inituartcons(void)
   // enable interrupts.
   inb(com+COM_IN_IIR);
   inb(com+COM_IN_RECEIVE);
-  picenable(irq_com);
-  ioapicenable(irq_com, 0);
+  extpic->map_isa_irq(irq_com).enable();
 }

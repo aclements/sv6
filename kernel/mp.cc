@@ -11,10 +11,12 @@ static console_stream verbose(true);
 abstract_lapic *lapic;
 struct cpu cpus[NCPU];
 int ncpu __mpalign__;
+abstract_extpic *extpic;
 
 bool initlapic_xapic(void);
 bool initlapic_x2apic(void);
 bool initcpus_acpi(void);
+bool initextpic_ioapic(void);
 
 class null_lapic : public abstract_lapic
 {
@@ -81,4 +83,17 @@ initcpus(void)
   verbose.println("mp: Initializing CPUs (uniprocessor mode)");
   cpus[0].id = 0;
   ncpu = 1;
+}
+
+void
+initextpic(void)
+{
+  if (initextpic_ioapic())
+    return;
+
+  verbose.println("mp: Falling back to legacy PIC mode");
+  // XXX(austin) This should provide an abstract_iopic for the legacy
+  // APIC.  Currently we initpic from cmain, which masks everything
+  // and leaves it that way, which is what we need for the IOAPIC.
+  panic("initiopic: Legacy PIC fallback not implemented");
 }

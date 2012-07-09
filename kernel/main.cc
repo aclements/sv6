@@ -11,7 +11,7 @@
 #include "apic.hh"
 
 void initpic(void);
-void initioapic(void);
+void initextpic(void);
 void inituart(void);
 void inituartcons(void);
 void initcga(void);
@@ -148,8 +148,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   initcpus();              // Requires initlapic, suggests initacpitables
 
   initpic();       // interrupt controller
-  initioapic();
-  inituartcons();          // Requires initpic, initioapic
+  initextpic();            // Requires initpic
+  inituartcons();          // Requires initiopic
   initcga();
 
   // Some global constructors require mycpu()->id (via myid()) which

@@ -4,12 +4,13 @@
 #include "pci.hh"
 #include "pcireg.hh"
 #include "spinlock.h"
+#include "apic.hh"
 #include "e1000reg.hh"
 
 #define TX_RING_SIZE 64
 #define RX_RING_SIZE 64
 
-int e1000irq;
+irq e1000irq;
 int e1000init;
 
 static struct e1000 {
@@ -308,13 +309,12 @@ e1000attach(struct pci_func *pcif)
   e1000.membase = pcif->reg_base[0];
   e1000.iobase = pcif->reg_base[2];
   e1000.pcidevid = PCI_PRODUCT(pcif->dev_id);
-  e1000irq = pcif->irq_line;
+  e1000irq = extpic->map_pci_irq(pcif);
 
 #if defined(HW_ben) || defined(HW_tom)
   // XXX(sbw) do something..
 #else
-  picenable(e1000irq);
-  ioapicenable(e1000irq, 0);
+  e1000irq.enable();
 #endif
 
   e1000reset();
