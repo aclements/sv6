@@ -17,7 +17,6 @@ void inituartcons(void);
 void initcga(void);
 void initconsole(void);
 void initpg(void);
-void initmp(void);
 void inittls(struct cpu *);
 void initnmi(void);
 void inittrap(void);
@@ -42,6 +41,7 @@ void initfutex(void);
 void initcmdline(void);
 void initdistref(void);
 void initacpitables(void);
+void initcpus(void);
 void idleloop(void);
 
 #define IO_RTC  0x70
@@ -143,12 +143,12 @@ cmain(u64 mbmagic, u64 mbaddr)
   inittls(&cpus[0]);       // thread local storage
 
   initacpitables();        // Requires initpg, inittls
+  initcpus();              // Suggests initacpitables
 
   initpic();       // interrupt controller
   initioapic();
   inituartcons();          // Requires initpic, initioapic
   initcga();
-  initmp();
 
   // Some global constructors require mycpu()->id (via myid()) which
   // we setup in inittls.  (Note that gcc 4.7 eliminated the .ctors
