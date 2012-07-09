@@ -15,6 +15,8 @@ extern "C" {
 static console_stream verbose(true);
 static console_stream verbose2(true);
 
+static bool pnp_irq_used[256];
+
 // ACPI table with a generic subtable layout.  This provides a
 // convenient iterator for traversing the subtables.
 template<typename Hdr>
@@ -301,6 +303,13 @@ initacpi(void)
   if (ACPI_FAILURE(r) && (r != AE_NOT_FOUND))
     panic("acpi: Error evaluating _PIC: %s", AcpiFormatException(r));
 
+  // Conservatively reserve all legacy IRQs.  This might cause us to
+  // not be able to configure a device.
+  for (int i = 0; i < 16; ++i)
+    pnp_irq_used[i] = true;
+  // Also reserve the spurious vector
+  pnp_irq_used[IRQ_SPURIOUS] = true;
+
   have_acpi = true;
 }
 
@@ -401,6 +410,132 @@ acpi_pci_resolve_handle(struct pci_bus *bus)
   return bus->acpi_handle;
 }
 
+static bool
+acpi_try_allocate_irq(int irq)
+{
+  if (pnp_irq_used[irq])
+    return false;
+  // XXX PCI interrupts can be shared (and apparently have to be on
+  // tom because they're oversubscribed to the links).
+  pnp_irq_used[irq] = true;
+  return true;
+}
+
+static irq
+acpi_resource_to_irq(const ACPI_RESOURCE &res)
+{
+  irq out;
+  switch (res.Type) {
+  case ACPI_RESOURCE_TYPE_IRQ:
+    out.gsi = res.Data.Irq.Interrupts[0];
+    out.active_low = (res.Data.Irq.Polarity == ACPI_ACTIVE_LOW);
+    out.level_triggered = (res.Data.Irq.Triggering == ACPI_LEVEL_SENSITIVE);
+    return out;
+  case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
+    out.gsi = res.Data.ExtendedIrq.Interrupts[0];
+    out.active_low = (res.Data.ExtendedIrq.Polarity == ACPI_ACTIVE_LOW);
+    out.level_triggered = (res.Data.ExtendedIrq.Triggering ==
+                           ACPI_LEVEL_SENSITIVE);
+    return out;
+  default:
+    panic("acpi: Not a resource type");
+  }
+}
+
+static irq
+acpi_pci_enable_link(const char *name)
+{
+  ACPI_STATUS r;
+
+  // Get link device
+  ACPI_HANDLE link;
+  if (ACPI_FAILURE(r = AcpiGetHandle(nullptr, (char*)name, &link)))
+    panic("acpi: AcpiGetHandle failed: %s", AcpiFormatException(r));
+
+  // What are it's current resource settings?  If it has an IRQ
+  // resource that isn't IRQ 0, then it's already been assigned
+  // resources and we're set.  Otherwise, remember where we found the
+  // IRQ resource so we can fill it in and set it.
+  ACPI_BUFFER crsbuf{ACPI_ALLOCATE_BUFFER};
+  if (ACPI_FAILURE(r = AcpiGetCurrentResources(link, &crsbuf)))
+    panic("acpi: AcpiGetCurrentResources failed: %s", AcpiFormatException(r));
+  acpi_deleter crsbufd(crsbuf.Pointer);
+  ACPI_RESOURCE *irqres = nullptr;
+  bool unknown_resource = false;
+  for (auto &res : acpi_array<ACPI_RESOURCE>(crsbuf)) {
+    switch (res.Type) {
+    case ACPI_RESOURCE_TYPE_START_DEPENDENT:
+    case ACPI_RESOURCE_TYPE_END_TAG:
+      // Do nothing
+      break;
+    case ACPI_RESOURCE_TYPE_IRQ:
+      if (res.Data.Irq.Interrupts[0] != 0)
+        return acpi_resource_to_irq(res);
+      irqres = &res;
+      break;
+    case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
+      if (res.Data.ExtendedIrq.Interrupts[0] != 0)
+        return acpi_resource_to_irq(res);
+      irqres = &res;
+      break;
+    default:
+      unknown_resource = true;
+    }
+  }
+  if (!irqres) {
+    swarn.println("acpi: PCI link ", name, " does not have an IRQ resource");
+    return irq();
+  }
+  if (unknown_resource) {
+    swarn.println("acpi: PCI link ", name, " has unexpected resources");
+    return irq();
+  }
+
+  // No current resource assignment.  Scan the possible resource
+  // settings.
+  ACPI_BUFFER prsbuf{ACPI_ALLOCATE_BUFFER};
+  if (ACPI_FAILURE(r = AcpiGetPossibleResources(link, &prsbuf)))
+    panic("acpi: AcpiGetPossibleResources failed: %s", AcpiFormatException(r));
+  verbose2.print("_PRS\n", shexdump(prsbuf.Pointer, prsbuf.Length, 0));
+  acpi_deleter prsbufd(prsbuf.Pointer);
+  int setirq = 0;
+  for (auto &res : acpi_array<ACPI_RESOURCE>(prsbuf)) {
+    verbose2.println(res);
+    switch (res.Type) {
+    case ACPI_RESOURCE_TYPE_IRQ:
+      for (int i = 0; i < res.Data.Irq.InterruptCount && !setirq; ++i)
+        if (acpi_try_allocate_irq(res.Data.Irq.Interrupts[i]))
+          setirq = res.Data.Irq.Interrupts[i];
+      break;
+    case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
+      for (int i = 0; i < res.Data.ExtendedIrq.InterruptCount && !setirq; ++i)
+        if (acpi_try_allocate_irq(res.Data.ExtendedIrq.Interrupts[i]))
+          setirq = res.Data.ExtendedIrq.Interrupts[i];
+      break;
+    }
+    if (setirq)
+      break;
+  }
+  if (!setirq) {
+    swarn.println("acpi: IRQ sharing not implemented");
+    return irq();
+  }
+
+  // Assign the chosen IRQ
+  switch (irqres->Type) {
+  case ACPI_RESOURCE_TYPE_IRQ:
+    irqres->Data.Irq.Interrupts[0] = setirq;
+    break;
+  case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
+    irqres->Data.ExtendedIrq.Interrupts[0] = setirq;
+    break;
+  }
+  verbose.println("acpi: Assigning IRQ ", setirq, " to ", name);
+  if ((ACPI_FAILURE(r = AcpiSetCurrentResources(link, &crsbuf))))
+    panic("acpi: AcpiSetCurrentResources failed: %s", AcpiFormatException(r));
+  return acpi_resource_to_irq(*irqres);
+}
+
 // Resolve the pin of device on bus to an IRQ.  Pin should be an
 // 0-based ACPI-style pin number.
 static irq
@@ -431,8 +566,8 @@ acpi_pci_resolve_pin_irq(struct pci_bus *bus, int device, int pin)
             return res;
           }
           // PCI interrupt link device
-          swarn.println("acpi: PCI interrupt link devices not implemented");
-          return irq();
+          verbose.println("acpi: Enabling PCI link ", entry.Source);
+          return acpi_pci_enable_link(entry.Source);
         }
       }
       swarn.println("acpi: PCI routing table entry missing");
