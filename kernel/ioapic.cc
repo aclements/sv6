@@ -156,11 +156,9 @@ ioapic_82093::map_isa_irq(int isa_irq)
 irq
 ioapic_82093::map_pci_irq(struct pci_func *f)
 {
-  // XXX(austin) Totally bogus, happens to work on QEMU and josmp
-  swarn.println("ioapic: Assuming IOAPIC routing of PCI IRQs matches legacy PIC");
-  irq res{};
-  res.vector = T_IRQ0 + f->irq_line;
-  res.gsi = f->irq_line;
+  irq res = acpi_pci_resolve_irq(f);
+  if (res.valid())
+    res.vector = T_IRQ0 + res.gsi;
   return res;
 }
 
