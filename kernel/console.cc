@@ -19,6 +19,7 @@
 #include "sperf.hh"
 #include "wq.hh"
 #include "major.h"
+#include "apic.hh"
 #include "kstream.hh"
 
 #define BACKSPACE 0x100
@@ -368,6 +369,5 @@ initconsole(void)
   devsw[MAJ_CONSOLE].write = consolewrite;
   devsw[MAJ_CONSOLE].read = consoleread;
 
-  picenable(IRQ_KBD);
-  ioapicenable(IRQ_KBD, 0);
+  extpic->map_isa_irq(IRQ_KBD).enable();
 }

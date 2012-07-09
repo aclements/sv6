@@ -80,6 +80,12 @@ do_pagefault(struct trapframe *tf)
   return -1;
 }
 
+static inline void
+lapiceoi()
+{
+  lapic->eoi();
+}
+
 void
 trap(struct trapframe *tf)
 {
@@ -160,7 +166,7 @@ trap(struct trapframe *tf)
     sampconf();  
     break;
   default:
-    if (tf->trapno == T_IRQ0+e1000irq) {
+    if (tf->trapno == e1000irq.vector) {
       e1000intr();
       lapiceoi();
       piceoi();

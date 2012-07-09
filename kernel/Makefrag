@@ -1,5 +1,7 @@
 OBJS = \
 	acpi.o \
+	acpidbg.o \
+	acpiosl.o \
 	async.o \
 	bio.o \
 	bootdata.o \
@@ -58,7 +60,8 @@ OBJS = \
 	incbin.o \
 	sysvectors.o \
 	pstream.o \
-	distref.o
+	distref.o \
+	semaphore.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
@@ -73,6 +76,9 @@ OBJS += $(shell $(CC) -print-file-name=libgcc_eh.a) \
 	$(shell $(CC) -print-file-name=libsupc++.a)
 endif
 
+# Include ACPICA fragment after we've set up the kernel object list,
+# but before the kernel build rules
+include kernel/Makefrag.acpica
 
 KERN = $(O)/kernel.elf
 ALL += $(KERN)

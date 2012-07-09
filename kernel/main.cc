@@ -11,14 +11,13 @@
 #include "apic.hh"
 
 void initpic(void);
-void initioapic(void);
+void initextpic(void);
 void inituart(void);
+void inituartcons(void);
 void initcga(void);
 void initconsole(void);
 void initpg(void);
-void initmp(void);
-void inittls(void);
-void initacpi(void);
+void inittls(struct cpu *);
 void initnmi(void);
 void inittrap(void);
 void initseg(void);
@@ -41,16 +40,22 @@ void initcpprt(void);
 void initfutex(void);
 void initcmdline(void);
 void initdistref(void);
+void initacpitables(void);
+void initcpus(void);
+void initlapic(void);
+void initacpi(void);
 void idleloop(void);
 
 #define IO_RTC  0x70
 
 static volatile int bstate;
+static cpuid_t bcpuid;
 
 void
 mpboot(void)
 {
-  inittls();
+  inittls(&cpus[bcpuid]);
+
   initseg();
   initlapic();
   initsamp();
@@ -120,7 +125,8 @@ bootothers(void)
     *(u32*)(code-64) = 0;
 
     bstate = 0;
-    lapicstartap(c->hwid, v2p(code));
+    bcpuid = c->id;
+    lapic->start_ap(c, v2p(code));
     // Wait for cpu to finish mpmain()
     while(bstate == 0)
       ;
@@ -133,14 +139,19 @@ cmain(u64 mbmagic, u64 mbaddr)
 {
   extern u64 cpuhz;
 
+  inituart();
   initpg();
   inithz();        // CPU Hz, microdelay
+  inittls(&cpus[0]);       // thread local storage
+
+  initacpitables();        // Requires initpg, inittls
+  initlapic();             // Requires initpg
+  initcpus();              // Requires initlapic, suggests initacpitables
+
   initpic();       // interrupt controller
-  initioapic();
-  inituart();
+  initextpic();            // Requires initpic
+  inituartcons();          // Requires initiopic
   initcga();
-  initmp();
-  inittls();       // thread local storage
 
   // Some global constructors require mycpu()->id (via myid()) which
   // we setup in inittls.  (Note that gcc 4.7 eliminated the .ctors
@@ -151,11 +162,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
       (*__init_array_start[i])(0, nullptr, nullptr);
 
-  initacpi();
-
   initseg();
   inittrap();
-  initlapic();
   initcmdline();
   initkalloc(mbaddr);
   initwq();        // (after kalloc)
@@ -172,7 +180,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   initfutex();
   initsamp();
   initlockstat();
-  initpci();
+  initacpi();              // Requires initacpitables, initkalloc?
+  initpci();               // Suggests initacpi
   initnet();
 
   if (VERBOSE)

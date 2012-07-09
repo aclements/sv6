@@ -212,18 +212,11 @@ freevm(pgmap *pml4)
 // Set up CPU's kernel segment descriptors.
 // Run once at boot time on each CPU.
 void
-inittls(void)
+inittls(struct cpu *c)
 {
-  struct cpu *c;
-  cpuid_t id = -1;
-
-  for (id = 0; id < NCPU; id++)
-    if (cpus[id].hwid.num == lapicid().num)
-      break;
-  assert(id != -1);
+  cpuid_t id = c - cpus;
 
   // Initialize cpu-local storage.
-  c = &cpus[id];
   writegs(KDSEG);
   writemsr(MSR_GS_BASE, (u64)&c->cpu);
   writemsr(MSR_GS_KERNBASE, (u64)&c->cpu);
@@ -251,7 +244,7 @@ tlbflush(u64 myreq)
 
   for (int i = 0; i < ncpu; i++)
     if (cpus[i].tlbflush_done < myreq)
-      lapic_tlbflush(cpus[i].hwid);
+      lapic->send_tlbflush(&cpus[i]);
 
   for (int i = 0; i < ncpu; i++)
     while (cpus[i].tlbflush_done < myreq)

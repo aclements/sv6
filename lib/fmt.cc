@@ -11,13 +11,15 @@ extern "C" unsigned int strlen(const char*);
 //
 static void
 printnum (void (*putch) (int, void *), void *putdat,
-	  unsigned long long num, unsigned base, int width, int padc)
+	  unsigned long long num, unsigned base, int width, int padc,
+          bool upper)
 {
   // recursion a bad idea here
   char buf[68], *x;
+  const char *digits = upper ? "0123456789ABCDEF" : "0123456789abcdef";
 
   for (x = buf; num; num /= base)
-    *x++ = "0123456789abcdef"[num % base];
+    *x++ = digits[num % base];
   if (x == buf)
     *x++ = '0';
 
@@ -82,6 +84,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat,
   unsigned long long num;
   int base, lflag, width, precision, altflag;
   char padc;
+  bool upper;
 
   while (1) {
     while ((ch = *(unsigned char *) fmt++) != '%') {
@@ -96,6 +99,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat,
     precision = -1;
     lflag = 0;
     altflag = 0;
+    upper = false;
   reswitch:
     switch (ch = *(unsigned char *) fmt++) {
 
@@ -222,6 +226,8 @@ vprintfmt(void (*putch)(int, void*), void *putdat,
       goto number;
 
       // (unsigned) hexadecimal
+    case 'X':
+      upper = true;
     case 'x':
       num = getuint (ap, lflag);
       base = 16;
@@ -230,7 +236,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat,
         putch ('x', putdat);
       }
     number:
-      printnum (putch, putdat, num, base, MAX(width, 0), padc);
+      printnum (putch, putdat, num, base, MAX(width, 0), padc, upper);
       break;
 
       // unrecognized escape sequence - just print it literally

@@ -4,6 +4,9 @@
 #include "pci.hh"
 #include "pcireg.hh"
 #include "traps.h"
+#include "kstream.hh"
+
+static console_stream verbose(true);
 
 extern int e1000attach(struct pci_func *pcif);
 extern int e1000eattach(struct pci_func *pcif);
@@ -64,24 +67,33 @@ pci_print_func(struct pci_func *f)
   if (PCI_CLASS(f->dev_class) < sizeof(pci_class) / sizeof(pci_class[0]))
     classname = pci_class[PCI_CLASS(f->dev_class)];
 
-  cprintf("PCI: %x:%x.%d: %x:%x: class: %x.%x (%s) irq: %d\n",
+  cprintf("PCI: %x:%x.%d: %x:%x: class: %x.%x (%s) irq: %d int: %c\n",
           f->bus->busno, f->dev, f->func,
           PCI_VENDOR(f->dev_id), PCI_PRODUCT(f->dev_id),
           PCI_CLASS(f->dev_class), PCI_SUBCLASS(f->dev_class), classname,
-          f->irq_line);
+          f->irq_line, "-ABCD"[f->int_pin]);
+}
+
+void
+to_stream(print_stream *s, const struct pci_func &f)
+{
+  s->print(sfmt(f.bus->busno).base(16).width(2).pad(), ':',
+           sfmt(f.dev).base(16).width(2).pad(), '.',
+           sfmt(f.func).base(16).width(2).pad());
 }
 
 static void
-pci_conf1_set_addr(u32 bus,
+pci_conf1_set_addr(u32 seg,
+                   u32 bus,
 		   u32 dev,
 		   u32 func,
 		   u32 offset)
 {
-  if (!(bus < 256 &&
+  if (!(seg == 0 &&
+        bus < 256 &&
         dev < 32 &&
         func < 8 &&
-        offset < 256 &&
-        (offset&0x3) == 0))
+        offset < 256))
     panic("pci_conf1_set_addr");
   
   u32 v = (1 << 31) |		// config-space
@@ -89,18 +101,50 @@ pci_conf1_set_addr(u32 bus,
   outl(pci_conf1_addr_ioport, v);
 }
 
+u32
+pci_conf_read(u32 seg, u32 bus, u32 dev, u32 func, u32 offset, int width)
+{
+  pci_conf1_set_addr(seg, bus, dev, func, offset);
+  switch (width) {
+  case 8:
+    return inb(pci_conf1_data_ioport + (offset & 3));
+  case 16:
+    return inw(pci_conf1_data_ioport + (offset & 2));
+  case 32:
+    return inl(pci_conf1_data_ioport);
+  }
+  panic("pci_conf_read: bad width %d", width);
+}
+
 static u32
 pci_conf_read(struct pci_func *f, u32 off)
 {
-  pci_conf1_set_addr(f->bus->busno, f->dev, f->func, off);
-  return inl(pci_conf1_data_ioport);
+  return pci_conf_read(0, f->bus->busno, f->dev, f->func, off, 32);
+}
+
+void
+pci_conf_write(u32 seg, u32 bus, u32 dev, u32 func, u32 offset,
+               u32 val, int width)
+{
+  pci_conf1_set_addr(seg, bus, dev, func, offset);
+  switch (width) {
+  case 8:
+    outb(pci_conf1_data_ioport, val + (offset & 3));
+    return;
+  case 16:
+    outl(pci_conf1_data_ioport, val + (offset & 2));
+    return;
+  case 32:
+    outw(pci_conf1_data_ioport, val);
+    return;
+  }
+  panic("pci_conf_write: bad width %d", width);
 }
 
 static void
 pci_conf_write(struct pci_func *f, u32 off, u32 v)
 {
-  pci_conf1_set_addr(f->bus->busno, f->dev, f->func, off);
-  outl(pci_conf1_data_ioport, v);
+  pci_conf_write(0, f->bus->busno, f->dev, f->func, off, v, 32);
 }
 
 static int __attribute__((warn_unused_result))
@@ -201,6 +245,8 @@ pci_msi_enable(struct pci_func *f, u8 irqnum)
 static int
 pci_scan_bus(struct pci_bus *bus)
 {
+  verbose.println("pci: Scanning bus ", shex(bus->busno));
+
   int totaldev = 0;
   struct pci_func df;
   memset(&df, 0, sizeof(df));
@@ -224,6 +270,7 @@ pci_scan_bus(struct pci_bus *bus)
       
       u32 intr = pci_conf_read(&af, PCI_INTERRUPT_REG);
       af.irq_line = PCI_INTERRUPT_LINE(intr);
+      af.int_pin = PCI_INTERRUPT_PIN(intr);
 
       u32 cmd_status = pci_conf_read(&af, PCI_COMMAND_STATUS_REG);
       if (cmd_status & PCI_STATUS_CAPLIST_SUPPORT)
@@ -321,8 +368,11 @@ pci_func_enable(struct pci_func *f)
 void
 initpci(void)
 {
-  static struct pci_bus root_bus;
-  memset(&root_bus, 0, sizeof(root_bus));
+  if (!acpi_pci_scan_roots(pci_scan_bus)) {
+    // Assume a single root bus
+    static struct pci_bus root_bus;
+    memset(&root_bus, 0, sizeof(root_bus));
 
-  pci_scan_bus(&root_bus);
+    pci_scan_bus(&root_bus);
+  }
 }

@@ -142,7 +142,7 @@ initidle(void)
   if (!p)
     panic("initidle proc::alloc");
 
-  if (myid() == mpbcpu()) {
+  if (myid() == 0) {
     u32 eax, ebx, ecx;
     cpuid(CPUID_FEATURES, nullptr, nullptr, &ecx, nullptr);
     if (ecx & FEATURE_ECX_MWAIT) {

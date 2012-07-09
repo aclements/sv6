@@ -1,191 +1,614 @@
-// http://www.acpi.info/spec.htm
-
 #include "types.h"
 #include "amd64.h"
 #include "kernel.hh"
+#include "bits.hh"
 #include "cpu.hh"
 #include "apic.hh"
+#include "pci.hh"
+#include "kstream.hh"
+#include <iterator>
 
-struct rsdp {
-  u8 signature[8];
-  u8 checksum;
-  u8 oemid[6];
-  u8 revision;
-  u32 rsdtaddr;
-  u32 length;
-  u64 xsdtaddr;
-  u8 extchecksum;
-  u8 reserved[3];
-};
-
-struct header {
-  u8 signature[4];
-  u32 length;
-  u8 revision;
-  u8 checksum;
-  u8 oemid[6];
-  u8 oemtableid[8];
-  u32 oemrevision;
-  u32 creatorid;
-  u32 creatorrevision;
-};
-
-struct rsdt {
-  struct header hdr;
-  u32 entry[];
-};
-
-struct xsdt {
-  struct header hdr;
-  u64 entry[];
-} __attribute__((packed));
-
-struct madt {
-  struct header hdr;
-  u32 localaddr;
-  u32 flags;
-  u8 entry[];
-};
-
-struct madt_apic {
-  u8 type;
-  u8 length;
-  u8 procid;
-  u8 apicid;
-  u32 flags;
-} __attribute__((packed));
-
-struct madt_x2apic {
-  u8 type;
-  u8 length;
-  u8 reserved[2];
-  u32 apicid;
-  u32 flags;
-  u32 procuid;
-} __attribute__((packed));
-
-#define CPU_ENABLED 0x1
-
-static u8
-sum(u8 *a, u32 length)
-{
-    u8 s = 0;
-    for (u32 i = 0; i < length; i++)
-	s += a[i];
-    return s;
+extern "C" {
+#include "acpi.h"
 }
 
-static struct rsdp *
-rsdp_search1(paddr pa, int len)
+static console_stream verbose(true);
+static console_stream verbose2(true);
+
+static bool pnp_irq_used[256];
+
+// ACPI table with a generic subtable layout.  This provides a
+// convenient iterator for traversing the subtables.
+template<typename Hdr>
+class acpi_table
 {
-    u8 *start = (u8 *)p2v(pa);
-    for (u8 *p = start; p < (start + len); p += 16) {
-	if ((memcmp(p, "RSD PTR ", 8) == 0) && (sum(p, 20) == 0))
-	    return (struct rsdp *)p;
+  Hdr *header_;
+
+public:
+  constexpr acpi_table() : header_(nullptr) { }
+  constexpr acpi_table(Hdr *header) : header_(header) { }
+  acpi_table(ACPI_TABLE_HEADER *header) : header_((Hdr*)header) { }
+
+  Hdr *operator->() const
+  {
+    return header_;
+  }
+
+  Hdr *get() const
+  {
+    return header_;
+  }
+
+  class iterator
+  {
+    void *pos_;
+  public:
+    constexpr iterator(void *pos) : pos_(pos) { }
+
+    ACPI_SUBTABLE_HEADER &operator*() const
+    {
+      return *(ACPI_SUBTABLE_HEADER*)pos_;
     }
-    return 0;
+
+    ACPI_SUBTABLE_HEADER *operator->() const
+    {
+      return (ACPI_SUBTABLE_HEADER*)pos_;
+    }
+
+    iterator &operator++()
+    {
+      pos_ = (char*)pos_ + ((ACPI_SUBTABLE_HEADER*)pos_)->Length;
+      return *this;
+    }
+
+    bool operator!=(const iterator &o)
+    {
+      return pos_ != o.pos_;
+    }
+  };
+
+  iterator begin() const
+  {
+    return iterator(header_ + 1);
+  }
+
+  iterator end() const
+  {
+    return iterator((char*)header_ + header_->Header.Length);
+  }
+};
+
+// ACPI array with generic variable-size elements.  Almost, but not
+// quite the same as a acpi_table.  Alas.
+template<typename T>
+class acpi_array
+{
+  T *first_;
+
+public:
+  constexpr acpi_array(T *first) : first_(first) { }
+  acpi_array(const ACPI_BUFFER &buf) : first_((T*)buf.Pointer) { }
+
+  class iterator
+  {
+    T *pos_;
+  public:
+    constexpr iterator(T *pos) : pos_(pos) { }
+    constexpr iterator() : pos_(nullptr) { }
+
+    T &operator*() const
+    {
+      return *pos_;
+    }
+
+    T *operator->() const
+    {
+      return pos_;
+    }
+
+    iterator &operator++()
+    {
+      pos_ = (T*)((char*)pos_ + pos_->Length);
+      return *this;
+    }
+
+    bool operator==(const iterator &o)
+    {
+      bool isend1 = !pos_ || pos_->Length == 0;
+      bool isend2 = !o.pos_ || o.pos_->Length == 0;
+      if (isend1 || isend2)
+        return isend1 && isend2;
+      return pos_ == o.pos_;
+    }
+
+    bool operator!=(const iterator &o)
+    {
+      return !(*this == o);
+    }
+  };
+
+  iterator begin() const
+  {
+    return iterator(first_);
+  }
+
+  iterator end() const
+  {
+    return iterator();
+  }
+};
+
+class acpi_deleter
+{
+  void *p_;
+
+public:
+  acpi_deleter(void *p) : p_(p) { }
+  ~acpi_deleter()
+  {
+    AcpiOsFree(p_);
+  }
+  acpi_deleter(acpi_deleter &&o) = delete;
+};
+
+static bool have_tables, have_acpi;
+static acpi_table<ACPI_TABLE_MADT> madt;
+
+void
+initacpitables(void)
+{
+  ACPI_STATUS r;
+
+  // ACPICA's table manager can be initialized independently of the
+  // rest of ACPICA precisely so we can use these tables during early
+  // boot.
+  if (ACPI_FAILURE(r = AcpiInitializeTables(nullptr, 16, FALSE)))
+    panic("acpi: AcpiInitializeTables failed: %s", AcpiFormatException(r));
+
+  have_tables = true;
+
+  // Get the MADT
+  ACPI_TABLE_HEADER *madtp;
+  r = AcpiGetTable((char*)ACPI_SIG_MADT, 0, &madtp);
+  if (ACPI_FAILURE(r) && r != AE_NOT_FOUND)
+    panic("acpi: AcpiGetTable failed: %s", AcpiFormatException(r));
+  if (r == AE_OK)
+    madt = acpi_table<ACPI_TABLE_MADT>(madtp);
 }
 
-static struct rsdp *
-rsdp_search(void)
+bool
+initcpus_acpi(void)
 {
-    struct rsdp *ret;
-    u8 *bda;
-    paddr pa;
-    
-    bda = (u8 *)p2v(0x400);
-    if ((pa = ((bda[0x0F] << 8) | bda[0x0E]) << 4)) {
-	if ((ret = rsdp_search1(pa, 1024)))
-	    return ret;
-    } 
-    return rsdp_search1(0xE0000, 0x20000);
+  if (!madt.get())
+    return false;
+
+  verbose.println("acpi: Initializing CPUs");
+
+  // Reserve CPU 0 for the BSP, since we're already committed to that
+  hwid_t my_apicid = lapic->id();
+  ncpu = 1;
+
+  // Create CPUs
+  bool found_bsp = false;
+  for (auto &sub : madt) {
+    uint32_t lapicid;
+    if (sub.Type == ACPI_MADT_TYPE_LOCAL_APIC) {
+      auto &lapic = *(ACPI_MADT_LOCAL_APIC*)&sub;
+      if (!(lapic.LapicFlags & ACPI_MADT_ENABLED))
+        continue;
+      lapicid = lapic.Id;
+    } else if (sub.Type == ACPI_MADT_TYPE_LOCAL_X2APIC) {
+      auto &lapic = *(ACPI_MADT_LOCAL_X2APIC*)&sub;
+      if (!(lapic.LapicFlags & ACPI_MADT_ENABLED))
+        continue;
+      lapicid = lapic.LocalApicId;
+    } else {
+      continue;
+    }
+
+    struct cpu *c;
+    if (lapicid == my_apicid.num) {
+      c = &cpus[0];
+      found_bsp = true;
+    } else {
+      if (ncpu == NCPU)
+        panic("initcpus_acpi: too many CPUs");
+      c = &cpus[ncpu++];
+    }
+    c->id = c - cpus;
+    c->hwid = HWID(lapicid);
+    verbose.println("acpi: CPU ", c->id, " APICID ", c->hwid.num);
+  }
+  assert(found_bsp);
+
+  return true;
 }
 
 static void
-scan_madt(struct madt* madt)
+decode_mps_inti_flags(uint8_t bus, uint32_t intiflags, irq *out)
 {
-  struct madt_x2apic* mx2;
-  struct madt_apic* ma;
-  u8* type;
-  u8* end;
-  u32 c;
+  int polarity = intiflags & ACPI_MADT_POLARITY_MASK;
+  out->active_low = (polarity == ACPI_MADT_POLARITY_ACTIVE_LOW);
+  if (bus != 0 && polarity == ACPI_MADT_POLARITY_CONFORMS)
+    panic("decode_mps_inti_flags: Unknown bus %d", bus);
+  int trigger = intiflags & ACPI_MADT_TRIGGER_MASK;
+  out->level_triggered = (trigger == ACPI_MADT_TRIGGER_LEVEL);
+  if (bus != 0 && trigger == ACPI_MADT_TRIGGER_CONFORMS)
+    panic("decode_mps_inti_flags: Unknown bus %d", bus);
+}
 
-  end = ((u8*)madt) + madt->hdr.length;
-  type = ((u8*)madt) + sizeof(*madt);
-  c = 0 == myid() ? 1 : 0;
+bool
+acpi_setup_ioapic(ioapic *apic)
+{
+  if (!madt.get())
+    return false;
 
-  while (type < end) {
-    s64 id = -1;
+  verbose.println("acpi: Initializing IOAPICs");
 
-    switch (type[0]) {
-    case 0: // Processor Local APIC
-      ma = (struct madt_apic*) type;
-      if (ma->flags & CPU_ENABLED)
-        id = ma->apicid;
-      break;
-    case 9: // Processor Local x2APIC
-      mx2 = (struct madt_x2apic*) type;
-      if (mx2->flags & CPU_ENABLED)
-        id = mx2->apicid;
-      break;
+  bool haveioapic = false;
+  for (auto &sub : madt) {
+    if (sub.Type == ACPI_MADT_TYPE_IO_APIC) {
+      // [ACPI5.0 5.2.12.3]
+      auto &ioapic = *(ACPI_MADT_IO_APIC*)&sub;
+      apic->register_base(ioapic.GlobalIrqBase, ioapic.Address);
+      haveioapic = true;
+    } else if (sub.Type == ACPI_MADT_TYPE_INTERRUPT_OVERRIDE) {
+      // [ACPI5.0 5.2.12.5]
+      auto &intov = *(ACPI_MADT_INTERRUPT_OVERRIDE*)&sub;
+      irq gsi;
+      gsi.gsi = intov.GlobalIrq;
+      decode_mps_inti_flags(intov.Bus, intov.IntiFlags, &gsi);
+      apic->register_isa_irq_override(intov.SourceIrq, gsi);
+    } else if (sub.Type == ACPI_MADT_TYPE_NMI_SOURCE) {
+      // [ACPI5.0 5.2.12.6]
+      auto &nmisrc = *(ACPI_MADT_NMI_SOURCE*)&sub;
+      irq nmi;
+      nmi.gsi = nmisrc.GlobalIrq;
+      decode_mps_inti_flags(-1, nmisrc.IntiFlags, &nmi);
+      apic->register_nmi(nmi);
     }
-
-    if (id != -1 && id != lapicid().num) {
-      assert(c < NCPU);
-      if (VERBOSE)
-        cprintf("%u from %u to %ld\n", c, cpus[c].hwid.num, id);
-      cpus[c].hwid.num = id;
-      c = c+1 == myid() ? c+2 : c+1;
-    }
-
-    type = type + type[1];
   }
 
+  return haveioapic;
 }
 
 void
 initacpi(void)
 {
-  struct rsdp* rsdp = rsdp_search();
-  struct madt* madt = nullptr;
-    
-  if (!rsdp)
+  if (!have_tables)
     return;
 
-  if (rsdp->xsdtaddr) {
-    struct xsdt* xsdt = (struct xsdt*) p2v(rsdp->xsdtaddr);
-    if (sum((u8 *)xsdt, xsdt->hdr.length)) {
-      cprintf("initacpi: bad xsdt checksum\n");
-      return;
-    }
-    
-    u32 n = xsdt->hdr.length > sizeof(*xsdt) ? 
-      (xsdt->hdr.length - sizeof(*xsdt)) / 8 : 0;
-    for (u32 i = 0; i < n; i++) {
-      struct header* h = (struct header*) p2v(xsdt->entry[i]);
-      if (memcmp(h->signature, "APIC", 4) == 0) {
-        madt = (struct madt*) h;
-        break;
-      }
-    }
-  } else {
-    struct rsdt* rsdt = (struct rsdt*) p2v(rsdp->rsdtaddr);
-    if (sum((u8 *)rsdt, rsdt->hdr.length)) {
-      cprintf("initacpi: bad rsdt checksum\n");
-      return;
-    }
-    
-    u32 n = rsdt->hdr.length > sizeof(*rsdt) ? 
-      (rsdt->hdr.length - sizeof(*rsdt)) / 8 : 0;
-    for (u32 i = 0; i < n; i++) {
-      struct header* h = (struct header*) p2v(rsdt->entry[i]);
-      if (memcmp(h->signature, "APIC", 4) == 0) {
-        madt = (struct madt*) h;
-        break;
-      }
+  // Perform the ACPICA initialization sequence [ACPICA 4.2]
+  ACPI_STATUS r;
+
+  if (ACPI_FAILURE(r = AcpiInitializeSubsystem()))
+    panic("acpi: AcpiInitializeSubsystem failed: %s", AcpiFormatException(r));
+
+  if (ACPI_FAILURE(r = AcpiLoadTables()))
+    panic("acpi: AcpiLoadTables failed: %s", AcpiFormatException(r));
+
+  if (ACPI_FAILURE(r = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION)))
+    panic("acpi: AcpiEnableSubsystem failed: %s", AcpiFormatException(r));
+
+  // XXX Install OS handlers
+
+  if (ACPI_FAILURE(r = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION)))
+    panic("acpi: AcpiInitializeObjects failed: %s", AcpiFormatException(r));
+
+  // Inform ACPI that we're using IOAPIC mode [ACPI5.0 5.8.1]
+  union acpi_object args[1] = { { ACPI_TYPE_INTEGER } };
+  struct acpi_object_list arg_list = { NELEM(args), args };
+  args[0].Integer.Value = 1;    // APIC IRQ model
+  r = AcpiEvaluateObject(NULL, (char*)"\\_PIC", &arg_list, NULL);
+  if (ACPI_FAILURE(r) && (r != AE_NOT_FOUND))
+    panic("acpi: Error evaluating _PIC: %s", AcpiFormatException(r));
+
+  // Conservatively reserve all legacy IRQs.  This might cause us to
+  // not be able to configure a device.
+  for (int i = 0; i < 16; ++i)
+    pnp_irq_used[i] = true;
+  // Also reserve the spurious vector
+  pnp_irq_used[IRQ_SPURIOUS] = true;
+
+  have_acpi = true;
+}
+
+static ACPI_STATUS
+pci_root_cb(ACPI_HANDLE object, UINT32 nesting_level,
+            void *context, void **return_value)
+{
+  auto scan = (int (*)(struct pci_bus *bus))(context);
+  struct pci_bus bus = {};
+
+  ACPI_STATUS r;
+  ACPI_OBJECT out;
+  ACPI_BUFFER outbuf{sizeof(out), &out};
+  r = AcpiEvaluateObject(object, (char*)"_BBN", nullptr, &outbuf);
+  if (ACPI_FAILURE(r) && (r != AE_NOT_FOUND))
+    panic("acpi: Error evaluating _BBN: %s", AcpiFormatException(r));
+  if (r == AE_OK) {
+    if (outbuf.Length != sizeof(out)) {
+      swarn.println("acpi: _BBN method returned void");
+      return AE_OK;
+    } else if (out.Type != ACPI_TYPE_INTEGER) {
+      swarn.println("acpi: _BBN method returned unexpected type");
+      return AE_OK;
+    } else {
+      bus.busno = out.Integer.Value;
     }
   }
-  
-  if (madt != nullptr)
-    scan_madt(madt);
+  bus.acpi_handle = object;
+
+  scan(&bus);
+  return AE_OK;
+}
+
+// Call scan for each of the PCI root buses.  Returns true if
+// enumeration via ACPI was possible, or false otherwise (meaning a
+// fallback mechanism should be used).
+bool
+acpi_pci_scan_roots(int (*scan)(struct pci_bus *bus))
+{
+  if (!have_acpi)
+    return false;
+
+  // See http://www.acpi.info/acpi_faq.htm for information on scanning
+  // multiple roots
+  verbose.println("acpi: Using ACPI for PCI root enumeration");
+
+  AcpiGetDevices((char*)"PNP0A03", pci_root_cb, (void*)scan, nullptr);
+
+  return true;
+}
+
+// Find the ACPI handle (if any) associated with func.
+ACPI_HANDLE
+acpi_pci_resolve_handle(struct pci_func *func)
+{
+  ACPI_STATUS r;
+
+  if (!have_acpi || func->acpi_handle)
+    return func->acpi_handle;
+
+  // Get the parent object
+  ACPI_HANDLE parent = acpi_pci_resolve_handle(func->bus);
+  if (!parent)
+    return nullptr;
+
+  // Walk children of the bus, looking for func's address
+  ACPI_HANDLE child = nullptr;
+  ACPI_DEVICE_INFO *devinfo;
+  while ((r = AcpiGetNextObject(ACPI_TYPE_DEVICE, parent, child,
+                                &child)) == AE_OK) {
+    if (ACPI_FAILURE(r = AcpiGetObjectInfo(child, &devinfo)))
+      panic("AcpiGetObjectInfo failed: %s", AcpiFormatException(r));
+    if ((devinfo->Valid & ACPI_VALID_ADR) &&
+        ((devinfo->Address >> 16) == func->dev) &&
+        (((devinfo->Address & 0xFFFF) == func->func ||
+          (devinfo->Address & 0xFFFF) == 0xFFFF))) {
+      // XXX On QEMU, one device can have multiple ACPI objects.  I
+      // haven't seen this on real hardware, though.
+      verbose.println("acpi: PCI device ", *func,
+                      " has ACPI handle ", sacpi(child));
+      func->acpi_handle = child;
+    }
+    AcpiOsFree(devinfo);
+  }
+  if (r != AE_NOT_FOUND)
+    panic("AcpiGetNextObject failed: %s", AcpiFormatException(r));
+
+  return func->acpi_handle;
+}
+
+// Find the ACPI handle (if any) associated with bus.
+ACPI_HANDLE
+acpi_pci_resolve_handle(struct pci_bus *bus)
+{
+  if (!bus->acpi_handle && bus->parent_bridge)
+    bus->acpi_handle = acpi_pci_resolve_handle(bus->parent_bridge);
+
+  return bus->acpi_handle;
+}
+
+static bool
+acpi_try_allocate_irq(int irq)
+{
+  if (pnp_irq_used[irq])
+    return false;
+  // XXX PCI interrupts can be shared (and apparently have to be on
+  // tom because they're oversubscribed to the links).
+  pnp_irq_used[irq] = true;
+  return true;
+}
+
+static irq
+acpi_resource_to_irq(const ACPI_RESOURCE &res)
+{
+  irq out;
+  switch (res.Type) {
+  case ACPI_RESOURCE_TYPE_IRQ:
+    out.gsi = res.Data.Irq.Interrupts[0];
+    out.active_low = (res.Data.Irq.Polarity == ACPI_ACTIVE_LOW);
+    out.level_triggered = (res.Data.Irq.Triggering == ACPI_LEVEL_SENSITIVE);
+    return out;
+  case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
+    out.gsi = res.Data.ExtendedIrq.Interrupts[0];
+    out.active_low = (res.Data.ExtendedIrq.Polarity == ACPI_ACTIVE_LOW);
+    out.level_triggered = (res.Data.ExtendedIrq.Triggering ==
+                           ACPI_LEVEL_SENSITIVE);
+    return out;
+  default:
+    panic("acpi: Not a resource type");
+  }
+}
+
+static irq
+acpi_pci_enable_link(const char *name)
+{
+  ACPI_STATUS r;
+
+  // Get link device
+  ACPI_HANDLE link;
+  if (ACPI_FAILURE(r = AcpiGetHandle(nullptr, (char*)name, &link)))
+    panic("acpi: AcpiGetHandle failed: %s", AcpiFormatException(r));
+
+  // What are it's current resource settings?  If it has an IRQ
+  // resource that isn't IRQ 0, then it's already been assigned
+  // resources and we're set.  Otherwise, remember where we found the
+  // IRQ resource so we can fill it in and set it.
+  ACPI_BUFFER crsbuf{ACPI_ALLOCATE_BUFFER};
+  if (ACPI_FAILURE(r = AcpiGetCurrentResources(link, &crsbuf)))
+    panic("acpi: AcpiGetCurrentResources failed: %s", AcpiFormatException(r));
+  acpi_deleter crsbufd(crsbuf.Pointer);
+  ACPI_RESOURCE *irqres = nullptr;
+  bool unknown_resource = false;
+  for (auto &res : acpi_array<ACPI_RESOURCE>(crsbuf)) {
+    switch (res.Type) {
+    case ACPI_RESOURCE_TYPE_START_DEPENDENT:
+    case ACPI_RESOURCE_TYPE_END_TAG:
+      // Do nothing
+      break;
+    case ACPI_RESOURCE_TYPE_IRQ:
+      if (res.Data.Irq.Interrupts[0] != 0)
+        return acpi_resource_to_irq(res);
+      irqres = &res;
+      break;
+    case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
+      if (res.Data.ExtendedIrq.Interrupts[0] != 0)
+        return acpi_resource_to_irq(res);
+      irqres = &res;
+      break;
+    default:
+      unknown_resource = true;
+    }
+  }
+  if (!irqres) {
+    swarn.println("acpi: PCI link ", name, " does not have an IRQ resource");
+    return irq();
+  }
+  if (unknown_resource) {
+    swarn.println("acpi: PCI link ", name, " has unexpected resources");
+    return irq();
+  }
+
+  // No current resource assignment.  Scan the possible resource
+  // settings.
+  ACPI_BUFFER prsbuf{ACPI_ALLOCATE_BUFFER};
+  if (ACPI_FAILURE(r = AcpiGetPossibleResources(link, &prsbuf)))
+    panic("acpi: AcpiGetPossibleResources failed: %s", AcpiFormatException(r));
+  verbose2.print("_PRS\n", shexdump(prsbuf.Pointer, prsbuf.Length, 0));
+  acpi_deleter prsbufd(prsbuf.Pointer);
+  int setirq = 0;
+  for (auto &res : acpi_array<ACPI_RESOURCE>(prsbuf)) {
+    verbose2.println(res);
+    switch (res.Type) {
+    case ACPI_RESOURCE_TYPE_IRQ:
+      for (int i = 0; i < res.Data.Irq.InterruptCount && !setirq; ++i)
+        if (acpi_try_allocate_irq(res.Data.Irq.Interrupts[i]))
+          setirq = res.Data.Irq.Interrupts[i];
+      break;
+    case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
+      for (int i = 0; i < res.Data.ExtendedIrq.InterruptCount && !setirq; ++i)
+        if (acpi_try_allocate_irq(res.Data.ExtendedIrq.Interrupts[i]))
+          setirq = res.Data.ExtendedIrq.Interrupts[i];
+      break;
+    }
+    if (setirq)
+      break;
+  }
+  if (!setirq) {
+    swarn.println("acpi: IRQ sharing not implemented");
+    return irq();
+  }
+
+  // Assign the chosen IRQ
+  switch (irqres->Type) {
+  case ACPI_RESOURCE_TYPE_IRQ:
+    irqres->Data.Irq.Interrupts[0] = setirq;
+    break;
+  case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
+    irqres->Data.ExtendedIrq.Interrupts[0] = setirq;
+    break;
+  }
+  verbose.println("acpi: Assigning IRQ ", setirq, " to ", name);
+  if ((ACPI_FAILURE(r = AcpiSetCurrentResources(link, &crsbuf))))
+    panic("acpi: AcpiSetCurrentResources failed: %s", AcpiFormatException(r));
+  return acpi_resource_to_irq(*irqres);
+}
+
+// Resolve the pin of device on bus to an IRQ.  Pin should be an
+// 0-based ACPI-style pin number.
+static irq
+acpi_pci_resolve_pin_irq(struct pci_bus *bus, int device, int pin)
+{
+  if (bus->acpi_handle) {
+    // There's an ACPI object for this bus.  Does the bus have an
+    // interrupt routing table?
+    ACPI_STATUS r;
+    ACPI_BUFFER buf{ACPI_ALLOCATE_BUFFER};
+    if (ACPI_FAILURE(r = AcpiGetIrqRoutingTable(bus->acpi_handle, &buf)) &&
+        r != AE_NOT_FOUND)
+      panic("AcpiGetIrqRoutingTable failed: %s", AcpiFormatException(r));
+    if (r == AE_OK) {
+      // We have a routing table.  Find the entry for this device's
+      // pin.
+      acpi_deleter bufd(buf.Pointer);
+      verbose2.println("acpi: Found _PRT on ", sacpi(bus->acpi_handle));
+      // [ACPI5.0 6.2.12]
+      for (auto &entry : acpi_array<ACPI_PCI_ROUTING_TABLE>(buf)) {
+        if ((entry.Address >> 16) == device && entry.Pin == pin) {
+          // Found the entry
+          verbose2.println("acpi: Matching entry: ", entry);
+          if (!entry.Source[0]) {
+            // Hard-wired interrupt routing
+            irq res(irq::default_pci());
+            res.gsi = entry.SourceIndex;
+            return res;
+          }
+          // PCI interrupt link device
+          verbose.println("acpi: Enabling PCI link ", entry.Source);
+          return acpi_pci_enable_link(entry.Source);
+        }
+      }
+      swarn.println("acpi: PCI routing table entry missing");
+      return irq();
+    }
+  }
+
+  if (bus->parent_bridge) {
+    // Resolve the IRQ via the parent bus.  Since we're crossing a
+    // bridge, swizzle the pin number.  See
+    // http://people.freebsd.org/~jhb/papers/bsdcan/2007/article/node5.html
+    // and
+    // http://blogs.msdn.com/b/ntdebugging/archive/2011/09/01/determining-the-interrupt-line-for-a-particular-pci-e-slot.aspx
+    // XXX(austin) I have no idea if this is actually right
+    verbose2.println("acpi: Traversing bridge ", *bus->parent_bridge,
+                     " (new pin ", "ABCD"[(pin + device) % 4], ")");
+    return acpi_pci_resolve_pin_irq(bus->parent_bridge->bus,
+                                    bus->parent_bridge->dev,
+                                    (pin + device) % 4);
+  }
+
+  return irq();
+}
+
+// Resolve the IRQ of the given PCI function.  If necessary, this
+// configures and enables the appropriate PCI interrupt link device.
+// Returns irq() if the PCI function has no IRQ.
+irq
+acpi_pci_resolve_irq(struct pci_func *func)
+{
+  if (func->int_pin == 0)
+    // The function does not use a PCI interrupt line
+    return irq();
+  int acpi_pin = func->int_pin - 1;
+  verbose2.println("acpi: Resolving IRQ of ", *func, " pin ", "ABCD"[acpi_pin]);
+
+  // Resolve ACPI objects up to the root
+  acpi_pci_resolve_handle(func);
+
+  irq irq = acpi_pci_resolve_pin_irq(func->bus, func->dev, acpi_pin);
+  if (!irq.valid())
+    swarn.println("acpi: No interrupt routing found for PCI device ", *func);
+  return irq;
 }

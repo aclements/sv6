@@ -43,6 +43,28 @@ struct proc;
 struct vmap;
 struct pipe;
 struct work;
+struct irq;
+class print_stream;
+
+// acpi.c
+typedef void *ACPI_HANDLE;
+bool            acpi_setup_ioapic(class ioapic *apic);
+bool            acpi_pci_scan_roots(int (*scan)(struct pci_bus *bus));
+ACPI_HANDLE     acpi_pci_resolve_handle(struct pci_func *func);
+ACPI_HANDLE     acpi_pci_resolve_handle(struct pci_bus *bus);
+irq             acpi_pci_resolve_irq(struct pci_func *func);
+
+// acpidbg.c
+struct sacpi_handle
+{
+  ACPI_HANDLE handle;
+};
+sacpi_handle    sacpi(ACPI_HANDLE handle);
+void            to_stream(print_stream *s, const sacpi_handle &o);
+void            to_stream(print_stream *s, const struct acpi_device_info &o);
+void            to_stream(print_stream *s, const struct acpi_pci_routing_table &o);
+void            to_stream(print_stream *s, const struct acpi_resource &r);
+void            to_stream(print_stream *s, const struct acpi_resource_source &r);
 
 // bio.c
 void            binit(void);
@@ -65,7 +87,7 @@ void            snprintf(char *buf, u32 n, const char *fmt, ...);
 void            printtrace(u64 rbp);
 
 // e1000.c
-extern int e1000irq;
+extern struct irq e1000irq;
 extern int e1000init;
 void            e1000intr(void);
 int             e1000tx(void *buf, u32 len);
@@ -117,9 +139,6 @@ void            iderw(struct buf*);
 struct proc *   idleproc(void);
 void            idlezombie(struct proc*);
 
-// ioapic.c
-void            ioapicenable(int irq, int cpu);
-
 // kalloc.c
 char*           kalloc(const char *name);
 void            kfree(void*);
@@ -141,7 +160,6 @@ void            halt(void) __attribute__((noreturn));
 
 // mp.c
 extern int      ncpu;
-int             mpbcpu(void);
 
 // net.c
 void            netfree(void *va);

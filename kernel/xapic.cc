@@ -8,6 +8,9 @@
 #include "bits.hh"
 #include "cpu.hh"
 #include "apic.hh"
+#include "kstream.hh"
+
+static console_stream verbose(true);
 
 // Local APIC registers, divided by 4 for use as uint[] indices.
 #define ID      (0x0020/4)   // ID
@@ -43,11 +46,23 @@
 
 #define IO_RTC  0x70
 
-static volatile u32 *xapic = (u32 *)(KBASE + 0xfee00000);
+static volatile u32 *xapic;
 static u64 xapichz;
 
+class xapic_lapic : public abstract_lapic
+{
+public:
+  void init();
+  void cpu_init();
+  hwid_t id();
+  void eoi();
+  void send_ipi(struct cpu *c, int ino);
+  void mask_pc(bool mask);
+  void start_ap(struct cpu *c, u32 addr);
+};
+
 static void
-xapicw(int index, int value)
+xapicw(u32 index, u32 value)
 {
   xapic[index] = value;
   xapic[ID];  // wait for write to finish, by reading
@@ -75,14 +90,23 @@ xapicwait()
 }
 
 void
-initxapic(void)
+xapic_lapic::init()
+{
+  u64 apic_base = readmsr(MSR_APIC_BAR);
+
+  // Sanity check
+  if (!(apic_base & APIC_BAR_XAPIC_EN))
+    panic("xapic_lapic::init xAPIC not enabled");
+
+  xapic = (u32*)p2v(apic_base & ~0xffful);
+}
+
+void
+xapic_lapic::cpu_init()
 {
   u64 count;
 
-  u32 edx;
-  cpuid(CPUID_FEATURES, nullptr, nullptr, nullptr, &edx);
-  if (!(edx & FEATURE_EDX_APIC))
-    panic("No LAPIC");
+  verbose.println("xapic: Initializing LAPIC (CPU ", myid(), ")");
 
   // Enable local APIC, do not suppress EOI broadcast, set spurious
   // interrupt vector.
@@ -115,7 +139,7 @@ initxapic(void)
   // Disable performance counter overflow interrupts
   // on machines that provide that interrupt entry.
   if(((xapic[VER]>>16) & 0xFF) >= 4)
-    xapicpc(0);
+    mask_pc(false);
 
   // Map error interrupt to IRQ_ERROR.
   xapicw(ERROR, T_IRQ0 + IRQ_ERROR);
@@ -138,59 +162,44 @@ initxapic(void)
 }
 
 void
-xapicpc(char mask)
+xapic_lapic::mask_pc(bool mask)
 {
   xapicw(PCINT, mask ? MASKED : MT_NMI);
 }
 
 hwid_t
-xapicid(void)
+xapic_lapic::id()
 {
   if (readrflags() & FL_IF) {
     cli();
-    panic("cpunum() called from %p with interrupts enabled\n",
+    panic("xapic_lapic::id() called from %p with interrupts enabled\n",
       __builtin_return_address(0));
   }
 
-  if (xapic == nullptr)
-    panic("xapicid");
   return HWID(xapic[ID]>>24);
 }
 
 // Acknowledge interrupt.
 void
-xapiceoi(void)
+xapic_lapic::eoi()
 {
-  if(xapic)
-    xapicw(EOI, 0);
+  xapicw(EOI, 0);
 }
 
 // Send IPI
 void
-xapic_ipi(hwid_t hwid, int ino)
+xapic_lapic::send_ipi(struct cpu *c, int ino)
 {
-  xapicw(ICRHI, hwid.num << 24);
+  xapicw(ICRHI, c->hwid.num << 24);
   xapicw(ICRLO, FIXED | DEASSERT | ino);
   if (xapicwait() < 0)
-    panic("xapic_ipi: xapicwait failure");
-}
-
-void
-xapic_tlbflush(hwid_t hwid)
-{
-  xapic_ipi(hwid, T_TLBFLUSH);
-}
-
-void
-xapic_sampconf(hwid_t hwid)
-{
-  xapic_ipi(hwid, T_SAMPCONF);
+    panic("xapic_lapic::send_ipi: xapicwait failure");
 }
 
 // Start additional processor running bootstrap code at addr.
 // See Appendix B of MultiProcessor Specification.
 void
-xapicstartap(hwid hwid, u32 addr)
+xapic_lapic::start_ap(struct cpu *c, u32 addr)
 {
   int i;
 
@@ -198,7 +207,7 @@ xapicstartap(hwid hwid, u32 addr)
   // Send INIT (level-triggered) interrupt to reset other CPU.
   
 
-  xapicw(ICRHI, hwid.num<<24);
+  xapicw(ICRHI, c->hwid.num<<24);
   xapicw(ICRLO, INIT | LEVEL | ASSERT);
   xapicwait();
   microdelay(10000);
@@ -212,8 +221,23 @@ xapicstartap(hwid hwid, u32 addr)
   // should be ignored, but it is part of the official Intel algorithm.
   // Bochs complains about the second one.  Too bad for Bochs.
   for(i = 0; i < 2; i++){
-    xapicw(ICRHI, hwid.num<<24);
+    xapicw(ICRHI, c->hwid.num<<24);
     xapicw(ICRLO, STARTUP | (addr>>12));
     microdelay(200);
   }
+}
+
+bool
+initlapic_xapic(void)
+{
+  u32 edx;
+  cpuid(CPUID_FEATURES, nullptr, nullptr, nullptr, &edx);
+  if (!(edx & FEATURE_EDX_APIC))
+    return false;
+
+  verbose.println("xapic: Using xAPIC LAPIC");
+  static xapic_lapic apic;
+  apic.init();
+  lapic = &apic;
+  return true;
 }
