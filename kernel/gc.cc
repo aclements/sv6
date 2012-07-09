@@ -136,17 +136,17 @@ gc_delayfreelist(void)
   if (gc_debug) {
     cprintf("(%d,%d) (%s): min %lu global %lu\n", myproc()->cpuid, myproc()->pid, myproc()->name, min, global);
   }
-  myproc()->epoch++; // ensure enumerate's call to gc_begin_epoch doesn't have sideeffects
+  myproc()->gc->epoch++; // ensure enumerate's call to gc_begin_epoch doesn't have sideeffects
   xnspid->enumerate([&min](u32, proc *p)->bool{
       // Some threads may never call begin/end_epoch(), and never update
       // p->epoch, so gc_thread does it for them.
       if (p->magic != PROC_MAGIC)
         panic("gc_delayfreelist: no magic %lx\n", p->magic);
 
-      u64 x = p->epoch.load();
+      u64 x = p->gc->epoch.load();
       if (!(x & 0xff)) {
-        cmpxch(&p->epoch, x, global_epoch.load() << 8);
-        x = p->epoch.load();
+        cmpxch(&p->gc->epoch, x, global_epoch.load() << 8);
+        x = p->gc->epoch.load();
       }
 
       // cprintf("gc_min %d(%s): %lu %ld\n", p->pid, p->name, p->epoch, p->epoch_depth);
@@ -154,7 +154,7 @@ gc_delayfreelist(void)
         min = (x>>8);
       return false;
     });
-  myproc()->epoch--;
+  myproc()->gc->epoch--;
   if (min >= global) {
     gc_move_to_tofree(min);
   }
@@ -167,7 +167,7 @@ gc_delayed(rcu_freed *e)
   int c = mycpu()->id;
   gc_state[c].ndelayed++;
 
-  u64 myepoch = (myproc()->epoch >> 8);
+  u64 myepoch = (myproc()->gc->epoch >> 8);
   u64 minepoch = gc_state[c].delayed[myepoch % NEPOCH].epoch;
   if (gc_debug) 
     cprintf("(%d, %d): gc_delayed: %lu ndelayed %d\n", c, myproc()->pid,
@@ -185,11 +185,11 @@ void
 gc_begin_epoch(void)
 {
   if (myproc() == nullptr) return;
-  u64 v = myproc()->epoch++;
+  u64 v = myproc()->gc->epoch++;
   if (v & 0xff)
     return;
 
-  cmpxch(&myproc()->epoch, v+1, (global_epoch.load()<<8)+1);
+  cmpxch(&myproc()->gc->epoch, v+1, (global_epoch.load()<<8)+1);
   // We effectively need an mfence here, and cmpxch provides one
   // by virtue of being a LOCK instuction.
 }
@@ -198,7 +198,7 @@ void
 gc_end_epoch(void)
 {
   if (myproc() == nullptr) return;
-  u64 e = --myproc()->epoch;
+  u64 e = --myproc()->gc->epoch;
   if ((e & 0xff) == 0 && gc_state[mycpu()->id].ndelayed > NGC)
     gc_state[mycpu()->id].cv.wake_all();
 }
@@ -273,7 +273,7 @@ gc_worker(void *x)
     t0 = rdtsc();
     gc_state[mycpu()->id].nrun++;
     u64 global = global_epoch;
-    myproc()->epoch = global_epoch.load() << 8;      // move the gc thread to next epoch
+    myproc()->gc->epoch = global_epoch.load() << 8;      // move the gc thread to next epoch
     for (i = gc_state[mycpu()->id].min_epoch; i < global-2; i++) {
       int nfree = gc_free_tofreelist(&gc_state[mycpu()->id].tofree[i%NEPOCH].head, i);
       ngc += nfree;
@@ -296,7 +296,7 @@ gc_worker(void *x)
 void
 initprocgc(struct proc *p)
 {
-  p->epoch = global_epoch.load() << 8;
+  p->gc->epoch = global_epoch.load() << 8;
 }
 
 void

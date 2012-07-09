@@ -65,7 +65,7 @@ proc_pgmap::onzero() const
 proc::proc(int npid) :
   rcu_freed("proc"), vmap(0), uwq(0), worker(0), kstack(0),
   pid(npid), parent(0), tf(0), context(0), killed(0),
-  ftable(0), cwd(0), tsc(0), curcycles(0), cpuid(0), epoch(0),
+  ftable(0), cwd(0), tsc(0), curcycles(0), cpuid(0),
   cpu_pin(0), oncv(0), cv_wakeup(0),
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
   user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
@@ -75,7 +75,7 @@ proc::proc(int npid) :
   snprintf(lockname, sizeof(lockname), "cv:proc:%d", pid);
   lock = spinlock(lockname+3, LOCKSTAT_PROC);
   cv = condvar(lockname);
-
+  gc = new gc_handle();
   memset(&childq, 0, sizeof(childq));
   memset(&child_next, 0, sizeof(child_next));
   memset(&cv_waiters, 0, sizeof(cv_waiters));

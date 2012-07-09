@@ -1,5 +1,18 @@
 #pragma once
 
+#include "atomic.hh"
+#include "cpputil.hh"
+
+using std::atomic;
+
+struct gc_handle {
+  std::atomic<u64> epoch;      // low 8 bits are depth count
+
+  gc_handle(void) {};
+
+  NEW_DELETE_OPS(gc_handle)
+};
+
 class rcu_freed {
  public:
   u64 _rcu_epoch;

@@ -11,6 +11,7 @@
 class uwq;
 class uwq_worker;
 struct pgmap;
+struct gc_handle;
 
 #if 0
 // This should be per-address space
@@ -91,7 +92,7 @@ struct proc : public rcu_freed, public sched_link {
   SLIST_HEAD(childlist, proc) childq;
   SLIST_ENTRY(proc) child_next;
   struct condvar cv;
-  std::atomic<u64> epoch;      // low 8 bits are depth count
+  struct gc_handle *gc;
   char lockname[16];
   int cpu_pin;
 #if MTRACE
