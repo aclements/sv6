@@ -7,7 +7,9 @@ using std::atomic;
 
 struct gc_handle {
   std::atomic<u64> epoch;      // low 8 bits are depth count
-
+  int core;
+  struct gc_handle* next;
+  struct gc_handle* prev;
   gc_handle(void) {};
 
   NEW_DELETE_OPS(gc_handle)

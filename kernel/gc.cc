@@ -32,15 +32,20 @@ struct headinfo {
   atomic<u64> epoch;
 };
 
-static struct gc_state { 
+struct gc_state { 
+  struct spinlock lock_ __mpalign__;
   struct condvar cv;
   headinfo delayed[NEPOCH];
   headinfo tofree[NEPOCH];
+  gc_handle head;
   atomic<int> ndelayed;
-  int min_epoch;
+  int min_epoch;    // the lowest epoch # to free
+  int max_epoch;    // the highest epoch # that all processes on this core have seen
   int nrun;
   int nfree;
   int cnt;
+public:
+  gc_state();
 } __mpalign__ gc_state[NCPU] __mpalign__;
 
 static struct gc_lock {
@@ -48,6 +53,17 @@ static struct gc_lock {
   gc_lock() : l("gc", LOCKSTAT_GC) { }
 } gc_lock;
 atomic<u64> global_epoch __mpalign__;
+
+gc_state::gc_state() : 
+  lock_("gc_state", LOCKSTAT_GC), cv(condvar("gc_cv"))
+{ 
+  head.next = &head;
+  head.prev = &head;
+  for (int i = 0; i < NEPOCH; i++) {
+    delayed[i].epoch = i;
+    tofree[i].epoch = i;
+  }
+}
 
 static int
 gc_free_tofreelist(atomic<rcu_freed*> *head, u64 epoch)
@@ -137,6 +153,7 @@ gc_delayfreelist(void)
     cprintf("(%d,%d) (%s): min %lu global %lu\n", myproc()->cpuid, myproc()->pid, myproc()->name, min, global);
   }
   myproc()->gc->epoch++; // ensure enumerate's call to gc_begin_epoch doesn't have sideeffects
+#if 0
   xnspid->enumerate([&min](u32, proc *p)->bool{
       // Some threads may never call begin/end_epoch(), and never update
       // p->epoch, so gc_thread does it for them.
@@ -154,6 +171,14 @@ gc_delayfreelist(void)
         min = (x>>8);
       return false;
     });
+#else
+  for (int c = 0; c < ncpu; c++) { 
+    u64 w = gc_state[c].max_epoch;
+    if (w < min) {
+      min = w;
+    }
+  }
+#endif
   myproc()->gc->epoch--;
   if (min >= global) {
     gc_move_to_tofree(min);
@@ -182,16 +207,49 @@ gc_delayed(rcu_freed *e)
 }
 
 void
+gc_enqueue(gc_handle *h, int c)
+{
+  scoped_acquire x(&gc_state[c].lock_);
+
+  h->next = &gc_state[c].head;
+  h->prev = gc_state[c].head.prev;
+  gc_state[c].head.prev->next = h;
+  gc_state[c].head.prev = h;
+}
+
+void
+gc_dequeue(gc_handle *h, int c)
+{
+  u64 m = global_epoch;
+  scoped_acquire x(&gc_state[c].lock_);
+  for (gc_handle* entry = gc_state[c].head.next; entry != &gc_state[c].head; entry = entry->next) {
+    if (entry == h) {
+      entry->next->prev = entry->prev;
+      entry->prev->next = entry->next;
+    } else {
+      if ((entry->epoch >> 8) < m) 
+        m = (entry->epoch >> 8);
+    }
+  }
+  if (gc_state[c].max_epoch != m) {
+    gc_state[c].max_epoch = m;
+    // cprintf("%d: m = %lu\n", c, m);
+  }
+}
+
+void
 gc_begin_epoch(void)
 {
   if (myproc() == nullptr) return;
   u64 v = myproc()->gc->epoch++;
   if (v & 0xff)
     return;
-
+  int c = mycpu()->id;
+  myproc()->gc->core = c;
   cmpxch(&myproc()->gc->epoch, v+1, (global_epoch.load()<<8)+1);
   // We effectively need an mfence here, and cmpxch provides one
   // by virtue of being a LOCK instuction.
+  gc_enqueue(myproc()->gc, c);
 }
 
 void
@@ -199,7 +257,11 @@ gc_end_epoch(void)
 {
   if (myproc() == nullptr) return;
   u64 e = --myproc()->gc->epoch;
-  if ((e & 0xff) == 0 && gc_state[mycpu()->id].ndelayed > NGC)
+  if ((e & 0xff) != 0)
+    return;
+  
+  gc_dequeue(myproc()->gc, myproc()->gc->core);
+  if (gc_state[mycpu()->id].ndelayed > NGC)
     gc_state[mycpu()->id].cv.wake_all();
 }
 
@@ -307,11 +369,6 @@ initgc(void)
   set_barrier(ncpu+1);
 #endif
   for (int i = 0; i < ncpu; i++) {
-    for (int j = 0; j < NEPOCH; j++) {
-      gc_state[i].delayed[j].epoch = j;
-      gc_state[i].tofree[j].epoch = j;
-    }
-    gc_state[i].cv = condvar("gc_cv");
   }
 
   for (int c = 0; c < ncpu; c++) {

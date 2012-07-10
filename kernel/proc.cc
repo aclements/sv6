@@ -86,6 +86,7 @@ proc::proc(int npid) :
 proc::~proc(void)
 {
   magic = 0;
+  // delete gc;
 }
 
 void
