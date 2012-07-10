@@ -34,6 +34,7 @@ SECTIONS
                 *(.got.plt)  *(.igot.plt)
                 *(.eh_frame_hdr)
                 *(.eh_frame)
+                *(.eh_frame_end)
                 *(.gcc_except_table .gcc_except_table.*)
 	}
 	PROVIDE(edata = .);
