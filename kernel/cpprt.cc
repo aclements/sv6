@@ -218,6 +218,44 @@ __stack_chk_fail(void)
   panic("stack_chk_fail");
 }
 
+extern "C" int pthread_once(int *oncectl, void (*f)(void));
+int
+pthread_once(int *oncectl, void (*f)(void))
+{
+  if (__sync_bool_compare_and_swap(oncectl, 0, 1))
+    (*f)();
+
+  return 0;
+}
+
+extern "C" int pthread_cancel(int tid);
+int
+pthread_cancel(int tid)
+{
+  /*
+   * This function's job is to contain a non-zero opcode that
+   * makes __gthread_active_p in gcc/gthr-posix95.h return 1.
+   */
+  return 0;
+}
+
+extern "C" int pthread_mutex_lock(int *mu);
+int
+pthread_mutex_lock(int *mu)
+{
+  while (!__sync_bool_compare_and_swap(mu, 0, 1))
+    ; /* spin */
+  return 0;
+}
+
+extern "C" int pthread_mutex_unlock(int *mu);
+int
+pthread_mutex_unlock(int *mu)
+{
+  *mu = 0;
+  return 0;
+}
+
 extern "C" void* __cxa_get_globals(void);
 void*
 __cxa_get_globals(void)
