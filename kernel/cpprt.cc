@@ -233,8 +233,8 @@ int
 pthread_cancel(int tid)
 {
   /*
-   * This function's job is to contain a non-zero opcode that
-   * makes __gthread_active_p in gcc/gthr-posix95.h return 1.
+   * This function's job is to make __gthread_active_p
+   * in gcc/gthr-posix95.h return 1.
    */
   return 0;
 }
