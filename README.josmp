@@ -1,10 +1,9 @@
-## To build and run xv6 on josmp:
+To build and run xv6 on josmp:
+$ make HW=josmp rsync setup-xv6
+then ssh josmp and reboot.
 
-make HW=josmp rsync reboot-xv6
+If josmp is already running xv6, then
+$ make HW=josmp rsync reboot-xv6
 
----
-
-## To restore booting into local Linux:
-
-make HW=josmp reboot-linux
-
+To restore booting into local Linux
+$ make HW=josmp reboot-linux
