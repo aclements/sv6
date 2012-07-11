@@ -316,7 +316,6 @@ proc::alloc(void)
     throw_bad_alloc();
 
   p->cpuid = mycpu()->id;
-  initprocgc(p);
 #if MTRACE
   p->mtrace_stacks.curr = -1;
 #endif

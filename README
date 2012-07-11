@@ -16,6 +16,8 @@
   $ (cd lwip && git checkout DEVEL-1_4_1)
   $ make clean;make
 
+  (if you are building o.josmp, make sure you make clean that make target)
+
 * Copies of e1000 and e1000e manuals are in manuals/.  They were
   retrieved from:
 
