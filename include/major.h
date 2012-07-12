@@ -4,3 +4,4 @@
 #define MAJ_LOCKSTAT 4
 #define MAJ_STAT     5
 #define MAJ_CMDLINE  6
+#define MAJ_GC       7

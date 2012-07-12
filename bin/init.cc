@@ -24,6 +24,7 @@ static struct {
   { "/dev/lockstat",  MAJ_LOCKSTAT },
   { "/dev/stat",      MAJ_STAT },
   { "/dev/cmdline",   MAJ_CMDLINE},
+  { "/dev/gc",   MAJ_GC},
 };
 
 static int

@@ -10,7 +10,7 @@ struct gc_handle {
   int core;
   struct gc_handle* next;
   struct gc_handle* prev;
-  gc_handle(void) { core = -1; };
+  gc_handle(void) { core = -1; epoch = 0;};
 
   NEW_DELETE_OPS(gc_handle)
 };
@@ -53,4 +53,3 @@ class scoped_gc_epoch {
 void            initgc(void);
 void            gc_delayed(rcu_freed *);
 void            gc_wakeup(void);
-

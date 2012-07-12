@@ -8,6 +8,8 @@
 #include "cpputil.hh"
 #include "percpu.hh"
 #include "gc.hh"
+#include "major.h"
+#include "uk/gcstat.h"
 
 using std::atomic;
 
@@ -20,7 +22,8 @@ using std::atomic;
 // a process add to its core global_epoch's delayed freelist on delayed_free()
 // a core maintains an epoch, min_epoch (>= global_epoch)
 //   min_epoch is the lowest epoch # a process on that core is in
-//   a process always ends an epoch on the core it started (even if the process is migrated)
+//   a process always ends an epoch on the core it started (even if the
+//   process is migrated)
 // one gc thread and state (e.g., NEPOCH delaylist) per core
 // a gcc thread performs two jobs:
 // 1. one gcc thread perform step 1: updates global_epoch
@@ -30,7 +33,7 @@ using std::atomic;
 
 enum { gc_debug = 0 };
 
-#define NGC 1000000
+#define NGC 100000000
 // #define BARRIER (to allow for in-kernel barriers for measurements)
 
 // Head of a delayed free list. Always read and updated while holding lock_
@@ -47,9 +50,7 @@ struct gc_state {
   struct condvar cv;
   headinfo delayed[NEPOCH];     // NEPOCH delayed-free lists
   gc_handle proclist;           // list of process in an epoch on this core
-  int ndelayed;
-  int nrun;
-  int nfree;
+  int woken;
 public:
   gc_state();
   void dequeue(gc_handle *h);
@@ -58,6 +59,7 @@ public:
 };
 
 percpu<gc_state, percpu_safety::internal> gc_state;
+percpu<gc_stat, percpu_safety::internal> stat;
 
 // Increment of global_epoch acquires gc_lock, but processes cannot read it
 // without locks
@@ -69,14 +71,15 @@ atomic<u64> global_epoch __mpalign__;
 
 // Increment global_epoch if (1) each core has freed all epochs <= global-2
 // and (2) each core has no processes in an epoch <= global - 2
-// This operation is the only common global operation.  XXX implement global min in scalable manner
+// This operation is the only common global operation.  
+// XXX implement global min in scalable manner
 static void
 gc_inc_global_epoch(void)
 {
   int r = tryacquire(&gc_lock.l);
   if (r == 0) return;
   assert(r == 1);
-
+  u64 t0 = rdtsc();
   u64 global = global_epoch;  // make "local" copy
   u64 minfree = global;
   u64 minepoch = global;
@@ -91,12 +94,15 @@ gc_inc_global_epoch(void)
   }
   if ((minfree < global-2) || (minepoch < global-2)) 
     goto done;
-  if (minepoch >= global) {
-    if (1) cprintf("update global_epoch to: %lu\n", minepoch+1);
-    global_epoch = minepoch + 1; 
+  if (minepoch > global-2) {
+    if (gc_debug) cprintf("update global_epoch to: %lu\n", minepoch+1);
+    global_epoch = global + 1; 
   }
 done:
   release(&gc_lock.l);
+  u64 t1 = rdtsc();
+  stat[mycpu()->id].ncycles += (t1-t0);
+  stat[mycpu()->id].nop ++;
 }
 
 gc_state::gc_state() : 
@@ -124,7 +130,8 @@ void
 gc_state::dequeue(gc_handle *h)
 {
   u64 m = global_epoch;
-  for (gc_handle* entry = this->proclist.next; entry != &this->proclist; entry = entry->next) {
+  for (gc_handle* entry = this->proclist.next; entry != &this->proclist;
+       entry = entry->next) {
     if (entry == h) {
       entry->next->prev = entry->prev;
       entry->prev->next = entry->next;
@@ -138,7 +145,8 @@ gc_state::dequeue(gc_handle *h)
   }
 }
 
-// free the elements in delayed-free list r (from epoch epoch).  runs without holding _lock
+// free the elements in delayed-free list r (from epoch epoch).  
+// Runs without holding _lock
 int
 gc_state::gc_free(rcu_freed *r, u64 epoch)
 {
@@ -162,28 +170,26 @@ gc_state::gc_free(rcu_freed *r, u64 epoch)
 static void
 gc_worker(void *x)
 {
-  u64 t0, t1;
   if (VERBOSE)
     cprintf("gc_worker: %d\n", mycpu()->id);
 
   acquire(&gc_state->lock_);
   for (;;) {
     u64 i;
-    int ngc = 0;
-    gc_state->cv.sleep_to(&gc_state->lock_, nsectime() + ((u64)GCINTERVAL)*1000000ull);
+    gc_state->cv.sleep_to(&gc_state->lock_, 
+                          nsectime() + ((u64)GCINTERVAL)*1000000ull);
 #ifdef BARRIER
     mybarrier();
 #endif
-    t0 = rdtsc();
-    gc_state->nrun++;
+    stat->nrun++;
 
     // if no processes are running on this core, update min_epoch
-    if (gc_state->proclist.next == &gc_state->proclist)
+    if (gc_state->proclist.next == &gc_state->proclist) {
       gc_state->min_epoch = global_epoch.load();
+    }
 
-    // free all delayed-free lists until global_epoch - 2
-    u64 global = global_epoch;
-    for (i = gc_state->nexttofree_epoch; i < global-2; i++) {
+    // free all delayed-free lists until min_epoch
+    for (i = gc_state->nexttofree_epoch; i < gc_state->min_epoch; i++) {
       rcu_freed *head = gc_state->delayed[i%NEPOCH].head;
 
       // give up lock during free
@@ -192,27 +198,41 @@ gc_worker(void *x)
       int nfree = gc_state->gc_free(head,i);
 
       acquire(&gc_state->lock_);
-      ngc += nfree;
       gc_state->delayed[i%NEPOCH].head = nullptr;
       gc_state->delayed[i%NEPOCH].epoch += NEPOCH;
-      gc_state->ndelayed -= nfree;
-
+      stat->nfree += nfree;
       if (gc_debug && nfree > 0) {
 	cprintf("%d: epoch %lu freed %d\n", mycpu()->id, i, nfree);
       }
-      gc_state->nfree += nfree;
+
     }
     gc_state->nexttofree_epoch = i;
 
     // try to increment global_epoch
     gc_inc_global_epoch();
-
-    t1 = rdtsc();
-    if (gc_debug && ngc > 0) {
-      cprintf("%d: ngc %d in %lu cycles\n", mycpu()->id, ngc, t1-t0);
-    }
   }
 }
+
+static int
+statread(struct inode *inode, char *dst, u32 off, u32 n)
+{
+  size_t sz = sizeof(gc_stat);
+  int i = off / sz;
+
+  if (n != sz)
+    return -1;
+
+  if (i >= NCPU) {
+    for (int n = 0; n < NCPU; n++)
+      memset((void *) &stat[n], 0, sz);
+    return 0;
+  }
+
+  memcpy(dst, &stat[i], sz);
+  
+  return n;
+}
+
 
 //
 // Public interface:
@@ -225,6 +245,10 @@ initgc(void)
 #ifdef BARRIER
   set_barrier(ncpu+1);
 #endif
+  
+  devsw[MAJ_GC].write = nullptr;
+  devsw[MAJ_GC].read = statread;
+
   for (int c = 0; c < ncpu; c++) {
     char namebuf[32];
     snprintf(namebuf, sizeof(namebuf), "gc_%u", c);
@@ -237,19 +261,21 @@ gc_delayed(rcu_freed *e)
 {
   int c =  mycpu()->id;
   struct gc_state *gs = &gc_state[c];
-  u64 epoch = global_epoch;
 
   scoped_acquire x(&gs->lock_);
 
+  u64 epoch = global_epoch;
+
   if (gc_debug) 
     cprintf("(%d, %d): gc_delayed: %lu ndelayed %d\n", c, myproc()->pid,
-            epoch, gs->ndelayed);
+            epoch, stat[c].ndelay);
 
   if (epoch != gs->delayed[epoch % NEPOCH].epoch) {
-    cprintf("%d: epoch %lu minepoch %lu\n", c, epoch, gs->delayed[epoch % NEPOCH].epoch);
+    cprintf("%d: epoch %lu minepoch %lu my freeto %lu my min %lu\n", c, epoch, 
+            gs->delayed[epoch % NEPOCH].epoch, gs->nexttofree_epoch.load(), gs->min_epoch.load());
     panic("gc_delayed_int");
   }
-  gs->ndelayed++;
+  stat[c].ndelay++;
   e->_rcu_epoch = epoch;
   e->_rcu_next = gs->delayed[epoch % NEPOCH].head;
   gs->delayed[epoch % NEPOCH].head = e;
@@ -260,8 +286,7 @@ gc_begin_epoch(void)
 {
   if (myproc() == nullptr) return;
   u64 v = myproc()->gc->epoch++;
-  if (v & 0xff)
-    return;
+  if (v & 0xff) return;
 
   int c =  mycpu()->id;
   struct gc_state *gs = &gc_state[c];  
@@ -291,22 +316,17 @@ gc_end_epoch(void)
   
   gc_state[c].dequeue(myproc()->gc);
   myproc()->gc->core = -1;
-  if (gs->ndelayed > NGC)
+  if (stat[c].ndelay > NGC) {
     gs->cv.wake_all();
-}
-
-void gc_dumpstat(void)
-{
-  for (int i = 0; i < ncpu; i++) {
-    cprintf("worker %d: %d %d\n", i, gc_state[i].nrun, gc_state[i].nfree);
   }
 }
 
 void
 gc_wakeup(void)
 {
-  for (int i = 0; i < NCPU; i++)
+  for (int i = 0; i < NCPU; i++) {
     gc_state[i].cv.wake_all();
+  }
 }
 
 #ifdef BARRIER
