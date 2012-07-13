@@ -33,9 +33,6 @@ using std::atomic;
 
 enum { gc_debug = 0 };
 
-#define NGC 100000000
-// #define BARRIER (to allow for in-kernel barriers for measurements)
-
 // Head of a delayed free list. Always read and updated while holding lock_
 struct headinfo {
   rcu_freed* head;
@@ -60,6 +57,8 @@ public:
 
 percpu<gc_state, percpu_safety::internal> gc_state;
 percpu<gc_stat, percpu_safety::internal> stat;
+int ngc_cpu;
+int gc_batchsize;
 
 // Increment of global_epoch acquires gc_lock, but processes cannot read it
 // without locks
@@ -83,7 +82,7 @@ gc_inc_global_epoch(void)
   u64 global = global_epoch;  // make "local" copy
   u64 minfree = global;
   u64 minepoch = global;
-  for (int c = 0; c < ncpu; c++) { 
+  for (int c = 0; c < ngc_cpu; c++) { 
     // is reading nexttofree_epoch and min_epoch a single cache miss?
     if (gc_state[c].nexttofree_epoch < minfree) {
       minfree = gc_state[c].nexttofree_epoch;
@@ -102,7 +101,7 @@ done:
   release(&gc_lock.l);
   u64 t1 = rdtsc();
   stat[mycpu()->id].ncycles += (t1-t0);
-  stat[mycpu()->id].nop ++;
+  stat[mycpu()->id].nop++;
 }
 
 gc_state::gc_state() : 
@@ -178,9 +177,7 @@ gc_worker(void *x)
     u64 i;
     gc_state->cv.sleep_to(&gc_state->lock_, 
                           nsectime() + ((u64)GCINTERVAL)*1000000ull);
-#ifdef BARRIER
-    mybarrier();
-#endif
+
     stat->nrun++;
 
     // if no processes are running on this core, update min_epoch
@@ -214,7 +211,7 @@ gc_worker(void *x)
 }
 
 static int
-statread(struct inode *inode, char *dst, u32 off, u32 n)
+readstat(struct inode *inode, char *dst, u32 off, u32 n)
 {
   size_t sz = sizeof(gc_stat);
   int i = off / sz;
@@ -233,6 +230,16 @@ statread(struct inode *inode, char *dst, u32 off, u32 n)
   return n;
 }
 
+static int
+writectrl(struct inode *inode, const char *buf, u32 off, u32 n)
+{
+  if (n != 2*sizeof(int))
+    return -1;
+  memcpy(&ngc_cpu, buf, sizeof(int));
+  memcpy(&gc_batchsize, buf + sizeof(int), sizeof(int));
+  cprintf("ngc_cpu %d gc_batchsize %d\n", ngc_cpu, gc_batchsize);
+  return n;
+}
 
 //
 // Public interface:
@@ -241,13 +248,12 @@ statread(struct inode *inode, char *dst, u32 off, u32 n)
 void
 initgc(void)
 {
+  ngc_cpu = NCPU;
   global_epoch = NEPOCH-2;
-#ifdef BARRIER
-  set_barrier(ncpu+1);
-#endif
+  gc_batchsize = 100000000;
   
-  devsw[MAJ_GC].write = nullptr;
-  devsw[MAJ_GC].read = statread;
+  devsw[MAJ_GC].write = writectrl;
+  devsw[MAJ_GC].read = readstat;
 
   for (int c = 0; c < ncpu; c++) {
     char namebuf[32];
@@ -272,7 +278,9 @@ gc_delayed(rcu_freed *e)
 
   if (epoch != gs->delayed[epoch % NEPOCH].epoch) {
     cprintf("%d: epoch %lu minepoch %lu my freeto %lu my min %lu\n", c, epoch, 
-            gs->delayed[epoch % NEPOCH].epoch, gs->nexttofree_epoch.load(), gs->min_epoch.load());
+            gs->delayed[epoch % NEPOCH].epoch, gs->nexttofree_epoch.load(), 
+            gs->min_epoch.load());
+    if (c >= ngc_cpu) return;
     panic("gc_delayed_int");
   }
   stat[c].ndelay++;
@@ -316,7 +324,7 @@ gc_end_epoch(void)
   
   gc_state[c].dequeue(myproc()->gc);
   myproc()->gc->core = -1;
-  if (stat[c].ndelay > NGC) {
+  if (stat[c].ndelay > gc_batchsize) {
     gs->cv.wake_all();
   }
 }
@@ -328,35 +336,3 @@ gc_wakeup(void)
     gc_state[i].cv.wake_all();
   }
 }
-
-#ifdef BARRIER
-std::atomic<int> barrier0, barrier1;
-int gen[16];
-int barrier_val;
-
-static void
-set_barrier(int n)
-{
-  barrier_val = n;
-  barrier0 = barrier_val;
-  barrier1 = barrier_val;
-}
-
-static void
-mybarrier()
-{
-  int mygen = gen[mycpu()->id];
-  // cprintf("%d: enter barrier %d\n", mycpu()->id, mygen);
-  std::atomic<int> *barrier = (mygen % 2 == 0) ? &barrier0 : &barrier1;
-  int slot = --(*barrier);
-  if (slot == 1) {
-    std::atomic<int> *pbarrier = (mygen % 2 == 0) ? &barrier1 : &barrier0;
-    (*pbarrier) = barrier_val;
-    --(*barrier);
-  } else {
-    while (*barrier) ;
-  }
-  gen[mycpu()->id]++;
-  // cprintf("%d: leave barrier\n", mycpu()->id);
-}
-#endif
