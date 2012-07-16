@@ -4,5 +4,6 @@ struct gc_stat {
   int nrun;
   u64 ncycles;
   u64 nop;
+  int nalloc;
 };
 

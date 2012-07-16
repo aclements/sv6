@@ -8,20 +8,33 @@
 
 static int cpu = 0;
 static int sec = 2;
+static char *test;
+static int fd_ctrl;
 
 static void
-ctrl(int ncore, int size)
+ctrl_init(void)
 {
-  int fd, r;
-  char buf[sizeof(int) * 2];
+  fd_ctrl = open("/dev/gc", O_WRONLY);
+  if (fd_ctrl < 0)
+    die("gc: open failed");
+}
+
+static void
+ctrl_done(void)
+{
+  close(fd_ctrl);
+}
+
+static void
+ctrl(int ncore, int size, int op)
+{
+  int r;
+  char buf[sizeof(int) * 3];
   
   memcpy(buf, &ncore, sizeof(int));
-  memcpy(buf, &size, sizeof(int));
-
-  fd = open("/dev/gc", O_WRONLY);
-  if (fd < 0)
-    die("gc: open failed");
-  r = write(fd, &ncore, 2* sizeof(ncore));
+  memcpy(buf + sizeof(int), &size, sizeof(int));
+  memcpy(buf + sizeof(int)*2, &op, sizeof(int));
+  r = write(fd_ctrl, buf, 3* sizeof(int));
   if (r < 0)
     die("gc: write failed");
 }
@@ -49,9 +62,9 @@ stats(int print)
       die("gct: unexpected read");
 
     if (print)
-      fprintf(1, "%d: ndelay %d nfree %d nrun %d ncycles %lu nop %lu cycles/op %lu\n", 
+      fprintf(1, "%d: ndelay %d nfree %d nrun %d ncycles %lu nop %lu cycles/op %lu nalloc %d\n", 
             c++, gs.ndelay, gs.nfree, gs.nrun, gs.ncycles, gs.nop, 
-            (gs.nop > 0) ? gs.ncycles/gs.nop : 0);
+              (gs.nop > 0) ? gs.ncycles/gs.nop : 0, gs.nalloc);
   }
 
   close(fd);
@@ -61,52 +74,78 @@ stats(int print)
 // Each core open and closes a file, delay freeing the file structure.
 //
 
+void gctest(void)
+{
+  int fd;
+  if((fd = open("cat", 0)) < 0){
+    fprintf(1, "cat: cannot open %s\n", "cat");
+    exit();
+  }
+  close(fd);
+
+}
+
+void memtest(void)
+{
+  ctrl(8, 1000000, 1);   // alloc
+  ctrl(8, 1000000, 2);   // free
+}
+
 void
 child()
 {
   u64 s = 5; // use integer instead of float (e.g., 2.5)!
   u64 nsec = sec*s*1000*1000*1000L; 
-  // fprintf(1, "child %d\n", cpu); XXX crashes kernel????
+  int n = 0;
+  // fprintf(1, "child %d\n", cpu); XXX telnet cannot handle this?
   if (setaffinity(cpu) < 0) {
     die("sys_setaffinity(%d) failed", 0);
   }
   if (cpu == 0) { 
     stats(0);
   }
+  if (strcmp("mem", test) == 0) {
+    ctrl_init();
+  }
+  // perf_start(0, 24000000000ul);
   u64 t0 = rdtsc();
   u64 t1;
   do {
-    for(int i = 0; i < 1000; i++) {
-      int fd;
-      if((fd = open("cat", 0)) < 0){
-        fprintf(1, "cat: cannot open %s\n", "cat");
-        exit();
-      }
-      close(fd);
+    for(int i = 0; i < 10; i++) {
+      if (strcmp("gc", test) == 0) gctest();
+      else memtest();
+      n++;
     }
     t1 = rdtsc();
   } while((t1 - t0) < nsec);
+  if (cpu == 1) printf("%d: %d ops in %d sec\n", cpu, n, s);
+  if (strcmp("mem", test) == 0) {
+    ctrl_done();
+  }
   if (cpu == 0) { 
     printf("stats for sec\n", s);
     stats(1);
   }
+  // perf_stop();
 }
 
 int
 main(int argc, char *argv[])
 {
-  if (argc < 3)
-    die("usage: %s nproc batchsize [nsec]", argv[0]);
+  if (argc < 4)
+    die("usage: %s nproc batchsize [gc|mem] [nsec]", argv[0]);
 
   int nproc = atoi(argv[1]);
   int batchsize = atoi(argv[2]);
+  test = argv[3];
+  if (argc > 4)
+    sec = atoi(argv[4]);
 
-  if (argc > 3)
-    sec = atoi(argv[3]);
+  printf("%s: %d %d %s\n", argv[0], nproc, batchsize, test);
 
-  printf("%s: %d %d\n", argv[0], nproc, batchsize);
-
-  ctrl(nproc, batchsize);
+  ctrl_init();
+  ctrl(nproc, batchsize, 0);
+  ctrl_done();
 
   for (int i = 0; i < nproc; i++) {
     int pid = fork(0);

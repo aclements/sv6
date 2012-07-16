@@ -230,14 +230,28 @@ readstat(struct inode *inode, char *dst, u32 off, u32 n)
   return n;
 }
 
+struct mem {
+  void *v;
+};
+
+percpu<struct mem, percpu_safety::internal> mymem;
+
 static int
 writectrl(struct inode *inode, const char *buf, u32 off, u32 n)
 {
-  if (n != 2*sizeof(int))
+  int op;
+  if (n != 3*sizeof(int))
     return -1;
   memcpy(&ngc_cpu, buf, sizeof(int));
   memcpy(&gc_batchsize, buf + sizeof(int), sizeof(int));
-  cprintf("ngc_cpu %d gc_batchsize %d\n", ngc_cpu, gc_batchsize);
+  memcpy(&op, buf + 2 * sizeof(int), sizeof(int));
+  if (op == 1) {
+    mymem->v = kmalloc(1024, "test");
+    stat->nalloc++;
+  }
+  if (op == 2) {
+    kmfree(mymem->v, 1024);
+  }
   return n;
 }
 
