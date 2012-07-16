@@ -11,6 +11,17 @@ static int sec = 2;
 static char *test;
 static int fd_ctrl;
 
+static u64 selector = 
+  0UL << 32 |
+  1 << 24 | 
+  1 << 22 | 
+  1 << 20 |
+  1 << 17 | 
+  1 << 16 | 
+  0x00 << 8 | 
+  0x76;
+static u64 period = 100000;
+
 static void
 ctrl_init(void)
 {
@@ -117,7 +128,7 @@ child()
   if (strcmp("mem", test) == 0) {
     ctrl_init();
   }
-  if (cpu == 0) perf_start(0, 100000);
+  if (cpu == 0) perf_start(selector, period);
   u64 t0 = rdtsc();
   u64 t1;
   do {

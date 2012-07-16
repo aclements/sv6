@@ -43,7 +43,9 @@ static const u64 wd_selector = 0;
 #endif
 
 static percpu<bool> wd_flag;
+#if 0
 static void wdcheck(struct trapframe*);
+#endif
 
 struct pmu {
   void (*config)(u64 ctr, u64 sel, u64 val);  
@@ -177,7 +179,7 @@ sampintr(struct trapframe *tf)
   cnt = rdpmc(1);
   if ((cnt & (1ULL << (pmu.cntval_bits - 1))) == 0) {
     r = 1;
-    wdcheck(tf);
+    // wdcheck(tf);
     pmuconfig(1, wd_selector, wd_period);
   }
 
@@ -336,6 +338,7 @@ initsamp(void)
 //
 // watchdog
 //
+#if 0
 static void
 wdcheck(struct trapframe* tf)
 {
@@ -350,6 +353,7 @@ wdcheck(struct trapframe* tf)
   }
   *wd_flag = false;
 }
+#endif
 
 void
 wdpoke(void)
