@@ -74,10 +74,10 @@ stats(int print)
 // Each core open and closes a file, delay freeing the file structure.
 //
 
-void gctest(void)
+void gctest(char *fn)
 {
   int fd;
-  if((fd = open("cat", 0)) < 0){
+  if((fd = open(fn, O_RDONLY)) < 0){
     fprintf(1, "cat: cannot open %s\n", "cat");
     exit();
   }
@@ -85,6 +85,7 @@ void gctest(void)
 
 }
 
+// XXX this won't scale (one shared inode)
 void memtest(void)
 {
   ctrl(8, 1000000, 1);   // alloc
@@ -97,28 +98,37 @@ child()
   u64 s = 5; // use integer instead of float (e.g., 2.5)!
   u64 nsec = sec*s*1000*1000*1000L; 
   int n = 0;
+  char filename[32];
+  int fd;
+
   // fprintf(1, "child %d\n", cpu); XXX telnet cannot handle this?
   if (setaffinity(cpu) < 0) {
     die("sys_setaffinity(%d) failed", 0);
   }
+  snprintf(filename, sizeof(filename), "f%d", cpu);
+  fd = open(filename, O_CREATE|O_RDWR);
+  if (fd < 0)
+    die("gc: open failed");
+  close(fd);
+
   if (cpu == 0) { 
     stats(0);
   }
   if (strcmp("mem", test) == 0) {
     ctrl_init();
   }
-  // perf_start(0, 24000000000ul);
+  if (cpu == 0) perf_start(0, 100000);
   u64 t0 = rdtsc();
   u64 t1;
   do {
     for(int i = 0; i < 10; i++) {
-      if (strcmp("gc", test) == 0) gctest();
+      if (strcmp("gc", test) == 0) gctest(filename);
       else memtest();
       n++;
     }
     t1 = rdtsc();
   } while((t1 - t0) < nsec);
-  if (cpu == 1) printf("%d: %d ops in %d sec\n", cpu, n, s);
+  if (cpu == 0) printf("%d: %d ops in %d sec\n", cpu, n, s);
   if (strcmp("mem", test) == 0) {
     ctrl_done();
   }
@@ -126,7 +136,9 @@ child()
     printf("stats for sec\n", s);
     stats(1);
   }
-  // perf_stop();
+  if (cpu == 0) perf_stop();
+  if (unlink(filename) < 0)
+    die("unlink failed\n");
 }
 
 int
