@@ -52,7 +52,8 @@ public:
   gc_state();
   void dequeue(gc_handle *h);
   void enqueue(gc_handle *h);
-  gc_free(rcu_freed *r, u64 epoch);
+  int gc_free(rcu_freed *r, u64 epoch);
+  void do_gc(void);
 };
 
 percpu<gc_state, percpu_safety::internal> gc_state;
@@ -166,6 +167,38 @@ gc_state::gc_free(rcu_freed *r, u64 epoch)
   return nfree;
 }
 
+// Caller must hold lock_
+void
+gc_state::do_gc(void)
+{
+  u64 i;
+
+  stat->nrun++;
+
+  // free all delayed-free lists until min_epoch
+  for (i = nexttofree_epoch; i < min_epoch; i++) {
+    rcu_freed *head = delayed[i%NEPOCH].head;
+
+    // give up lock during free
+    release(&lock_);
+
+    int nfree = gc_free(head,i);
+
+    acquire(&lock_);
+    delayed[i%NEPOCH].head = nullptr;
+    delayed[i%NEPOCH].epoch += NEPOCH;
+    stat->nfree += nfree;
+    if (gc_debug && nfree > 0) {
+      cprintf("%d: epoch %lu freed %d\n", mycpu()->id, i, nfree);
+    }
+
+  }
+  nexttofree_epoch = i;
+
+  // try to increment global_epoch
+  gc_inc_global_epoch();
+}
+
 static void
 gc_worker(void *x)
 {
@@ -174,39 +207,16 @@ gc_worker(void *x)
 
   acquire(&gc_state->lock_);
   for (;;) {
-    u64 i;
     gc_state->cv.sleep_to(&gc_state->lock_, 
                           nsectime() + ((u64)GCINTERVAL)*1000000ull);
-
-    stat->nrun++;
 
     // if no processes are running on this core, update min_epoch
     if (gc_state->proclist.next == &gc_state->proclist) {
       gc_state->min_epoch = global_epoch.load();
     }
 
-    // free all delayed-free lists until min_epoch
-    for (i = gc_state->nexttofree_epoch; i < gc_state->min_epoch; i++) {
-      rcu_freed *head = gc_state->delayed[i%NEPOCH].head;
+    gc_state->do_gc();
 
-      // give up lock during free
-      release(&gc_state->lock_);
-
-      int nfree = gc_state->gc_free(head,i);
-
-      acquire(&gc_state->lock_);
-      gc_state->delayed[i%NEPOCH].head = nullptr;
-      gc_state->delayed[i%NEPOCH].epoch += NEPOCH;
-      stat->nfree += nfree;
-      if (gc_debug && nfree > 0) {
-	cprintf("%d: epoch %lu freed %d\n", mycpu()->id, i, nfree);
-      }
-
-    }
-    gc_state->nexttofree_epoch = i;
-
-    // try to increment global_epoch
-    gc_inc_global_epoch();
   }
 }
 
@@ -245,13 +255,6 @@ writectrl(struct inode *inode, const char *buf, u32 off, u32 n)
   memcpy(&ngc_cpu, buf, sizeof(int));
   memcpy(&gc_batchsize, buf + sizeof(int), sizeof(int));
   memcpy(&op, buf + 2 * sizeof(int), sizeof(int));
-  if (op == 1) {
-    mymem->v = kmalloc(1024, "test");
-    stat->nalloc++;
-  }
-  if (op == 2) {
-    kmfree(mymem->v, 1024);
-  }
   return n;
 }
 
@@ -287,7 +290,7 @@ gc_delayed(rcu_freed *e)
   u64 epoch = global_epoch;
 
   if (gc_debug) 
-    cprintf("(%d, %d): gc_delayed: %lu ndelayed %d\n", c, myproc()->pid,
+    cprintf("(%d, %d): gc_delayed: %lu ndelayed %lu\n", c, myproc()->pid,
             epoch, stat[c].ndelay);
 
   if (epoch != gs->delayed[epoch % NEPOCH].epoch) {
@@ -338,8 +341,9 @@ gc_end_epoch(void)
   
   gc_state[c].dequeue(myproc()->gc);
   myproc()->gc->core = -1;
-  if (stat[c].ndelay > gc_batchsize) {
-    gs->cv.wake_all();
+  if (stat[c].ndelay % gc_batchsize == 0) {
+    gs->do_gc();
+    // gs->cv.wake_all();
   }
 }
 

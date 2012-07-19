@@ -8,9 +8,9 @@
 
 static int cpu = 0;
 static int sec = 2;
-static char *test;
 static int fd_ctrl;
 
+#ifdef PROFILE
 static u64 selector = 
   0UL << 32 |
   1 << 24 | 
@@ -21,6 +21,10 @@ static u64 selector =
   0x00 << 8 | 
   0x76;
 static u64 period = 100000;
+#else
+static u64 selector = 0;
+static u64 period = 0;
+#endif
 
 static void
 ctrl_init(void)
@@ -73,9 +77,9 @@ stats(int print)
       die("gct: unexpected read");
 
     if (print)
-      fprintf(1, "%d: ndelay %d nfree %d nrun %d ncycles %lu nop %lu cycles/op %lu nalloc %d\n", 
+      fprintf(1, "%d: ndelay %d nfree %d nrun %d ncycles %lu nop %lu cycles/op %lu\n", 
             c++, gs.ndelay, gs.nfree, gs.nrun, gs.ncycles, gs.nop, 
-              (gs.nop > 0) ? gs.ncycles/gs.nop : 0, gs.nalloc);
+              (gs.nop > 0) ? gs.ncycles/gs.nop : 0);
   }
 
   close(fd);
@@ -96,13 +100,6 @@ void gctest(char *fn)
 
 }
 
-// XXX this won't scale (one shared inode)
-void memtest(void)
-{
-  ctrl(8, 1000000, 1);   // alloc
-  ctrl(8, 1000000, 2);   // free
-}
-
 void
 child()
 {
@@ -112,7 +109,6 @@ child()
   char filename[32];
   int fd;
 
-  // fprintf(1, "child %d\n", cpu); XXX telnet cannot handle this?
   if (setaffinity(cpu) < 0) {
     die("sys_setaffinity(%d) failed", 0);
   }
@@ -125,24 +121,19 @@ child()
   if (cpu == 0) { 
     stats(0);
   }
-  if (strcmp("mem", test) == 0) {
-    ctrl_init();
-  }
   if (cpu == 0) perf_start(selector, period);
   u64 t0 = rdtsc();
   u64 t1;
   do {
     for(int i = 0; i < 10; i++) {
-      if (strcmp("gc", test) == 0) gctest(filename);
-      else memtest();
+      gctest(filename);
       n++;
     }
     t1 = rdtsc();
   } while((t1 - t0) < nsec);
-  if (cpu == 0) printf("%d: %d ops in %d sec\n", cpu, n, s);
-  if (strcmp("mem", test) == 0) {
-    ctrl_done();
-  }
+
+  // printf("%d: %d ops in %d sec\n", cpu, n, s);
+
   if (cpu == 0) { 
     printf("stats for sec\n", s);
     stats(1);
@@ -155,16 +146,15 @@ child()
 int
 main(int argc, char *argv[])
 {
-  if (argc < 4)
-    die("usage: %s nproc batchsize [gc|mem] [nsec]", argv[0]);
+  if (argc < 3)
+    die("usage: %s nproc batchsize [nsec]", argv[0]);
 
   int nproc = atoi(argv[1]);
   int batchsize = atoi(argv[2]);
-  test = argv[3];
-  if (argc > 4)
-    sec = atoi(argv[4]);
+  if (argc > 3)
+    sec = atoi(argv[3]);
 
-  printf("%s: %d %d %s\n", argv[0], nproc, batchsize, test);
+  printf("%s: %d %d\n", argv[0], nproc, batchsize);
 
   ctrl_init();
   ctrl(nproc, batchsize, 0);
