@@ -35,12 +35,12 @@ streamnum (print_stream *s, unsigned long long num,
 }
 
 #define INT_TO_STREAM(typ)                              \
-  void to_stream(print_stream *s, typ v)                \
+  void to_stream(print_stream *s, unsigned typ v)       \
   {                                                     \
     streamnum(s, v);                                    \
   }                                                     \
                                                         \
-  void to_stream(print_stream *s, unsigned typ v)       \
+  void to_stream(print_stream *s, typ v)                \
   {                                                     \
     if (v < 0)                                          \
       streamnum(s, -v, true);                           \
