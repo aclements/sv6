@@ -26,12 +26,24 @@ using std::atomic;
 //   process is migrated)
 // one gc thread and state (e.g., NEPOCH delaylist) per core
 // a gcc thread performs two jobs:
-// 1. one gcc thread perform step 1: updates global_epoch
-//   (costs linear in the number of cores, but a global operation)
-// 2. in parallel gc threads free the elements on the delayed-free lists
+// 1. in parallel gc threads free the elements on the delayed-free lists
 //   (costs linear in the number of elements to be freed, but a local operation)
+// 2a (global scheme). one gcc thread perform step 1: updates global_epoch
+//   (costs linear in the number of cores, but a global operation)
+// 2a (local scheme). each core reads the global_min and cur_epoch from its
+//   neighbor. it updates its global_min by computing the min(global_min read from
+//   neighbor and its min_epoch). it sets its cur_epoch to the 
+//   neighbor's cur_epoch.  core 0 is the ring leader: it increases epoch, 
+//   if global_min from last core >= cur_epoch-2.  If local communication scales,
+//   this gc scheme will scale, but the delay to increase cur_epoch is linear
+//   in the number of cores.
+//
+// To limit the number of delayed free lists per core, each core also has a
+// variable nexttofree_epoch, which <= min_epoch. cur_epoch isn't increased
+// unless nexttofree_epoch >= cur_epoch-2, implicitly also ensuring the
+// constraint that cur_epoch is only increases when min_epoch >= cur_epoch-2.
 
-enum { gc_debug = 0 };
+enum { gc_debug = 0, gc_global = 0 };
 
 // Head of a delayed free list. Always read and updated while holding lock_
 struct headinfo {
@@ -39,10 +51,12 @@ struct headinfo {
   u64 epoch;
 };
 
+// nexttofree_epoch << min_epoch << cur_epoch (or global_epoch)
 struct gc_state { 
   atomic<u64> nexttofree_epoch; // the lowest epoch # to free on this core
   atomic<u64> min_epoch;        // the lowest epoch # a process on this core is in
-
+  atomic<u64> cur_epoch;        // the current epoch this core is running in
+  atomic<u64> global_min;       // used to compute global_min over nexttofree
   struct spinlock lock_ __mpalign__;
   struct condvar cv;
   headinfo delayed[NEPOCH];     // NEPOCH delayed-free lists
@@ -54,9 +68,10 @@ public:
   void enqueue(gc_handle *h);
   int gc_free(rcu_freed *r, u64 epoch);
   void do_gc(void);
+  void inc_cur_epoch(void);
 };
 
-percpu<gc_state, percpu_safety::internal> gc_state;
+percpu<gc_state, percpu_safety::internal> gc_states;
 percpu<gc_stat, percpu_safety::internal> stat;
 int ngc_cpu;
 int gc_batchsize;
@@ -71,8 +86,7 @@ atomic<u64> global_epoch __mpalign__;
 
 // Increment global_epoch if (1) each core has freed all epochs <= global-2
 // and (2) each core has no processes in an epoch <= global - 2
-// This operation is the only common global operation.  
-// XXX implement global min in scalable manner
+// This operation is the only global operation.  
 static void
 gc_inc_global_epoch(void)
 {
@@ -85,11 +99,11 @@ gc_inc_global_epoch(void)
   u64 minepoch = global;
   for (int c = 0; c < ngc_cpu; c++) { 
     // is reading nexttofree_epoch and min_epoch a single cache miss?
-    if (gc_state[c].nexttofree_epoch < minfree) {
-      minfree = gc_state[c].nexttofree_epoch;
+    if (gc_states[c].nexttofree_epoch < minfree) {
+      minfree = gc_states[c].nexttofree_epoch;
     }
-    if (gc_state[c].min_epoch < minepoch) {
-      minepoch = gc_state[c].min_epoch;
+    if (gc_states[c].min_epoch < minepoch) {
+      minepoch = gc_states[c].min_epoch;
     }
   }
   if ((minfree < global-2) || (minepoch < global-2)) 
@@ -105,6 +119,31 @@ done:
   stat[mycpu()->id].nop++;
 }
 
+// Scalable way of computing global_min by arranging nodes in a virtual ring
+void
+gc_state::inc_cur_epoch(void)
+{
+  u64 t0 = rdtsc();
+  if (mycpu()->id == 0) {
+    u64 min = gc_states[ncpu-1].global_min;
+    if (min >= cur_epoch - 2) {
+      if (gc_debug) cprintf("%d: update my epoch to: %lu\n", 
+                          mycpu()->id, cur_epoch+1);
+      cur_epoch += 1;
+    }
+    global_min = nexttofree_epoch.load();
+  } else {
+    int neighbor = mycpu()->id - 1;
+    u64 neighbor_global_min = gc_states[neighbor].global_min;
+    cur_epoch = gc_states[neighbor].cur_epoch.load();
+    global_min = neighbor_global_min > nexttofree_epoch ?
+      global_min = nexttofree_epoch.load() :  global_min = neighbor_global_min;
+  }
+  u64 t1 = rdtsc();
+  stat[mycpu()->id].ncycles += (t1-t0);
+  stat[mycpu()->id].nop++;
+}
+
 gc_state::gc_state() : 
   lock_("gc_state", LOCKSTAT_GC), cv(condvar("gc_cv"))
 { 
@@ -113,6 +152,7 @@ gc_state::gc_state() :
   for (int i = 0; i < NEPOCH; i++) {
     delayed[i].epoch = i;
   }
+  cur_epoch = NEPOCH-2;
 }
 
 // caller should hold lock_
@@ -129,7 +169,7 @@ gc_state::enqueue(gc_handle *h)
 void
 gc_state::dequeue(gc_handle *h)
 {
-  u64 m = global_epoch;
+  u64 m = gc_global ? global_epoch : cur_epoch;
   for (gc_handle* entry = this->proclist.next; entry != &this->proclist;
        entry = entry->next) {
     if (entry == h) {
@@ -196,7 +236,8 @@ gc_state::do_gc(void)
   nexttofree_epoch = i;
 
   // try to increment global_epoch
-  gc_inc_global_epoch();
+  if (gc_global) gc_inc_global_epoch();
+  else inc_cur_epoch();
 }
 
 static void
@@ -205,17 +246,18 @@ gc_worker(void *x)
   if (VERBOSE)
     cprintf("gc_worker: %d\n", mycpu()->id);
 
-  acquire(&gc_state->lock_);
+  acquire(&gc_states->lock_);
   for (;;) {
-    gc_state->cv.sleep_to(&gc_state->lock_, 
+    gc_states->cv.sleep_to(&gc_states->lock_, 
                           nsectime() + ((u64)GCINTERVAL)*1000000ull);
 
     // if no processes are running on this core, update min_epoch
-    if (gc_state->proclist.next == &gc_state->proclist) {
-      gc_state->min_epoch = global_epoch.load();
+    if (gc_states->proclist.next == &gc_states->proclist) {
+      gc_states->min_epoch = gc_global ? global_epoch.load() : 
+        gc_states->cur_epoch.load();
     }
 
-    gc_state->do_gc();
+    gc_states->do_gc();
 
   }
 }
@@ -239,12 +281,6 @@ readstat(struct inode *inode, char *dst, u32 off, u32 n)
   
   return n;
 }
-
-struct mem {
-  void *v;
-};
-
-percpu<struct mem, percpu_safety::internal> mymem;
 
 static int
 writectrl(struct inode *inode, const char *buf, u32 off, u32 n)
@@ -283,11 +319,11 @@ void
 gc_delayed(rcu_freed *e)
 {
   int c =  mycpu()->id;
-  struct gc_state *gs = &gc_state[c];
+  struct gc_state *gs = &gc_states[c];
 
   scoped_acquire x(&gs->lock_);
 
-  u64 epoch = global_epoch;
+  u64 epoch = gc_global ? global_epoch : gs->cur_epoch;
 
   if (gc_debug) 
     cprintf("(%d, %d): gc_delayed: %lu ndelayed %lu\n", c, myproc()->pid,
@@ -314,12 +350,12 @@ gc_begin_epoch(void)
   if (v & 0xff) return;
 
   int c =  mycpu()->id;
-  struct gc_state *gs = &gc_state[c];  
+  struct gc_state *gs = &gc_states[c];  
 
   scoped_acquire x(&gs->lock_);
-
+  u64 epoch = gc_global ? global_epoch : gs->cur_epoch;
   myproc()->gc->core = c;
-  cmpxch(&myproc()->gc->epoch, v+1, (global_epoch.load()<<8)+1);
+  cmpxch(&myproc()->gc->epoch, v+1, (epoch<<8)+1);
   // We effectively need an mfence here, and cmpxch provides one
   // by virtue of being a LOCK instuction.
   gs->enqueue(myproc()->gc);
@@ -335,15 +371,15 @@ gc_end_epoch(void)
 
   int c = myproc()->gc->core;
   assert (c != -1);
-  struct gc_state *gs = &gc_state[c];  
+  struct gc_state *gs = &gc_states[c];  
 
   scoped_acquire x(&gs->lock_);
   
-  gc_state[c].dequeue(myproc()->gc);
+  gc_states[c].dequeue(myproc()->gc);
   myproc()->gc->core = -1;
   if (stat[c].ndelay % gc_batchsize == 0) {
-    gs->do_gc();
-    // gs->cv.wake_all();
+    // gs->do_gc();
+    gs->cv.wake_all();
   }
 }
 
@@ -351,6 +387,6 @@ void
 gc_wakeup(void)
 {
   for (int i = 0; i < NCPU; i++) {
-    gc_state[i].cv.wake_all();
+    gc_states[i].cv.wake_all();
   }
 }

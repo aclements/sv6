@@ -135,7 +135,7 @@ child()
   // printf("%d: %d ops in %d sec\n", cpu, n, s);
 
   if (cpu == 0) { 
-    printf("stats for sec\n", s);
+    printf("stats for %d sec\n", s);
     stats(1);
   }
   if (cpu == 0) perf_stop();
