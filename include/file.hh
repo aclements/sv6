@@ -5,6 +5,7 @@
 #include "gc.hh"
 #include "atomic.hh"
 #include "ref.hh"
+#include "condvar.h"
 
 class dirns;
 
