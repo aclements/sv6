@@ -6,8 +6,6 @@
 #include "uwq.hh"
 #include "distref.hh"
 
-#define VM_RADIX  1
-
 struct padded_length;
 
 using std::atomic;
@@ -48,9 +46,7 @@ private:
 enum vmatype { PRIVATE, COW };
 
 struct vma
-#if VM_RADIX
   : public radix_elem, public distributed_refcnt
-#endif
 {
   const uptr vma_start;        // start of mapping
   const uptr vma_end;          // one past the last byte
@@ -64,7 +60,6 @@ struct vma
 
   virtual void do_gc() { delete this; }
 
-#if VM_RADIX
   void decref(u64 delta)
   {
     distref_dec(delta);
@@ -80,7 +75,6 @@ private:
   {
     gc_delayed(this);
   }
-#endif
 };
 
 class print_stream;
@@ -89,9 +83,7 @@ void to_stream(print_stream *s, vma *v);
 // An address space: a set of vmas plus h/w page table.
 // The elements of e[] are not ordered by address.
 struct vmap {
-#if VM_RADIX
   struct radix vmas;
-#endif
 
   static vmap* alloc();
 
