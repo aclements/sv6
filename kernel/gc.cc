@@ -61,7 +61,6 @@ struct gc_state {
   struct condvar cv;
   headinfo delayed[NEPOCH];     // NEPOCH delayed-free lists
   gc_handle proclist;           // list of process in an epoch on this core
-  int woken;
 public:
   gc_state();
   void dequeue(gc_handle *h);
@@ -120,6 +119,7 @@ done:
 }
 
 // Scalable way of computing global_min by arranging nodes in a virtual ring
+// XXX ring could follow physical proximity
 void
 gc_state::inc_cur_epoch(void)
 {
@@ -135,7 +135,9 @@ gc_state::inc_cur_epoch(void)
   } else {
     int neighbor = mycpu()->id - 1;
     u64 neighbor_global_min = gc_states[neighbor].global_min;
-    cur_epoch = gc_states[neighbor].cur_epoch.load();
+    u64 e = gc_states[neighbor].cur_epoch.load();
+    assert(cur_epoch <= e);
+    cur_epoch = e;
     global_min = neighbor_global_min > nexttofree_epoch ?
       global_min = nexttofree_epoch.load() :  global_min = neighbor_global_min;
   }
@@ -207,7 +209,8 @@ gc_state::gc_free(rcu_freed *r, u64 epoch)
   return nfree;
 }
 
-// Caller must hold lock_
+// Caller must hold lock_.  This function cannot be called recursively,
+// but it won't if only gc_worker() runs do_gc.
 void
 gc_state::do_gc(void)
 {
@@ -219,7 +222,7 @@ gc_state::do_gc(void)
   for (i = nexttofree_epoch; i < min_epoch; i++) {
     rcu_freed *head = delayed[i%NEPOCH].head;
 
-    // give up lock during free
+    // give up lock during free; gc_free() may call gc_begin/end_epoch
     release(&lock_);
 
     int nfree = gc_free(head,i);
@@ -256,7 +259,7 @@ gc_worker(void *x)
       gc_states->min_epoch = gc_global ? global_epoch.load() : 
         gc_states->cur_epoch.load();
     }
-
+    
     gc_states->do_gc();
 
   }
@@ -334,7 +337,7 @@ gc_delayed(rcu_freed *e)
             gs->delayed[epoch % NEPOCH].epoch, gs->nexttofree_epoch.load(), 
             gs->min_epoch.load());
     if (c >= ngc_cpu) return;
-    panic("gc_delayed_int");
+    panic("gc_delayed");
   }
   stat[c].ndelay++;
   e->_rcu_epoch = epoch;
@@ -371,15 +374,19 @@ gc_end_epoch(void)
 
   int c = myproc()->gc->core;
   assert (c != -1);
+  assert (c >= 0 && c < ncpu);
   struct gc_state *gs = &gc_states[c];  
 
   scoped_acquire x(&gs->lock_);
   
   gc_states[c].dequeue(myproc()->gc);
   myproc()->gc->core = -1;
+
   if (stat[c].ndelay % gc_batchsize == 0) {
-    // gs->do_gc();
-    gs->cv.wake_all();
+    // calling gs->do_gc() works for gcbench, because gcbench threads are pinned
+    // to a core.  do_gc is correct when it uses one core's gc_state, so better
+    // to wakeup this core's gc thread, and yield the core to it.
+    gs->cv.wake_all(true);
   }
 }
 

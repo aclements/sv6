@@ -107,11 +107,12 @@ condvar::sleep(struct spinlock *lk)
 
 // Wake up all processes sleeping on this condvar.
 void
-condvar::wake_all()
+condvar::wake_all(int yield)
 {
   struct proc *p, *tmp;
 
   scoped_acquire cv_l(&lock);
+  myproc()->yield_ = yield;
   LIST_FOREACH_SAFE(p, &waiters, cv_waiters, tmp) {
     scoped_acquire p_l(&p->lock);
     if (p->get_state() != SLEEPING)

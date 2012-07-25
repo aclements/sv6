@@ -33,7 +33,7 @@ struct condvar {
 
   void sleep(struct spinlock *);
   void sleep_to(struct spinlock*, u64);
-  void wake_all();
+  void wake_all(int yield=false);
 #endif // __cplusplus
 };
 
