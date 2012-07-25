@@ -12,15 +12,20 @@
 #include "cpu.hh"
 #include "multiboot.hh"
 #include "wq.hh"
+#include "page_info.hh"
 
 static struct Mbmem mem[128];
 static u64 nmem;
-static u64 membytes;
+static u64 membytes, memmax;
 percpu<kmem, percpu_safety::internal> kmems;
 percpu<kmem, percpu_safety::internal> slabmem[slab_type_max];
 
 extern char end[]; // first address after kernel loaded from ELF file
 char *newend;
+
+page_info *page_info_array;
+std::size_t page_info_len;
+paddr page_info_base;
 
 static int kinited __mpalign__;
 
@@ -89,6 +94,8 @@ initmem(u64 mbaddr)
     p += 4 + *(u32*)p;
     if (mbmem->type == 1 && mbmem->base >= 0x100000) {
       membytes += mbmem->length;
+      if (mbmem->base + mbmem->length > memmax)
+        memmax = mbmem->base + mbmem->length;
       mem[nmem] = *mbmem;
       nmem++;
     }
@@ -256,6 +263,15 @@ initkalloc(u64 mbaddr)
   u64 k;
 
   initmem(mbaddr);
+
+  // Allocate the page metadata array.  Since there's no point in
+  // tracking the pages that store the page metadata array, we compute
+  // the optimal size balance so the array starts with the metadata
+  // for the page immediately following the array.
+  page_info_array = (page_info*)newend;
+  page_info_len = 1 + (memmax - v2p(newend)) / (sizeof(page_info) + PGSIZE);
+  newend = PGROUNDUP(newend + page_info_len * sizeof(page_info));
+  page_info_base = v2p(newend);
 
   for (int c = 0; c < NCPU; c++) {
     kmems[c].name[0] = (char) c + '0';
