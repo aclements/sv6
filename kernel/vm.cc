@@ -195,9 +195,6 @@ vmnode::loadall()
  */
 
 vma::vma(vmap *vmap, uptr start, uptr end, enum vmatype vtype, vmnode *vmn) :
-#if VM_CRANGE
-    range(&vmap->vmas, start, end-start),
-#endif
     vma_start(start), vma_end(end), va_type(vtype), n(vmn)
 {
   assert(PGOFFSET(start) == 0);
@@ -245,12 +242,7 @@ vmap::alloc(void)
 }
 
 vmap::vmap() : 
-#if VM_CRANGE
-  vmas(10),
-#endif
-#if VM_RADIX
   vmas(PGSHIFT),
-#endif
   ref(1), kshared((char*) ksalloc(slab_kshared)), brk_(0),
   brklock_("brk_lock", LOCKSTAT_VM),
   pgmap_list_(false)
@@ -292,21 +284,12 @@ vmap::replace_vma(vma *a, vma *b)
   assert(a->vma_start == b->vma_start);
   assert(a->vma_end == b->vma_end);
   auto span = vmas.search_lock(a->vma_start, a->vma_end - a->vma_start);
-#if VM_CRANGE
-  if (a->deleted())
-    return false;
-  for (auto e: span)
-    assert(a == e);
-  span.replace(b);
-#endif
-#if VM_RADIX
   for (auto it = span.begin(); it != span.end(); ++it) {
     if (static_cast<vma*>(*it) == a)
       // XXX(austin) replace should take iterators to represent the
       // span so we don't have to find the keys all over again.
       span.replace(it.key(), it.span(), b);
   }
-#endif
   return true;
 }
 
@@ -315,23 +298,12 @@ vmap::copy(int share, proc_pgmap* pgmap)
 {
   vmap *nm = new vmap();
 
-#if VM_RADIX
   radix::iterator next_it;
   for (auto it = vmas.begin(); it != vmas.end(); it = next_it, it.skip_nulls()) {
     next_it = it.next_change();
     u64 range_start = it.key();
     u64 range_end = next_it.key();
     vma *e = static_cast<vma*>(*it);
-#endif
-#if 0
-  }  // Ugh.  Un-confuse IDE indentation.
-#endif
-#if VM_CRANGE
-  for (auto r: vmas) {
-    vma *e = static_cast<vma *>(r);
-    u64 range_start = e->vma_start;
-    u64 range_end = e->vma_end;
-#endif
     u64 range_size = range_end - range_start;
 
     struct vma *ne;
@@ -344,11 +316,7 @@ vmap::copy(int share, proc_pgmap* pgmap)
       // if the original vma wasn't COW, replace it with a COW vma
       if (e->va_type != COW) {
         vma *repl = new vma(this, e->vma_start, e->vma_end, COW, e->n);
-#if VM_RADIX
         vmas.search_lock(range_start, range_size).replace(range_start, range_size, repl);
-#elif VM_CRANGE
-        replace_vma(e, repl);
-#endif
         updatepages(pgmap->pml4, range_start, range_end, [](atomic<pme_t>* p) {
             for (;;) {
               pme_t v = p->load();
@@ -367,20 +335,13 @@ vmap::copy(int share, proc_pgmap* pgmap)
 
     auto span = nm->vmas.search_lock(range_start, range_size);
     for (auto x: span) {
-#if VM_RADIX
       if (!x)
         continue;
-#endif
       cprintf("non-empty span 0x%lx--0x%lx in %p: %p\n",
               ne->vma_start, ne->vma_end, nm, x);
       assert(0);  /* span must be empty */
     }
-#if VM_CRANGE
-    span.replace(ne);
-#endif
-#if VM_RADIX
     span.replace(range_start, range_size, ne);
-#endif
   }
 
   if (share) {
@@ -408,13 +369,8 @@ vmap::lookup(uptr start, uptr len)
   if (start + len < start)
     panic("vmap::lookup bad len");
 
-#if VM_CRANGE
-  auto r = vmas.search(start, len);
-#endif
-#if VM_RADIX
   assert(len <= PGSIZE);
   auto r = vmas.search(start);
-#endif
   if (r != 0) {
     vma *e = (vma *) r;
     if (e->vma_end <= e->vma_start)
@@ -449,18 +405,6 @@ again:
     // new scope to release the search lock before tlbflush
     u64 len = n->npages * PGSIZE;
     auto span = vmas.search_lock(vma_start, len);
-#if VM_CRANGE
-    // XXX handle overlaps, set replaced=true
-    for (auto r: span) {
-      if (!fixed)
-        goto again;
-
-      vma *rvma = (vma*) r;
-      uerr.println("vmap::insert: overlap with ", rvma);
-      return -1;
-    }
-#endif
-#if VM_RADIX
     // XXX(austin) span.replace also has to do this scan.  It would be
     // nice if we could do just one scan.
     for (auto r: span) {
@@ -479,7 +423,6 @@ again:
         break;
       }
     }
-#endif
 
     e = new vma(this, vma_start, vma_start+len, PRIVATE, n);
     if (e == 0) {
@@ -487,12 +430,7 @@ again:
       return -1;
     }
 
-#if VM_CRANGE
-    span.replace(e);
-#endif
-#if VM_RADIX
     span.replace(e->vma_start, e->vma_end-e->vma_start, e);
-#endif
     // XXX(sbw) Replace should tell what cores to update
   }
 
@@ -544,28 +482,9 @@ vmap::remove(uptr vma_start, uptr len, proc_pgmap* pgmap)
     // new scope to release the search lock before tlbflush
 
     auto span = vmas.search_lock(vma_start, len);
-#if VM_CRANGE
-    // XXX handle partial unmap
-    uptr vma_end = vma_start + len;
-    for (auto r: span) {
-      vma *rvma = (vma*) r;
-      if (rvma->vma_start < vma_start || rvma->vma_end > vma_end) {
-        uerr.println("vmap::remove: partial unmap not supported; "
-                     "unmapping [", shex(vma_start),",",shex(vma_start+len), ")"
-                     " from ", rvma);
-        return -1;
-      }
-    }
-#endif
-
-#if VM_CRANGE
-    span.replace(0);
-#endif
-#if VM_RADIX
     // XXX(austin) If this could tell us that nothing was replaced, we
     // could skip the updatepages.
     span.replace(vma_start, len, 0);
-#endif
     // XXX(sbw) Replace should tell what cores to update
   }
 
@@ -703,12 +622,8 @@ vmap::pagefault(uptr va, u32 err, proc_pgmap* pgmap)
   }
 
   scoped_gc_epoch gc;
-#if VM_CRANGE
-  vma *m = lookup(va, 1);
-#elif VM_RADIX
   auto vma_it = vmas.find(va);
   vma *m = static_cast<vma*>(*vma_it);
-#endif
   if (m == 0)
     return -1;
 
@@ -749,12 +664,6 @@ vmap::pagefault(uptr va, u32 err, proc_pgmap* pgmap)
   if (!cmpxch(pte, ptev, ptev | PTE_LOCK))
     goto retry;
 
-#if VM_CRANGE
-  if (m->deleted()) {
-    *pte = ptev;
-    goto retry;
-  }
-#elif VM_RADIX
   // The radix tree is the source of truth about where the VMA is
   // mapped.  It might have been unmapped from this va but still be
   // around, so we can't just test if it's deleted.
@@ -762,7 +671,6 @@ vmap::pagefault(uptr va, u32 err, proc_pgmap* pgmap)
     *pte = ptev;
     goto retry;
   }
-#endif
 
   if (m->va_type == COW) {
     *pte = v2p(m->n->page[npg]) | PTE_P | PTE_U | PTE_COW;
@@ -894,19 +802,12 @@ vmap::sbrk(ssize_t n, uptr *addr)
   // sbrk() would start to use the next region (e.g. the stack).
   uptr newstart = PGROUNDUP(curbrk);
   s64 newn = PGROUNDUP(n + curbrk - newstart);
-#if VM_CRANGE
-  range *prev = 0;
-#endif
-#if VM_RADIX
   void *last = 0;
-#endif
   auto span = vmas.search_lock(newstart, newn + PGSIZE);
   for (auto r: span) {
-#if VM_RADIX
     if (!r || r == last)
       continue;
     last = r;
-#endif
     vma *e = (vma*) r;
 
     if (e->vma_start <= newstart) {
@@ -917,9 +818,6 @@ vmap::sbrk(ssize_t n, uptr *addr)
 
       newn -= e->vma_end - newstart;
       newstart = e->vma_end;
-#if VM_CRANGE
-      prev = e;
-#endif
     } else {
       uerr.println("growproc: overlap with existing mapping; "
                    "brk ", shex(curbrk), " n ", n);
@@ -940,13 +838,7 @@ vmap::sbrk(ssize_t n, uptr *addr)
     return -1;
   }
 
-#if VM_CRANGE
-  span.replace(prev, repl);
-#endif
-
-#if VM_RADIX
   span.replace(newstart, newn, repl);
-#endif
 
   brk_ += n;
   return 0;
@@ -959,15 +851,6 @@ vmap::unmapped_area(size_t npages)
   uptr addr = 0x1000;
 
   while (addr < USERTOP) {
-#if VM_CRANGE
-    auto x = vmas.search(addr, n);
-    if (x == nullptr)
-      return addr;
-    vma* a = (vma*) x;
-    addr = a->vma_end;
-#endif
-
-#if VM_RADIX
     bool overlap = false;
     for (uptr ax = addr; ax < addr+n; ax += PGSIZE) {
       auto x = vmas.search(ax);
@@ -980,7 +863,6 @@ vmap::unmapped_area(size_t npages)
     }
     if (!overlap)
       return addr;
-#endif
   }
   return 0;
 }
