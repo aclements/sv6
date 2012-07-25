@@ -40,6 +40,7 @@ void initcpprt(void);
 void initfutex(void);
 void initcmdline(void);
 void initdistref(void);
+void initrefcache(void);
 void initacpitables(void);
 void initcpus(void);
 void initlapic(void);
@@ -173,6 +174,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initidle();
   initgc();        // gc epochs and threads
   initdistref();   // distref collector thread
+  initrefcache();  // Requires initsched
   initdisk();      // disk
   initbio();       // buffer cache
   initinode();     // inode cache
