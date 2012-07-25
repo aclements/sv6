@@ -1,14 +1,11 @@
 #include "gc.hh"
 #include "atomic.hh"
-#include "crange_arch.hh"
-#include "crange.hh"
 #include "radix.hh"
 #include "cpputil.hh"
 #include "hwvm.hh"
 #include "uwq.hh"
 #include "distref.hh"
 
-#define VM_CRANGE 0
 #define VM_RADIX  1
 
 struct padded_length;
@@ -51,9 +48,6 @@ private:
 enum vmatype { PRIVATE, COW };
 
 struct vma
-#if VM_CRANGE
-  : public range
-#endif
 #if VM_RADIX
   : public radix_elem, public distributed_refcnt
 #endif
@@ -95,10 +89,6 @@ void to_stream(print_stream *s, vma *v);
 // An address space: a set of vmas plus h/w page table.
 // The elements of e[] are not ordered by address.
 struct vmap {
-#if VM_CRANGE
-  struct crange vmas;
-#endif
-
 #if VM_RADIX
   struct radix vmas;
 #endif
