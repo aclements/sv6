@@ -30,7 +30,7 @@ using std::atomic;
 //   (costs linear in the number of elements to be freed, but a local operation)
 // 2a (global scheme). one gcc thread perform step 1: updates global_epoch
 //   (costs linear in the number of cores, but a global operation)
-// 2a (local scheme). each core reads the global_min and cur_epoch from its
+// 2b (local scheme). each core reads the global_min and cur_epoch from its
 //   neighbor. it updates its global_min by computing the min(global_min read from
 //   neighbor and its min_epoch). it sets its cur_epoch to the 
 //   neighbor's cur_epoch.  core 0 is the ring leader: it increases epoch, 
@@ -51,7 +51,7 @@ struct headinfo {
   u64 epoch;
 };
 
-// nexttofree_epoch << min_epoch << cur_epoch (or global_epoch)
+// nexttofree_epoch << min_epoch << global_epoch (or cur_epoch)
 struct gc_state { 
   atomic<u64> nexttofree_epoch; // the lowest epoch # to free on this core
   atomic<u64> min_epoch;        // the lowest epoch # a process on this core is in
@@ -83,9 +83,9 @@ static struct gc_lock {
 } gc_lock;
 atomic<u64> global_epoch __mpalign__;
 
-// Increment global_epoch if (1) each core has freed all epochs <= global-2
-// and (2) each core has no processes in an epoch <= global - 2
-// This operation is the only global operation.  
+// Sceheme 2a: Increment global_epoch if (1) each core has freed all epochs <=
+// global-2 and (2) each core has no processes in an epoch <= global - 2 This
+// operation is the only global operation.
 static void
 gc_inc_global_epoch(void)
 {
@@ -118,14 +118,15 @@ done:
   stat[mycpu()->id].nop++;
 }
 
-// Scalable way of computing global_min by arranging nodes in a virtual ring
+// Scheme 2b: Scalable way of computing global_min by arranging nodes in a
+// virtual ring.
 // XXX ring could follow physical proximity
 void
 gc_state::inc_cur_epoch(void)
 {
   u64 t0 = rdtsc();
   if (mycpu()->id == 0) {
-    u64 min = gc_states[ncpu-1].global_min;
+    u64 min = gc_states[ngc_cpu-1].global_min;
     if (min >= cur_epoch - 2) {
       if (gc_debug) cprintf("%d: update my epoch to: %lu\n", 
                           mycpu()->id, cur_epoch+1);
@@ -187,7 +188,7 @@ gc_state::dequeue(gc_handle *h)
   }
 }
 
-// free the elements in delayed-free list r (from epoch epoch).  
+// Free the elements in delayed-free list r (from epoch epoch).  
 // Runs without holding _lock
 int
 gc_state::gc_free(rcu_freed *r, u64 epoch)
