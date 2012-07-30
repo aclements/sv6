@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <stdexcept>
 
+#include "bit_spinlock.hh"
+
 #ifndef RADIX_DEBUG
 #define RADIX_DEBUG 1
 #endif
@@ -86,8 +88,7 @@ public:
  *   T();  // ideally = default
  *   T(T& o);
  *   T &operator=(T& o);
- *   void set_locked(bool );
- *   bool is_locked() const;
+ *   bit_spinlock get_lock();
  *   bool is_set() const;
  * };
  * </code>
@@ -433,27 +434,34 @@ public:
         // since we're just assigning unset values.
         auto leaf = node.as_leaf_node();
         for (std::size_t i = idx; i < idx + len; i++) {
-          x->set_locked(leaf->child[i].is_locked());
+          // Preserve the lock state over the copy
+          x->get_lock().init(leaf->child[i].get_lock().is_locked());
           leaf->child[i] = *x;
         }
       } else {
         auto upper = node.as_upper_node();
         for (std::size_t i = idx; i < idx + len; i++) {
+          // Set all of the terminal children in this range
+          // (maintaining their lock state) and recurse into
+          // non-terminal children.
           node_ptr child(upper->child[i]);
           if (child.is_null()) {
-            // Create a new external.  If we're removing, then there's
-            // nothing to do.
+            // Create a new external.  If we're unsetting, then
+            // there's nothing to do.
             if (!unset)
               // XXX Use allocator?
-              upper->child[i] = node_ptr(new value_type(*x), child.is_locked());
+              upper->child[i] = node_ptr(new value_type(*x),
+                                         child.get_lock().is_locked());
           } else if (child.is_external()) {
             // Assign to the existing external.  If we're removing,
             // then delete the external
             value_type *ext = child.as_external();
             if (!unset) {
+              // The lock bit is maintained on the pointer, so we
+              // don't have to worry about maintaining it here.
               *ext = *x;
             } else {
-              upper->child[i] = node_ptr(nullptr, child.is_locked());
+              upper->child[i] = node_ptr(nullptr, child.get_lock().is_locked());
               // XXX This isn't safe without RCU
               delete ext;
             }
@@ -773,8 +781,9 @@ private:
       NONE = 0, UPPER = 1, LEAF = 2, EXTERNAL = 3
     };
 
+    static constexpr int lock_bit = 2;
     static constexpr uintptr_t type_mask = 3 << 0;
-    static constexpr uintptr_t lock_mask = 1 << 2;
+    static constexpr uintptr_t lock_mask = 1 << lock_bit;
     static constexpr uintptr_t mask = type_mask | lock_mask;
 
     constexpr node_ptr() : v(0) { }
@@ -819,17 +828,9 @@ private:
       return v;
     }
 
-    bool is_locked() const
+    bit_spinlock get_lock()
     {
-      return !!(v & lock_mask);
-    }
-
-    node_ptr &set_locked(bool l)
-    {
-      if (l)
-        v = v & ~lock_mask;
-      else
-        v = v | lock_mask;
+      return bit_spinlock(&v, lock_bit);
     }
 
     type get_type() const
@@ -871,7 +872,7 @@ private:
     void free(radix_array *r)
     {
       if (RADIX_DEBUG)
-        assert(!is_locked());
+        assert(!get_lock().is_locked());
       switch (get_type()) {
       case EXTERNAL:
         delete as_external();
@@ -891,6 +892,12 @@ private:
    * upper node's children can be null, leaf nodes, or externals.
    * Above level 1, an upper node's children can be null, upper nodes,
    * or externals.
+   *
+   * Externals provide two places to maintain the lock bit: either in
+   * the pointer to the external or in the external itself.  We use
+   * the bits in the pointer.  Similarly, we do not use the set bit in
+   * the external, since having a non-null pointer implies that the
+   * value is set.
    */
   struct upper_node
   {
@@ -911,7 +918,7 @@ private:
     upper_node(radix_array *r, node_ptr src)
     {
       // Initialize child pointers
-      bool is_locked = src.is_locked();
+      bool is_locked = src.get_lock().is_locked();
       try {
         if (src.is_external()) {
           // Copy to new externals for each child node
@@ -950,7 +957,7 @@ private:
 
       // Construct an upper_node using r's allocator.
       upper_node *node;
-      if (src.is_null() && !src.is_locked()) {
+      if (src.is_null() && !src.get_lock().is_locked()) {
         node = r->upper_node_alloc_.default_allocate();
       } else {
         node = r->upper_node_alloc_.allocate(1);
@@ -1005,17 +1012,17 @@ private:
         assert(src.is_null() || src.is_external());
 
       // Allocate leaf node
-      bool is_locked = src.is_locked();
+      bool is_locked = src.get_lock().is_locked();
       leaf_node *node;
       if (src.is_null()) {
         // We default-initialize the child array whether it's locked
-        // or not so that we have something to set_locked'd on (this
-        // differs from upper_node, where we can construct the locked
-        // pointer in place).
+        // or not so that we have something to lock (this differs from
+        // upper_node, where we can construct the locked pointer in
+        // place).
         node = r->leaf_node_alloc_.default_allocate();
         if (is_locked)
           for (auto &c : node->child)
-            c.set_locked(true);
+            c.get_lock().init(true);
       } else {
         // Allocate the node, but don't call it's constructor because
         // that would force us to default-initialize the child array.
@@ -1032,7 +1039,7 @@ private:
           for (auto &c : node->child) {
             new (&c) value_type(*orig);
             if (is_locked)
-              c.set_locked(true);
+              c.get_lock().init(true);
           }
         } catch (...) {
           // XXX If we didn't zalloc it, some values might be junk
