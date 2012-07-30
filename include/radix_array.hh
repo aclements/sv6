@@ -392,7 +392,12 @@ public:
         if (atomic_compare_exchange_strong(
               &node_.as_upper_node()->child[subkey(k_, node_level_)],
               &orig_child.v, new_child.v)) {
-          // Success.  Free the old node if it was an external
+          // Success.  If the old child was locked, then that bit was
+          // propagated to all children of the new node.  Since the
+          // radix_array::lock object is managing the CLI, we don't
+          // have to worry about anything lock-related here.
+
+          // Free the old node if it was an external
           if (orig_child.is_external())
             // XXX This isn't safe without RCU
             delete orig_child.as_external();
@@ -472,6 +477,63 @@ public:
           }
         }
       }
+    }
+
+    /**
+     * Lock the current value.
+     */
+    void lock()
+    {
+      while (node_level_) {
+        // Upper node.  We may need to go further down the tree to
+        // reach a terminal child.
+        auto child = &node_.as_upper_node()->child[subkey(k_, node_level_)];
+        node_ptr c(*child);
+        if (c.is_external() || c.is_null()) {
+          // c is a copy of the node_ptr, but we need to lock the real
+          // thing.  Unfortunately, there's no way to do this with an
+          // atomic<> because it assumes it's the only thing doing
+          // atomic operations and doesn't provide bit ops itself, so
+          // we have to cheat.
+          static_assert(sizeof(*child) == sizeof(node_ptr),
+                        "Unexpected atomic size");
+          node_ptr *cref(reinterpret_cast<node_ptr*>(child));
+          cref->get_lock().acquire(bit_spinlock::cli_caller);
+          // Was c expanded while we were waiting for the lock?
+          c = node_ptr(*child);
+          if (c.is_external() || c.is_null())
+            return;
+          // Yes.  Release the lock and push down.
+          cref->get_lock().release(bit_spinlock::cli_caller);
+        }
+        force_terminal();
+      }
+      // Leaf node
+      auto &c = node_.as_leaf_node()->child[subkey(k_, 0)];
+      c.get_lock().acquire(bit_spinlock::cli_caller);
+    }
+
+    /**
+     * Unlock the current value.
+     */
+    void unlock()
+    {
+      while (node_level_) {
+        // Upper node.  We may need to go further down the tree to
+        // reach a terminal child.
+        auto child = &node_.as_upper_node()->child[subkey(k_, node_level_)];
+        node_ptr c(*child);
+        if (c.is_external() || c.is_null()) {
+          // See lock()
+          node_ptr *c2(reinterpret_cast<node_ptr*>(child));
+          c2->get_lock().release(bit_spinlock::cli_caller);
+          return;
+        }
+        force_terminal();
+      }
+      // Leaf node
+      auto &c = node_.as_leaf_node()->child[subkey(k_, 0)];
+      c.get_lock().release(bit_spinlock::cli_caller);
     }
 
   public:
@@ -756,12 +818,107 @@ public:
     fill(low, high, value_type());
   }
 
-  // lock
-  // acquire(const iterator &low, const iterator &high)
-  // {
-  //   // XXX The returned object merely holds the lock.  All operations
-  //   // should be done using the regular methods on radix_array.
-  // }
+  /**
+   * Class that holds a lock on a range of a radix array.
+   */
+  class lock
+  {
+    friend class radix_array;
+
+    radix_array *r_;
+    key_type low_, high_;
+
+    constexpr lock(radix_array *r, key_type low, key_type high)
+      : r_(r), low_(low), high_(high) { }
+
+  public:
+    /** Default constructor. */
+    constexpr lock() : r_(nullptr), low_(0), high_(0) { }
+
+    /** Copying is forbidden. */
+    lock(const lock &o) = delete;
+    lock &operator=(const lock &o) = delete;
+
+    /** Move constructor. */
+    lock(lock &&o) : r_(o.r_), low_(o.low_), high_(o.high_)
+    {
+      o.r_ = nullptr;
+    }
+
+    /** Move assignment operator. */
+    lock &operator=(lock &&o)
+    {
+      release();
+      r_ = o.r_;
+      low_ = o.low_;
+      high_ = o.high_;
+      o.r_ = nullptr;
+    }
+
+    /**
+     * Release the lock.
+     */
+    ~lock()
+    {
+      release();
+    }
+
+    /**
+     * Explicitly release the lock.
+     */
+    void
+    release()
+    {
+      if (r_) {
+        iterator it(r_, low_);
+        iterator high(r_, high_);
+        for (; it.k_ < high.k_; it += it.span())
+          it.unlock();
+        r_ = nullptr;
+#ifdef XV6_KERNEL
+        popcli();
+#endif
+      }
+    }
+  };
+
+  /**
+   * Lock all values in the range <tt>[low, high)</tt>.
+   *
+   * This is an advisory lock: it does not automatically preclude any
+   * operation except another acquire operation.  However,
+   * ::radix_array users must ensure somehow that updates to the same
+   * key never occur simultaneously, and these locks provide support
+   * for a simple lock-based convention.
+   *
+   * This may lock a larger range than requested if ranges have been
+   * folded (unlike #fill(), the will not expand compressed regions).
+   * Callers should be prepared for this.
+   */
+  lock
+  acquire(const iterator &low, const iterator &high)
+  {
+    iterator it(low);
+    // Round low down to key boundary
+    it.force_terminal();
+    key_type low_key = it.k_ & ~(level_span(it.node_level_) - 1);
+    // Round high up to key boundary (high_key is inclusive)
+    high.force_terminal();
+    key_type high_key = high.k_ | (level_span(high.node_level_) - 1);
+
+#ifdef XV6_KERNEL
+    // Rather than bumping the cli count for every bit lock we take
+    // and being very careful when we propagate bit locks over
+    // decompression, we simply managing the cli count ourselves, with
+    // one cli for the entire locked range.
+    pushcli();
+#endif
+
+    for (; it.k_ < high.k_; it += it.span())
+      it.lock();
+
+    return lock(this, low_key, high_key);
+  }
 
 private:
   typename ZAllocator::template rebind<upper_node>::other upper_node_alloc_;
