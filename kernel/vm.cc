@@ -17,6 +17,7 @@
 #include "uwq.hh"
 #include "kmtrace.hh"
 #include "kstream.hh"
+#include "page_info.hh"
 
 enum { vm_debug = 0 };
 enum { tlb_shootdown = 1 };
@@ -50,7 +51,7 @@ vmnode::~vmnode()
 {
   for(u64 i = 0; i < npages; i++)
     if (page[i])
-      kfree(page[i]);
+      page_info::of(page[i])->dec();
   if (ip != nullptr)
     iput(ip);
 }
@@ -90,6 +91,8 @@ vmnode::allocpg(int idx, bool zero)
 
   if (p == nullptr)
     return -1;
+
+  new (page_info::of(p)) page_info();
 
   if(!cmpxch(&page[idx], (char*) 0, p)) {
     if (zero)
@@ -147,6 +150,9 @@ vmnode::fault(int idx)
   if (p == nullptr)
     throw_bad_alloc();
 
+  // Initialize reference count
+  new (page_info::of(p)) page_info();
+
   if (type == ONDEMAND) {
     mtreadavar("inode:%x.%x", ip->dev, ip->inum);
 
@@ -160,8 +166,10 @@ vmnode::fault(int idx)
     // Possible race condition with concurrent loadpg() calls,
     // if the underlying inode's contents change..
     //
-    if (readi(ip, p, fileo, filen) != filen)
+    if (readi(ip, p, fileo, filen) != filen) {
+      kfree(p);
       return -1;
+    }
 
     // XXX(sbw), we should memset the remainder, but sometimes
     // we loadpg on a pg that already has content.
