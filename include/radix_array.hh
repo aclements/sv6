@@ -78,7 +78,12 @@ public:
  *
  * For maximum space and time-efficiency, a radix_array requires its
  * value type to store two bits of state information: a "set" bit and
- * a "locked" bit.  Ideally, the value type should also be trivially
+ * a "locked" bit.  It must also support copy construction and copy
+ * assignment, which are used for decompression and filling,
+ * respectively.  The copy assignment operator must not temporarily
+ * clear the lock bit if it is set and, if the caller can read during
+ * a concurrent write, concurrent copy assignment and reading must be
+ * safe.  Ideally, the value type should also be trivially
  * constructable, but this is not required.  Specifically, the value
  * type must satisfy the following interface
  *
