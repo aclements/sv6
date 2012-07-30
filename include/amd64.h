@@ -1,6 +1,8 @@
 #pragma once
 // Routines to let C code use special x86 instructions.
 
+#include "types.h"
+
 static inline void
 cpuid(u32 info, u32 *eaxp, u32 *ebxp,
       u32 *ecxp, u32 *edxp)
@@ -276,6 +278,29 @@ static inline void
 prefetch(void *a)
 {
   __asm volatile("prefetch (%0)" : : "r" (a));
+}
+
+// Atomically set bit nr of *a and return its old value
+static inline int
+locked_test_and_set_bit(int nr, volatile void *a)
+{
+  int old;
+  __asm volatile("lock; bts %2,%1; sbb %0,%0"
+                 : "=r" (old), "+m" (*(volatile uint64_t*)a)
+                 : "Ir" (nr)
+                 : "memory");
+  return old;
+}
+
+// Atomically clear bit nr of *a, with release semantics appropriate
+// for clearing a lock bit.
+static inline void
+clear_bit_unlock(int nr, volatile void *a)
+{
+  __asm volatile("lock; btr %1,%0"
+                 : "+m" (*(volatile uint64_t*)a)
+                 : "Ir" (nr)
+                 : "memory");
 }
 
 // Layout of the trap frame built on the stack by the
