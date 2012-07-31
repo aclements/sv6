@@ -39,7 +39,7 @@ sys_dup(int ofd)
   if (!getfile(ofd, &f))
     return -1;
   f->inc();
-  if ((fd = fdalloc(f.ptr())) < 0) {
+  if ((fd = fdalloc(f.get())) < 0) {
     f->dec();
     return -1;
   }

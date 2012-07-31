@@ -1,14 +1,69 @@
 template <class T>
 class sref {
+private:
+  constexpr explicit sref(T* p) noexcept : ptr_(p) { }
+
 public:
-  sref(T* p = nullptr) : ptr_(p) {
+  constexpr sref() noexcept : ptr_(nullptr) { }
+
+  sref(const sref &o) : ptr_(o.ptr_) {
     if (ptr_)
       ptr_->inc();
+  }
+
+  sref(sref &&o) noexcept : ptr_(o.ptr_)
+  {
+    o.ptr_ = nullptr;
   }
 
   ~sref() {
     if (ptr_)
       ptr_->dec();
+  }
+
+  sref& operator=(const sref& o) {
+    T *optr = o.ptr_;
+    if (optr != ptr_) {
+      if (optr)
+        optr->inc();
+      if (ptr_)
+        ptr_->dec();
+      ptr_ = optr;
+    }
+    return *this;
+  }
+
+  sref& operator=(sref&& o) {
+    if (ptr_)
+      ptr_->dec();
+    ptr_ = o.ptr_;
+    o.ptr_ = nullptr;
+    return *this;
+  }
+
+  // Transfer ownership of a pointer to this sref.  This *does not*
+  // increment the reference count and is primarily meant for getting
+  // srefs for freshly allocated objects that have come with an
+  // implicit reference count of 1.
+  static constexpr sref transfer(T* p) {
+    return sref(p);
+  }
+
+  // Create a new reference to a pointer.  This *does* increment the
+  // reference count and is primarily meant for transferring between
+  // manual pointer-based reference counting and automatic counting.
+  static sref newref(T* p) {
+    if (p)
+      p->inc();
+    return sref(p);
+  }
+
+  void reset()
+  {
+    if (ptr_) {
+      ptr_->dec();
+      ptr_ = nullptr;
+    }
   }
 
   bool init(T* p) {
@@ -23,16 +78,13 @@ public:
   bool operator==(T* p) const { return ptr_ == p; }
   bool operator!=(T* p) const { return ptr_ != p; }
 
-  const T * operator->() const { return ptr_; }
-  T * operator->() { return ptr_; }
-  T * ptr() const { return ptr_; }
+  explicit operator bool() const noexcept { return !!ptr_; }
+
+  T * operator->() const noexcept { return ptr_; }
+  T & operator*() const noexcept { return *ptr_; }
+  T * get() const noexcept { return ptr_; }
 
 private:
-  sref<T>& operator=(sref<T>& mp);
-  sref<T>& operator=(T* p);
-  sref<T>& operator=(const sref<T>& pr);
-  sref(const sref<T>& pr);
-
   T *ptr_;
 };
 
