@@ -1,6 +1,10 @@
 #pragma once
 
+#ifdef XV6_KERNEL
+#include "atomic.hh"
+#else
 #include <atomic>
+#endif
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -1044,6 +1048,8 @@ private:
         break;
       case LEAF:
         as_leaf_node()->free(r);
+        break;
+      case NONE:
         break;
       }
     }
