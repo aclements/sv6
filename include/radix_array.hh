@@ -358,7 +358,7 @@ public:
     /**
      * Set <tt>[k, k + 1<<key_shift(level))</tt> to @c x.
      */
-    void set_at_level(unsigned level, const value_type &x)
+    void set_at_level(unsigned level, const value_type &x) const
     {
       // XXX Would be nice to rejoin nodes, but that will require
       // RCU-freeing nodes and support from the value_type.  It would
@@ -491,7 +491,7 @@ public:
     /**
      * Lock the current value.
      */
-    void lock()
+    void lock() const
     {
       while (node_level_) {
         // Upper node.  We may need to go further down the tree to
@@ -525,7 +525,7 @@ public:
     /**
      * Unlock the current value.
      */
-    void unlock()
+    void unlock() const
     {
       while (node_level_) {
         // Upper node.  We may need to go further down the tree to
