@@ -703,9 +703,35 @@ public:
      */
     size_type span() const
     {
+      auto bspan = base_span();
+      return bspan - (k_ & (bspan - 1));
+    }
+
+    /**
+     * Return the base of this iterator.  Because of node compression,
+     * the #index() can fall in the middle of a compressed range that
+     * is known to have the same value for a range of indexes.  The
+     * base is the beginning of that range and hence is always less
+     * than or equal to #index().  The #base_span() is the size of
+     * that range and will always be greater than or equal to #span(),
+     * which is how much of that span lies after #index().
+     */
+    size_type base() const
+    {
+      // Round k_ down to the nearest multiple of the base span, where
+      // the base span is a power of two.
+      return k_ & ~(base_span() - 1);
+    }
+
+    /**
+     * Return the base span of this iterator.  This value stored in
+     * the array will be the same for at least <tt>[base(), base() +
+     * base_span())</tt>.
+     */
+    size_type base_span() const
+    {
       force_terminal();
-      auto base_span = level_span(node_level_);
-      return base_span - (k_ & (base_span - 1));
+      return level_span(node_level_);
     }
   };
 
@@ -907,13 +933,10 @@ public:
   lock
   acquire(const iterator &low, const iterator &high)
   {
-    iterator it(low);
     // Round low down to key boundary
-    it.force_terminal();
-    key_type low_key = it.k_ & ~(level_span(it.node_level_) - 1);
-    // Round high up to key boundary (high_key is inclusive)
-    high.force_terminal();
-    key_type high_key = high.k_ | (level_span(high.node_level_) - 1);
+    key_type low_key = low.base();;
+    // Round high up to key boundary
+    key_type high_key = high.base() + high.base_span();
 
 #ifdef XV6_KERNEL
     // Rather than bumping the cli count for every bit lock we take
@@ -923,6 +946,7 @@ public:
     pushcli();
 #endif
 
+    iterator it(low);
     for (; it.k_ < high.k_; it += it.span())
       it.lock();
 
