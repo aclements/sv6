@@ -1,5 +1,10 @@
+#pragma once
+
 #include "atomic.hh"
 #include "percpu.hh"
+
+#include <typeinfo>
+#include <memory>
 
 template<class T>
 struct vptr64 {
@@ -72,3 +77,109 @@ enum {
 };
 
 extern percpu<kmem, percpu_safety::internal> kmems;
+
+// std allocator
+
+template<class T>
+class allocator_base
+{
+public:
+  typedef std::size_t size_type;
+  typedef ptrdiff_t difference_type;
+  typedef T* pointer;
+  typedef const T* const_pointer;
+  typedef T& reference;
+  typedef const T& const_reference;
+  typedef T value_type;
+
+  pointer
+  address(reference x) const noexcept
+  {
+    return std::addressof(x);
+  }
+
+  const_pointer
+  address(const_reference x) const noexcept
+  {
+    return std::addressof(x);
+  }
+
+  template<class U, class... Args>
+  void
+  construct(U* p, Args&&... args)
+  {
+    ::new((void *)p) U(std::forward<Args>(args)...);
+  }
+
+  template <class U>
+  void
+  destroy(U* p)
+  {
+    p->~U();
+  }
+};
+
+// Standard allocator that uses the kernel page allocator.  This
+// satisfies both the standard Allocator requirement as well as the
+// ZAllocator requirement.
+template<class T>
+class kalloc_allocator : public allocator_base<T>
+{
+public:
+  template <class U> struct rebind { typedef kalloc_allocator<U> other; };
+
+  kalloc_allocator() = default;
+  kalloc_allocator(const kalloc_allocator&) = default;
+  template<class U> kalloc_allocator(const kalloc_allocator<U>&) noexcept { }
+
+  T*
+  allocate(std::size_t n, const void *hint = 0)
+  {
+    if (n * sizeof(T) != PGSIZE)
+      panic("%s cannot allocate %zu bytes", __PRETTY_FUNCTION__, n * sizeof(T));
+    return (T*)kalloc(typeid(T).name());
+  }
+
+  void
+  deallocate(T* p, std::size_t n)
+  {
+    if (n * sizeof(T) != PGSIZE)
+      panic("%s cannot deallocate %zu bytes", __PRETTY_FUNCTION__,
+            n * sizeof(T));
+    kfree(p);
+  }
+
+  std::size_t
+  max_size() const noexcept
+  {
+    return PGSIZE;
+  }
+
+  // ZAllocator methods
+
+  T*
+  default_allocate()
+  {
+    if (sizeof(T) != PGSIZE)
+      panic("%s cannot allocate %zu bytes", __PRETTY_FUNCTION__, sizeof(T));
+
+    if (std::has_trivial_default_constructor<T>::value) {
+      // A trivial default constructor will zero-initialize
+      // everything, so we can short-circuit this by allocating a zero
+      // page.
+      return (T*)zalloc(typeid(T).name());
+    }
+
+    // Fall back to usual allocation and default construction
+    T *p = allocate(1);
+    try {
+      // Unqualified lookup doesn't find declarations in dependent
+      // bases.  Hence "this->".
+      this->construct(p);
+    } catch (...) {
+      deallocate(p, 1);
+      throw;
+    }
+    return p;
+  }
+};
