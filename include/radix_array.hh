@@ -844,6 +844,22 @@ public:
   }
 
   /**
+   * Copy-assign the value at @c it to @c x.
+   *
+   * This is equivalent to <tt>fill(it, it+1, x)</tt> and has the same
+   * concurrency requirements.
+   */
+  void
+  fill(const iterator &it, const T &x)
+  {
+    // XXX(austin) Support a move version.  Probably need to split
+    // expand_to_level out of set_at_level, since otherwise I would
+    // need a move version of set_at_level, which it can't generally
+    // support.
+    it.set_at_level(0, x);
+  }
+
+  /**
    * Unset all values in the range [low, high).  This is equivalent to
    * filling this range with an unset value.
    */
@@ -951,6 +967,21 @@ public:
       it.lock();
 
     return lock(this, low_key, high_key);
+  }
+
+  /**
+   * Lock the value at @c it.
+   *
+   * This is equivalent to <tt>acquire(it, it+1)</tt>.
+   */
+  lock
+  acquire(const iterator &it)
+  {
+#ifdef XV6_KERNEL
+    pushcli();
+#endif
+    it.lock();
+    return lock(this, it.base(), it.base() + it.base_span());
   }
 
 private:
