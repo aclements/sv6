@@ -15,6 +15,7 @@ void
 forkt_setup(u64 pid)
 {
   tlsdata* t = (tlsdata*) sbrk(sizeof(*t));
+  assert(t != (tlsdata*)-1);
   setfs((u64) t);
 }
 
@@ -23,6 +24,7 @@ pthread_create(pthread_t* tid, const pthread_attr_t* attr,
                void* (*start)(void*), void* arg)
 {
   char* base = (char*) sbrk(stack_size);
+  assert(base != (char*)-1);
   int t = forkt(base + stack_size, (void*) start, arg, FORK_SHARE_VMAP | FORK_SHARE_FD);
   if (t < 0)
     return t;
@@ -36,6 +38,7 @@ xthread_create(pthread_t* tid, int flags,
                void* (*start)(void*), void* arg)
 {
   char* base = (char*) sbrk(stack_size);
+  assert(base != (char*)-1);
   int t = forkt(base + stack_size, (void*) start, arg,
                 FORK_SHARE_VMAP | FORK_SHARE_FD | flags);
   if (t < 0)
