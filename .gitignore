@@ -7,6 +7,9 @@ _*
 *.asm
 *.out
 o.qemu/
+o.ben/
+o.josmp/
+o.tom/
 .gdbinit
 /mtrace.out
 /mtrace.txt
@@ -17,3 +20,6 @@ o.qemu/
 config.mk
 lwip
 /.passwd.*
+.gdb_history
+cscope.out
+cscope.files
