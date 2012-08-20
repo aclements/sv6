@@ -31,11 +31,9 @@ inituser(void)
     panic("userinit: out of vmaps?");
   if ((p->pgmap = proc_pgmap::alloc(p->vmap)) == 0)
     panic("inituser: alloc proc_pgmap");
-  vmnode *vmn =  new vmnode(PGROUNDUP(_initcode_size) / PGSIZE);
-  if(vmn == 0)
-    panic("userinit: vmn_allocpg");
-  if(p->vmap->insert(vmn, INIT_START, 1, nullptr) < 0)
-    panic("userinit: vmap_insert");
+  if(p->vmap->insert(vmdesc::anon_desc, INIT_START, PGROUNDUP(_initcode_size),
+                     nullptr) < 0)
+    panic("inituser: vmap::insert");
   if(p->vmap->copyout(INIT_START, _initcode_start, _initcode_size) < 0)
     panic("userinit: copyout");
   memset(p->tf, 0, sizeof(*p->tf));

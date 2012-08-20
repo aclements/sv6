@@ -32,40 +32,60 @@ dosegment(inode* ip, vmap* vmp, u64 off)
     return -1;
 
   uptr va_start = PGROUNDDOWN(ph.vaddr);
+  uptr mapped_end = PGROUNDDOWN(ph.vaddr + ph.filesz);
   uptr backed_end = PGROUNDUP(ph.vaddr + ph.filesz);
   uptr va_end = PGROUNDUP(ph.vaddr + ph.memsz);
-  off_t in_off = ph.offset - PGOFFSET(ph.vaddr);
-  size_t in_sz = ph.filesz + PGOFFSET(ph.vaddr);
 
-  if (va_start != backed_end) {
-    // Part represented in the file.  This may be empty, which is why
-    // this code is conditional.
-    size_t npg = (backed_end - va_start) / PGSIZE;
-    vmnode* node = new vmnode(npg, ONDEMAND, ip, in_off, in_sz);
-    if (node == nullptr)
-      return -1;
+  if (ph.filesz == ph.memsz) {
+    // There's no zero fill after this segment, so we can map the
+    // whole segment, even if that means we'll map in extra stuff from
+    // the file following the real contents of the segment.
+    mapped_end = backed_end;
+  }
 
-    if (vmp->insert(node, va_start, 1, nullptr) < 0) {
-      delete node;
+  if (va_start != mapped_end) {
+    // Part represented in the file that we can directly map.  This
+    // may be empty, which is why this code is conditional.
+    if ((ph.vaddr - ph.offset) % PGSIZE) {
+      // XXX(austin) Support misaligned/overlapping/etc segments
+      cprintf("ELF segment is not page-aligned\n");
       return -1;
+    }
+    if (vmp->insert(vmdesc(sref<inode>::newref(ip), ph.vaddr - ph.offset),
+                    va_start, mapped_end - va_start, nullptr) < 0)
+      return -1;
+  }
+
+  if (mapped_end != backed_end) {
+    // There's some file data that we can't directly map because
+    // another segment may begin on the same page as this segment
+    // ends.
+    if (vmp->insert(vmdesc::anon_desc, mapped_end, backed_end - mapped_end,
+                    nullptr) < 0)
+      return -1;
+    size_t seg_pos = mapped_end - va_start;
+    char buf[512];
+    while (seg_pos < ph.filesz) {
+      size_t to_read = ph.filesz - seg_pos;
+      if (to_read > sizeof(buf))
+        to_read = sizeof(buf);
+      int res = readi(ip, buf, ph.offset + seg_pos, to_read);
+      if (res <= 0)
+        return -1;
+      if (vmp->copyout(ph.vaddr + seg_pos, buf, res) < 0)
+        return -1;
+      seg_pos += res;
     }
   }
 
   if (va_end != backed_end) {
     // Zeroed part omitted from the file.  This must be mapped
     // separately both to avoid mapping non-zero data that follows
-    // this segment in the file and so the size of the vmnode doesn't
-    // exceed the size of the file (which could cause a failure on
-    // page fault).
-    size_t npg = (va_end - backed_end) / PGSIZE;
-    vmnode* node = new vmnode(npg);
-    if (node == nullptr)
+    // this segment in the file and so we don't try to fault beyond
+    // the end of the file.
+    if (vmp->insert(vmdesc::anon_desc, backed_end, va_end - backed_end,
+                    nullptr) < 0)
       return -1;
-
-    if (vmp->insert(node, backed_end, 1, nullptr) < 0) {
-      delete node;
-      return -1;
-    }
   }
 
   return 0;
@@ -74,7 +94,6 @@ dosegment(inode* ip, vmap* vmp, u64 off)
 static long
 dostack(vmap* vmp, char** argv, const char* path)
 {
-  struct vmnode *vmn = nullptr;
   uptr argstck[1+MAXARG];
   s64 argc;
   uptr sp;
@@ -87,10 +106,9 @@ dostack(vmap* vmp, char** argv, const char* path)
   //   char *argv[argc+1]
   //   u64 argc
 
-  // Allocate a one-page stack at the top of the (user) address space
-  if((vmn = new vmnode(USTACKPAGES)) == 0)
-    return -1;
-  if(vmp->insert(vmn, USERTOP-(USTACKPAGES*PGSIZE), 1, nullptr) < 0)
+  // Allocate a stack at the top of the (user) address space
+  if (vmp->insert(vmdesc::anon_desc, USERTOP - (USTACKPAGES*PGSIZE),
+                  USTACKPAGES * PGSIZE, nullptr) < 0)
     return -1;
 
   for (argc = 0; argv[argc]; argc++)
@@ -122,14 +140,7 @@ dostack(vmap* vmp, char** argv, const char* path)
 static int
 doheap(vmap* vmp)
 {
-  struct vmnode *vmn;
-
-  if((vmn = new vmnode(32)) == nullptr)
-    return -1;
-  if(vmp->insert(vmn, BRK, 1, nullptr) < 0)
-    return -1;
-  vmp->brk_ = BRK + 8;  // XXX so that brk-1 points within heap vma..
-
+  vmp->brk_ = BRK;
   return 0;
 }
 

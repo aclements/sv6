@@ -126,15 +126,10 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
   }
 #endif
 
-  vmnode *vmn = new vmnode((end - start) / PGSIZE);
-  if (vmn == 0)
+  uptr r = myproc()->vmap->insert(vmdesc::anon_desc, start, end - start,
+                                  myproc()->pgmap);
+  if (r < 0)
     return MAP_FAILED;
-
-  uptr r = myproc()->vmap->insert(vmn, start, 1, myproc()->pgmap);
-  if (r < 0) {
-    delete vmn;
-    return MAP_FAILED;
-  }
 
   return (void*)r;
 }

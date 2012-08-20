@@ -5,83 +5,96 @@
 #include "hwvm.hh"
 #include "uwq.hh"
 #include "distref.hh"
+#include "bit_spinlock.hh"
+#include "radix_array.hh"
+#include "kalloc.hh"
+#include "page_info.hh"
 
 struct padded_length;
 
 using std::atomic;
 
-// A memory object (physical pages or inode).
-enum vmntype { EAGER, ONDEMAND };
-
-struct vmnode {
-  const u64 npages;
-  atomic<bool> empty;
-  atomic<char*> page[128];
-  const enum vmntype type;
-  const u64 offset;
-  const u64 sz;
-
-  vmnode(u64 npg, vmntype type = EAGER,
-         inode *i = 0, u64 off = 0, u64 s = 0);
-  ~vmnode();
-  void decref();
-  void incref();
-  u64 ref();
-  void allocall(bool zero = true);
-  int allocpg(int idx, bool zero = true);
-  int loadall();
-  int loadpg(off_t off);
-  int fault(int idx);
-
-  vmnode* copy();
-
-  NEW_DELETE_OPS(vmnode);
-private:
-  atomic<u64> ref_;
-  struct inode *const ip;
-};
-
-// A mapping of a chunk of an address space to
-// a specific memory object.
-enum vmatype { PRIVATE, COW };
-
-struct vma
-  : public radix_elem, public distributed_refcnt
+// A virtual memory descriptor that maintains metadata for pages in an
+// address space.  This plays a similar role to the more traditional
+// "virtual memory area," but this does not know its size (it could
+// represent a single page or the entire address space).
+struct vmdesc
 {
-  const uptr vma_start;        // start of mapping
-  const uptr vma_end;          // one past the last byte
-  const enum vmatype va_type;
-  struct vmnode * const n;
+  enum {
+    // Bit used for radix tree range locking
+    FLAG_LOCK_BIT = 0,
+    FLAG_LOCK = 1<<FLAG_LOCK_BIT,
 
-  vma(vmap *vmap, uptr start, uptr end, enum vmatype vtype, vmnode *vmn);
-  ~vma();
+    // Set if this virtual page frame has been mapped
+    FLAG_MAPPED = 1<<1,
 
-  NEW_DELETE_OPS(vma);
+    // Set if this virtual page frame is copy-on-write.  A write fault
+    // to this page frame should copy page and unset the COW bit.  A
+    // read fault should map the existing page read-only.  This flag
+    // should be zero if this VPF has no backing page.
+    FLAG_COW = 1<<2,
 
-  virtual void do_gc() { delete this; }
+    // Set if this page frame maps anonymous memory.  Cleared if this
+    // page frame maps a file (in which case ip and start are used).
+    FLAG_ANON = 1<<3,
+  };
 
-  void decref(u64 delta)
+  // Flags
+  u64 flags;
+
+  // The physical page mapped in this frame, or null if no page has
+  // been allocated for this frame.
+  sref<class page_info> page;
+
+  // XXX We could pack the following fields into a union if there's
+  // anything we can overlap with them for anonymous memory.  However,
+  // then we have to use C++11 unrestricted unions because of the
+  // sref, so we'd have to define all of vmdesc's special methods
+  // ourselves.
+
+  // The file mapped at this page frame.
+  sref<struct inode> inode;
+
+  // If a file is mapped at this page frame, the virtual address of
+  // that file's 0 byte.  For anonymous memory, this must be 0.  We
+  // record this instead of the page frame's offset in the file so
+  // that a range of page frames mapping a sequence of pages from a
+  // file will be identical (and hence compressable in the radix
+  // tree).
+  intptr_t start;
+
+  // Construct a descriptor for unmapped memory.
+  vmdesc() : flags(0), start(0) { }
+
+  // Construct a descriptor that maps the beginning of ip's file to
+  // virtual address start (which may be negative).
+  vmdesc(const sref<struct inode> &ip, intptr_t start)
+    : flags(FLAG_MAPPED), inode(ip), start(start) { }
+
+  // The anonymous memory descriptor.
+  static struct vmdesc anon_desc;
+
+  // Radix_array element methods
+
+  bit_spinlock get_lock()
   {
-    distref_dec(delta);
+    return bit_spinlock(&flags, FLAG_LOCK_BIT);
   }
 
-  void incref(u64 delta)
+  bool is_set() const
   {
-    distref_inc(delta);
+    return flags & FLAG_MAPPED;
   }
 
 private:
-  void distref_free()
-  {
-    gc_delayed(this);
-  }
+  constexpr vmdesc(u64 flags)
+    : flags(flags), page(), inode(), start() { }
 };
 
-class print_stream;
-void to_stream(print_stream *s, vma *v);
+void to_stream(class print_stream *s, const vmdesc &vmd);
 
-// An address space: a set of vmas plus h/w page table.
-// The elements of e[] are not ordered by address.
+// An address space. This manages the mapping from virtual addresses
+// to virtual memory descriptors.
 struct vmap {
   struct radix vmas;
 
@@ -90,23 +103,37 @@ struct vmap {
   atomic<u64> ref;
   char *const kshared;
 
-  bool replace_vma(vma *a, vma *b);
-
   void decref();
   void incref();
 
-  vmap* copy(int share, proc_pgmap* pgmap);
-  vma* lookup(uptr start, uptr len);
-  long insert(vmnode *n, uptr va_start, int dotlb, proc_pgmap* pgmap);
+  // Copy this vmap's structure and share pages copy-on-write.
+  vmap* copy(proc_pgmap* pgmap);
+
+  // Map desc from virtual addresses start to start+len.
+  long insert(const vmdesc &desc, uptr start, uptr len, proc_pgmap* pgmap,
+              bool dotlb = true);
+
+  // Unmap from virtual addresses start to start+len.
   int remove(uptr start, uptr len, proc_pgmap* pgmap);
 
   int pagefault(uptr va, u32 err, proc_pgmap* pgmap);
+
+  // Map virtual address va in this address space to a kernel virtual
+  // address, performing the equivalent of a read page fault if
+  // necessary.  Returns nullptr if va is not mapped.  Needless to
+  // say, this mapping is only valid within the returned page.
   void* pagelookup(uptr va);
+
+  // Copy len bytes from p to user address va in vmap.  Most useful
+  // when vmap is not the current page table.
   int copyout(uptr va, void *p, u64 len);
   int sbrk(ssize_t n, uptr *addr);
 
   void add_pgmap(proc_pgmap* pgmap);
   void rem_pgmap(proc_pgmap* pgmap);
+
+  // Print this vmap to the console
+  void dump();
 
   uptr brk_;                    // Top of heap
 
@@ -116,10 +143,25 @@ private:
   vmap& operator=(const vmap&);
   ~vmap();
   NEW_DELETE_OPS(vmap)
-  int pagefault_wcow(vma *m, proc_pgmap* pgmap);
   uptr unmapped_area(size_t n);
 
+  // Virtual page frames
+  typedef radix_array<vmdesc, USERTOP / PGSIZE, PGSIZE,
+                      kalloc_allocator<vmdesc> > vpf_array;
+  vpf_array vpfs_;
+
   struct spinlock brklock_;
+
+  enum class access_type
+  {
+    READ, WRITE
+  };
+
+  // Ensure there is a backing page at @c it.  The caller is
+  // responsible for ensuring that there is a mapping at @c it and for
+  // locking vpfs_ at @c it.  This throws bad_alloc if a page must be
+  // allocated and cannot be.
+  page_info *ensure_page(const vpf_array::iterator &it, access_type type);
 
   // XXX(sbw) most likely an awful hash function
   static u64 proc_pgmap_hash(proc_pgmap* const & p)

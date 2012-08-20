@@ -290,17 +290,11 @@ uwq::allocworker(void)
   p->vmap = vmap_;
   p->ftable = ftable_;
     
-  struct vmnode *vmn;
-  if ((vmn = new vmnode(USTACKPAGES)) == nullptr) {
-    finishproc(p);
-    return nullptr;
-  }
-
   // Include a bumper page
   uptr ustack = ustack_.fetch_add((USTACKPAGES*PGSIZE)+PGSIZE);
   uptr stacktop = ustack + (USTACKPAGES*PGSIZE);
-  if (vmap_->insert(vmn, ustack, 1, pgmap_) < 0) {
-    delete vmn;
+  if (vmap_->insert(vmdesc::anon_desc, ustack, USTACKPAGES * PGSIZE,
+                    pgmap_) < 0) {
     finishproc(p);
     return nullptr;
   }

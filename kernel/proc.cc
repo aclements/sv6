@@ -447,7 +447,6 @@ fork(int flags)
 {
   int pid;
   struct proc *np;
-  int cow = 1;
 
   //cprintf("%d: fork\n", myproc()->pid);
 
@@ -472,7 +471,7 @@ fork(int flags)
     }
   } else {
     // Copy process state from p.
-    np->vmap = myproc()->vmap->copy(cow, myproc()->pgmap);
+    np->vmap = myproc()->vmap->copy(myproc()->pgmap);
     np->pgmap = proc_pgmap::alloc(np->vmap);
   }
 

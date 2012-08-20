@@ -18,11 +18,8 @@ script_mmap_work(void *a0, void *a1, void *a2, void *a3)
   atomic<int> *donep = (atomic<int> *) a2;
   struct proc *p = (struct proc *) a3;
 
-  vmnode *vmn = new vmnode(PGROUNDUP(len) / PGSIZE);
-  if(vmn == 0)
-    panic("sys_script: new vmnode");
-
-  if(p->vmap->insert(vmn, PGROUNDDOWN((u64)addr), 0, p->pgmap) < 0)
+  if(p->vmap->insert(vmdesc::anon_desc, PGROUNDDOWN((u64)addr), PGROUNDUP(len),
+                     p->pgmap) < 0)
     panic("sys_script: insert");
 
   *donep += 1;
