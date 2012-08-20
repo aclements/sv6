@@ -74,7 +74,8 @@ do_pagefault(struct trapframe *tf)
 #endif
         return 0;
       }
-      uerr.println("pagefault: failed in user");
+      uerr.println("pagefault: failed in user for ", shex(addr),
+                   " err ", (int)tf->err);
       cli();
   }
   return -1;
