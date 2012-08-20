@@ -678,6 +678,30 @@ public:
       return !(*this == o);
     }
 
+    /** Comparison operator. */
+    bool operator<(const iterator &o) const
+    {
+      return r_ < o.r_ || k_ < o.k_;
+    }
+
+    /** Comparison operator. */
+    bool operator<=(const iterator &o) const
+    {
+      return r_ < o.r_ || (r_ == o.r_ && k_ <= o.k_);
+    }
+
+    /** Comparison operator. */
+    bool operator>(const iterator &o) const
+    {
+      return r_ > o.r_ || k_ > o.k_;
+    }
+
+    /** Comparison operator. */
+    bool operator>=(const iterator &o) const
+    {
+      return r_ > o.r_ || (r_ == o.r_ && k_ >= o.k_);
+    }
+
     /**
      * Return the difference between the index of this iterator and
      * the index of @c o.
@@ -700,6 +724,10 @@ public:
      * Return the span of this iterator.  The value stored in the
      * array will be the same for at least <tt>[index(), index() +
      * span())</tt>.
+     *
+     * Note: When iterating by spans, test <tt>it < end</tt> rather
+     * than <tt>it != end</tt> because, in general, the span may
+     * exceed the position of an end iterator.
      */
     size_type span() const
     {
