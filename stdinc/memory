@@ -1,0 +1,13 @@
+// -*- c++ -*-
+
+#pragma once
+
+namespace std {
+  // [C++11 20.6.12.1]
+  template <class T>
+  T*
+  addressof(T& r) noexcept
+  {
+    return reinterpret_cast<T*>(&(char&)r);
+  }
+}
