@@ -558,7 +558,13 @@ public:
     value_type &operator*() const
     {
       // XXX Throwing an exception here means we can't use C++11
-      // for-each syntax safely
+      // for-each syntax safely.  It also means I can't safely call
+      // is_set and then * in the presence of concurrent updates.  It
+      // could instead be up to the caller to check is_set of what's
+      // returned.  We'd need a common unset value to return for null
+      // upper pointers.  It would be radically unsafe to set mutate a
+      // returned common value, but this is unsafe in general because
+      // of node compression.
       while (node_level_) {
         // Upper node.  We may need to go further down the tree to
         // reach a terminal child.
