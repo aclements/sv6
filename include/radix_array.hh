@@ -949,10 +949,17 @@ public:
   lock
   acquire(const iterator &low, const iterator &high)
   {
+    // XXX Support acquire_for_insert and acquire_for_read, where the
+    // former would expand the region to ensure tight locking, while
+    // the latter would perform loose locking?
+
     // Round low down to key boundary
-    key_type low_key = low.base();;
+    key_type low_key = low.base();
     // Round high up to key boundary
-    key_type high_key = high.base() + high.base_span();
+    key_type high_key = high.base();
+    if (high_key != high.index())
+      // We have to lock the whole high slot
+      high_key += high.base_span();
 
 #ifdef XV6_KERNEL
     // Rather than bumping the cli count for every bit lock we take
