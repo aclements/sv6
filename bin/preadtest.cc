@@ -111,7 +111,7 @@ main(int ac, char **av)
   if (ac > 1)
     use_async = av[1][0] == 'a';
   
-  fd = open("preadtest.x", O_CREATE|O_RDWR);
+  fd = open("preadtest.x", O_CREAT|O_RDWR);
   if (fd < 0)
     die("open failed");
   

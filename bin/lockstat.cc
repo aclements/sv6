@@ -24,7 +24,7 @@ stats(void)
     die("lockstat: open failed");
 
   unlink("/lockstat.last");
-  sfd = open("/lockstat.last", O_RDWR|O_CREATE);
+  sfd = open("/lockstat.last", O_RDWR|O_CREAT);
   if (sfd < 0)
     die("lockstat: open failed");
 

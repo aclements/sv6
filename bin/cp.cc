@@ -16,7 +16,7 @@ main(int argc, char *argv[])
     exit();
   }
 
-  int fd2 = open(argv[2], O_CREATE|O_WRONLY);
+  int fd2 = open(argv[2], O_CREAT|O_WRONLY);
   if(fd2 < 0){
     printf("cp: cannot create %s\n", argv[2]);
     exit();

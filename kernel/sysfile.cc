@@ -355,7 +355,7 @@ sys_openat(int dirfd, const char *path, int omode)
   mt_ascope ascope("%s(%d,%s,%d)", __func__, dirfd, path, omode);
   mtreadavar("inode:%x.%x", cwd->dev, cwd->inum);
 
-  if(omode & O_CREATE){
+  if(omode & O_CREAT){
     if((ip = create(cwd, path, T_FILE, 0, 0)) == 0)
       return -1;
     if(omode & O_WAIT){

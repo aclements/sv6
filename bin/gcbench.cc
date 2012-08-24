@@ -112,7 +112,7 @@ child()
     die("sys_setaffinity(%d) failed", 0);
   }
   snprintf(filename, sizeof(filename), "f%d", cpu);
-  fd = open(filename, O_CREATE|O_RDWR);
+  fd = open(filename, O_CREAT|O_RDWR);
   if (fd < 0)
     die("gc: open failed");
   close(fd);
