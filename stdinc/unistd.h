@@ -2,6 +2,7 @@
 
 #include "compiler.h"
 #include <sys/types.h>
+#include <uk/unistd.h>
 
 BEGIN_DECLS
 

@@ -2,7 +2,7 @@
 #include "pthread.h"
 #include "user.h"
 #include "atomic.hh"
-#include "fcntl.h"
+#include <unistd.h>
 
 enum { stack_size = 8192 };
 static std::atomic<int> nextkey;

@@ -4,7 +4,6 @@
 #include "types.h"
 #include <assert.h>
 #include <sys/wait.h>
-#include <unistd.h>
 #else
 #include "types.h"
 #include "user.h"
@@ -16,6 +15,7 @@
 #endif
 #include "xsys.h"
 #include <sys/mman.h>
+#include <unistd.h>
 
 enum { readaccess = 1 };
 enum { verbose = 0 };

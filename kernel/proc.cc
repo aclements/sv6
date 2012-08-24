@@ -14,6 +14,7 @@
 #include "ns.hh"
 #include "fcntl.h"
 #include "wq.hh"
+#include <uk/unistd.h>
 
 u64
 proc::hash(const u32 &p)
