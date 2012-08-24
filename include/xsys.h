@@ -12,7 +12,6 @@ static inline void xwait()
   if (!WIFEXITED(status))
     die("bad status %u", status);
 }
-#define xmkdir(pathname) mkdir((pathname), S_IWUSR|S_IRUSR);
 #define xcreat(name) open((name), O_CREATE|O_RDWR, S_IRUSR|S_IWUSR)
 #define mtenable(x) do { } while(0)
 #define mtenable_type(x, y) do { } while (0)
@@ -25,7 +24,6 @@ static inline void xwait()
 
 #define xfork() fork(0)
 #define xexit() exit()
-#define xmkdir(pathname) mkdir((pathname))
 #define xcreat(name) open((name), O_CREATE|O_RDWR)
 #define xwait() wait()
 #define xpthread_join(tid) xwait()

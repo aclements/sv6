@@ -164,9 +164,9 @@ open(const char *path, int omode)
 }
 
 int
-mkdir(const char *path)
+mkdir(const char *path, mode_t mode)
 {
-  return mkdirat(AT_FDCWD, path);
+  return mkdirat(AT_FDCWD, path, mode);
 }
 
 unsigned

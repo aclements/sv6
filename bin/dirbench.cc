@@ -87,7 +87,7 @@ main(int ac, char** av)
   if (ac > 3)
     path = av[3];
 
-  xmkdir(path);
+  mkdir(path, 0777);
 
   mtenable_type(mtrace_record_ascope, "xv6-dirbench");
 

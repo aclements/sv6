@@ -80,7 +80,7 @@ main(void)
   dup(0);  // stdout
   dup(0);  // stderr
 
-  mkdir("dev");
+  mkdir("dev", 0777);
   for (int i = 0; i < NELEM(dev); i++)
     if (mknod(dev[i].name, dev[i].major, 1) < 0)
       fprintf(2, "init: mknod %s failed\n", dev[i].name);

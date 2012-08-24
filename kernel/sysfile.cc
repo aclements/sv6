@@ -428,7 +428,7 @@ sys_openat(int dirfd, const char *path, int omode)
 
 //SYSCALL
 int
-sys_mkdirat(int dirfd, const char *path)
+sys_mkdirat(int dirfd, const char *path, mode_t mode)
 {
   struct inode *cwd;
   struct inode *ip;

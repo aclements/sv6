@@ -17,7 +17,7 @@ dolevel(int fd, int depth)
     {
       char name[] = "a";
       *name += i;
-      if (mkdirat(fd, name) < 0)
+      if (mkdirat(fd, name, 0777) < 0)
         die("mkdirat");
 
       int nfd = openat(fd, name, O_RDONLY);
@@ -43,7 +43,7 @@ main(int ac, char **av)
   branch = atoi(av[3]);
   int depth = atoi(av[4]);
 
-  if (mkdir(dir))
+  if (mkdir(dir, 07777))
     die("mkdir");
   
   int fd = open(dir, O_RDONLY);

@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <assert.h>
+#include <sys/types.h>
 
 BEGIN_DECLS
 struct stat;
@@ -18,7 +19,7 @@ char* strchr(const char*, char c);
 int strcmp(const char*, const char*);
 int strncmp(const char *p, const char *q, size_t n);
 int open(const char*, int);
-int mkdir(const char*);
+int mkdir(const char*, mode_t);
 
 char* gets(char*, int max);
 unsigned int strlen(const char*);
