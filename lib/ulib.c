@@ -3,6 +3,8 @@
 #include "user.h"
 #include "amd64.h"
 
+#include <unistd.h>
+
 char*
 strncpy(char *s, const char *t, size_t n)
 {
@@ -165,6 +167,13 @@ int
 mkdir(const char *path)
 {
   return mkdirat(AT_FDCWD, path);
+}
+
+unsigned
+sleep(unsigned secs)
+{
+  nsleep((uint64_t)secs * 1000000000);
+  return 0;
 }
 
 extern void __cxa_pure_virtual(void);
