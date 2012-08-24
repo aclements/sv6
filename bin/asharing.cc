@@ -121,7 +121,7 @@ fssharing(void* arg)
   char filename[32];
   snprintf(filename, sizeof(filename), "f%d", i);
 
-  open(filename, O_CREAT|O_RDWR);
+  open(filename, O_CREAT|O_RDWR, 0666);
 
   ready();
 

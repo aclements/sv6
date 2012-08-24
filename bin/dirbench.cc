@@ -14,6 +14,7 @@
 #include "xsys.h"
 #endif
 #include <fcntl.h>
+#include <sys/stat.h>
 
 static const bool pinit = true;
 
@@ -37,7 +38,7 @@ bench(u32 tid, int nloop, const char* path)
     for (u32 i = 0; i < nfile; i++) {
       snprintf(pn, sizeof(pn), "%s/f:%d:%d", path, tid, i);
 
-      int fd = xcreat(pn);
+      int fd = open(pn, O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
       if (fd < 0)
 	die("create failed\n");
 

@@ -11,7 +11,6 @@ static inline void xwait()
   if (!WIFEXITED(status))
     die("bad status %u", status);
 }
-#define xcreat(name) open((name), O_CREAT|O_RDWR, S_IRUSR|S_IWUSR)
 #define mtenable(x) do { } while(0)
 #define mtenable_type(x, y) do { } while (0)
 #define mtdisable(x) do { } while(0)
@@ -23,7 +22,6 @@ static inline void xwait()
 
 #define xfork() fork(0)
 #define xexit() exit()
-#define xcreat(name) open((name), O_CREAT|O_RDWR)
 #define xwait() wait()
 #define xpthread_join(tid) xwait()
 

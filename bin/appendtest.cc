@@ -35,7 +35,7 @@ main(int ac, char **av)
   pthread_t tid;
   int fd;
 
-  fd = open("/append.x", O_CREAT|O_RDWR);
+  fd = open("/append.x", O_CREAT|O_RDWR, 0666);
   if (fd < 0)
     die("open");
   if (write(fd, hello, strlen(hello)) != strlen(hello))

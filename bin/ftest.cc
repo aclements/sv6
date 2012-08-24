@@ -28,7 +28,7 @@ main(int ac, char **av)
     wbuf[i] = i % 16;
   
   unlink("ftest.x");
-  fd = open("ftest.x", O_CREAT|O_RDWR);
+  fd = open("ftest.x", O_CREAT|O_RDWR, 0666);
   for (i = 0; i < FSIZE; ) {
     count = MIN(sizeof(wbuf), FSIZE-i);
     if (write(fd, wbuf, count) != count)

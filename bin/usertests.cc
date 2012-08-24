@@ -53,7 +53,7 @@ writetest(void)
   int i;
 
   fprintf(stdout, "small file test\n");
-  fd = open("small", O_CREAT|O_RDWR);
+  fd = open("small", O_CREAT|O_RDWR, 0666);
   if(fd >= 0){
     fprintf(stdout, "creat small succeeded; ok\n");
   } else {
@@ -102,7 +102,7 @@ writetest1(void)
 
   fprintf(stdout, "big files test\n");
 
-  fd = open("big", O_CREAT|O_RDWR);
+  fd = open("big", O_CREAT|O_RDWR, 0666);
   if(fd < 0){
     fprintf(stdout, "error: creat big failed!\n");
     exit();
@@ -163,7 +163,7 @@ createtest(void)
   name[2] = '\0';
   for(i = 0; i < 52; i++){
     name[1] = '0' + i;
-    fd = open(name, O_CREAT|O_RDWR);
+    fd = open(name, O_CREAT|O_RDWR, 0666);
     close(fd);
   }
   name[0] = 'a';
@@ -377,7 +377,7 @@ sharedfd(void)
   char buf[10];
 
   unlink("sharedfd");
-  fd = open("sharedfd", O_CREAT|O_RDWR);
+  fd = open("sharedfd", O_CREAT|O_RDWR, 0666);
   if(fd < 0){
     fprintf(1, "fstests: cannot open sharedfd for writing");
     return;
@@ -437,7 +437,7 @@ twofiles(void)
   }
 
   fname = pid ? "f1" : "f2";
-  fd = open(fname, O_CREAT | O_RDWR);
+  fd = open(fname, O_CREAT | O_RDWR, 0666);
   if(fd < 0){
     fprintf(1, "create failed\n");
     exit();
@@ -500,7 +500,7 @@ createdelete(void)
   name[2] = '\0';
   for(i = 0; i < N; i++){
     name[1] = '0' + i;
-    fd = open(name, O_CREAT | O_RDWR);
+    fd = open(name, O_CREAT | O_RDWR, 0666);
     if(fd < 0){
       fprintf(1, "create failed\n");
       exit();
@@ -566,7 +566,7 @@ unlinkread(void)
   int fd, fd1;
 
   fprintf(1, "unlinkread test\n");
-  fd = open("unlinkread", O_CREAT | O_RDWR);
+  fd = open("unlinkread", O_CREAT | O_RDWR, 0666);
   if(fd < 0){
     fprintf(1, "create unlinkread failed\n");
     exit();
@@ -584,7 +584,7 @@ unlinkread(void)
     exit();
   }
 
-  fd1 = open("unlinkread", O_CREAT | O_RDWR);
+  fd1 = open("unlinkread", O_CREAT | O_RDWR, 0666);
   write(fd1, "yyy", 3);
   close(fd1);
 
@@ -615,7 +615,7 @@ linktest(void)
   unlink("lf1");
   unlink("lf2");
 
-  fd = open("lf1", O_CREAT|O_RDWR);
+  fd = open("lf1", O_CREAT|O_RDWR, 0666);
   if(fd < 0){
     fprintf(1, "create lf1 failed\n");
     exit();
@@ -691,7 +691,7 @@ concreate(void)
     } else if(pid == 0 && (i % 5) == 1){
       link("C0", file);
     } else {
-      fd = open(file, O_CREAT | O_RDWR);
+      fd = open(file, O_CREAT | O_RDWR, 0666);
       if(fd < 0){
         fprintf(1, "concreate create %s failed\n", file);
         exit();
@@ -764,7 +764,7 @@ bigdir(void)
   fprintf(1, "bigdir test\n");
   unlink("bd");
 
-  fd = open("bd", O_CREAT);
+  fd = open("bd", O_CREAT, 0666);
   if(fd < 0){
     fprintf(1, "bigdir create failed\n");
     exit();
@@ -810,7 +810,7 @@ subdir(void)
     exit();
   }
 
-  fd = open("dd/ff", O_CREAT | O_RDWR);
+  fd = open("dd/ff", O_CREAT | O_RDWR, 0666);
   if(fd < 0){
     fprintf(1, "create dd/ff failed\n");
     exit();
@@ -828,7 +828,7 @@ subdir(void)
     exit();
   }
 
-  fd = open("dd/dd/ff", O_CREAT | O_RDWR);
+  fd = open("dd/dd/ff", O_CREAT | O_RDWR, 0666);
   if(fd < 0){
     fprintf(1, "create dd/dd/ff failed\n");
     exit();
@@ -895,15 +895,15 @@ subdir(void)
     exit();
   }
 
-  if(open("dd/ff/ff", O_CREAT|O_RDWR) >= 0){
+  if(open("dd/ff/ff", O_CREAT|O_RDWR, 0666) >= 0){
     fprintf(1, "create dd/ff/ff succeeded!\n");
     exit();
   }
-  if(open("dd/xx/ff", O_CREAT|O_RDWR) >= 0){
+  if(open("dd/xx/ff", O_CREAT|O_RDWR, 0666) >= 0){
     fprintf(1, "create dd/xx/ff succeeded!\n");
     exit();
   }
-  if(open("dd", O_CREAT) >= 0){
+  if(open("dd", O_CREAT, 0666) >= 0){
     fprintf(1, "create dd succeeded!\n");
     exit();
   }
@@ -988,7 +988,7 @@ bigfile(void)
   fprintf(1, "bigfile test\n");
 
   unlink("bigfile");
-  fd = open("bigfile", O_CREAT | O_RDWR);
+  fd = open("bigfile", O_CREAT | O_RDWR, 0666);
   if(fd < 0){
     fprintf(1, "cannot create bigfile");
     exit();
@@ -1052,7 +1052,7 @@ thirteen(void)
     fprintf(1, "mkdir 1234567890123/1234567890123 failed\n");
     exit();
   }
-  fd = open("1234567890123/1234567890123/1234567890123", O_CREAT);
+  fd = open("1234567890123/1234567890123/1234567890123", O_CREAT, 0666);
   if(fd < 0){
     fprintf(1, "create 1234567890123/1234567890123/1234567890123 failed\n");
     exit();
@@ -1082,7 +1082,7 @@ longname(void)
 {
   fprintf(stdout, "longname\n");
   for (int i = 0; i < 100; i++) {
-    if (open("12345678901234", O_CREAT) != -1) {
+    if (open("12345678901234", O_CREAT, 0666) != -1) {
       fprintf(stdout, "open 12345678901234, O_CREAT succeeded!\n");
       exit();
     }  
@@ -1140,7 +1140,7 @@ dirfile(void)
 
   fprintf(1, "dir vs file\n");
 
-  fd = open("dirfile", O_CREAT);
+  fd = open("dirfile", O_CREAT, 0666);
   if(fd < 0){
     fprintf(1, "create dirfile failed\n");
     exit();
@@ -1155,7 +1155,7 @@ dirfile(void)
     fprintf(1, "create dirfile/xx succeeded!\n");
     exit();
   }
-  fd = open("dirfile/xx", O_CREAT);
+  fd = open("dirfile/xx", O_CREAT, 0666);
   if(fd >= 0){
     fprintf(1, "create dirfile/xx succeeded!\n");
     exit();
@@ -1213,10 +1213,10 @@ iref(void)
 
     mkdir("", 0777);
     link("README", "");
-    fd = open("", O_CREAT);
+    fd = open("", O_CREAT, 0666);
     if(fd >= 0)
       close(fd);
-    fd = open("xx", O_CREAT);
+    fd = open("xx", O_CREAT, 0666);
     if(fd >= 0)
       close(fd);
     unlink("xx");
@@ -1488,7 +1488,7 @@ bigargtest(void)
 void
 uox(char *name, const char *data)
 {
-  int fd = open(name, O_CREAT|O_RDWR);
+  int fd = open(name, O_CREAT|O_RDWR, 0666);
   if(fd < 0){
     fprintf(stdout, "creat %s failed\n", name);
     exit();
@@ -1576,7 +1576,7 @@ preads(void)
 
   fprintf(1, "concurrent preads\n");
 
-  fd = open("preads.x", O_CREAT|O_RDWR);
+  fd = open("preads.x", O_CREAT|O_RDWR, 0666);
   if (fd < 0)
     die("preads: open failed");
 
@@ -1864,7 +1864,7 @@ main(int argc, char *argv[])
     fprintf(1, "already ran user tests -- rebuild fs.img\n");
     exit();
   }
-  close(open("usertests.ran", O_CREAT));
+  close(open("usertests.ran", O_CREAT, 0666));
 
   nenabled = argc - 1;
   enabled = argv + 1;

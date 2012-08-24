@@ -13,6 +13,7 @@
 #include "xsys.h"
 #endif
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #define CHUNKSZ 512
 #define FILESZ  (NCPU*CHUNKSZ)
@@ -77,7 +78,7 @@ main(int ac, char **av)
 
   // Setup shared file
   unlink(path);
-  int fd = xcreat(path);
+  int fd = open(path, O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
   if (fd < 0)
     die("open O_CREAT failed");
   for (int i = 0; i < FILESZ; i += CHUNKSZ) {
