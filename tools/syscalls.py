@@ -70,7 +70,7 @@ SYS_%(uname)s = %(num)d
                                     ", ".join(syscall.uargs), extra)
 
 class Syscall(object):
-    def __init__(self, kname, rettype, kargs, flags, num=None):
+    def __init__(self, fp, kname, rettype, kargs, flags, num=None):
         self.kname, self.rettype, self.kargs, self.flags, self.num = \
             kname, rettype, kargs, flags, num
 
@@ -81,7 +81,12 @@ class Syscall(object):
         uargs = []
         for karg in kargs:
             m = re.match("(.*?) *[a-z_]+$", karg)
-            atype = m.group(1)
+            if m:
+                atype = m.group(1)
+            elif karg.strip() == "...":
+                atype = "..."
+            else:
+                raise ParseError(fp.name, "could not parse args %r" % kargs)
             while True:
                 atype2 = re.sub("userptr<(.*)>", r"\1*", atype)
                 if atype2 == atype:
@@ -110,7 +115,7 @@ def parse(fp):
         rettype, name, kargs = m.groups()
         kargs = re.split(" *, *", kargs)
 
-        res.append(Syscall(name, rettype, kargs, flags.split()))
+        res.append(Syscall(fp, name, rettype, kargs, flags.split()))
 
     return res
 
