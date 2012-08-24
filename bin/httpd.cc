@@ -2,7 +2,7 @@
 #include "user.h"
 #include "lib.h"
 #include "unet.h"
-#include "fcntl.h"
+#include <fcntl.h>
 #include <sys/stat.h>
 
 #define VERSION "0.1"

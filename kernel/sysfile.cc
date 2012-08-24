@@ -1,5 +1,4 @@
 #include "types.h"
-#include <uk/stat.h>
 #include "mmu.h"
 #include "kernel.hh"
 #include "spinlock.h"
@@ -8,12 +7,13 @@
 #include "proc.hh"
 #include "fs.h"
 #include "file.hh"
-#include "fcntl.h"
 #include "cpu.hh"
 #include "net.hh"
 #include "kmtrace.hh"
 #include "sperf.hh"
 #include "dirns.hh"
+#include <uk/fcntl.h>
+#include <uk/stat.h>
 
 static bool
 getfile(int fd, sref<file> *f)

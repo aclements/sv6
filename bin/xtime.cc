@@ -1,6 +1,5 @@
 #include "types.h"
 #include "user.h"
-#include "fcntl.h"
 #include "amd64.h"
 #include "pmc.hh"
 #include "bits.hh"

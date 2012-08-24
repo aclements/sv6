@@ -2,7 +2,6 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include "types.h"
 #include "user/dirit.hh"
@@ -24,6 +23,7 @@
 #define xfstatat fstatat
 #endif
 #include <sys/stat.h>
+#include <fcntl.h>
 
 static const bool silent = (DEBUG == 0);
 

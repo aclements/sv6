@@ -1,8 +1,8 @@
 #include "types.h"
-#include "fcntl.h"
 #include "user.h"
 #include "amd64.h"
 
+#include <fcntl.h>
 #include <unistd.h>
 
 char*

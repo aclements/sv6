@@ -1,6 +1,5 @@
 #if defined(LINUX)
 #include <sys/types.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,6 +27,7 @@ typedef uint64_t u64;
 #define stderr 2
 #define BSIZ (DIRSIZ+1)
 #endif
+#include <fcntl.h>
 #include <sys/stat.h>
 
 static const bool silent = (DEBUG == 0);

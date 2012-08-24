@@ -2,8 +2,8 @@
 #include "user.h"
 #include "amd64.h"
 #include "lib.h"
-#include "fcntl.h"
-#include "uk/gcstat.h"
+#include <fcntl.h>
+#include <uk/gcstat.h>
 
 static int cpu = 0;
 static int sec = 2;

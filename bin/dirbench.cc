@@ -1,7 +1,6 @@
 #if defined(LINUX)
 #include "user/util.h"
 #include "types.h"
-#include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
 #include <sys/stat.h>
@@ -12,9 +11,9 @@
 #include "user.h"
 #include "mtrace.h"
 #include "amd64.h"
-#include "fcntl.h"
 #include "xsys.h"
 #endif
+#include <fcntl.h>
 
 static const bool pinit = true;
 

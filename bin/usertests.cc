@@ -1,10 +1,10 @@
 #include "types.h"
 #include "user.h"
 #include "fs.h"
-#include "fcntl.h"
 #include "traps.h"
 #include "pthread.h"
 
+#include <fcntl.h>
 #include <sys/mman.h>
 
 #include <utility>

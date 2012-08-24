@@ -11,7 +11,6 @@
 #include "uspinlock.h"
 #include "mtrace.h"
 #include "pthread.h"
-#include "fcntl.h"
 #endif
 #include "xsys.h"
 #include <sys/mman.h>

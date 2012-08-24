@@ -12,8 +12,8 @@
 #include "kalloc.hh"
 #include "vm.hh"
 #include "ns.hh"
-#include "fcntl.h"
 #include "wq.hh"
+#include <uk/fcntl.h>
 #include <uk/unistd.h>
 
 u64

@@ -1,7 +1,7 @@
 #include "types.h"
 #include "user.h"
 #include "lib.h"
-#include "fcntl.h"
+#include <fcntl.h>
 #include "wq.hh"
 
 static int branch;

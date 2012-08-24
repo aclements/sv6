@@ -1,6 +1,6 @@
 #include "types.h"
 #include "user.h"
-#include "fcntl.h"
+#include <fcntl.h>
 #include "amd64.h"
 #include "uk/lockstat.h"
 

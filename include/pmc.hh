@@ -1,4 +1,5 @@
 #include "sched.hh"
+#include <fcntl.h>
 
 struct pmc_count {
 

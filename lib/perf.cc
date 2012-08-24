@@ -1,6 +1,6 @@
 #include "types.h"
 #include "user.h"
-#include "fcntl.h"
+#include <fcntl.h>
 #include "sampler.h"
 
 static int perf_fd = -1;

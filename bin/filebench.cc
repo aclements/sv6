@@ -1,7 +1,6 @@
 #if defined(LINUX)
 #include "user/util.h"
 #include "types.h"
-#include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
 #include <sys/wait.h>
@@ -9,11 +8,11 @@
 #else
 #include "types.h"
 #include "user.h"
-#include "fcntl.h"
 #include "amd64.h"
 #include "mtrace.h"
 #include "xsys.h"
 #endif
+#include <fcntl.h>
 
 #define CHUNKSZ 512
 #define FILESZ  (NCPU*CHUNKSZ)
