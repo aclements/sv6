@@ -9,7 +9,6 @@
 #include "xsys.h"
 #else
 #include "types.h"
-#include "stat.h"
 #include "user.h"
 #include "mtrace.h"
 #include "amd64.h"

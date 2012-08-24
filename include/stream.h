@@ -1,3 +1,5 @@
+#include <sys/stat.h>
+
 typedef struct fstream {
   int fd;
   off_t off;

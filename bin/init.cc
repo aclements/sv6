@@ -1,7 +1,6 @@
 // init: The initial user-level program
 
 #include "types.h"
-#include "stat.h"
 #include "user.h"
 #include "fcntl.h"
 #include "lib.h"

@@ -1,6 +1,5 @@
 #if defined(LINUX)
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -15,7 +14,6 @@
 #define perf_start(x, y) do { } while (0)
 #else // assume xv6
 #include "types.h"
-#include "stat.h"
 #include "user.h"
 #include "fs.h"
 #include "lib.h"
@@ -25,6 +23,7 @@
 #define stderr 2
 #define xfstatat fstatat
 #endif
+#include <sys/stat.h>
 
 static const bool silent = (DEBUG == 0);
 

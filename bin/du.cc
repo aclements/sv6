@@ -1,5 +1,5 @@
 #include "types.h"
-#include "stat.h"
+#include <sys/stat.h>
 #include "user.h"
 #include "fs.h"
 

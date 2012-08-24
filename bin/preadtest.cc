@@ -1,6 +1,5 @@
 #define PGSIZE 4096
 #include "types.h"
-#include "stat.h"
 #include "fcntl.h"
 #include "user.h"
 #include "lib.h"

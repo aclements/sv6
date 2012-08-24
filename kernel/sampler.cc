@@ -3,7 +3,7 @@
 #include "spinlock.h"
 #include "condvar.h"
 #include "fs.h"
-#include "stat.h"
+#include <uk/stat.h>
 #include "kalloc.hh"
 #include "file.hh"
 #include "bits.hh"

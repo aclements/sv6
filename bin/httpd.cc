@@ -3,7 +3,7 @@
 #include "lib.h"
 #include "unet.h"
 #include "fcntl.h"
-#include "stat.h"
+#include <sys/stat.h>
 
 #define VERSION "0.1"
 #define HTTP_VERSION "1.0"

@@ -6,7 +6,7 @@
 #include "queue.h"
 #include "proc.hh"
 #include "amd64.h"
-#include "stat.h"
+#include <uk/stat.h>
 #include "fs.h"
 #include "file.hh"
 #include "vm.hh"

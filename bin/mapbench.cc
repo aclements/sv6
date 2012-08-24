@@ -7,7 +7,6 @@
 #include <unistd.h>
 #else
 #include "types.h"
-#include "stat.h"
 #include "user.h"
 #include "amd64.h"
 #include "uspinlock.h"

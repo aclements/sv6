@@ -7,7 +7,6 @@
 #else
 #include "types.h"
 #include "pthread.h"
-#include "stat.h"
 #include "user.h"
 #include "amd64.h"
 #endif

@@ -1,5 +1,5 @@
 #include "types.h"
-#include "stat.h"
+#include <uk/stat.h>
 #include "mmu.h"
 #include "kernel.hh"
 #include "spinlock.h"

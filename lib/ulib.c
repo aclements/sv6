@@ -1,5 +1,4 @@
 #include "types.h"
-#include "stat.h"
 #include "fcntl.h"
 #include "user.h"
 #include "amd64.h"

@@ -1,6 +1,5 @@
 #if defined(LINUX)
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -18,7 +17,6 @@ typedef uint64_t u64;
 #define perf_start(x, y) do { } while (0)
 #else // assume xv6
 #include "types.h"
-#include "stat.h"
 #include "user.h"
 #include "lib.h"
 #include "fs.h"
@@ -30,6 +28,7 @@ typedef uint64_t u64;
 #define stderr 2
 #define BSIZ (DIRSIZ+1)
 #endif
+#include <sys/stat.h>
 
 static const bool silent = (DEBUG == 0);
 
