@@ -158,9 +158,13 @@ memcmp(const void* s1, const void* s2, size_t n)
 }
 
 int
-open(const char *path, int omode)
+open(const char *path, int omode, ...)
 {
-  return openat(AT_FDCWD, path, omode);
+  va_list ap;
+  va_start(ap, omode);
+  mode_t mode = va_arg(ap, int);
+  va_end(ap);
+  return openat(AT_FDCWD, path, omode, mode);
 }
 
 int

@@ -330,7 +330,7 @@ create(inode *cwd, const char *path, short type, short major, short minor)
 
 //SYSCALL
 int
-sys_openat(int dirfd, const char *path, int omode)
+sys_openat(int dirfd, const char *path, int omode, ...)
 {
   int fd;
   struct file *f;

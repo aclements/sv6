@@ -18,7 +18,7 @@ void* memmove(void*, const void*, size_t);
 char* strchr(const char*, char c);
 int strcmp(const char*, const char*);
 int strncmp(const char *p, const char *q, size_t n);
-int open(const char*, int);
+int open(const char*, int, ...);
 int mkdir(const char*, mode_t);
 
 char* gets(char*, int max);
