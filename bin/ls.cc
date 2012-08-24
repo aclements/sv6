@@ -41,12 +41,12 @@ ls(const char *path)
     return;
   }
   
-  switch(st.type){
-  case T_FILE:
-    fprintf(1, "%s %d %d %d\n", fmtname(path), st.type, st.ino, st.size);
+  switch(st.st_mode & S_IFMT){
+  case S_IFREG:
+    fprintf(1, "- %s %d %d\n", fmtname(path), st.st_ino, st.st_size);
     break;
   
-  case T_DIR:
+  case S_IFDIR:
     if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf){
       fprintf(1, "ls: path too long\n");
       break;
@@ -63,7 +63,7 @@ ls(const char *path)
         fprintf(1, "ls: cannot stat %s\n", buf);
         continue;
       }
-      fprintf(1, "%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      fprintf(1, "d %s %d %d\n", fmtname(buf), st.st_ino, st.st_size);
     }
     break;
   }

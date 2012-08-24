@@ -13,8 +13,6 @@ typedef uint64_t u64;
 #include "reducer.hh"
 #include "user/dirit.hh"
 #include "user/util.h"
-#define ST_SIZE(st)  (st).st_size
-#define ST_ISDIR(st) S_ISDIR((st).st_mode)
 #define BSIZ 256
 #define perf_stop() do { } while(0)
 #define perf_start(x, y) do { } while (0)
@@ -29,8 +27,6 @@ typedef uint64_t u64;
 #include "dirit.hh"
 #include "percpu.hh"
 #include "reducer.hh"
-#define ST_SIZE(st)  (st).size
-#define ST_ISDIR(st) ((st).type == T_DIR)
 #define stderr 2
 #define BSIZ (DIRSIZ+1)
 #endif
@@ -47,8 +43,8 @@ du(int fd)
     return 0;
   }
 
-  reducer_opadd<size_t> size(ST_SIZE(st));
-  if (ST_ISDIR(st)) {
+  reducer_opadd<size_t> size(st.st_size);
+  if (S_ISDIR(st.st_mode)) {
     dirit di(fd);
     wq_for<dirit>(di,
                   [](dirit &i)->bool { return !i.end(); },

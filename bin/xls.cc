@@ -9,11 +9,6 @@
 #include "user/dirit.hh"
 #include "user/util.h"
 #include "wq.hh"
-#define ST_SIZE(st)  (st).st_size
-#define ST_TYPE(st)  (ST_ISDIR(st) ? 1 : ST_ISREG(st) ? 2 : 3)
-#define ST_INO(st)   (st).st_ino
-#define ST_ISDIR(st) S_ISDIR((st).st_mode)
-#define ST_ISREG(st) S_ISREG((st).st_mode)
 #define BSIZ 256
 #define xfstatat(fd, n, st) fstatat(fd, n, st, 0)
 #define perf_stop() do { } while(0)
@@ -26,11 +21,6 @@
 #include "lib.h"
 #include "wq.hh"
 #include "dirit.hh"
-#define ST_SIZE(st)  (st).size
-#define ST_TYPE(st)  (st).type
-#define ST_INO(st)   (st).ino
-#define ST_ISDIR(st) ((st).type == T_DIR)
-#define ST_ISREG(st) ((st).type == T_FILE)
 #define BSIZ (DIRSIZ + 1)
 #define stderr 2
 #define xfstatat fstatat
@@ -55,12 +45,12 @@ ls(const char *path)
     return;
   }
  
-  if (ST_ISREG(st)) {
+  if (S_ISREG(st.st_mode)) {
     if (!silent)
-      printf("%u %10lu %10lu %s\n",
-             ST_TYPE(st), ST_INO(st), ST_SIZE(st), path);
+      printf("- %10lu %10lu %s\n",
+             st.st_ino, st.st_size, path);
     close(fd);
-  } else if (ST_ISDIR(st)) {
+  } else if (S_ISDIR(st.st_mode)) {
     dirit di(fd);
     wq_for<dirit>(di,
                   [](dirit &i)->bool { return !i.end(); },
@@ -73,8 +63,8 @@ ls(const char *path)
       }
       
       if (!silent)
-        printf("%u %10lu %10lu %s\n",
-               ST_TYPE(st), ST_INO(st), ST_SIZE(st), name);
+        printf("d %10lu %10lu %s\n",
+               st.st_ino, st.st_size, name);
     });
   } else {
     close(fd);

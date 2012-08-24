@@ -47,7 +47,7 @@ fprefill(FILE *fp)
   if (!fp->pfill)
     return;
   
-  target = MIN(fp->off + pstride, fp->stat.size);
+  target = MIN(fp->off + pstride, fp->stat.st_size);
   while (target - fp->poff >= IPC_PGSIZE)
   {
     size_t count;

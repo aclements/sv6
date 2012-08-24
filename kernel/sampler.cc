@@ -224,11 +224,11 @@ sampstat(struct inode *ip, struct stat *st)
   for (p = &pmulog[0]; p != q; p++)
     sz += p->count * sizeof(struct pmuevent);
 
-  st->dev = ip->dev;
-  st->ino = ip->inum;
-  st->type = ip->type;
-  st->nlink = ip->nlink();
-  st->size = sz;
+  st->st_dev = ip->dev;
+  st->st_ino = ip->inum;
+  st->st_mode = ip->type << __S_IFMT_SHIFT;
+  st->st_nlink = ip->nlink();
+  st->st_size = sz;
 }
 
 static int

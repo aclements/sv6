@@ -159,7 +159,7 @@ resp(int s, const char *url)
     return error(s, 404);
   }
 
-  if (stat.type != T_FILE && stat.type != T_DEV) {
+  if (!S_ISREG(stat.st_mode) && !S_ISCHR(stat.st_mode)) {
     close(fd);
     return error(s, 404);
   }
@@ -168,7 +168,7 @@ resp(int s, const char *url)
   if (r < 0)
     goto error;
 
-  r = content_length(s, stat.size);
+  r = content_length(s, stat.st_size);
   if (r < 0)
     goto error;
 

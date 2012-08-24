@@ -13,8 +13,8 @@ du(int fd)
     return 0;
   }
 
-  int size = st.size;
-  if (st.type == T_DIR) {
+  int size = st.st_size;
+  if (S_ISDIR(st.st_mode)) {
     struct dirent de;
     while (read(fd, &de, sizeof(de)) == sizeof(de)) {
       if (de.inum == 0)
