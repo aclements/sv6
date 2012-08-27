@@ -3,6 +3,8 @@
 // On-disk file system format. 
 // Both the kernel and user programs use this header file.
 
+#include <uk/fs.h>
+
 // Block 0 is unused.
 // Block 1 is super block.
 // Inodes start at block 2.

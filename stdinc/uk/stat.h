@@ -1,10 +1,7 @@
 // User/kernel shared stat definitions
 #pragma once
 
-// xv6-specific file type codes
-#define T_DIR  1   // Directory
-#define T_FILE 2   // File
-#define T_DEV  3   // Special device
+#include <uk/fs.h>
 
 struct stat {
   mode_t  st_mode;              /* Mode (including file type) */
