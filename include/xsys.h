@@ -1,5 +1,7 @@
 #if defined(LINUX)
 
+#include <sys/wait.h>
+
 #define FORK_SEPARATE_PGMAP 0
 #define xfork() fork()
 #define xexit() exit(EXIT_SUCCESS)
