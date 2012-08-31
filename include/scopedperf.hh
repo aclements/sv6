@@ -179,7 +179,7 @@ static const uint8_t log2table[256] = {
 };
 
 template<class T, int Nbits>
-inline uint8_t
+inline uintptr_t
 log2r(T v)
 {
   if (Nbits == 8) {
@@ -194,7 +194,7 @@ log2r(T v)
 }
 
 template<class T>
-inline uint8_t
+uintptr_t
 log2(T v)
 {
   return log2r<T, sizeof(T)*8>(v);
@@ -337,10 +337,10 @@ class perfsum_tmpl : public perfsum_base, public Enabler {
   enum { maxcpu = 256 };
 
   template<class Stats, class T>
-  static uint64_t addcpus(const Stats &s, T f) {
+  static uint64_t addcpus(const Stats stat[], T f) {
     uint64_t tot = 0;
     for (uint i = 0; i < maxcpu; i++)
-      tot += f(&s[i]);
+      tot += f(&stat[i]);
     return tot;
   }
 };
