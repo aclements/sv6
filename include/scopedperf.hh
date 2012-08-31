@@ -6,10 +6,22 @@
  *   under spmc/lib/scopedperf.hh
  */
 
+#if !defined(XV6)
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <assert.h>
+#include <string.h>
+#include <stdint.h>
+#include <sys/time.h>
+#endif
+
 namespace scopedperf {
 
+#if defined(XV6)
 typedef u32 uint;
 typedef u64 uint64_t;
+#endif
 
 /*
  * statically enable/disable most of the generated code for profiling.
@@ -33,21 +45,32 @@ class always_disabled {
 /*
  * spinlock: mostly to avoid pthread mutex sleeping.
  */
+#if !defined(XV6_KERNEL)
 class spinlock {
  public:
-  spinlock() : _lk("sperflk") { }
+  spinlock() : x(0) {}
 
   void acquire() {
-    ::acquire(&_lk);
+    while (!__sync_bool_compare_and_swap(&x, 0, 1))
+      ;
   }
 
   void release() {
-    ::release(&_lk);
+    x = 0;
   }
 
  private:
-  ::spinlock _lk;
+  volatile uint x;
 };
+#endif
+
+#if defined(XV6_KERNEL)
+using ::spinlock;
+
+static inline int sched_getcpu() {
+  return mycpu()->id;
+}
+#endif
 
 class scoped_spinlock {
  public:
@@ -68,6 +91,7 @@ class scoped_spinlock {
   spinlock *const l;
   bool held;
 };
+
 
 /*
  * vector & pair: for portability.
@@ -134,6 +158,50 @@ end(const vector<T> &v)
 
 
 /*
+ * fast log-base-2, for histograms.
+ */
+static const uint8_t log2table[256] = {
+#define R2(x)   x,      x
+#define R4(x)   R2(x),  R2(x)
+#define R8(x)   R4(x),  R4(x)
+#define R16(x)  R8(x),  R8(x)
+#define R32(x)  R16(x), R16(x)
+#define R64(x)  R32(x), R32(x)
+#define R128(x) R64(x), R64(x)
+  0, 1, R2(2), R4(3), R8(4), R16(5), R32(6), R64(7), R128(8)
+#undef R2
+#undef R4
+#undef R8
+#undef R16
+#undef R32
+#undef R64
+#undef R128
+};
+
+template<class T, int Nbits>
+inline uint8_t
+log2r(T v)
+{
+  if (Nbits == 8) {
+    return log2table[v];
+  } else {
+    T hi = v >> (Nbits/2);
+    if (hi)
+      return Nbits/2 + log2r<T, Nbits/2>(hi);
+    else
+      return log2r<T, Nbits/2>(v);
+  }
+}
+
+template<class T>
+inline uint8_t
+log2(T v)
+{
+  return log2r<T, sizeof(T)*8>(v);
+}
+
+
+/*
  * ctrgroup: a group of performance counters.
  */
 
@@ -144,10 +212,10 @@ template<>
 class ctrgroup_chain<> {
  public:
   ctrgroup_chain() {}
-  static const uint nctr = 0;
-  void get_samples(uint64_t *v) const {}
-  void get_delta(uint64_t *delta, uint64_t *prev) const {}
-  vector<const char*> get_names() const { return vector<const char*>(); }
+  static const uint cg_nctr = 0;
+  void cg_get_samples(uint64_t *v) const {}
+  void cg_get_delta(uint64_t *delta, uint64_t *prev) const {}
+  vector<const char*> get_names() const { return {}; }
 };
 
 template<typename One, typename... Others>
@@ -159,18 +227,18 @@ class ctrgroup_chain<One, Others...> : ctrgroup_chain<Others...> {
     x->setup();
   }
 
-  static const uint nctr = 1 + ctrgroup_chain<Others...>::nctr;
+  static const uint cg_nctr = 1 + ctrgroup_chain<Others...>::cg_nctr;
 
-  void get_samples(uint64_t *v) const {
+  void cg_get_samples(uint64_t *v) const {
     v[0] = ctr->sample();
-    ctrgroup_chain<Others...>::get_samples(v+1);
+    ctrgroup_chain<Others...>::cg_get_samples(v+1);
   }
 
-  void get_delta(uint64_t *delta, uint64_t *prev) const {
+  void cg_get_delta(uint64_t *delta, uint64_t *prev) const {
     uint64_t x = ctr->sample();
     *delta = (x - *prev) & ctr->mask;
     *prev = x;
-    ctrgroup_chain<Others...>::get_delta(delta+1, prev+1);
+    ctrgroup_chain<Others...>::cg_get_delta(delta+1, prev+1);
   }
 
   vector<const char*> get_names() const {
@@ -178,8 +246,6 @@ class ctrgroup_chain<One, Others...> : ctrgroup_chain<Others...> {
     v.insert_front(ctr->name);
     return v;
   }
-
-  NEW_DELETE_OPS(ctrgroup_chain)
 
  private:
   const One *const ctr;
@@ -208,19 +274,9 @@ class perfsum_base {
   static void printall(int w0 = 17, int w = 13) {
     scoped_spinlock x(get_sums_lock());
     auto sums = get_sums();
-    for (perfsum_base *ps: *sums) {
-      if (ps->disp == hide || !ps->get_enabled())
-	continue;
-      auto p = ps->get_stats();
-      print_row(ps->name, ps->get_names(), w0, w, [](const char *name)
-		{ return name; });
-      print_row("  avg",   p, w0, w, [](const pair<uint64_t, uint64_t> &e)
-	        { return e.first ? e.second / e.first : 0; });
-      print_row("  total", p, w0, w, [](const pair<uint64_t, uint64_t> &e)
-		{ return e.second; });
-      print_row("  count", p, w0, w, [](const pair<uint64_t, uint64_t> &e)
-		{ return e.first; });
-    }
+    for (perfsum_base *ps: *sums)
+      if (ps->disp == show)
+        ps->print(w0, w);
   }
 
   static void resetall() {
@@ -229,12 +285,10 @@ class perfsum_base {
       ps->reset();
   }
 
-  virtual vector<pair<uint64_t, uint64_t> > get_stats() const = 0;
-  virtual vector<const char*> get_names() const = 0;
-  virtual bool get_enabled() const = 0;
+  virtual void print(int w0, int w) const = 0;
   virtual void reset() = 0;
 
- private:
+ protected:
   template<class Row, class Callback>
   static void print_row(const char *rowname, const Row &r,
 			int w0, int w, Callback f)
@@ -245,6 +299,10 @@ class perfsum_base {
     std::cout << std::endl;
   }
 
+  const char *name;
+  const display_opt disp;
+
+ private:
   static vector<perfsum_base*> *get_sums() {
     static vector<perfsum_base*> v;
     return &v;
@@ -254,9 +312,6 @@ class perfsum_base {
     static spinlock l;
     return &l;
   }
-
-  const char *name;
-  const display_opt disp;
 };
 
 static inline void
@@ -267,85 +322,109 @@ compiler_barrier()
 }
 
 template<typename Enabler, typename... Counters>
-class perfsum_ctr : public perfsum_base, public Enabler {
+class perfsum_tmpl : public perfsum_base, public Enabler {
+ public:
+  perfsum_tmpl(const ctrgroup_chain<Counters...> *c,
+               const char *n, perfsum_base::display_opt d)
+    : perfsum_base(n, d), cg(c)
+  {
+  }
+
+  static const uint ps_nctr = ctrgroup_chain<Counters...>::cg_nctr;
+
+ protected:
+  const struct ctrgroup_chain<Counters...> *const cg;
+  enum { maxcpu = 256 };
+
+  template<class Stats, class T>
+  static uint64_t addcpus(const Stats &s, T f) {
+    uint64_t tot = 0;
+    for (uint i = 0; i < maxcpu; i++)
+      tot += f(&s[i]);
+    return tot;
+  }
+};
+
+/*
+ * perfsum_ctr: aggregate counts of performance events.
+ */
+template<typename Enabler, typename... Counters>
+class perfsum_ctr : public perfsum_tmpl<Enabler, Counters...> {
  public:
   perfsum_ctr(const ctrgroup_chain<Counters...> *c,
-	      const char *n, display_opt d)
-    : perfsum_base(n, d), cg(c), base(0)
+	      const char *n, perfsum_base::display_opt d)
+    : perfsum_tmpl<Enabler, Counters...>(c, n, d), base(0)
   {
     reset();
   }
 
   perfsum_ctr(const char *n,
-	      const perfsum_ctr<Enabler, Counters...> *basesum, display_opt d)
-    : perfsum_base(n, d), cg(basesum->cg), base(basesum)
+	      const perfsum_ctr<Enabler, Counters...> *basesum,
+              perfsum_base::display_opt d)
+    : perfsum_tmpl<Enabler, Counters...>(basesum->cg, n, d), base(basesum)
   {
     reset();
   }
 
   void get_samples(uint64_t *s) const {
     compiler_barrier();
-    cg->get_samples(s);
+    perfsum_tmpl<Enabler, Counters...>::cg->cg_get_samples(s);
     compiler_barrier();
   }
 
   void record(uint cpuid, uint64_t *s) {
-    uint64_t delta[cg->nctr];
+    uint64_t delta[perfsum_tmpl<Enabler, Counters...>::ps_nctr];
 
     compiler_barrier();
-    cg->get_delta(delta, s);
+    perfsum_tmpl<Enabler, Counters...>::cg->cg_get_delta(delta, s);
     compiler_barrier();
 
-    for (uint i = 0; i < cg->nctr; i++)
+    for (uint i = 0; i < perfsum_tmpl<Enabler, Counters...>::ps_nctr; i++)
       stat[cpuid].sum[i] += delta[i];
     stat[cpuid].count++;
   }
 
-  vector<pair<uint64_t, uint64_t> > get_stats() const /* override */ {
-    vector<pair<uint64_t, uint64_t> > v;
-    for (uint i = 0; i < cg->nctr; i++) {
+  void print(int w0, int w) const /* override */ {
+    if (!Enabler::enabled())
+      return;
+
+    auto &cg = perfsum_tmpl<Enabler, Counters...>::cg;
+    vector<pair<uint64_t, uint64_t> > p;
+    for (uint i = 0; i < cg->cg_nctr; i++) {
       uint64_t b =
-	base ? base->addcpus([i](const stats *s) { return s->sum[i]; })
-	     : addcpus([](const stats *s) { return s->count; });
-      v.push_back(make_pair(b,
-	addcpus([i](const stats *s) { return s->sum[i]; })));
+	base ? addcpus(base->stat, [&](const stats *s) { return s->sum[i]; })
+	     : addcpus(stat,       [&](const stats *s) { return s->count; });
+      p.push_back(make_pair(b,
+	addcpus(stat, [i](const stats *s) { return s->sum[i]; })));
     }
-    return v;
-  }
 
-  vector<const char*> get_names() const /* override */ {
-    return cg->get_names();
-  }
-
-  bool get_enabled() const /* override */ {
-    return Enabler::enabled();
+    print_row(perfsum_base::name, cg->get_names(), w0, w, [](const char *name)
+	      { return name; });
+    print_row("  avg",   p, w0, w, [](const pair<uint64_t, uint64_t> &e)
+#if !defined(XV6)
+	      { return ((double) e.second) / (double) e.first; }
+#else
+	      { return e.second / e.first; }
+#endif
+              );
+    print_row("  total", p, w0, w, [](const pair<uint64_t, uint64_t> &e)
+	      { return e.second; });
+    print_row("  count", p, w0, w, [](const pair<uint64_t, uint64_t> &e)
+	      { return e.first; });
   }
 
   void reset() /* override */ {
     memset(stat, 0, sizeof(stat));
   }
 
-  NEW_DELETE_OPS(perfsum_ctr)
-
  private:
-  enum { maxcpu = 256 };
-
   struct stats {
     uint64_t count;
-    uint64_t sum[ctrgroup_chain<Counters...>::nctr];
-  } __attribute__((aligned (128)));
+    uint64_t sum[perfsum_tmpl<Enabler, Counters...>::ps_nctr];
+  } __attribute__((aligned (64)));
 
-  struct stats stat[maxcpu];
-  const struct ctrgroup_chain<Counters...> *const cg;
+  struct stats stat[perfsum_tmpl<Enabler, Counters...>::maxcpu];
   const struct perfsum_ctr<Enabler, Counters...> *const base;
-
-  template<class T>
-  uint64_t addcpus(T f) const {
-    uint64_t tot = 0;
-    for (uint i = 0; i < maxcpu; i++)
-      tot += f(&stat[i]);
-    return tot;
-  }
 };
 
 template<typename Enabler, typename... Counters>
@@ -383,6 +462,93 @@ perfsum_frac(const char *name,
   return perfsum_ctr<Enabler, Counters...>(name, base, perfsum_base::show);
 }
 
+/*
+ * perfsum_hist: histogram-based aggregates.
+ */
+template<typename Enabler, typename... Counters>
+class perfsum_hist_tmpl : public perfsum_tmpl<Enabler, Counters...> {
+ public:
+  perfsum_hist_tmpl(const ctrgroup_chain<Counters...> *c,
+	            const char *n, perfsum_base::display_opt d)
+    : perfsum_tmpl<Enabler, Counters...>(c, n, d)
+  {
+    reset();
+  }
+
+  void get_samples(uint64_t *s) const {
+    compiler_barrier();
+    perfsum_tmpl<Enabler, Counters...>::cg->cg_get_samples(s);
+    compiler_barrier();
+  }
+
+  void record(uint cpuid, uint64_t *s) {
+    uint64_t delta[perfsum_tmpl<Enabler, Counters...>::ps_nctr];
+
+    compiler_barrier();
+    perfsum_tmpl<Enabler, Counters...>::cg->cg_get_delta(delta, s);
+    compiler_barrier();
+
+    for (uint i = 0; i < perfsum_tmpl<Enabler, Counters...>::ps_nctr; i++)
+      stat[cpuid].hist[i].count[log2(delta[i])]++;
+  }
+
+  void print(int w0, int w) const /* override */ {
+    if (!Enabler::enabled())
+      return;
+
+    uint first = nbuckets, last = 0;
+
+    auto &cg = perfsum_tmpl<Enabler, Counters...>::cg;
+    vector<buckets> p;
+    for (uint i = 0; i < cg->cg_nctr; i++) {
+      buckets v;
+      for (uint j = 0; j < nbuckets; j++) {
+        v.count[j] = addcpus(stat, [&](const stats *s) { return s->hist[i].count[j]; });
+        if (v.count[j]) {
+          if (j < first) first = j;
+          if (j > last)  last = j;
+        }
+      }
+      p.push_back(v);
+    }
+
+    print_row(perfsum_base::name, cg->get_names(), w0, w, [](const char *name)
+	      { return name; });
+    for (uint i = first; i <= last; i++) {
+      char n[64];
+      snprintf(n, sizeof(n), "  < 2^%d", i);
+      print_row(n, p, w0, w, [&](const buckets &b) { return b.count[i]; });
+    }
+    print_row("  total", p, w0, w, [](const buckets &b)
+	      { uint64_t s = 0; for (auto x: b.count) s += x; return s; });
+  }
+
+  void reset() /* override */ {
+    memset(stat, 0, sizeof(stat));
+  }
+
+ private:
+  enum { nbuckets = sizeof(uint64_t)*8 + 1 };
+
+  struct buckets {
+    uint64_t count[nbuckets];
+  };
+
+  struct stats {
+    struct buckets hist[perfsum_tmpl<Enabler, Counters...>::ps_nctr];
+  } __attribute__((aligned (64)));
+
+  struct stats stat[perfsum_tmpl<Enabler, Counters...>::maxcpu];
+};
+
+template<typename Enabler = default_enabler, typename... Counters>
+perfsum_hist_tmpl<Enabler, Counters...>
+perfsum_hist(const char *name, const ctrgroup_chain<Counters...> *c,
+	     const perfsum_base::display_opt d = perfsum_base::show)
+{
+  return perfsum_hist_tmpl<Enabler, Counters...>(c, name, d);
+}
+
 
 /*
  * namedctr &c: actual counter implementations.
@@ -405,7 +571,6 @@ class tsc_ctr : public namedctr<64> {
     __asm __volatile("rdtsc" : "=a" (a), "=d" (d));
     return a | (d << 32);
   }
-  NEW_DELETE_OPS(tsc_ctr)
 };
 
 class tscp_ctr : public namedctr<64> {
@@ -464,7 +629,7 @@ class pmc_setup : public pmc_ctr<CounterWidth> {
     pmcuse[n] = true;
     x.release();
 
-#if 0
+#if !defined(XV6)
     // ugly but effective
     std::stringstream ss;
     ss << "for f in /sys/kernel/spmc/cpu*/" << n << "; do "
@@ -479,7 +644,7 @@ class pmc_setup : public pmc_ctr<CounterWidth> {
   uint64_t pmc_v;
 };
 
-#if 0
+#if !defined(XV6)
 class tod_ctr : public namedctr<64> {
  public:
   tod_ctr() : namedctr("tod-usec") {}
@@ -501,11 +666,11 @@ class zero_ctr : public namedctr<64> {
 /*
  * scoped performance-counting regions, which record samples into a perfsum.
  */
-template<typename Enabler, typename... Counters>
+template<typename Perfsum>
 class base_perf_region {
  public:
-  base_perf_region(perfsum_ctr<Enabler, Counters...> *psarg)
-    : ps(psarg), enabled(ps->enabled()), cpuid(enabled ? mycpu()->id : 0)
+  base_perf_region(Perfsum *psarg)
+    : ps(psarg), enabled(ps->enabled()), cpuid(enabled ? sched_getcpu() : 0)
   {
     if (enabled)
       ps->get_samples(s);
@@ -519,31 +684,31 @@ class base_perf_region {
   }
 
  private:
-  perfsum_ctr<Enabler, Counters...> *const ps;
+  Perfsum *const ps;
   const bool enabled;
   const uint cpuid;
-  uint64_t s[ctrgroup_chain<Counters...>::nctr];
+  uint64_t s[Perfsum::ps_nctr];
 };
 
-template<typename Enabler, typename... Counters>
-class scoped_perf_region : public base_perf_region<Enabler, Counters...> {
+template<typename Perfsum>
+class scoped_perf_region : public base_perf_region<Perfsum> {
  public:
-  scoped_perf_region(perfsum_ctr<Enabler, Counters...> *psarg)
-    : base_perf_region<Enabler, Counters...>(psarg) {}
-  ~scoped_perf_region() { base_perf_region<Enabler, Counters...>::lap(); }
+  scoped_perf_region(Perfsum *psarg)
+    : base_perf_region<Perfsum>(psarg) {}
+  ~scoped_perf_region() { base_perf_region<Perfsum>::lap(); }
 };
 
-template<typename Enabler, typename... Counters>
-class killable_perf_region : public base_perf_region<Enabler, Counters...> {
+template<typename Perfsum>
+class killable_perf_region : public base_perf_region<Perfsum> {
  public:
-  killable_perf_region(perfsum_ctr<Enabler, Counters...> *psarg)
-    : base_perf_region<Enabler, Counters...>(psarg), active(true) {}
+  killable_perf_region(Perfsum *psarg)
+    : base_perf_region<Perfsum>(psarg), active(true) {}
   ~killable_perf_region() { stop(); }
 
   // perform a final measurement, if needed before destructor
   void stop() {
     if (active)
-      base_perf_region<Enabler, Counters...>::lap();
+      base_perf_region<Perfsum>::lap();
     active = false;
   }
 
@@ -554,18 +719,18 @@ class killable_perf_region : public base_perf_region<Enabler, Counters...> {
   bool active;
 };
 
-template<typename Enabler, typename... Counters>
-scoped_perf_region<Enabler, Counters...>
-perf_region(perfsum_ctr<Enabler, Counters...> *ps)
+template<typename Perfsum>
+scoped_perf_region<Perfsum>
+perf_region(Perfsum *ps)
 {
-  return scoped_perf_region<Enabler, Counters...>(ps);
+  return scoped_perf_region<Perfsum>(ps);
 }
 
-template<typename Enabler, typename... Counters>
-killable_perf_region<Enabler, Counters...>
-killable_region(perfsum_ctr<Enabler, Counters...> *ps)
+template<typename Perfsum>
+killable_perf_region<Perfsum>
+killable_region(Perfsum *ps)
 {
-  return killable_perf_region<Enabler, Counters...>(ps);
+  return killable_perf_region<Perfsum>(ps);
 }
 
 
