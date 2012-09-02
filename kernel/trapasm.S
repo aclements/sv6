@@ -37,9 +37,6 @@
 .globl sysentry
 .align 8
 sysentry:
-        // can syscall/sysret be used safely in the presence of NMIs?
-        // we are executing with cpl=0 but without a valid stack.
-
         swapgs
         movq    %rax, %gs:24 // save %rax so we can use it
         movq    %gs:8, %rax  // myproc()
