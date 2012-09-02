@@ -76,11 +76,13 @@ sysentry:
 
         movq    %r10, %rcx  // saved by usys.S
         pushq   %gs:24      // syscall# saved from %rax
+
+        sti
         call    sysentry_c
-        popq    %r11
+        cli
 
         // return using SYSRET
-        cli
+        popq    %r11        // discard syscall# arg on the stack
         movq    %rsp, %r11
         swapgs
 
