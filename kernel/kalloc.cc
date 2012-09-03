@@ -277,7 +277,10 @@ initkalloc(u64 mbaddr)
   // tracking the pages that store the page metadata array, we compute
   // the optimal size balance so the array starts with the metadata
   // for the page immediately following the array.
-  page_info_array = (page_info*)newend;
+
+  // Translate newend from the small boot mapping at KCODE to the
+  // large direct mapping at KBASE.
+  page_info_array = (page_info*)((uptr)newend - KCODE + KBASE);
   page_info_len = 1 + (memmax - v2p(newend)) / (sizeof(page_info) + PGSIZE);
   newend = PGROUNDUP(newend + page_info_len * sizeof(page_info));
   page_info_base = v2p(newend);
