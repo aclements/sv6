@@ -37,8 +37,6 @@ class histogram_log2
     char buf[32];
     snprintf(buf, sizeof buf, "%llu", (long long unsigned)Max);
     *lwidth = strlen(buf);
-    if (over_)
-      ++*lwidth;
 
     // Find the minimum used bucket
     *min_bucket = 0;
@@ -162,14 +160,15 @@ public:
     get_print_stats(&lwidth, &min_bucket, &max_bucket);
 
     if (zero_)
-      printf("%*llu-: %llu\n", lwidth, 0ull, (long long unsigned)zero_);
+      printf("%*llu- : %llu\n", lwidth, 0ull, (long long unsigned)zero_);
     for (unsigned i = min_bucket; i <= max_bucket; ++i) {
+      bool last = i == max_bucket;
       if (i == NBUCKETS)
-        printf("%*llu..: %llu\n", lwidth - 1, (long long unsigned)Max,
+        printf("%*llu..: %llu\n", lwidth, (long long unsigned)Max,
                (long long unsigned)over_);
       else
-        printf("%*llu-: %llu\n", lwidth, 1ull<<i,
-               (long long unsigned)buckets_[i]);
+        printf("%*llu%s: %llu\n", lwidth, 1ull<<i,
+               last ? "  " : "- ", (long long unsigned)buckets_[i]);
     }
   }
 
@@ -186,13 +185,15 @@ public:
 
     unsigned bar_width = 75 - lwidth;
     if (zero_)
-      printf("%*llu-: %s\n", lwidth, 0ull, get_bar(bar_width * zero_ / max_count));
+      printf("%*llu- : %s\n", lwidth, 0ull, get_bar(bar_width * zero_ / max_count));
     for (unsigned i = min_bucket; i <= max_bucket; ++i) {
+      bool last = i == max_bucket;
       if (i == NBUCKETS)
-        printf("%*llu..: %s\n", lwidth - 1, (long long unsigned)Max,
+        printf("%*llu..: %s\n", lwidth, (long long unsigned)Max,
                get_bar(bar_width * over_ / max_count));
       else
-        printf("%*llu-: %s\n", lwidth, 1ull<<i,
+        printf("%*llu%s: %s\n", lwidth, 1ull<<i,
+               last ? "  " : "- ",
                get_bar(bar_width * buckets_[i] / max_count));
     }
   }
