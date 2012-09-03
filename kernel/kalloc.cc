@@ -252,9 +252,11 @@ slabinit(struct kmem *k, char **p, u64 *off)
   for (int i = 0; i < k->ninit; i++) {
     if (*p == (void *)-1)
       panic("slabinit: memnext");
-    // XXX(sbw) handle this condition
-    if (memsize(*p) < k->size)
-      panic("slabinit: memsize");
+    while (memsize(*p) < k->size) {
+      *p = (char*) memnext(*p, k->size);
+      if (*p == (char*)-1)
+        panic("slabinit: memsize");
+    }
     kfree_pool(k, *p);
     *p = (char*) memnext(*p, k->size);
     *off = *off+k->size;
