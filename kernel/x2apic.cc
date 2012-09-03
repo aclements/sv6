@@ -23,6 +23,8 @@
   #define BCAST      0x00080000   // Send to all APICs, including self.
   #define LEVEL      0x00008000ull   // Level triggered
   #define ASSERT     0x00004000   // Assert interrupt (vs deassert)
+  #define DEASSERT   0x00000000
+  #define FIXED      0x00000000
 #define TIMER   0x832   // Local Vector Table 0 (TIMER)
   #define X1         0x0000000B   // divide counts by 1
   #define PERIODIC   0x00020000   // Periodic
@@ -138,7 +140,7 @@ x2apic_lapic::mask_pc(bool mask)
 void
 x2apic_lapic::send_ipi(struct cpu *c, int ino)
 {
-  panic("x2apic_lapic::send_ipi not implemented");
+  writemsr(ICR, (((u64)c->hwid.num)<<32) | FIXED | DEASSERT | ino);
 }
 
 hwid_t
