@@ -5,7 +5,7 @@
 
 #include "mmu.h"
 
-# KADDR is the kernel virtual address of the first byte of physical memory.
+# KCODE is the kernel virtual address of the first byte of physical memory.
 # The linker loads the executable as if starting at KCODE+2MB, but we
 # ask the loader to load the kernel at physical 2MB and then set up the
 # necessary memory mapping to switch to the higher address.

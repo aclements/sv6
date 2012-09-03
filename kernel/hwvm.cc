@@ -64,7 +64,9 @@ walkpgdir(pgmap *pml4, u64 va, int create)
   return &pt->e[PX(0,va)];
 }
 
-// Map from 0 to 128Gbytes starting at KBASE.
+// Create a direct mapping starting at PA 0 to VA KBASE up to
+// KBASEEND.  This augments the KCODE mapping created by the
+// bootloader.
 void
 initpg(void)
 {
