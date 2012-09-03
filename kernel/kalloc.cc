@@ -303,13 +303,12 @@ initkalloc(u64 mbaddr)
 
   if (VERBOSE)
     cprintf("%lu mbytes\n", membytes / (1<<20));
-  n = membytes / NCPU;
+  n = (membytes - v2p(newend)) / NCPU;
   if (n & (PGSIZE-1))
     n = PGROUNDDOWN(n);
 
   p = (char*)PGROUNDUP((uptr)newend);
-  k = (((uptr)p) - KCODE);
-  p = (char*) KBASE + k;
+  k = 0;
   for (int c = 0; c < NCPU; c++) {
     // Fill slab allocators
     strncpy(slabmem[slab_stack][c].name, " kstack", MAXNAME);
@@ -338,7 +337,8 @@ initkalloc(u64 mbaddr)
     }
    
     // The rest goes to the page allocator
-    for (; k != n; k += PGSIZE, p = (char*) memnext(p, PGSIZE)) {
+    // XXX(austin) This should come from NUMA
+    for (; k < n; k += PGSIZE, p = (char*) memnext(p, PGSIZE)) {
       if (p == (void *)-1)
         panic("initkalloc: e820next");
       kfree_pool(&kmems[c], p);
