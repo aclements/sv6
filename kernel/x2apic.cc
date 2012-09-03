@@ -190,6 +190,8 @@ x2apic_lapic::cpu_init()
   u32 value;
   int maxlvt;
 
+  verbose.println("x2apic: Initializing LAPIC (CPU ", myid(), ")");
+
   // Enable performance counter overflow interrupts for sampler.cc
   mask_pc(false);
 
