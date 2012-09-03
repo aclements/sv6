@@ -28,7 +28,8 @@ class histogram_log2
   enum { NBUCKETS = sizeof(buckets_) / sizeof(buckets_[0]) };
 
   void
-  get_print_stats(unsigned *lwidth, unsigned *max_bucket) const
+  get_print_stats(unsigned *lwidth, unsigned *min_bucket,
+                  unsigned *max_bucket) const
   {
     // Compute the label width.  This is fixed, rather than being
     // based on used buckets, so that multiple histograms are
@@ -39,16 +40,23 @@ class histogram_log2
     if (over_)
       ++*lwidth;
 
+    // Find the minimum used bucket
+    *min_bucket = 0;
+    if (!zero_)
+      for (; *min_bucket < NBUCKETS; ++*min_bucket)
+        if (buckets_[*min_bucket])
+          break;
+
     // Find maximum used bucket (plus one, so we always end with a
     // zero label)
     if (over_) {
-      *max_bucket = NBUCKETS - 1;
+      *max_bucket = NBUCKETS;
     } else {
       *max_bucket = 0;
       for (std::size_t i = 0; i < NBUCKETS; ++i)
         if (buckets_[i])
           *max_bucket = i;
-      if (*max_bucket < NBUCKETS - 1)
+      if (*max_bucket < NBUCKETS)
         ++*max_bucket;
     }
   }
@@ -150,35 +158,42 @@ public:
   void
   print() const
   {
-    unsigned lwidth, max_bucket;
-    get_print_stats(&lwidth, &max_bucket);
+    unsigned lwidth, min_bucket, max_bucket;
+    get_print_stats(&lwidth, &min_bucket, &max_bucket);
 
-    printf("%*llu-: %llu\n", lwidth, 0ull, (long long unsigned)zero_);
-    for (unsigned i = 0; i <= max_bucket; ++i)
-      printf("%*llu-: %llu\n", lwidth, 1ull<<i, (long long unsigned)buckets_[i]);
-    if (over_)
-      printf("%*llu..: %llu\n", lwidth - 1, (long long unsigned)Max,
-             (long long unsigned)over_);
+    if (zero_)
+      printf("%*llu-: %llu\n", lwidth, 0ull, (long long unsigned)zero_);
+    for (unsigned i = min_bucket; i <= max_bucket; ++i) {
+      if (i == NBUCKETS)
+        printf("%*llu..: %llu\n", lwidth - 1, (long long unsigned)Max,
+               (long long unsigned)over_);
+      else
+        printf("%*llu-: %llu\n", lwidth, 1ull<<i,
+               (long long unsigned)buckets_[i]);
+    }
   }
 
   void
   print_bars() const
   {
-    unsigned lwidth, max_bucket;
-    get_print_stats(&lwidth, &max_bucket);
+    unsigned lwidth, min_bucket, max_bucket;
+    get_print_stats(&lwidth, &min_bucket, &max_bucket);
 
     unsigned max_count = 0;
-    for (unsigned i = 0; i <= max_bucket; ++i)
-      if (buckets_[i] > max_count)
-        max_count = buckets_[i];
+    for (auto v : buckets_)
+      if (v > max_count)
+        max_count = v;
 
     unsigned bar_width = 75 - lwidth;
-    printf("%*llu-: %s\n", lwidth, 0ull, get_bar(bar_width * zero_ / max_count));
-    for (unsigned i = 0; i <= max_bucket; ++i)
-      printf("%*llu-: %s\n", lwidth, 1ull<<i,
-             get_bar(bar_width * buckets_[i] / max_count));
-    if (over_)
-      printf("%*llu..: %s\n", lwidth - 1, (long long unsigned)Max,
-             get_bar(bar_width * over_ / max_count));
+    if (zero_)
+      printf("%*llu-: %s\n", lwidth, 0ull, get_bar(bar_width * zero_ / max_count));
+    for (unsigned i = min_bucket; i <= max_bucket; ++i) {
+      if (i == NBUCKETS)
+        printf("%*llu..: %s\n", lwidth - 1, (long long unsigned)Max,
+               get_bar(bar_width * over_ / max_count));
+      else
+        printf("%*llu-: %s\n", lwidth, 1ull<<i,
+               get_bar(bar_width * buckets_[i] / max_count));
+    }
   }
 };
