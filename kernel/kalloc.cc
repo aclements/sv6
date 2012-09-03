@@ -282,7 +282,17 @@ initkalloc(u64 mbaddr)
   // large direct mapping at KBASE.
   page_info_array = (page_info*)((uptr)newend - KCODE + KBASE);
   page_info_len = 1 + (memmax - v2p(newend)) / (sizeof(page_info) + PGSIZE);
-  newend = PGROUNDUP(newend + page_info_len * sizeof(page_info));
+  auto page_info_bytes = page_info_len * sizeof(page_info);
+  // Find a memory hole large enough to fit page_info_array.
+  // XXX(austin) This is really unfortunate on ben, where this forces
+  // us to skip the bottom 4 gigs of RAM.  We could break this up into
+  // chunks with a fast lookup table.  We could virtually map this
+  // (probably with large pages).  If we virtually map it, we might
+  // also be able to make it NUMA aware so the metadata for pages is
+  // stored on the same physical node as the pages.
+  while (memsize(page_info_array) < page_info_bytes)
+    page_info_array = (page_info*)memnext(page_info_array, page_info_bytes);
+  newend = PGROUNDUP((char*)page_info_array + page_info_bytes);
   page_info_base = v2p(newend);
 
   for (int c = 0; c < NCPU; c++) {
