@@ -13,6 +13,7 @@
 #include "multiboot.hh"
 #include "wq.hh"
 #include "page_info.hh"
+#include "kstream.hh"
 
 static struct Mbmem mem[128];
 static u64 nmem;
@@ -92,7 +93,13 @@ initmem(u64 mbaddr)
   while (p < ep) {
     mbmem = (Mbmem *)(p+4);
     p += 4 + *(u32*)p;
-    if (mbmem->type == 1 && mbmem->base >= 0x100000) {
+    bool use = mbmem->type == 1 && mbmem->base >= 0x100000;
+    console.println("e820: ", shex(mbmem->base).width(18).pad(), "-",
+                    shex(mbmem->base + mbmem->length - 1).width(18).pad(), " ",
+                    use ? "usable" :
+                    mbmem->type == 1 ? "usable (ignored)" :
+                    "reserved");
+    if (use) {
       membytes += mbmem->length;
       if (mbmem->base + mbmem->length > memmax)
         memmax = mbmem->base + mbmem->length;
