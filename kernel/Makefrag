@@ -10,7 +10,6 @@ OBJS = \
 	condvar.o \
 	console.o \
 	cpprt.o \
-	crange.o \
 	e1000.o \
 	exec.o \
 	file.o \

@@ -14,7 +14,7 @@ streamnum (print_stream *s, unsigned long long num,
     for (; num; num /= base)
       *--x = "0123456789abcdef"[num % base];
     if (alt) {
-      if (base == 16) {
+      if (base == 16 && pad != '0') {
         *--x = 'x';
         *--x = '0';
       } else if (base == 8) {
@@ -26,6 +26,13 @@ streamnum (print_stream *s, unsigned long long num,
   }
 
   size_t len = buf + sizeof(buf) - x;
+
+  if (alt && base == 16 && pad == '0') {
+    // Special case.  Otherwise, this would print like 0000x1
+    to_stream(s, "0x");
+    if (width >= 2)
+      width -= 2;
+  }
 
   for (; width > len; width--)
     to_stream(s, pad);

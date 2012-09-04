@@ -1,4 +1,4 @@
-#include "crange_arch.hh"
+#include "types.h"
 #include "radix.hh"
 
 enum { radix_debug = 0 };

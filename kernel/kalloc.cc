@@ -13,6 +13,7 @@
 #include "multiboot.hh"
 #include "wq.hh"
 #include "page_info.hh"
+#include "kstream.hh"
 
 static struct Mbmem mem[128];
 static u64 nmem;
@@ -92,7 +93,13 @@ initmem(u64 mbaddr)
   while (p < ep) {
     mbmem = (Mbmem *)(p+4);
     p += 4 + *(u32*)p;
-    if (mbmem->type == 1 && mbmem->base >= 0x100000) {
+    bool use = mbmem->type == 1 && mbmem->base >= 0x100000;
+    console.println("e820: ", shex(mbmem->base).width(18).pad(), "-",
+                    shex(mbmem->base + mbmem->length - 1).width(18).pad(), " ",
+                    use ? "usable" :
+                    mbmem->type == 1 ? "usable (ignored)" :
+                    "reserved");
+    if (use) {
       membytes += mbmem->length;
       if (mbmem->base + mbmem->length > memmax)
         memmax = mbmem->base + mbmem->length;
@@ -245,9 +252,11 @@ slabinit(struct kmem *k, char **p, u64 *off)
   for (int i = 0; i < k->ninit; i++) {
     if (*p == (void *)-1)
       panic("slabinit: memnext");
-    // XXX(sbw) handle this condition
-    if (memsize(p) < k->size)
-      panic("slabinit: memsize");
+    while (memsize(*p) < k->size) {
+      *p = (char*) memnext(*p, k->size);
+      if (*p == (char*)-1)
+        panic("slabinit: memsize");
+    }
     kfree_pool(k, *p);
     *p = (char*) memnext(*p, k->size);
     *off = *off+k->size;
@@ -268,9 +277,22 @@ initkalloc(u64 mbaddr)
   // tracking the pages that store the page metadata array, we compute
   // the optimal size balance so the array starts with the metadata
   // for the page immediately following the array.
-  page_info_array = (page_info*)newend;
+
+  // Translate newend from the small boot mapping at KCODE to the
+  // large direct mapping at KBASE.
+  page_info_array = (page_info*)((uptr)newend - KCODE + KBASE);
   page_info_len = 1 + (memmax - v2p(newend)) / (sizeof(page_info) + PGSIZE);
-  newend = PGROUNDUP(newend + page_info_len * sizeof(page_info));
+  auto page_info_bytes = page_info_len * sizeof(page_info);
+  // Find a memory hole large enough to fit page_info_array.
+  // XXX(austin) This is really unfortunate on ben, where this forces
+  // us to skip the bottom 4 gigs of RAM.  We could break this up into
+  // chunks with a fast lookup table.  We could virtually map this
+  // (probably with large pages).  If we virtually map it, we might
+  // also be able to make it NUMA aware so the metadata for pages is
+  // stored on the same physical node as the pages.
+  while (memsize(page_info_array) < page_info_bytes)
+    page_info_array = (page_info*)memnext(page_info_array, page_info_bytes);
+  newend = PGROUNDUP((char*)page_info_array + page_info_bytes);
   page_info_base = v2p(newend);
 
   for (int c = 0; c < NCPU; c++) {
@@ -281,13 +303,12 @@ initkalloc(u64 mbaddr)
 
   if (VERBOSE)
     cprintf("%lu mbytes\n", membytes / (1<<20));
-  n = membytes / NCPU;
+  n = (membytes - v2p(newend)) / NCPU;
   if (n & (PGSIZE-1))
     n = PGROUNDDOWN(n);
 
   p = (char*)PGROUNDUP((uptr)newend);
-  k = (((uptr)p) - KCODE);
-  p = (char*) KBASE + k;
+  k = 0;
   for (int c = 0; c < NCPU; c++) {
     // Fill slab allocators
     strncpy(slabmem[slab_stack][c].name, " kstack", MAXNAME);
@@ -316,7 +337,8 @@ initkalloc(u64 mbaddr)
     }
    
     // The rest goes to the page allocator
-    for (; k != n; k += PGSIZE, p = (char*) memnext(p, PGSIZE)) {
+    // XXX(austin) This should come from NUMA
+    for (; k < n; k += PGSIZE, p = (char*) memnext(p, PGSIZE)) {
       if (p == (void *)-1)
         panic("initkalloc: e820next");
       kfree_pool(&kmems[c], p);

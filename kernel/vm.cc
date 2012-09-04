@@ -11,7 +11,6 @@
 #include "proc.hh"
 #include "vm.hh"
 #include "gc.hh"
-#include "crange.hh"
 #include "cpputil.hh"
 #include "sperf.hh"
 #include "uwq.hh"
