@@ -336,6 +336,7 @@ sys_openat(int dirfd, const char *path, int omode, ...)
   struct file *f;
   struct inode *ip;
   struct inode *cwd;
+  int rwmode = omode & (O_RDONLY|O_WRONLY|O_RDWR);
 
   if (dirfd == AT_FDCWD) {
     cwd = myproc()->cwd;
@@ -399,7 +400,7 @@ sys_openat(int dirfd, const char *path, int omode, ...)
       goto retry;
     }
     if(ip->type == T_DIR) {
-      if (omode != O_RDONLY){
+      if (rwmode != O_RDONLY){
 	iunlockput(ip);
 	return -1;
       }
@@ -420,8 +421,8 @@ sys_openat(int dirfd, const char *path, int omode, ...)
   f->type = file::FD_INODE;
   f->ip = ip;
   f->off = 0;
-  f->readable = !(omode & O_WRONLY);
-  f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+  f->readable = !(rwmode == O_WRONLY);
+  f->writable = !(rwmode == O_RDONLY);
   f->append = !!(omode & O_APPEND);
   return fd;
 }
