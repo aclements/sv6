@@ -50,7 +50,7 @@ error(int s, int code)
 
   snprintf(buf, 512, "HTTP/" HTTP_VERSION" %d %s\r\n"
            "Server: xv6-httpd/" VERSION "\r\n"
-           "Connection: close"
+           "Connection: close\r\n"
            "Content-type: text/html\r\n"
            "\r\n"
            "<html><body><p>%d - %s</p></body></html>\r\n",
