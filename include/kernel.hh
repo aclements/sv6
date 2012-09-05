@@ -108,6 +108,7 @@ void            ilock(struct inode*, int writer);
 void            iunlockput(struct inode*);
 void            iupdate(struct inode*);
 void            iunlock(struct inode*);
+void            itrunc(struct inode*);
 int             readi(struct inode*, char*, u32, u32);
 void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, const char*, u32, u32);

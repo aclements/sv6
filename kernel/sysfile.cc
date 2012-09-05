@@ -409,6 +409,9 @@ sys_openat(int dirfd, const char *path, int omode, ...)
     }
   }
 
+  if(omode & O_TRUNC)
+    itrunc(ip);
+
   if((f = file::alloc()) == 0 || (fd = fdalloc(f)) < 0){
     if(f)
       f->dec();
