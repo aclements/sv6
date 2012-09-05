@@ -109,7 +109,7 @@ def parse(fp):
     for flags, proto in re.findall(r"//SYSCALL(.*)([^{]*)", fp.read()):
         # Parse the prototype
         proto = " ".join(proto.split())
-        m = re.match(r"(.+) ([a-z_]+) *\(([^)]+)\)", proto)
+        m = re.match(r"(.+) ([a-z0-9_]+) *\(([^)]+)\)", proto)
         if not m:
             raise ParseError(fp.name, "could not parse prototype %r" % proto)
         rettype, name, kargs = m.groups()
