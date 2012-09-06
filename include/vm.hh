@@ -86,6 +86,10 @@ struct vmdesc
     return flags & FLAG_MAPPED;
   }
 
+  // We need new/delete so the radix_array can allocate external nodes
+  // when performing node compression.
+  NEW_DELETE_OPS(vmdesc)
+
 private:
   vmdesc(u64 flags)
     : flags(flags), page(), inode(), start() { }
