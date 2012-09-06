@@ -120,7 +120,7 @@ $(O)/kernel/%: kernel/%.S $(O)/sysroot
 	$(Q)$(LD) $(LDFLAGS) -N -e start -Ttext $(TTEXT) -o $@.out $@.o $(LDEXTRA)
 	$(Q)$(OBJCOPY) -S -O binary $@.out $@
 
-$(O)/kernel/asmdefines.S: kernel/asmdefines.c $(O)/sysroot
+$(O)/kernel/asmdefines.S: kernel/asmdefines.cc $(O)/sysroot
 	@echo "  CXX    $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) -S $(CXXFLAGS) -o $@ $<
