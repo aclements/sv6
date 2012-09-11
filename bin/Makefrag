@@ -45,6 +45,7 @@ UPROGS= \
 	vmimbalbench \
 	appendtest \
 	linkbench \
+	crwpbench
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS += \
