@@ -42,7 +42,6 @@
 #include "dirns.hh"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
-static void itrunc(struct inode*);
 static inode* the_root;
 
 #define IADDRSSZ (sizeof(u32)*NINDIRECT)
@@ -594,7 +593,7 @@ class diskblock : public rcu_freed {
   NEW_DELETE_OPS(diskblock)
 };
 
-static void
+void
 itrunc(struct inode *ip)
 {
   int i, j;

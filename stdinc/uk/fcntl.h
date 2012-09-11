@@ -6,6 +6,7 @@
 #define O_RDWR    0x002
 #define O_APPEND  0x004
 #define O_CREAT   0x200
-#define O_WAIT    0x400 // (xv6) open waits for create, read for write
+#define O_TRUNC   0x400
+#define O_WAIT    0x800 // (xv6) open waits for create, read for write
 
 #define AT_FDCWD  -100

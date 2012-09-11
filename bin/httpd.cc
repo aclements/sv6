@@ -50,7 +50,7 @@ error(int s, int code)
 
   snprintf(buf, 512, "HTTP/" HTTP_VERSION" %d %s\r\n"
            "Server: xv6-httpd/" VERSION "\r\n"
-           "Connection: close"
+           "Connection: close\r\n"
            "Content-type: text/html\r\n"
            "\r\n"
            "<html><body><p>%d - %s</p></body></html>\r\n",
@@ -140,7 +140,7 @@ content(int s, int fd)
 }
 
 static void
-resp(int s, const char *url)
+resp_get(int s, const char *url)
 {
   struct stat stat;
   int fd;
@@ -192,14 +192,85 @@ error:
   error(s, -r);
 }
 
+static void
+resp_put(int s, const char *url, int content_length)
+{
+  int r;
+
+  if (content_length < 0) {
+    error(s, 400);
+    return;
+  }
+
+  int fd = open(url, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+  if (fd < 0) {
+    error(s, 404);
+    return;
+  }
+
+  char buf[1024];
+  while (content_length && (r = read(s, buf, NELEM(buf))) != 0) {
+    if (r < 0) {
+      fprintf(1, "httpd client: read %d\n", r);
+      r = -400;
+      goto error;
+    }
+    content_length -= r;
+    r = xwrite(fd, buf, r);
+    if (r < 0) {
+      fprintf(1, "httpd client: write %d\n", r);
+      r = -400;
+      goto error;
+    }
+  }
+
+  r = header(s);
+  if (r < 0)
+    goto error;
+
+  r = header_fin(s);
+  if (r < 0)
+    goto error;
+
+  close(fd);
+  return;
+
+ error:
+  close(fd);
+  error(s, -r);
+}
+
 static int
-parse(const char *b, char **rurl)
+readline(int s, char *buf, int limit)
+{
+  char *pos = buf;
+  while (pos < buf + limit - 1) {
+    int r = read(s, pos, 1);
+    if (r < 0)
+      return r;
+    if (r == 0)
+      break;
+    ++pos;
+    if (*(pos - 1) == '\n')
+      break;
+  }
+  *pos = '\0';
+  return pos - buf;
+}
+
+static int
+parse(const char *b, char **rurl, const char **method)
 {
   const char *url;
   int len;
   char *r;
 
-  if (strncmp(b, "GET ", 4) != 0)
+  *method = NULL;
+  if (strncmp(b, "GET ", 4) == 0)
+    *method = "GET";
+  else if (strncmp(b, "PUT ", 4) == 0)
+    *method = "PUT";
+  else
     return -1;
 
   b += 4;
@@ -223,21 +294,37 @@ client(int s)
 {
   char b[BUFSIZE];
   char *url;
+  const char *method;
   int r;
+  int content_length = -1;
 
-  r = read(s, b, NELEM(b)-1);
-  if (r < 0)
-    fprintf(1, "httpd client: read %d\n", r);
-  b[r] = 0;
-  
-  r = parse(b, &url);
+  r = readline(s, b, NELEM(b));
+  if (r < 0) {
+    fprintf(1, "httpd client: read request %d\n", r);
+    return;
+  }
+
+  r = parse(b, &url, &method);
   if (r < 0) {
     error(s, 400);
     return;
-  }    
+  }
 
-  fprintf(1, "httpd client: url %s\n", url);
-  resp(s, url);
+  do {
+    r = readline(s, b, NELEM(b));
+    if (r <= 0) {
+      fprintf(1, "httpd client: read headers %d\n", r);
+      return;
+    }
+    if (strncmp(b, "Content-Length: ", 16) == 0)
+      content_length = atoi(b + 16);
+  } while (strcmp(b, "\r\n"));
+
+  fprintf(1, "httpd client: %s %s\n", method, url);
+  if (method[0] == 'G')
+    resp_get(s, url);
+  else if (method[0] == 'P')
+    resp_put(s, url, content_length);
   free(url);
 }
 

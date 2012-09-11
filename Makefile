@@ -89,7 +89,7 @@ $(O)/%.o: $(O)/%.S
 # include path, but re-rooted at this new directory.
 $(O)/sysroot: include/host_hdrs.hh
 	rm -rf $@.tmp $@
-	mkdir $@.tmp
+	mkdir -p $@.tmp
 	tar c $$($(CXX) -E -H -std=c++0x $< -o /dev/null 2>&1 \
 		| awk '/^[.]/ {print $$2}') | tar xC $@.tmp
 	mv $@.tmp $@
