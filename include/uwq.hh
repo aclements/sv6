@@ -16,9 +16,9 @@ struct uwq_ipcbuf {
 #if defined (XV6_KERNEL)
 bool uwq_trywork(void);
 
-struct uwq;
+class uwq;
 
-struct uwq_worker {
+class uwq_worker {
   uwq_worker(uwq*, proc*);
   long wait();
   void exit();
@@ -32,8 +32,8 @@ struct uwq_worker {
   NEW_DELETE_OPS(uwq_worker);
 };
 
-struct uwq : public referenced, public rcu_freed {
-  friend struct uwq_worker;
+class uwq : public referenced, public rcu_freed {
+  friend class uwq_worker;
 
   static uwq* alloc(proc_pgmap* pgmap, vmap* vmap,
                     filetable *ftable, uptr uentry);
