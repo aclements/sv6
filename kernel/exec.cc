@@ -161,7 +161,9 @@ exec(const char *path, const char * const *argv, void *ascopev)
   struct vmap *vmp = nullptr;
   proc_pgmap *pgmap = nullptr;
   const char *s, *last;
-  struct elfhdr elf;
+  char buf[1024];
+  int sz;
+  struct elfhdr *elf;
   struct proghdr ph;
   u64 off;
   int i;
@@ -182,12 +184,34 @@ exec(const char *path, const char * const *argv, void *ascopev)
 
   gc_begin_epoch();
 
-  // Check ELF header
+  // Check header
   if(ip->type != T_FILE)
     goto bad;
-  if(readi(ip, (char*)&elf, 0, sizeof(elf)) < sizeof(elf))
+  sz = readi(ip, buf, 0, sizeof(buf));
+  if (sz < 0)
     goto bad;
-  if(elf.magic != ELF_MAGIC)
+
+  // Script?
+  if (strncmp(buf, "#!", 2) == 0) {
+    for (i = 2; i < sz; ++i) {
+      if (buf[i] == '\n') {
+        buf[i] = 0;
+        break;
+      }
+    }
+    if (i == sz)
+      goto bad;
+    const char *argv[] = {&buf[2], path, NULL};
+    gc_end_epoch();
+    return exec(argv[0], argv, ascopev);
+  }
+
+  // ELF?
+  static_assert(sizeof(elf) <= sizeof(buf), "buf too small for ELF header");
+  if (sz < sizeof(elf))
+    goto bad;
+  elf = reinterpret_cast<elfhdr*>(&buf);
+  if(elf->magic != ELF_MAGIC)
     goto bad;
 
   if((vmp = vmap::alloc()) == 0)
@@ -195,7 +219,7 @@ exec(const char *path, const char * const *argv, void *ascopev)
   if ((pgmap = proc_pgmap::alloc(vmp)) == 0)
     goto bad;
 
-  for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
+  for(i=0, off=elf->phoff; i<elf->phnum; i++, off+=sizeof(ph)){
     Elf64_Word type;
     if(readi(ip, (char*)&type, 
              off+__offsetof(struct proghdr, type), 
@@ -227,7 +251,7 @@ exec(const char *path, const char * const *argv, void *ascopev)
 
   myproc()->pgmap = pgmap;
   myproc()->vmap = vmp;
-  myproc()->tf->rip = elf.entry;
+  myproc()->tf->rip = elf->entry;
   myproc()->tf->rsp = sp;
   myproc()->run_cpuid_ = myid();
 
