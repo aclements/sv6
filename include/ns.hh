@@ -154,7 +154,7 @@ class xns : public rcu_freed {
           }
 
           if (!cmpxch(pe, e, e->next.load())) {
-            *pelock = 0;
+            pelock->store(0);
             e->next_lock = 0;
             break;
           }
@@ -166,7 +166,7 @@ class xns : public rcu_freed {
             e->percore_next.load()->percore_pprev = e->percore_pprev;
           release(&percore_lock[c]);
 
-          *pelock = 0;
+          pelock->store(0);
           gc_delayed(e);
           return true;
         }
