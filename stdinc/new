@@ -26,7 +26,10 @@ namespace std {
     bad_array_new_length() noexcept { }
   };
 
-  struct nothrow_t {};
+  struct nothrow_t {
+    nothrow_t() {}
+  };
+
   extern const nothrow_t nothrow;
 
   //typedef void (*new_handler)();
