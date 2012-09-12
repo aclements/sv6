@@ -37,7 +37,8 @@ constexpr int DISTREF_MAX_PENDING = 100;
 
 // We use 'null' to indicate that a distributed_refcnt isn't on a free
 // list, which means we need something else to terminate a free list.
-static constexpr distributed_refcnt *terminator = (distributed_refcnt*)-1;
+static distributed_refcnt * const terminator =
+  reinterpret_cast<distributed_refcnt*>(-1);
 
 // A per-core worker that manages a maybe-free list and a to-free
 // list.
@@ -72,10 +73,6 @@ static enum {
 
 static spinlock wake_lock("distref_thread lock");
 static condvar wake_cv("distref_thread cv");
-
-// Pure virtual destructors need an implementation, even though it
-// will never be called automatically (yay C++!)
-distributed_refcnt::~distributed_refcnt() { }
 
 bool
 distref_worker::enqueue(distributed_refcnt *dr)
