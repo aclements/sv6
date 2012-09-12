@@ -333,7 +333,7 @@ class perfsum_tmpl : public perfsum_base, public Enabler {
   static const uint ps_nctr = ctrgroup_chain<Counters...>::cg_nctr;
 
  protected:
-  const struct ctrgroup_chain<Counters...> *const cg;
+  const ctrgroup_chain<Counters...> *const cg;
   enum { maxcpu = 256 };
 
   template<class Stats, class T>
@@ -392,24 +392,26 @@ class perfsum_ctr : public perfsum_tmpl<Enabler, Counters...> {
     vector<pair<uint64_t, uint64_t> > p;
     for (uint i = 0; i < cg->cg_nctr; i++) {
       uint64_t b =
-	base ? addcpus(base->stat, [&](const stats *s) { return s->sum[i]; })
-	     : addcpus(stat,       [&](const stats *s) { return s->count; });
+	base ? this->addcpus(base->stat, [&](const stats *s) {
+            return s->sum[i]; })
+        : this->addcpus(stat, [&](const stats *s) {
+            return s->count; });
       p.push_back(make_pair(b,
-	addcpus(stat, [i](const stats *s) { return s->sum[i]; })));
+        this->addcpus(stat, [i](const stats *s) { return s->sum[i]; })));
     }
 
-    print_row(perfsum_base::name, cg->get_names(), w0, w, [](const char *name)
+    perfsum_base::print_row(perfsum_base::name, cg->get_names(), w0, w, [](const char *name)
 	      { return name; });
-    print_row("  avg",   p, w0, w, [](const pair<uint64_t, uint64_t> &e)
+    perfsum_base::print_row("  avg",   p, w0, w, [](const pair<uint64_t, uint64_t> &e)
 #if !defined(XV6)
 	      { return ((double) e.second) / (double) e.first; }
 #else
 	      { return e.second / e.first; }
 #endif
               );
-    print_row("  total", p, w0, w, [](const pair<uint64_t, uint64_t> &e)
+    perfsum_base::print_row("  total", p, w0, w, [](const pair<uint64_t, uint64_t> &e)
 	      { return e.second; });
-    print_row("  count", p, w0, w, [](const pair<uint64_t, uint64_t> &e)
+    perfsum_base::print_row("  count", p, w0, w, [](const pair<uint64_t, uint64_t> &e)
 	      { return e.first; });
   }
 
@@ -424,7 +426,7 @@ class perfsum_ctr : public perfsum_tmpl<Enabler, Counters...> {
   } __attribute__((aligned (64)));
 
   struct stats stat[perfsum_tmpl<Enabler, Counters...>::maxcpu];
-  const struct perfsum_ctr<Enabler, Counters...> *const base;
+  const perfsum_ctr<Enabler, Counters...> *const base;
 };
 
 template<typename Enabler, typename... Counters>
