@@ -457,7 +457,7 @@ pagelookup(vmap* vmap, uptr va)
 }
 
 int
-vmap::copyout(uptr va, void *p, u64 len)
+vmap::copyout(uptr va, const void *p, u64 len)
 {
   char *buf = (char*)p;
   auto it = vpfs_.find(va / PGSIZE);

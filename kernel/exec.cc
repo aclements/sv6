@@ -92,7 +92,7 @@ dosegment(inode* ip, vmap* vmp, u64 off)
 }
 
 static long
-dostack(vmap* vmp, char** argv, const char* path)
+dostack(vmap* vmp, const char* const * argv, const char* path)
 {
   uptr argstck[1+MAXARG];
   s64 argc;
@@ -154,7 +154,7 @@ exec_cleanup(vmap *oldvmap, uwq *olduwq, proc_pgmap* oldpgmap)
 }
 
 int
-exec(const char *path, char **argv, void *ascopev)
+exec(const char *path, const char * const *argv, void *ascopev)
 {
   ANON_REGION(__func__, &perfgroup);
   struct inode *ip = nullptr;

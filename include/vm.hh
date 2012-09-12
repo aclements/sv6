@@ -130,7 +130,7 @@ struct vmap {
 
   // Copy len bytes from p to user address va in vmap.  Most useful
   // when vmap is not the current page table.
-  int copyout(uptr va, void *p, u64 len);
+  int copyout(uptr va, const void *p, u64 len);
   int sbrk(ssize_t n, uptr *addr);
 
   void add_pgmap(proc_pgmap* pgmap);

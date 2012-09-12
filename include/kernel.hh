@@ -94,7 +94,7 @@ int             e1000tx(void *buf, u32 len);
 void            e1000hwaddr(u8 *hwaddr);
 
 // exec.c
-int             exec(const char*, char**, void* ascope);
+int             exec(const char*, const char* const*, void* ascope);
 
 // fs.c
 int             namecmp(const char*, const char*);
