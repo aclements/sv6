@@ -13,6 +13,7 @@
 #include "user.h"
 #include "mtrace.h"
 #include "amd64.h"
+#include "xsys.h"
 #endif
 
 // Concurrent reading and writing of a pipe.  Forks n processes with one shared
