@@ -8,7 +8,7 @@
 #include "mtrace.h"
 
 static volatile std::atomic<u64> waiting;
-static volatile std::atomic<u64> waking;
+static volatile std::atomic<u64> waking __attribute__((unused));
 static int iters;
 static int nworkers;
 static volatile int go;
