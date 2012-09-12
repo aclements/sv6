@@ -145,6 +145,8 @@ namespace std {
   }
 
 #if 0
+  // XXX(sbw) If you enable this code, you might need to
+  // compile with -mcx16
   template<>
   bool
   atomic<u128>::compare_exchange_weak(u128 &__i1, u128 i2, memory_order __m)

@@ -22,7 +22,7 @@ else
 CC  = $(TOOLPREFIX)gcc
 CXX = $(TOOLPREFIX)g++
 CXXFLAGS = -Wno-delete-non-virtual-dtor
-CFLAGS   = 
+CFLAGS   =
 ASFLAGS  = -Wa,--divide
 endif
 
@@ -34,7 +34,7 @@ STRIP = $(TOOLPREFIX)strip
 INCLUDES  = --sysroot=$(O)/sysroot -iquote include -iquote$(O)/include -Istdinc -I$(QEMUSRC) -include param.h -include include/compiler.h
 COMFLAGS  = -static -g -MD -MP -m64 -O3 -Wall -Werror -DHW_$(HW) -DXV6 \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
-	    -mno-sse -mcx16 -mno-red-zone $(INCLUDES)
+	    -mno-sse -mno-red-zone $(INCLUDES)
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare $(CXXFLAGS)
