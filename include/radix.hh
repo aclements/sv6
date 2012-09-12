@@ -13,7 +13,7 @@ enum { key_bits = 36 };
 enum { radix_levels = (key_bits + bits_per_level - 1) / bits_per_level };
 
 class radix_elem;
-class radix_node;
+struct radix_node;
 
 /*
  * Each pointer to a radix_elem or radix_node can be in one of four
