@@ -4,7 +4,7 @@
 #include "percpu.hh"
 
 struct uwq_ipcbuf;
-class work;
+struct work;
 
 int             wq_trywork(void);
 int             wq_push(work *w);
