@@ -57,7 +57,7 @@ main(int ac, char** av)
   if (ac > 2)
     nloop = atoi(av[2]);
 
-  if (pipe(fds) < 0) {
+  if (pipe(fds, PIPE_UNORDED) < 0) {
     printf("pipe failed\n");
     xexit();
   }

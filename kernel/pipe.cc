@@ -14,6 +14,7 @@
 struct pipe {
   struct spinlock lock;
   struct condvar  cv;
+  int flag;        // Ordered?
   char data[PIPESIZE];
   u32 nread;      // number of bytes read
   u32 nwrite;     // number of bytes written
@@ -22,7 +23,7 @@ struct pipe {
 };
 
 int
-pipealloc(struct file **f0, struct file **f1)
+pipealloc(struct file **f0, struct file **f1, int flag)
 {
   struct pipe *p;
 
@@ -37,6 +38,7 @@ pipealloc(struct file **f0, struct file **f1)
   p->writeopen = 1;
   p->nwrite = 0;
   p->nread = 0;
+  p->flag = flag;
   new (&p->lock) spinlock("pipe", LOCKSTAT_PIPE);
   new (&p->cv) condvar("pipe");
   (*f0)->type = file::FD_PIPE;

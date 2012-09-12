@@ -544,14 +544,14 @@ sys_exec(const char *upath, userptr<userptr<const char> > uargv)
 
 //SYSCALL
 int
-sys_pipe(int *fd)
+sys_pipe(int *fd, int flag)
 {
   struct file *rf, *wf;
   int fd0, fd1;
 
   if(argcheckptr(fd, 2*sizeof(fd[0])) < 0)
     return -1;
-  if(pipealloc(&rf, &wf) < 0)
+  if(pipealloc(&rf, &wf, flag) < 0)
     return -1;
   fd0 = -1;
   if((fd0 = fdalloc(rf)) < 0 || (fd1 = fdalloc(wf)) < 0){
