@@ -125,7 +125,7 @@ trapcommon:
         movw %ax, %ds
         movw %ax, %es
 
-        cmp  $KCSEG, TF_CS(%rsp)
+        cmpw  $KCSEG, TF_CS(%rsp)
         jz 1f
         swapgs
 
@@ -138,7 +138,7 @@ trapcommon:
 .align 8
 trapret:
         cli
-        cmp $KCSEG, TF_CS(%rsp)
+        cmpw $KCSEG, TF_CS(%rsp)
         jz 1f
         swapgs
 
