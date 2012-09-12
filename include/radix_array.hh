@@ -154,9 +154,9 @@ private:
   // sizes and keys.
   typedef size_type key_type;
 
-  class node_ptr;
-  class upper_node;
-  class leaf_node;
+  struct node_ptr;
+  struct upper_node;
+  struct leaf_node;
 
   static constexpr std::size_t
   round_up_div(std::size_t a, std::size_t b)
