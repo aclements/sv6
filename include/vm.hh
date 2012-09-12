@@ -87,7 +87,7 @@ struct vmdesc
   }
 
 private:
-  constexpr vmdesc(u64 flags)
+  vmdesc(u64 flags)
     : flags(flags), page(), inode(), start() { }
 };
 
