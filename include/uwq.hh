@@ -19,6 +19,7 @@ bool uwq_trywork(void);
 class uwq;
 
 class uwq_worker {
+public:
   uwq_worker(uwq*, proc*);
   long wait();
   void exit();
@@ -35,6 +36,7 @@ class uwq_worker {
 class uwq : public referenced, public rcu_freed {
   friend class uwq_worker;
 
+public:
   static uwq* alloc(proc_pgmap* pgmap, vmap* vmap,
                     filetable *ftable, uptr uentry);
   bool  haswork() const;
