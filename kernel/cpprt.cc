@@ -144,6 +144,7 @@ namespace std {
     return v;
   }
 
+#if 0
   template<>
   bool
   atomic<u128>::compare_exchange_weak(u128 &__i1, u128 i2, memory_order __m)
@@ -155,6 +156,7 @@ namespace std {
       __i1 = _M_i;
     return ok;
   }
+#endif
 };
 
 namespace __cxxabiv1 {
