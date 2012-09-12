@@ -33,7 +33,7 @@ uwq_trywork(void)
     struct cpu *c = &cpus[j];
     
     // The gc_epoch is for uwq
-    scoped_gc_epoch xgc();
+    scoped_gc_epoch xgc;
     barrier();
 
     uwq* uwq = c->uwq;
