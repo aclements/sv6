@@ -15,14 +15,15 @@ O  	   = o.$(HW)
 ifdef USE_CLANG
 CC  = $(TOOLPREFIX)clang
 CXX = $(TOOLPREFIX)clang++ 
-CXXFLAGS = -Wno-delete-non-virtual-dtor -Wno-gnu-designator
+CXXFLAGS = -Wno-delete-non-virtual-dtor -Wno-gnu-designator -Wno-tautological-compare -Wno-unused-private-field
 CFLAGS   = -no-integrated-as
+ASFLAGS  = 
 else
 CC  = $(TOOLPREFIX)gcc
 CXX = $(TOOLPREFIX)g++
 CXXFLAGS = -Wno-delete-non-virtual-dtor
-CFLAGS =
-ASFLAGS =
+CFLAGS   = 
+ASFLAGS  = -Wa,--divide
 endif
 
 LD = $(TOOLPREFIX)ld
@@ -37,7 +38,7 @@ COMFLAGS  = -static -g -MD -MP -m64 -O3 -Wall -Werror -DHW_$(HW) -DXV6 \
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare $(CXXFLAGS)
-ASFLAGS   = -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h -Wa,--divide
+ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
 LDFLAGS   = -m elf_x86_64
 
 ALL := 
