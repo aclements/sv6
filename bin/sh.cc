@@ -189,6 +189,8 @@ main(int ac, char** av)
       continue;
     } else if(!strcmp(buf, "exit\n") || !strcmp(buf, "exit\r")){
       exit();
+    } else if(buf[0] == '#'){
+      continue;
     }
     if(fork1() == 0)
       runcmd(parsecmd(buf));
