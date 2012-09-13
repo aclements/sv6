@@ -47,7 +47,7 @@ startone(const char **argv)
 static void
 runcmdline(void)
 {
-  const char* argv[3] = { "sh", 0, 0 };
+  const char* argv[4] = { "sh", "-c", 0 };
   char buf[256];
   char* b;
   long r;
@@ -63,7 +63,7 @@ runcmdline(void)
   buf[r] = 0;
   
   if ((b = strchr(buf, '$'))) {
-    argv[1] = b+1;
+    argv[2] = b+1;
     startone(argv);
   }
 }
