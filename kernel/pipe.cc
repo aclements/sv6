@@ -60,9 +60,8 @@ pipealloc(struct file **f0, struct file **f1, int flag)
 
 //PAGEBREAK: 20
  bad:
-  if(p) {
-    p->~pipe();
-  }
+  if(p)
+    delete p;
   if(*f0)
     (*f0)->dec();
   if(*f1)
