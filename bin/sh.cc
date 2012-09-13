@@ -4,6 +4,8 @@
 #include "user.h"
 #include <fcntl.h>
 
+bool interactive;
+
 // Parsed command representation
 #define EXEC  1
 #define REDIR 2
@@ -133,7 +135,8 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
-  fprintf(2, "$ ");
+  if (interactive)
+    fprintf(2, "$ ");
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if(buf[0] == 0) // EOF
@@ -154,6 +157,7 @@ main(int ac, char** av)
       break;
     }
   }
+  interactive = true;
 
   // If args, concatenate them parse as a command.
   if (ac > 1 && strcmp(av[1], "-c") == 0) {
@@ -178,6 +182,7 @@ main(int ac, char** av)
     exit();
   } else if (ac > 1) {
     // Shell script
+    interactive = false;
     close(0);
     if (open(av[1], O_RDONLY) < 0) {
       fprintf(2, "cannot open %s\n", av[1]);
