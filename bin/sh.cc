@@ -156,10 +156,10 @@ main(int ac, char** av)
   }
 
   // If args, concatenate them parse as a command.
-  if (ac > 1) {
+  if (ac > 1 && strcmp(av[1], "-c") == 0) {
     char* b = buf;
     char* e = b+sizeof(buf);
-    for (int i = 1; i < ac; i++) {
+    for (int i = 2; i < ac; i++) {
       int n;
       n = strlen(av[i]);
       if (b+n+1 > e)
@@ -176,6 +176,13 @@ main(int ac, char** av)
       runcmd(parsecmd(buf));
     wait();
     exit();
+  } else if (ac > 1) {
+    // Shell script
+    close(0);
+    if (open(av[1], O_RDONLY) < 0) {
+      fprintf(2, "cannot open %s\n", av[1]);
+      return -1;
+    }
   }
 
   // Read and run input commands.
