@@ -8,18 +8,34 @@
 #include "fs.h"
 #include "file.hh"
 #include "cpu.hh"
+#include "ilist.hh"
 
 #define PIPESIZE 512
+
+struct corepipe {
+  u32 nread;      // number of bytes read
+  u32 nwrite;     // number of bytes written
+  char data[PIPESIZE];
+};
 
 struct pipe {
   struct spinlock lock;
   struct condvar  cv;
   int flag;        // Ordered?
-  char data[PIPESIZE];
-  u32 nread;      // number of bytes read
-  u32 nwrite;     // number of bytes written
   int readopen;   // read fd is still open
   int writeopen;  // write fd is still open
+  u32 nread;      // number of bytes read
+  u32 nwrite;     // number of bytes written
+  char data[PIPESIZE];
+#if 0
+  struct corepipe pipes[NCPU];    // if unordered
+#endif
+  pipe(int f) : flag(f), readopen(1), writeopen(1), nread(0), nwrite(0) {
+    lock = spinlock("pipe", LOCKSTAT_PIPE);
+    cv = condvar("pipe");
+  };
+  ~pipe();
+  NEW_DELETE_OPS(pipe);
 };
 
 int
@@ -31,16 +47,7 @@ pipealloc(struct file **f0, struct file **f1, int flag)
   *f0 = *f1 = 0;
   if((*f0 = file::alloc()) == 0 || (*f1 = file::alloc()) == 0)
     goto bad;
-  // XXX Use new
-  if((p = (pipe*)kmalloc(sizeof(*p), "pipe")) == 0)
-    goto bad;
-  p->readopen = 1;
-  p->writeopen = 1;
-  p->nwrite = 0;
-  p->nread = 0;
-  p->flag = flag;
-  new (&p->lock) spinlock("pipe", LOCKSTAT_PIPE);
-  new (&p->cv) condvar("pipe");
+  p = new pipe(flag);
   (*f0)->type = file::FD_PIPE;
   (*f0)->readable = 1;
   (*f0)->writable = 0;
@@ -54,9 +61,7 @@ pipealloc(struct file **f0, struct file **f1, int flag)
 //PAGEBREAK: 20
  bad:
   if(p) {
-    p->cv.~condvar();
-    p->lock.~spinlock();
-    kmfree((char*)p, sizeof(*p));
+    p->~pipe();
   }
   if(*f0)
     (*f0)->dec();
