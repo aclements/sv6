@@ -9,13 +9,27 @@
 #include "file.hh"
 #include "cpu.hh"
 #include "ilist.hh"
+#include "uk/unistd.h"
 
 #define PIPESIZE 512
+
+// Initial support for unordered pipes by having per-core pipes.  A writer
+// writes n bytes as a single unit in its neighbor per-core pipe, from which the
+// neighbor is intended to read the n bytes.  If my neighbor's pipe is full or
+// empty, could try other per-core pipes, but in worse case we must block.  For
+// now, if my neighbor's pipe is full or empty, switch immediately to the
+// unscalable plan (one shared pipe).
 
 struct corepipe {
   u32 nread;      // number of bytes read
   u32 nwrite;     // number of bytes written
   char data[PIPESIZE];
+  struct spinlock lock;
+  corepipe() : nread(0), nwrite(0) {
+    lock = spinlock("corepipe", LOCKSTAT_PIPE);
+  };
+  ~corepipe();
+  NEW_DELETE_OPS(corepipe);
 };
 
 struct pipe {
@@ -27,15 +41,74 @@ struct pipe {
   u32 nread;      // number of bytes read
   u32 nwrite;     // number of bytes written
   char data[PIPESIZE];
-#if 0
-  struct corepipe pipes[NCPU];    // if unordered
-#endif
+  corepipe *pipes[NCPU];    // if unordered
+
   pipe(int f) : flag(f), readopen(1), writeopen(1), nread(0), nwrite(0) {
     lock = spinlock("pipe", LOCKSTAT_PIPE);
     cv = condvar("pipe");
+    if (flag & PIPE_UNORDED) {
+      for (int i = 0; i < NCPU; i++) {
+        pipes[i] = new corepipe();
+      }
+    }
   };
-  ~pipe();
+  ~pipe() {
+  };
   NEW_DELETE_OPS(pipe);
+
+  int write(const char *addr, int n) {
+    acquire(&lock);
+    for(int i = 0; i < n; i++){
+      while(nwrite == nread + PIPESIZE){ 
+        if(readopen == 0 || myproc()->killed){
+          release(&lock);
+          return -1;
+        }
+        cv.wake_all();
+        cv.sleep(&lock);
+      }
+      data[nwrite++ % PIPESIZE] = addr[i];
+    }
+    cv.wake_all();
+    release(&lock);
+    return n;
+  }
+
+  int read(char *addr, int n) {
+    int i;
+    acquire(&lock);
+    while(nread == nwrite && writeopen) { 
+      if(myproc()->killed){
+        release(&lock);
+        return -1;
+      }
+      cv.sleep(&lock);
+    }
+    for(i = 0; i < n; i++) { 
+      if(nread == nwrite)
+        break;
+      addr[i] = data[nread++ % PIPESIZE];
+    }
+    cv.wake_all();
+    release(&lock);
+    return i;
+  }
+
+  int close(int writable) {
+    acquire(&lock);
+    if(writable){
+      writeopen = 0;
+    } else {
+      readopen = 0;
+    }
+    cv.wake_all();
+    if(readopen == 0 && writeopen == 0){
+      release(&lock);
+      return 1;
+    } else
+      release(&lock);
+    return 0;
+  }
 };
 
 int
@@ -58,7 +131,6 @@ pipealloc(struct file **f0, struct file **f1, int flag)
   (*f1)->pipe = p;
   return 0;
 
-//PAGEBREAK: 20
  bad:
   if(p)
     delete p;
@@ -72,63 +144,48 @@ pipealloc(struct file **f0, struct file **f1, int flag)
 void
 pipeclose(struct pipe *p, int writable)
 {
-  acquire(&p->lock);
-  if(writable){
-    p->writeopen = 0;
-  } else {
-    p->readopen = 0;
-  }
-  p->cv.wake_all();
-  if(p->readopen == 0 && p->writeopen == 0){
-    release(&p->lock);
-    p->lock.~spinlock();
-    kmfree((char*)p, sizeof(*p));
-  } else
-    release(&p->lock);
+  if (p->close(writable))
+    delete p;
 }
 
-//PAGEBREAK: 40
 int
 pipewrite(struct pipe *p, const char *addr, int n)
 {
-  int i;
-
-  acquire(&p->lock);
-  for(i = 0; i < n; i++){
-    while(p->nwrite == p->nread + PIPESIZE){  //DOC: pipewrite-full
-      if(p->readopen == 0 || myproc()->killed){
-        release(&p->lock);
-        return -1;
-      }
-      p->cv.wake_all();
-      p->cv.sleep(&p->lock); //DOC: pipewrite-sleep
+  if (p->flag & PIPE_UNORDED) {
+    corepipe *cp = p->pipes[(mycpu()->id + 1) % NCPU];
+    acquire(&cp->lock);
+    if (cp->nwrite + n < cp->nread + PIPESIZE) {
+      for (int i = 0; i < n; i++)
+        cp->data[cp->nwrite++ % PIPESIZE] = addr[i];
+      release(&cp->lock);
+    } else { 
+      release(&cp->lock);
+      n = p->write(addr, n);
     }
-    p->data[p->nwrite++ % PIPESIZE] = addr[i];
+  } else {
+    n = p->write(addr, n);
   }
-  p->cv.wake_all();  //DOC: pipewrite-wakeup1
-  release(&p->lock);
   return n;
 }
 
 int
 piperead(struct pipe *p, char *addr, int n)
 {
-  int i;
-
-  acquire(&p->lock);
-  while(p->nread == p->nwrite && p->writeopen){  //DOC: pipe-empty
-    if(myproc()->killed){
-      release(&p->lock);
-      return -1;
+  int r;
+  if (p->flag & PIPE_UNORDED) {
+    corepipe *cp = p->pipes[mycpu()->id];
+    acquire(&cp->lock);
+    if (cp->nread + n <= cp->nwrite) {
+      for(int i = 0; i < n; i++)
+        addr[i] = p->data[p->nread++ % PIPESIZE];
+      release(&cp->lock);
+      r = n;
+    } else { 
+      release(&cp->lock);
+      r = p->read(addr, n);
     }
-    p->cv.sleep(&p->lock); //DOC: piperead-sleep
+  } else {
+    r = p->read(addr, n);
   }
-  for(i = 0; i < n; i++){  //DOC: piperead-copy
-    if(p->nread == p->nwrite)
-      break;
-    addr[i] = p->data[p->nread++ % PIPESIZE];
-  }
-  p->cv.wake_all();  //DOC: piperead-wakeup
-  release(&p->lock);
-  return i;
+  return r;
 }

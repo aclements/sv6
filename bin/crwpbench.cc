@@ -30,6 +30,10 @@ bench(int me, int nloop)
   char buf[1];
   int n;
 
+  if (setaffinity(me) < 0) {
+    die("sys_setaffinity(%d) failed", 0);
+  }
+
   for (int i = 0; i < nloop; i++) {
     if (me % 2 == 0) {
       n = write(fds[1], "x", 1);
@@ -48,7 +52,7 @@ int
 main(int ac, char** av)
 {
   int nproc;
-  int nloop = 100;
+  int nloop = 1024;
   
   if (ac < 2)
     die("usage: %s nproc [nloop]", av[0]);
