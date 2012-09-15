@@ -14,22 +14,28 @@
 #define PIPESIZE 512
 
 struct pipe {
+  virtual int write(const char *addr, int n) = 0;
+  virtual int read(char *addr, int n) = 0;
+  virtual int close(int writable) = 0;
+  NEW_DELETE_OPS(pipe);
+};
+
+struct ordered : pipe {
   struct spinlock lock;
   struct condvar  cv;
-  int flag;        // Ordered?
   int readopen;   // read fd is still open
   int writeopen;  // write fd is still open
   u32 nread;      // number of bytes read
   u32 nwrite;     // number of bytes written
   char data[PIPESIZE];
 
-  pipe(int f) : flag(f), readopen(1), writeopen(1), nread(0), nwrite(0) {
+  ordered() : readopen(1), writeopen(1), nread(0), nwrite(0) {
     lock = spinlock("pipe", LOCKSTAT_PIPE);
     cv = condvar("pipe");
   };
-  ~pipe() {
+  ~ordered() {
   };
-  NEW_DELETE_OPS(pipe);
+  NEW_DELETE_OPS(ordered);
 
   virtual int write(const char *addr, int n) {
     acquire(&lock);
@@ -87,33 +93,57 @@ struct pipe {
 };
 
 // Initial support for unordered pipes by having per-core pipes.  A writer
-// writes n bytes as a single unit in its neighbor per-core pipe, from which the
-// neighbor is intended to read the n bytes.  If my neighbor's pipe is full or
-// empty, could try other per-core pipes, but in worse case we must block.  For
-// now, if my neighbor's pipe is full or empty, switch immediately to the
-// unscalable plan (one shared pipe).
+// writes n bytes as a single unit in its local per-core pipe, from which the
+// neighbor is intended to read the n bytes.  If a writer's local pipe is full,
+// it sleeps until a reader to wake it up.  A reader cycles through all per-core
+// pipes, starting from the next core.  If it reads from a full pipe, it wakes up
+// the local writer.  If all pipes are empty, then it keeps trying.
+//
+// tension between load balance and performance: if there is no need for load
+// balance, reader and writer should agree on a given pipe and use only that
+// one.
+//
+// tension between space sharing and time sharing: maybe should read from local
+// pipe, maybe should give up cpu when no pipe has data.
+//
+// XXX shouldn't cpuid has index in pipes because process may be rescheduled.
+//
+// XXX Should pipe track #readers, #writers?  so that we don't have to allocate
+// NCPU per-core pipes.
 
 struct corepipe {
   u32 nread;
   u32 nwrite;
+  int readopen;
   char data[PIPESIZE];
   struct spinlock lock;
-  corepipe() : nread(0), nwrite(0) {
+  struct condvar  cv;
+  corepipe() : nread(0), nwrite(0), readopen(1) {
     lock = spinlock("corepipe", LOCKSTAT_PIPE);
+    cv = condvar("pipe");
   };
   ~corepipe();
   NEW_DELETE_OPS(corepipe);
 
-  int write(const char *addr, int n) {
-    int r = 0;
+  int write(const char *addr, int n, int sleep) {
+    int r = -1;
     acquire(&lock);
-    if (nwrite + n < nread + PIPESIZE) {
-      for (int i = 0; i < n; i++)
-        data[nwrite++ % PIPESIZE] = addr[i];
-      r = n;
+    while (1) {
+      if(readopen == 0 || myproc()->killed)
+        break;
+      if (nwrite + n < nread + PIPESIZE) {
+        for (int i = 0; i < n; i++)
+          data[nwrite++ % PIPESIZE] = addr[i];
+        r = n;
+        break;
+      } else if (sleep) {
+        cprintf("w");
+        cv.sleep(&lock);
+      } else {
+        break;
+      }
     }
     release(&lock);
-    cprintf("w");
     return r;
   }
 
@@ -124,16 +154,17 @@ struct corepipe {
       for(int i = 0; i < n; i++)
         addr[i] = data[nread++ % PIPESIZE];
       r = n;
+      cv.wake_all();   // XXX only wakeup when it was full?
     }
     release(&lock);
-    cprintf("r");
     return r;
   }
 };
 
 struct unordered : pipe {
   corepipe *pipes[NCPU]; 
-  unordered() : pipe(0) {
+  int writeopen;
+  unordered() : writeopen(1) {   // XXX have an abstract pipe interface
     for (int i = 0; i < NCPU; i++) {
       pipes[i] = new corepipe();
     }
@@ -143,24 +174,45 @@ struct unordered : pipe {
   NEW_DELETE_OPS(unordered);
 
   int write(const char *addr, int n) {
-    corepipe *cp = pipes[(mycpu()->id + 1) % NCPU];
-    int r = cp->write(addr, n);
-    if (n != r)
-      r = pipe::write(addr, n);
+    int r;
+    corepipe *cp = pipes[(mycpu()->id) % NCPU]; 
+    r = cp->write(addr, n, 1);    // XXX we could try to write in another pipe
+    assert (n == r);
     return r;
   };
 
   int read(char *addr, int n) {
-    corepipe *cp = pipes[mycpu()->id];
-    int r = cp->read(addr, n);
-    if (r != n)
-      r = pipe::read(addr, n);
+    int r;
+    while (1) {
+      for (int i = (mycpu()->id + 1) % NCPU; i != mycpu()->id; 
+           i = (i + 1) % NCPU) {
+        r = pipes[i]->read(addr, n);
+        if (r == n) return r;
+      }
+      if (writeopen == 0 || myproc()->killed) return -1;
+
+      // XXX should we give up the CPU at some point?
+    }
+
     return r;
   }
 
   int close(int writeable) {
-    // XXX close core pipes
-    return pipe::close(writeable);
+    int readopen = 1;
+    int r = 0;
+    for (int i = 0; i < NCPU; i++) acquire(&pipes[i]->lock);
+    if(writeable){
+      writeopen = 0;
+    } else {
+      for (int i = 0; i < NCPU; i++) pipes[i]->readopen = 0;
+      readopen = 0;
+    }
+    for (int i = 0; i < NCPU; i++) pipes[i]->cv.wake_all();
+    if(readopen == 0 && writeopen == 0) {
+      r = 1;
+    }
+    for (int i = 0; i < NCPU; i++) release(&pipes[i]->lock);
+    return r;
   }
 };
 
@@ -176,7 +228,7 @@ pipealloc(struct file **f0, struct file **f1, int flag)
   if (flag & PIPE_UNORDED) {
     p = new unordered();
   } else {
-    p = new pipe(flag);
+    p = new ordered();
   }
   (*f0)->type = file::FD_PIPE;
   (*f0)->readable = 1;

@@ -20,7 +20,7 @@
 // pipe.  Even process write a character to the pipe, odd ones read the
 // character.
 
-// To build on Linux: g++ -DLINUX -Wall -g -I.. -pthread linkbench.cc
+// To build on Linux: g++ -DLINUX -Wall -g -I.. -pthread crwpbench.cc
 
 int fds[2];
 
@@ -45,6 +45,8 @@ bench(int me, int nloop)
       assert(n == 1);
     }
   }
+
+  printf("%d: done\n", me);
   xexit();
 }
 
