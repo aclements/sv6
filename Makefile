@@ -100,9 +100,11 @@ xv6memfs.img: bootblock kernelmemfs
 	dd if=bootblock of=xv6memfs.img conv=notrunc
 	dd if=kernelmemfs of=xv6memfs.img seek=1 conv=notrunc
 
-$(O)/fs.img: $(O)/tools/mkfs README $(UPROGS)
+FSEXTRA += README
+
+$(O)/fs.img: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
 	@echo "  MKFS   $@"
-	$(Q)$(O)/tools/mkfs $@ README $(UPROGS)
+	$(Q)$(O)/tools/mkfs $@ $(FSEXTRA) $(UPROGS)
 
 .PRECIOUS: $(O)/%.o
 .PHONY: clean qemu gdb rsync
