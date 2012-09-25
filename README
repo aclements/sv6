@@ -51,7 +51,18 @@
 * clang 
   - Version 3.0 or greater is required to build xv6
   - http://llvm.org/docs/GettingStarted.html
+  - You might need a patched libstdc++ from gcc 4.7.0 or later:
+    See http://clang.llvm.org/cxx_status.html
+  - or you might be able to reuse you're current libstdc++, e.g.:
+    export CPLUS_INCLUDE_PATH=/usr/include/x86_64-linux-gnu
+    export C_INCLUDE_PATH=/usr/include/x86_64-linux-gnu
+    export LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
 
+  gcc (for libstdc++ if necessary):
+  # .. apply the patch ..
+  $ ./configure --enable-languages=c,c++ --disable-nls --prefix=[PREFIX]
+
+  llvm and clang:
   $ git clone http://llvm.org/git/llvm.git
   $ (cd llvm/tools && git clone http://llvm.org/git/clang.git)
   $ CC=gcc CXX=g++ ./configure --prefix=[PREFIX] \
