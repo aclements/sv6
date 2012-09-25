@@ -4,7 +4,7 @@
 // scalability, while tweaking stat to not return the link count will
 // lead to perfect scalability of stat.
 
-// To build on Linux: g++ -DLINUX -Wall -g -I.. -pthread linkbench.cc
+// To build on Linux: g++ -DLINUX -std=c++0x -Wall -g -I.. -pthread linkbench.cc
 
 #include <fcntl.h>
 #include <stdint.h>
@@ -17,16 +17,26 @@
 #include <stdio.h>
 #include "user/util.h"
 #include "include/xsys.h"
+#include "include/histogram.hh"
 #else // Assume xv6
 #include "pthread.h"
 #include "types.h"
 #include "user.h"
 #include "amd64.h"
 #include "xsys.h"
+#include "pmc.hh"
+#include "bits.hh"
+#include "histogram.hh"
 #endif
 
-#ifdef LINUX
-#define RECORD_PMC 3
+#if defined(LINUX)
+//#define RECORD_PMC 3
+#elif defined(HW_tom)
+#define RECORD_PMC 0
+#endif
+
+#if defined(MTRACE)
+#include "mtrace.h"
 #endif
 
 static pthread_barrier_t bar;
@@ -35,6 +45,8 @@ static uint64_t start_tsc[256], stop_tsc[256];
 static uint64_t tsc_stat[256], tsc_link[256], pmc_stat[256];
 static uint64_t count[256];
 static volatile bool stop;
+
+static histogram_log2<uint64_t, 1<<20> tsc_hist[256];
 
 void*
 timer_thread(void *)
@@ -55,14 +67,23 @@ do_stat(void *opaque)
 
   struct stat st;
   uint64_t lcount = 0;
+#ifdef RECORD_PMC
+  uint64_t pmc1 = rdpmc(RECORD_PMC);
+#endif
   while (!stop) {
     fstat(filefd, &st);
     ++lcount;
   }
+#ifdef RECORD_PMC
+  uint64_t pmc2 = rdpmc(RECORD_PMC);
+#endif
 
   stop_tsc[cpu] = rdtsc();
   count[cpu] = lcount;
   tsc_stat[cpu] = stop_tsc[cpu] - start_tsc[cpu];
+#ifdef RECORD_PMC
+  pmc_stat[cpu] = pmc2 - pmc1;
+#endif
   return NULL;
 }
 
@@ -132,6 +153,7 @@ do_both(void *opaque)
       lpmc_stat += pmc2 - pmc1;
 #endif
     ltsc_stat += tsc2 - tsc1;
+    tsc_hist[cpu] += tsc2 - tsc1;
     link("0/file", path);
     unlink(path);
     uint64_t tsc3 = rdtsc();
@@ -158,14 +180,15 @@ summarize_tsc(const char *label, uint64_t tscs[], unsigned count)
       max = tscs[i];
     total += tscs[i];
   }
-  printf("%lu %s span\n", max - min, label);
+  printf("%lu cycles %s skew\n", max - min, label);
   return total/count;
 }
 
-uint64_t
-sum(uint64_t v[], unsigned count)
+template<class T>
+T
+sum(T v[], unsigned count)
 {
-  uint64_t res = 0;
+  T res{};
   for (unsigned i = 0; i < count; ++i)
     res += v[i];
   return res;
@@ -181,6 +204,30 @@ main(int argc, char **argv)
   int nstats = atoi(argv[1]);
   int nlinks = both ? 0 : atoi(argv[2]);
 
+  printf("# --cores=%d --duration=5s", nstats+nlinks);
+  if (both)
+    printf("\n");
+  else
+    printf(" --stats=%d --links=%d\n", nstats, nlinks);
+
+#if !defined(LINUX) && defined(RECORD_PMC)
+  // Configure PMC
+  // L2 cache misses
+  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|(0x2|0x8)<<8|0x7e, 0);
+  // L1 cache misses
+//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|(1<<24)|(0x1f<<8)|0x42, 0);
+  // Retired instructions
+//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0xc0, 0);
+  // Retired mispredicted branch instructions
+//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0xc3, 0);
+  // Dispatch stalls
+//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0xd1, 0);
+  // Dispatch stall on LS full
+//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0xd8, 0);
+  // LS buffer 2 full
+//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0x23, 0);
+#endif
+
   // Set up file system
   mkdir("linkbench-d", 0777);
   chdir("linkbench-d");
@@ -188,6 +235,10 @@ main(int argc, char **argv)
   filefd = openat(AT_FDCWD, "0/file", O_CREAT|O_RDWR, 0666);
   if (filefd < 0)
     die("openat failed");
+
+#if defined(MTRACE)
+  mtenable_type(mtrace_record_ascope, "xv6-linkbench");
+#endif
 
   // Run benchmark
   pthread_t timer;
@@ -207,6 +258,10 @@ main(int argc, char **argv)
   for (int i = 0; i < nstats + nlinks; ++i)
     xpthread_join(threads[i]);
 
+#if defined(MTRACE)
+  mtdisable("xv6-linkbench");
+#endif
+
   // Summarize
   uint64_t start_avg = summarize_tsc("start", start_tsc, nstats + nlinks);
   uint64_t stop_avg = summarize_tsc("stop", stop_tsc, nstats + nlinks);
@@ -220,10 +275,25 @@ main(int argc, char **argv)
   if (stats) {
     printf("%lu cycles/stat\n", sum(tsc_stat, nstats + nlinks) / stats);
 #ifdef RECORD_PMC
+    printf("%lu pmc\n", sum(pmc_stat, nstats + nlinks));
+    printf("%lu pmc/stat\n", sum(pmc_stat, nstats + nlinks) / stats);
+#ifdef LINUX
+    // xv6 doesn't have floating point support
     printf("%g pmc/stat\n", sum(pmc_stat, nstats + nlinks) / (double)stats);
+#endif
 #endif
   }
   printf("%lu links\n", links);
   if (links)
     printf("%lu cycles/link\n", sum(tsc_link, nstats + nlinks) / links);
+
+  // printf("stat tsc histogram: ");
+  // auto hist = sum(tsc_hist, nstats + nlinks);
+  // hist.print_stats();
+  // hist.print_bars();
+  // printf("\n");
+  // hist.print();
+
+  printf("\n");
+  sleep(10);
 }
