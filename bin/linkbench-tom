@@ -1,0 +1,33 @@
+#!/sh
+echo == --host=tom --bench=linkbench --kernel=xv6 ==
+echo
+
+linkbench 1 0
+linkbench 1 5
+linkbench 1 11
+linkbench 1 17
+linkbench 1 23
+linkbench 1 29
+linkbench 1 35
+linkbench 1 41
+linkbench 1 47
+
+linkbench 1 0
+linkbench 1 5
+linkbench 1 11
+linkbench 1 17
+linkbench 1 23
+linkbench 1 29
+linkbench 1 35
+linkbench 1 41
+linkbench 1 47
+
+linkbench 1 0
+linkbench 1 5
+linkbench 1 11
+linkbench 1 17
+linkbench 1 23
+linkbench 1 29
+linkbench 1 35
+linkbench 1 41
+linkbench 1 47
