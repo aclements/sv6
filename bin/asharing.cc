@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include "mtrace.h"
 #include "pthread.h"
+#include "rnd.hh"
 
 #include <sys/mman.h>
 
@@ -37,14 +38,6 @@ ready(void)
     while (barrier)
       asm volatile("pause");
   }
-}
-
-u64
-rnd(void)
-{
-  static u64 rseed;
-  rseed = rseed * 6364136223846793005 + 1442695040888963407;
-  return rseed;
 }
 
 void*

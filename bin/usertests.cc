@@ -3,6 +3,7 @@
 #include "fs.h"
 #include "traps.h"
 #include "pthread.h"
+#include "rnd.hh"
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -13,16 +14,6 @@ char buf[2048];
 char name[3];
 const char *echoargv[] = { "echo", "ALL", "TESTS", "PASSED", 0 };
 int stdout = 1;
-
-// Random number generator for randomized tests
-static u64 rseed;
-
-u64
-rnd(void)
-{
-  rseed = rseed * 6364136223846793005 + 1442695040888963407;
-  return rseed;
-}
 
 // simple file system tests
 
@@ -1786,7 +1777,6 @@ vmoverlap(void)
   char *base = (char*)0x1000;
   char map[10] = {};
   int mapn = 1;
-  rseed = 0;
   for (int i = 0; i < 100; i++) {
     int op = i % 20 >= 10;
     int lo = rnd() % 10, hi = rnd() % 10;

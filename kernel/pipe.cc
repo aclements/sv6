@@ -164,7 +164,7 @@ struct corepipe {
 struct unordered : pipe {
   corepipe *pipes[NCPU]; 
   int writeopen;
-  unordered() : writeopen(1) {   // XXX have an abstract pipe interface
+  unordered() : writeopen(1) {
     for (int i = 0; i < NCPU; i++) {
       pipes[i] = new corepipe();
     }

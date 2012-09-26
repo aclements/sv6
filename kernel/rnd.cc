@@ -1,20 +1,20 @@
 #include "types.h"
-#include "amd64.h"
-#include "cpu.hh"
+#include "kernel.hh"
+#include "percpu.hh"
 #include "rnd.hh"
 
-struct seed {
-  u64 v;
-} __mpalign__;
-static struct seed seeds[NCPU] __mpalign__;
+struct state {
+  u64 seed;
+};
 
-u64 
+percpu<state,percpu_safety::internal> rstate;
+
+u64
 rnd(void)
 {
-  if (seeds[mycpu()->id].v == 0) {
-    seeds[mycpu()->id].v = rdtsc();
+  if (rstate->seed == 0) {
+    rstate->seed = rdtsc();
   }
-  seeds[mycpu()->id].v = 
-    seeds[mycpu()->id].v * 6364136223846793005 + 1442695040888963407;
-  return seeds[mycpu()->id].v;
+  rstate->seed = rstate->seed *  6364136223846793005 + 1442695040888963407;
+  return rstate->seed;
 }

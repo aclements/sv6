@@ -14,6 +14,7 @@
 #include "mtrace.h"
 #include "amd64.h"
 #include "xsys.h"
+#include "rnd.hh"
 #endif
 
 // Concurrent reading and writing of a pipe.  Forks n processes with one shared
@@ -22,13 +23,16 @@
 
 // To build on Linux: g++ -DLINUX -Wall -g -I.. -pthread crwpbench.cc
 
-int fds[2];
+static int fds[2];
+static int delay;
 
 void
 bench(int me, int nloop)
 {
   char buf[1];
   int n;
+
+  printf("start %d\n", me);
 
   if (setaffinity(me) < 0) {
     die("sys_setaffinity(%d) failed", 0);
@@ -43,6 +47,10 @@ bench(int me, int nloop)
       if (n == 0)
         break;
       assert(n == 1);
+      if (delay > 0) {
+        long d = rnd() % delay;
+        nsleep(d);
+      };
     }
   }
 
@@ -53,20 +61,23 @@ bench(int me, int nloop)
 int
 main(int ac, char** av)
 {
-  int nproc;
+  int nproc = 0;
   int nloop = 1024;
   
-  if (ac < 2)
-    die("usage: %s nproc [nloop]", av[0]);
+  if (ac < 3)
+    die("usage: %s nproc delay [nloop]", av[0]);
 
   nproc = atoi(av[1]);
-  if (ac > 2)
-    nloop = atoi(av[2]);
+  delay = atoi(av[2]);
+  if (ac > 3)
+    nloop = atoi(av[3]);
+
 
   if (pipe(fds, PIPE_UNORDED) < 0) {
     printf("pipe failed\n");
     xexit();
   }
+
 
   uint64_t t0 = rdtsc();
   for(int i = 0; i < nproc; i++) {
