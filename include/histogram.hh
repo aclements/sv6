@@ -148,6 +148,10 @@ public:
   void
   print_stats() const
   {
+    if (count() == 0) {
+      printf("count 0\n");
+      return;
+    }
     printf("count %llu  min %llu  mean %llu  max %llu\n",
            (long long unsigned)count(), (long long unsigned)min(),
            (long long unsigned)mean(), (long long unsigned)max());
@@ -182,6 +186,10 @@ public:
     for (auto v : buckets_)
       if (v > max_count)
         max_count = v;
+    if (max_count == 0) {
+      printf("%*llu..: \n", lwidth, 0ull);
+      return;
+    }
 
     unsigned bar_width = 75 - lwidth;
     if (zero_)

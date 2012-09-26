@@ -55,6 +55,9 @@ endif
 
 UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
 
+FSEXTRA += \
+	bin/linkbench-tom \
+
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
