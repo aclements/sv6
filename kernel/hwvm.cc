@@ -81,11 +81,14 @@ initpg(void)
     assert(pd);
 
     atomic<pme_t> *sp = &pd->e[PX(1,va)];
-    u64 flags = PTE_W | PTE_P | PTE_PS | PTE_NX;
+    u64 flags = PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
     *sp = pa | flags;
     va += PGSIZE*512;
     pa += PGSIZE*512;
   }
+
+  // Enable global pages
+  lcr4(rcr4() | CR4_PGE);
 }
 
 // Set up kernel part of a page table.

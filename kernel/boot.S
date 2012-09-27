@@ -206,8 +206,8 @@ initpagetables:
 	pushl %eax
 
 	// Set up 64-bit entry in %edx:%eax.
-	// Base address 0, present, read/write, large page.
-	movl $(0 | 1<<0 | 1<<1 | 1<<7), %eax
+	// Base address 0, present, read/write, large page, global.
+	movl $(0 | 1<<0 | 1<<1 | 1<<7 | 1<<8), %eax
 	movl $0, %edx
 
 	// Fill in 512 entries at pdt.
