@@ -79,10 +79,14 @@ initpg(void)
   u32 edx;
   cpuid(CPUID_EXTENDED_1, nullptr, nullptr, nullptr, &edx);
   if (edx & CPUID_EXTENDED_1_EDX_Page1GB) {
-    // XXX Redo the KCODE mapping with 1GB pages (or just combine the
-    // two mappings?)
     size = PGSIZE*512*512;
     target_level = 2;
+
+    // Redo KCODE mapping with a 1GB page
+    auto pdpt = descend(&kpml4, KCODE, 0, true, 3);
+    assert(pdpt);
+    pdpt->e[PX(2, KCODE)] = PTE_W | PTE_P | PTE_PS | PTE_G;
+    lcr3(rcr3());
   }
 
   // Create direct map region
