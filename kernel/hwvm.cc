@@ -72,19 +72,32 @@ initpg(void)
 {
   u64 va = KBASE;
   paddr pa = 0;
+  u64 size = PGSIZE*512;
+  int target_level = 1;
 
+  // Can we use 1GB mappings?
+  u32 edx;
+  cpuid(CPUID_EXTENDED_1, nullptr, nullptr, nullptr, &edx);
+  if (edx & CPUID_EXTENDED_1_EDX_Page1GB) {
+    // XXX Redo the KCODE mapping with 1GB pages (or just combine the
+    // two mappings?)
+    size = PGSIZE*512*512;
+    target_level = 2;
+  }
+
+  // Create direct map region
   while (va < KBASEEND) {
-    auto pdp = descend(&kpml4, va, 0, 1, 3);
-    assert(pdp);
+    auto dir = &kpml4;
+    for (int level = 3; level > target_level; --level) {
+      dir = descend(dir, va, 0, true, level);
+      assert(dir);
+    }
 
-    auto pd = descend(pdp, va, 0, 1, 2);
-    assert(pd);
-
-    atomic<pme_t> *sp = &pd->e[PX(1,va)];
+    atomic<pme_t> *sp = &dir->e[PX(target_level,va)];
     u64 flags = PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
     *sp = pa | flags;
-    va += PGSIZE*512;
-    pa += PGSIZE*512;
+    va += size;
+    pa += size;
   }
 
   // Enable global pages
