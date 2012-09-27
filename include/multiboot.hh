@@ -27,10 +27,11 @@ struct Mbdata
 typedef struct Mbmem Mbmem;
 struct Mbmem
 {
+	u32	size;
 	u64	base;
 	u64	length;
 	u32	type;
-};
+} __attribute__((packed));
 
 typedef struct Mbmod Mbmod;
 struct Mbmod

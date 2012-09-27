@@ -62,6 +62,7 @@ OBJS = \
 	pstream.o \
 	distref.o \
 	semaphore.o \
+	version.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
@@ -138,6 +139,17 @@ $(O)/kernel/uaccess.o: $(O)/include/asmdefines.h
 
 $(O)/kernel/sysvectors.cc: tools/syscalls.py kernel/*.cc
 	$(call SYSCALLGEN,--kvectors)
+
+$(O)/kernel/version.cc: always
+	@echo "  GEN    $@"
+	$(Q)mkdir -p $(@D)
+	$(Q) \
+		BASE="$$(git describe --long)"; \
+		EXTRA="$$(if ! git diff --quiet || ! git diff --cached --quiet; then echo +; fi)"; \
+		echo "const char *xv6_version_string = \"$$BASE$$EXTRA\";" > \
+			$@.tmp
+	$(Q)cmp -s $@.tmp $@ || mv $@.tmp $@
+.PHONY: always
 
 .PRECIOUS: $(O)/kernel/%.o
 -include $(O)/kernel/*.d

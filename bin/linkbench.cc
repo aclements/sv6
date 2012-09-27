@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 
 #ifdef LINUX
 #include <pthread.h>
@@ -204,6 +205,11 @@ main(int argc, char **argv)
   int nstats = atoi(argv[1]);
   int nlinks = both ? 0 : atoi(argv[2]);
 
+  struct utsname uts;
+  uname(&uts);
+
+  printf("# --kernel=%s --host=%s --kver=%s\n",
+         uts.sysname, uts.nodename, uts.version);
   printf("# --cores=%d --duration=5s", nstats+nlinks);
   if (both)
     printf("\n");
@@ -214,6 +220,7 @@ main(int argc, char **argv)
   // Configure PMC
   // L2 cache misses
   perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|(0x2|0x8)<<8|0x7e, 0);
+  printf("# --pmc=\"L2 cache misses\"\n");
   // L1 cache misses
 //  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|(1<<24)|(0x1f<<8)|0x42, 0);
   // Retired instructions

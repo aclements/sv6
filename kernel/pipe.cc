@@ -15,6 +15,7 @@
 #define PIPESIZE 512
 
 struct pipe {
+  virtual ~pipe() { };
   virtual int write(const char *addr, int n) = 0;
   virtual int read(char *addr, int n) = 0;
   virtual int close(int writable) = 0;

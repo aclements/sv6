@@ -45,6 +45,7 @@ void initacpitables(void);
 void initcpus(void);
 void initlapic(void);
 void initacpi(void);
+void initwd(void);
 void idleloop(void);
 
 #define IO_RTC  0x70
@@ -62,6 +63,7 @@ mpboot(void)
   initsamp();
   initidle();
   initnmi();
+  initwd();                     // Requires initnmi
   bstate = 1;
   idleloop();
 }
@@ -195,6 +197,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   kpml4.e[0] = 0;  // don't need 1 GB identity mapping anymore
   lcr3(rcr3());
   initcpprt();
+  initwd();                // Requires initnmi
 
   idleloop();
 

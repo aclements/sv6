@@ -9,6 +9,7 @@
 #include "kalloc.hh"
 #include "mtrace.h"
 #include "cpu.hh"
+#include "kstream.hh"
 
 // allocate in power-of-two sizes up to 2^KMMAX (PGSIZE)
 #define KMMAX 12
@@ -111,8 +112,10 @@ kmalloc(u64 nbytes, const char *name)
   if (ALLOC_MEMSET) {
     char* chk = (char*)(h + 1);
     for (int i = 0; i < (1<<b)-sizeof(*h); i++)
-      if (chk[i] != 3)
-        panic("kmalloc: oops %p+%x", chk, i);
+      if (chk[i] != 3) {
+        console.print(shexdump(chk, nbytes));
+        panic("kmalloc: free memory was overwritten %p+%x", chk, i);
+      }
     memset(h, 4, (1<<b));
   }
 

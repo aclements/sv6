@@ -39,6 +39,7 @@
 #define CR0_CD		0x40000000	// Cache Disable
 #define CR0_PG		0x80000000	// Paging
 
+#define CR4_PGE         0x00000080      // Page global enable
 #define CR4_PCE         0x100           // RDPMC at CPL > 0
 
 // FS/GS base registers
@@ -87,6 +88,10 @@
 
 // CPUID function 0x00000005
 #define CPUID_MWAIT         0x00000005
+
+// CPUID function 0x80000001
+#define CPUID_EXTENDED_1 0x80000001
+#define CPUID_EXTENDED_1_EDX_Page1GB (1 << 26)
 
 // APIC Base Address Register MSR
 #define MSR_APIC_BAR        0x0000001b

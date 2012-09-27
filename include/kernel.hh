@@ -21,12 +21,13 @@ static inline uptr v2p(void *a) {
     return ua - KBASE;
 }
 
+// Set to true once KBASE mapping exists
+extern bool have_kbase_mapping;
+
 static inline void *p2v(uptr a) {
-  uptr ac = a + KCODE;
-  if (ac >= KCODE)
-    return (void*) ac;
-  else
+  if (have_kbase_mapping)
     return (u8 *) a + KBASE;
+  return (u8 *) a + KCODE;
 }
 
 struct proc_pgmap;

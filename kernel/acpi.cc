@@ -465,7 +465,6 @@ acpi_pci_enable_link(const char *name)
   for (auto &res : acpi_array<ACPI_RESOURCE>(crsbuf)) {
     switch (res.Type) {
     case ACPI_RESOURCE_TYPE_START_DEPENDENT:
-    case ACPI_RESOURCE_TYPE_END_TAG:
       // Do nothing
       break;
     case ACPI_RESOURCE_TYPE_IRQ:
@@ -478,10 +477,16 @@ acpi_pci_enable_link(const char *name)
         return acpi_resource_to_irq(res);
       irqres = &res;
       break;
+    case ACPI_RESOURCE_TYPE_END_TAG:
+      // Resource data is terminated with an end tag
+      goto crs_done;
     default:
+      swarn.println("acpi: PCI link ", name, " has unexpected resource:");
+      swarn.println("acpi:  ", res);
       unknown_resource = true;
     }
   }
+crs_done:
   if (!irqres) {
     swarn.println("acpi: PCI link ", name, " does not have an IRQ resource");
     return irq();
@@ -512,10 +517,14 @@ acpi_pci_enable_link(const char *name)
         if (acpi_try_allocate_irq(res.Data.ExtendedIrq.Interrupts[i]))
           setirq = res.Data.ExtendedIrq.Interrupts[i];
       break;
+    case ACPI_RESOURCE_TYPE_END_TAG:
+      // Resource data is terminated with an end tag
+      goto prs_done;
     }
     if (setirq)
       break;
   }
+prs_done:
   if (!setirq) {
     swarn.println("acpi: IRQ sharing not implemented");
     return irq();

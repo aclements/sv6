@@ -11,8 +11,10 @@
 #include "sperf.hh"
 #include "kmtrace.hh"
 #include "futex.h"
+#include "version.hh"
 
 #include <uk/mman.h>
+#include <uk/utsname.h>
 
 //SYSCALL
 int
@@ -213,5 +215,31 @@ long
 sys_yield(void)
 {
   yield();
+  return 0;
+}
+
+//SYSCALL
+int
+sys_uname(userptr<struct utsname> buf)
+{
+  static struct utsname uts
+  {
+    "xv6",
+#define xstr(s) str(s)
+#define str(s) #s
+      xstr(XV6_HW),
+#undef xstr
+#undef str
+      "xv6-scale",
+      "",
+      "x86_64"
+  };
+  static bool initialized;
+  if (!initialized) {
+    strncpy(uts.version, xv6_version_string, sizeof(uts.version) - 1);
+    initialized = true;
+  }
+  if (!buf.store(&uts))
+    return -1;
   return 0;
 }

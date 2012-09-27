@@ -180,12 +180,38 @@ kerneltrap(struct trapframe *tf)
     pid = myproc()->pid;
     kstack = myproc()->kstack;
   }
-  __cprintf("kernel trap %lu cpu %u\n"
-          "  tf: rip %016lx rsp %016lx rbp %016lx cr2 %016lx cs %x\n"
-          "  proc: name %s pid %u kstack %p\n",
-          tf->trapno, mycpu()->id, 
-          tf->rip, tf->rsp, tf->rbp, rcr2(), tf->cs,
-          name, pid, kstack);
+  __cprintf("kernel trap %lu err 0x%x cpu %u cs %u ds %u ss %u\n"
+            // Basic machine state
+            "  rip %016lx rsp %016lx rbp %016lx\n"
+            "  cr2 %016lx cr3 %016lx cr4 %016lx\n"
+            // Function arguments (AMD64 ABI)
+            "  rdi %016lx rsi %016lx rdx %016lx\n"
+            "  rcx %016lx r8  %016lx r9  %016lx\n"
+            // Everything else
+            "  rax %016lx rbx %016lx r10 %016lx\n"
+            "  r11 %016lx r12 %016lx r13 %016lx\n"
+            "  r14 %016lx r15 %016lx rflags %016lx\n"
+            // Process state
+            "  proc: name %s pid %u kstack %p\n",
+            tf->trapno, tf->err, mycpu()->id, tf->cs, tf->ds, tf->ss,
+            tf->rip, tf->rsp, tf->rbp,
+            rcr2(), rcr3(), rcr4(),
+            tf->rdi, tf->rsi, tf->rdx,
+            tf->rcx, tf->r8, tf->r9,
+            tf->rax, tf->rbx, tf->r10,
+            tf->r11, tf->r12, tf->r13,
+            tf->r14, tf->r15, tf->rflags,
+            name, pid, kstack);
+  // Trap decoding
+  if (tf->trapno == T_PGFLT) {
+    __cprintf("  %s %s %016lx from %s mode\n",
+              tf->err & FEC_PR ?
+              "protection violation" :
+              "non-present page",
+              tf->err & FEC_WR ? "writing" : "reading",
+              rcr2(),
+              tf->err & FEC_U ? "user" : "kernel");
+  }
   printtrace(tf->rbp);
 
   panicked = 1;

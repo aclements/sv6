@@ -18,7 +18,8 @@ file::alloc(void)
 file::file(void)
   : rcu_freed("file"), 
     type(file::FD_NONE), readable(0), writable(0), append(0), 
-    socket(0), pipe(nullptr), ip(nullptr), off(0)
+    socket(0), pipe(nullptr), ip(nullptr), off(0),
+    wsem("file::wsem", 1), rsem("file::rsem", 1)
 {
 }
 
@@ -81,8 +82,10 @@ file::read(char *addr, int n)
     iunlock(ip);
     return r;
   }
-  if(type == file::FD_SOCKET)
+  if(type == file::FD_SOCKET) {
+    auto l = rsem.guard();
     return netread(socket, addr, n);
+  }
   panic("fileread");
 }
 
@@ -119,8 +122,10 @@ file::write(const char *addr, int n)
     iunlock(ip);
     return r;
   }
-  if(type == file::FD_SOCKET)
+  if(type == file::FD_SOCKET) {
+    auto l = wsem.guard();
     return netwrite(socket, addr, n);
+  }
   panic("filewrite");
 }
 

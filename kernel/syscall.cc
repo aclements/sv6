@@ -21,6 +21,9 @@ fetchmem(void* dst, const void* usrc, u64 size)
 {
   if(mycpu()->ncli != 0)
     panic("fetchstr: cli'd");
+  // __uaccess_mem can't handle size == 0
+  if(size == 0)
+    return 0;
   return __uaccess_mem(dst, usrc, size);
 }
 
@@ -29,6 +32,8 @@ putmem(void *udst, const void *src, u64 size)
 {
   if(mycpu()->ncli != 0)
     panic("fetchstr: cli'd");
+  if(size == 0)
+    return 0;
   return __uaccess_mem(udst, src, size);
 }
 

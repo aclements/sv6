@@ -15,6 +15,8 @@
 
 using namespace std;
 
+bool have_kbase_mapping;
+
 static const char *levelnames[] = {
   "PT", "PD", "PDP", "PML4"
 };
@@ -72,20 +74,43 @@ initpg(void)
 {
   u64 va = KBASE;
   paddr pa = 0;
+  u64 size = PGSIZE*512;
+  int target_level = 1;
 
-  while (va < KBASEEND) {
-    auto pdp = descend(&kpml4, va, 0, 1, 3);
-    assert(pdp);
+  // Can we use 1GB mappings?
+  u32 edx;
+  cpuid(CPUID_EXTENDED_1, nullptr, nullptr, nullptr, &edx);
+  if (edx & CPUID_EXTENDED_1_EDX_Page1GB) {
+    size = PGSIZE*512*512;
+    target_level = 2;
 
-    auto pd = descend(pdp, va, 0, 1, 2);
-    assert(pd);
-
-    atomic<pme_t> *sp = &pd->e[PX(1,va)];
-    u64 flags = PTE_W | PTE_P | PTE_PS | PTE_NX;
-    *sp = pa | flags;
-    va += PGSIZE*512;
-    pa += PGSIZE*512;
+    // Redo KCODE mapping with a 1GB page
+    auto pdpt = descend(&kpml4, KCODE, 0, true, 3);
+    assert(pdpt);
+    pdpt->e[PX(2, KCODE)] = PTE_W | PTE_P | PTE_PS | PTE_G;
+    lcr3(rcr3());
   }
+
+  // Create direct map region
+  while (va < KBASEEND) {
+    auto dir = &kpml4;
+    for (int level = 3; level > target_level; --level) {
+      dir = descend(dir, va, 0, true, level);
+      assert(dir);
+    }
+
+    atomic<pme_t> *sp = &dir->e[PX(target_level,va)];
+    u64 flags = PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
+    *sp = pa | flags;
+    va += size;
+    pa += size;
+  }
+
+  // Enable global pages
+  lcr4(rcr4() | CR4_PGE);
+
+  // Inform system that kbase mapping is now usable
+  have_kbase_mapping = true;
 }
 
 // Set up kernel part of a page table.

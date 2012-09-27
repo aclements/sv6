@@ -62,6 +62,9 @@ SYS_%(uname)s = %(num)d
 """ % syscall.__dict__
 
     if options.udecls:
+        types = set(typ for syscall in syscalls for typ in syscall.types())
+        for typ in types:
+            print typ + ";"
         for syscall in syscalls:
             extra = ""
             if "NORET" in syscall.flags:
@@ -94,6 +97,12 @@ class Syscall(object):
                 atype = atype2
             uargs.append(atype)
         self.uargs = uargs
+
+    def types(self):
+        for uarg in self.uargs:
+            m = re.search("(?:struct|union) +[a-zA-Z_][a-zA-Z0-9_]*", uarg)
+            if m:
+                yield m.group(0)
 
     def __repr__(self):
         return "Syscall(%r,%r,%r,%r,%r)" % (

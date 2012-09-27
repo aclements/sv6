@@ -3,7 +3,10 @@
 #define KBASEEND   0xFFFFFF5000000000ull  // 320GB
 
 // The kernel is linked to run from virtual address KCODE+2MB.  boot.S
-// sets up a direct mapping at KCODE to KCODE+1GB.
+// sets up a direct mapping at KCODE to KCODE+1GB.  This is necessary
+// in addition to KBASE because we compile with -mcmodel=kernel, which
+// assumes the kernel text and symbols are linked in the top 2GB of
+// memory.
 #define KCODE      0xFFFFFFFFC0000000ull
 
 #define KSHARED    0xFFFFF00000000000ull
