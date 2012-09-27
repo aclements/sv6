@@ -10,6 +10,7 @@
 #include "cpu.hh"
 #include "ilist.hh"
 #include "uk/unistd.h"
+#include "rnd.hh"
 
 #define PIPESIZE 512
 
@@ -126,11 +127,13 @@ struct corepipe {
   NEW_DELETE_OPS(corepipe);
 
   int write(const char *addr, int n, int sleep) {
-    int r = -1;
+    int r = 0;
     acquire(&lock);
     while (1) {
-      if(readopen == 0 || myproc()->killed)
+      if(readopen == 0 || myproc()->killed) {
+        r = -1;
         break;
+      }
       if (nwrite + n < nread + PIPESIZE) {
         for (int i = 0; i < n; i++)
           data[nwrite++ % PIPESIZE] = addr[i];
@@ -154,7 +157,7 @@ struct corepipe {
       for(int i = 0; i < n; i++)
         addr[i] = data[nread++ % PIPESIZE];
       r = n;
-      cv.wake_all();   // XXX only wakeup when it was full?
+      // cv.wake_all();   // XXX only wakeup when it was full?
     }
     release(&lock);
     return r;
@@ -176,8 +179,12 @@ struct unordered : pipe {
   int write(const char *addr, int n) {
     int r;
     corepipe *cp = pipes[(mycpu()->id) % NCPU]; 
-    r = cp->write(addr, n, 1);    // XXX we could try to write in another pipe
-    assert (n == r);
+    do {
+      r = cp->write(addr, n, 0);
+      if (r < 0) break;
+      cp = pipes[rnd() % NCPU];    // try another pipe if cp is full
+      // XXX should we give up the CPU at some point?
+    } while (r != n);
     return r;
   };
 
@@ -190,7 +197,8 @@ struct unordered : pipe {
         if (r == n) return r;
       }
       if (writeopen == 0 || myproc()->killed) return -1;
-
+      r = pipes[mycpu()->id]->read(addr, n);
+      if (r == n) return r;
       // XXX should we give up the CPU at some point?
     }
 
