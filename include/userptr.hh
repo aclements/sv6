@@ -37,6 +37,11 @@ public:
   {
     return (uptr)ptr;
   }
+
+  bool store(const T *val) const
+  {
+    return !putmem(unsafe_get(), val, sizeof(T));
+  }
 };
 
 // For userptr to be passed like a regular pointer, its representation
