@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 
 #ifdef LINUX
 #include <pthread.h>
@@ -204,7 +205,11 @@ main(int argc, char **argv)
   int nstats = atoi(argv[1]);
   int nlinks = both ? 0 : atoi(argv[2]);
 
-  printf("# --cores=%d --duration=5s", nstats+nlinks);
+  struct utsname uts;
+  uname(&uts);
+
+  printf("# --cores=%d --duration=5s --kernel=%s --host=%s --kver=%s",
+         nstats+nlinks, uts.sysname, uts.nodename, uts.version);
   if (both)
     printf("\n");
   else
