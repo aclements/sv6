@@ -10,6 +10,68 @@
 extern struct klockstat klockstat_lazy;
 #endif
 
+#ifdef __cplusplus
+// ::lock_guard represents lock ownership of a lockable object.  These
+// objects are not copyable, but they are movable, so lock ownership
+// may be transferred.
+template<class Lock>
+class lock_guard
+{
+  Lock *l_;
+
+public:
+  // Acquire lock @c l.
+  lock_guard(Lock *l) : l_(l)
+  {
+    l_->acquire();
+  }
+
+  // Default constructor.
+  constexpr lock_guard() : l_(nullptr) { }
+
+  // Release lock.
+  ~lock_guard()
+  {
+    release();
+  }
+
+  // ::lock_guard cannot be copied.
+  lock_guard(const lock_guard &) = delete;
+  lock_guard& operator=(const lock_guard &) = delete;
+
+  // Move constructor transfers ownership of @c o's lock to this
+  // ::lock_guard.
+  lock_guard(lock_guard &&o) : l_(o.l_)
+  {
+    o.l_ = nullptr;
+  }
+
+  // Move assignment transfers ownership of @c o's lock to this
+  // ::lock_guard.
+  lock_guard& operator=(lock_guard &&o)
+  {
+    l_ = o.l_;
+    o.l_ = nullptr;
+    return *this;
+  }
+
+  // Explicitly release the lock held by this ::lock_guard.
+  void release()
+  {
+    if (l_) {
+      l_->release();
+      l_ = nullptr;
+    }
+  }
+
+  // Return true if this ::lock_guard holds a lock.
+  explicit operator bool () const noexcept
+  {
+    return !!l_;
+  }
+};
+#endif
+
 // Mutual exclusion lock.
 struct spinlock {
   u32 locked;       // Is the lock held?
@@ -113,15 +175,7 @@ holding(struct spinlock* lk)
 }
 #endif
 
-// RTTI class for acquiring and releasing a spinlock
-class scoped_acquire {
- private:
-  spinlock *_l;
-
- public:
-  scoped_acquire(spinlock *l) : _l(0) { acquire(l); }
-  ~scoped_acquire() { release(); }
-  void release() { if (_l) { _l->release(); _l = 0; } }
-  void acquire(spinlock *l) { assert(!_l); l->acquire(); _l = l; }
-};
+// XXX(Austin) scoped_acquire is the old name for the
+// spinlock-specific RAII lock holder.
+typedef lock_guard<spinlock> scoped_acquire;
 #endif
