@@ -6,6 +6,7 @@
 #include "atomic.hh"
 #include "ref.hh"
 #include "condvar.h"
+#include "semaphore.h"
 
 class dirns;
 
@@ -30,6 +31,10 @@ struct file : public referenced, public rcu_freed {
   struct pipe *pipe;
   struct inode *ip;
   u32 off;
+
+  // Used for sockets (XXX could be just a mutex)
+  // XXX This locking should be handled in net, not here.
+  semaphore wsem, rsem;
 
   virtual void do_gc(void);
 
