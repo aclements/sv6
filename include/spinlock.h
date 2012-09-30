@@ -134,6 +134,11 @@ struct spinlock {
   bool try_acquire();
   void release();
 
+  lock_guard<spinlock> guard()
+  {
+    return lock_guard<spinlock>(this);
+  }
+
 #if SPINLOCK_DEBUG
   bool holding();
 #endif

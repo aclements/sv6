@@ -44,5 +44,13 @@ public:
 
   // Release @c permits permits.
   void release(uint64_t permits = 1);
+
+  // Acquire one permit and return a ::lock_guard that holds the
+  // permit.
+  lock_guard<semaphore> guard()
+    __attribute__((warn_unused_result))
+  {
+    return lock_guard<semaphore>(this);
+  }
 #endif
 };
