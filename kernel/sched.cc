@@ -244,6 +244,9 @@ sched(void)
   proc* prev;
   proc* next;
 
+  // Poke the watchdog
+  wdpoke();
+
 #if SPINLOCK_DEBUG
   if(!holding(&myproc()->lock))
     panic("sched proc->lock");
