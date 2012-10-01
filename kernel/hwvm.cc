@@ -15,6 +15,8 @@
 
 using namespace std;
 
+bool have_kbase_mapping;
+
 static const char *levelnames[] = {
   "PT", "PD", "PDP", "PML4"
 };
@@ -106,6 +108,9 @@ initpg(void)
 
   // Enable global pages
   lcr4(rcr4() | CR4_PGE);
+
+  // Inform system that kbase mapping is now usable
+  have_kbase_mapping = true;
 }
 
 // Set up kernel part of a page table.
