@@ -90,9 +90,9 @@ class xns : public rcu_freed {
     scoped_gc_epoch gc;
 
     for (;;) {
-      auto root = table[i].chain;
+      auto root = table[i].chain.load();
       if (!allowdup) {
-        for (auto x = root.load(); x; x = x->next) {
+        for (auto x = root; x; x = x->next) {
           if (x->key == key) {
             gc_delayed(e);
             return -1;
@@ -100,8 +100,8 @@ class xns : public rcu_freed {
         }
       }
 
-      e->next = root.load();
-      if (cmpxch(&table[i].chain, e->next.load(), e)) {
+      e->next = root;
+      if (cmpxch(&table[i].chain, root, e)) {
         int c = myid();
         acquire(&percore_lock[c]);
         e->percore_c = c;
