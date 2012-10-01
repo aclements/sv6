@@ -202,6 +202,16 @@ kerneltrap(struct trapframe *tf)
             tf->r11, tf->r12, tf->r13,
             tf->r14, tf->r15, tf->rflags,
             name, pid, kstack);
+  // Trap decoding
+  if (tf->trapno == T_PGFLT) {
+    __cprintf("  %s %s %016lx from %s mode\n",
+              tf->err & FEC_PR ?
+              "protection violation" :
+              "non-present page",
+              tf->err & FEC_WR ? "writing" : "reading",
+              rcr2(),
+              tf->err & FEC_U ? "user" : "kernel");
+  }
   printtrace(tf->rbp);
 
   panicked = 1;
