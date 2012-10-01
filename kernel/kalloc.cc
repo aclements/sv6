@@ -15,9 +15,6 @@
 #include "page_info.hh"
 #include "kstream.hh"
 
-static struct Mbmem mem[128];
-static u64 nmem;
-static u64 membytes, memmax;
 percpu<kmem, percpu_safety::internal> kmems;
 percpu<kmem, percpu_safety::internal> slabmem[slab_type_max];
 
@@ -30,82 +27,172 @@ paddr page_info_base;
 
 static int kinited __mpalign__;
 
-static struct Mbmem *
-memsearch(paddr pa)
+// This class maintains a set of usable physical memory regions.
+class phys_map
 {
-  struct Mbmem *e;
-  struct Mbmem *q;
+  // The list of regions, in sorted order and without overlaps.
+  struct
+  {
+    uintptr_t base, end;
+  } regions[128];
+  size_t nregions;
 
-  q = mem+nmem;
-  for (e = &mem[0]; e < q; e++)
-    if ((e->base <= pa) && ((e->base+e->length) > pa))
-      return e;
-  return 0;
-}
+  // Remove region i.
+  void remove_index(size_t i)
+  {
+    memmove(regions + i, regions + i + 1,
+            (nregions - i - 1) * sizeof(regions[0]));
+    --nregions;
+  }
 
-static u64
-memsize(void *va)
-{
-  struct Mbmem *e;
-  paddr pa = v2p(va);
+  // Insert a region at index i.
+  void insert_index(size_t i, uintptr_t base, uintptr_t end)
+  {
+    if (nregions == sizeof(regions)/sizeof(regions[0]))
+      panic("phys_map: too many memory regions");
+    memmove(regions + i + 1, regions + i, (nregions - i) * sizeof(regions[0]));
+    regions[i].base = base;
+    regions[i].end = end;
+    ++nregions;
+  }
 
-  e = memsearch(pa);
-  if (e == nullptr)
-    return -1;
-  return (e->base+e->length) - pa;
-}
+public:
+  constexpr phys_map() : regions{}, nregions(0) { }
 
-static void *
-memnext(void *va, u64 inc)
-{
-  struct Mbmem *e, *q;
-  paddr pa = v2p(va);
+  // Add a region to the physical memory map.
+  void add(uintptr_t base, uintptr_t end)
+  {
+    // Scan for overlap
+    size_t i;
+    for (i = 0; i < nregions; ++i) {
+      if (end >= regions[i].base && base <= regions[i].end) {
+        // Found overlapping region
+        uintptr_t new_base = MIN(base, regions[i].base);
+        uintptr_t new_end = MAX(end, regions[i].end);
+        // Re-add expanded region, since it might overlap with another
+        remove_index(i);
+        add(new_base, new_end);
+        return;
+      }
+      if (regions[i].base >= base)
+        // Found insertion point
+        break;
+    }
+    insert_index(i, base, end);
+  }
 
-  e = memsearch(pa);
-  if (e == nullptr)
-    return (void *)-1;
+  // Remove a region from the physical memory map.
+  void remove(uintptr_t base, uintptr_t end)
+  {
+    // Scan for overlap
+    for (size_t i = 0; i < nregions; ++i) {
+      if (regions[i].base < base && end < regions[i].end) {
+        // Split this region
+        insert_index(i + 1, end, regions[i].end);
+        regions[i].end = base;
+      } else if (base <= regions[i].base && regions[i].end <= end) {
+        // Completely remove region
+        remove_index(i);
+        --i;
+      } else if (base <= regions[i].base && end > regions[i].base) {
+        // Left truncate
+        regions[i].base = end;
+      } else if (base < regions[i].end && end >= regions[i].end) {
+        // Right truncate
+        regions[i].end = base;
+      }
+    }
+  }
 
-  pa += inc;
-  if (pa < (e->base+e->length))
-    return p2v(pa);
+  // Print the memory map.
+  void print() const
+  {
+    for (size_t i = 0; i < nregions; ++i)
+      console.println("phys: ", shex(regions[i].base).width(18).pad(), "-",
+                      shex(regions[i].end - 1).width(18).pad());
+  }
 
-  q = mem+nmem;
-  for (e = e + 1; e < q; e++)
-      return p2v(e->base);
+  // Return the first region of physical memory of size @c size at or
+  // after @c start.
+  void *alloc(void *start, size_t size) const
+  {
+    // Find region containing start.  Also accept addresses right at
+    // the end of a region, in case the caller just right to the last
+    // byte of a region.
+    uintptr_t pa = v2p(start);
+    for (size_t i = 0; i < nregions; ++i) {
+      if (regions[i].base <= pa && pa <= regions[i].end) {
+        // Is there enough space?
+        if (pa + size < regions[i].end)
+          return p2v(pa);
+        // Not enough space.  Move to next region
+        if (i + 1 < nregions)
+          pa = regions[i+1].base;
+        else
+          panic("phys_map: out of memory allocating %lu bytes at %p",
+                size, start);
+      }
+    }
+    panic("phys_map: bad start address %p", start);
+  }
 
-  return (void *)-1;
-}
+  // Return the total number of bytes in the memory map.
+  size_t bytes() const
+  {
+    size_t total = 0;
+    for (size_t i = 0; i < nregions; ++i)
+      total += regions[i].end - regions[i].base;
+    return total;
+  }
 
+  // Return the first physical address above all of the regions.
+  size_t max() const
+  {
+    if (nregions == 0)
+      return 0;
+    return regions[nregions - 1].end;
+  }
+};
+
+static phys_map mem;
+
+// Parse a multiboot memory map.
 static void
-initmem(u64 mbaddr)
+parse_mb_map(struct Mbdata *mb)
 {
-  struct Mbdata *mb;
-  struct Mbmem *mbmem;
-  u8 *p, *ep;
-
-  mb = (Mbdata*) p2v(mbaddr);
   if(!(mb->flags & (1<<6)))
     panic("multiboot header has no memory map");
 
-  p = (u8*) p2v(mb->mmap_addr);
-  ep = p + mb->mmap_length;
-
+  // Print the map
+  uint8_t *p = (uint8_t*) p2v(mb->mmap_addr);
+  uint8_t *ep = p + mb->mmap_length;
   while (p < ep) {
-    mbmem = (Mbmem *)(p+4);
-    p += 4 + *(u32*)p;
-    bool use = mbmem->type == 1 && mbmem->base >= 0x100000;
+    struct Mbmem *mbmem = (Mbmem *)p;
+    p += 4 + mbmem->size;
     console.println("e820: ", shex(mbmem->base).width(18).pad(), "-",
                     shex(mbmem->base + mbmem->length - 1).width(18).pad(), " ",
-                    use ? "usable" :
-                    mbmem->type == 1 ? "usable (ignored)" :
-                    "reserved");
-    if (use) {
-      membytes += mbmem->length;
-      if (mbmem->base + mbmem->length > memmax)
-        memmax = mbmem->base + mbmem->length;
-      mem[nmem] = *mbmem;
-      nmem++;
-    }
+                    mbmem->type == 1 ? "usable" : "reserved");
+  }
+
+  // The E820 map can be out of order and it can have overlapping
+  // regions, so we have to clean it up.
+
+  // Add and merge usable regions
+  p = (uint8_t*) p2v(mb->mmap_addr);
+  while (p < ep) {
+    struct Mbmem *mbmem = (Mbmem *)p;
+    p += 4 + mbmem->size;
+    if (mbmem->type == 1)
+      mem.add(mbmem->base, mbmem->base + mbmem->length);
+  }
+
+  // Remove unusable regions
+  p = (uint8_t*) p2v(mb->mmap_addr);
+  while (p < ep) {
+    struct Mbmem *mbmem = (Mbmem *)p;
+    p += 4 + mbmem->size;
+    if (mbmem->type != 1)
+      mem.remove(mbmem->base, mbmem->base + mbmem->length);
   }
 }
 
@@ -174,8 +261,6 @@ kfree_pool(struct kmem *m, char *v)
 {
   if ((uptr)v % PGSIZE) 
     panic("kfree_pool: misaligned %p", v);
-  if (memsize(v) == -1ull)
-    panic("kfree_pool: unknown region %p", v);
 
   // Fill with junk to catch dangling refs.
   if (ALLOC_MEMSET && kinited && m->size <= 16384)
@@ -250,15 +335,9 @@ void
 slabinit(struct kmem *k, char **p, u64 *off)
 {
   for (int i = 0; i < k->ninit; i++) {
-    if (*p == (void *)-1)
-      panic("slabinit: memnext");
-    while (memsize(*p) < k->size) {
-      *p = (char*) memnext(*p, k->size);
-      if (*p == (char*)-1)
-        panic("slabinit: memsize");
-    }
+    *p = (char*)mem.alloc(*p, k->size);
     kfree_pool(k, *p);
-    *p = (char*) memnext(*p, k->size);
+    *p += k->size;
     *off = *off+k->size;
   }
 }  
@@ -271,7 +350,13 @@ initkalloc(u64 mbaddr)
   u64 n;
   u64 k;
 
-  initmem(mbaddr);
+  parse_mb_map((Mbdata*) p2v(mbaddr));
+
+  // Consider first 1MB of memory unusable
+  mem.remove(0, 0x100000);
+
+  console.println("Scrubbed memory map:");
+  mem.print();
 
   // Allocate the page metadata array.  Since there's no point in
   // tracking the pages that store the page metadata array, we compute
@@ -281,7 +366,7 @@ initkalloc(u64 mbaddr)
   // Translate newend from the small boot mapping at KCODE to the
   // large direct mapping at KBASE.
   page_info_array = (page_info*)((uptr)newend - KCODE + KBASE);
-  page_info_len = 1 + (memmax - v2p(newend)) / (sizeof(page_info) + PGSIZE);
+  page_info_len = 1 + (mem.max() - v2p(newend)) / (sizeof(page_info) + PGSIZE);
   auto page_info_bytes = page_info_len * sizeof(page_info);
   // Find a memory hole large enough to fit page_info_array.
   // XXX(austin) This is really unfortunate on ben, where this forces
@@ -290,8 +375,7 @@ initkalloc(u64 mbaddr)
   // (probably with large pages).  If we virtually map it, we might
   // also be able to make it NUMA aware so the metadata for pages is
   // stored on the same physical node as the pages.
-  while (memsize(page_info_array) < page_info_bytes)
-    page_info_array = (page_info*)memnext(page_info_array, page_info_bytes);
+  page_info_array = (page_info*)mem.alloc(page_info_array, page_info_bytes);
   newend = PGROUNDUP((char*)page_info_array + page_info_bytes);
   page_info_base = v2p(newend);
 
@@ -302,8 +386,8 @@ initkalloc(u64 mbaddr)
   }
 
   if (VERBOSE)
-    cprintf("%lu mbytes\n", membytes / (1<<20));
-  n = (membytes - v2p(newend)) / NCPU;
+    cprintf("%lu mbytes\n", mem.bytes() / (1<<20));
+  n = (mem.bytes() - v2p(newend)) / NCPU;
   if (n & (PGSIZE-1))
     n = PGROUNDDOWN(n);
 
@@ -338,10 +422,10 @@ initkalloc(u64 mbaddr)
    
     // The rest goes to the page allocator
     // XXX(austin) This should come from NUMA
-    for (; k < n; k += PGSIZE, p = (char*) memnext(p, PGSIZE)) {
-      if (p == (void *)-1)
-        panic("initkalloc: e820next");
+    for (; k < n; k += PGSIZE) {
+      p = (char*)mem.alloc(p, PGSIZE);
       kfree_pool(&kmems[c], p);
+      p += PGSIZE;
     }
 
     k = 0;
