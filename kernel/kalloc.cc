@@ -113,8 +113,9 @@ public:
   }
 
   // Return the first region of physical memory of size @c size at or
-  // after @c start.
-  void *alloc(void *start, size_t size) const
+  // after @c start.  If @c align is provided, the returned pointer
+  // will be a multiple of @c align, which must be a power of 2.
+  void *alloc(void *start, size_t size, size_t align = 0) const
   {
     // Find region containing start.  Also accept addresses right at
     // the end of a region, in case the caller just right to the last
@@ -122,6 +123,10 @@ public:
     uintptr_t pa = v2p(start);
     for (size_t i = 0; i < nregions; ++i) {
       if (regions[i].base <= pa && pa <= regions[i].end) {
+        // Align pa (we do this now so it doesn't matter if alignment
+        // pushes it outside of a known region).
+        if (align)
+          pa = (pa + align - 1) & ~(align - 1);
         // Is there enough space?
         if (pa + size < regions[i].end)
           return p2v(pa);
@@ -335,7 +340,7 @@ void
 slabinit(struct kmem *k, char **p, u64 *off)
 {
   for (int i = 0; i < k->ninit; i++) {
-    *p = (char*)mem.alloc(*p, k->size);
+    *p = (char*)mem.alloc(*p, k->size, PGSIZE);
     kfree_pool(k, *p);
     *p += k->size;
     *off = *off+k->size;
@@ -358,26 +363,47 @@ initkalloc(u64 mbaddr)
   console.println("Scrubbed memory map:");
   mem.print();
 
-  // Allocate the page metadata array.  Since there's no point in
-  // tracking the pages that store the page metadata array, we compute
-  // the optimal size balance so the array starts with the metadata
-  // for the page immediately following the array.
+  // Make sure newend is in the KBASE mapping, rather than the KCODE
+  // mapping (which may be too small for what we do below).
+  newend = (char*)p2v(v2p(newend));
 
-  // Translate newend from the small boot mapping at KCODE to the
-  // large direct mapping at KBASE.
-  page_info_array = (page_info*)((uptr)newend - KCODE + KBASE);
+  // Round newend up to a page boundary so allocations are aligned.
+  newend = PGROUNDUP(newend);
+
+  // Allocate the page metadata array.  Try allocating it at the
+  // current beginning of free memory.  If this succeeds, then we only
+  // need to size it to track the pages *after* the metadata array
+  // (since there's no point in tracking the pages that store the page
+  // metadata array itself).
   page_info_len = 1 + (mem.max() - v2p(newend)) / (sizeof(page_info) + PGSIZE);
   auto page_info_bytes = page_info_len * sizeof(page_info);
-  // Find a memory hole large enough to fit page_info_array.
-  // XXX(austin) This is really unfortunate on ben, where this forces
-  // us to skip the bottom 4 gigs of RAM.  We could break this up into
-  // chunks with a fast lookup table.  We could virtually map this
-  // (probably with large pages).  If we virtually map it, we might
-  // also be able to make it NUMA aware so the metadata for pages is
-  // stored on the same physical node as the pages.
-  page_info_array = (page_info*)mem.alloc(page_info_array, page_info_bytes);
-  newend = PGROUNDUP((char*)page_info_array + page_info_bytes);
-  page_info_base = v2p(newend);
+  page_info_array = (page_info*)mem.alloc(newend, page_info_bytes);
+
+  if ((char*)page_info_array == newend) {
+    // We were able to allocate it at newend, so we only have to track
+    // physical pages following the array.
+    newend = PGROUNDUP((char*)page_info_array + page_info_bytes);
+    page_info_base = v2p(newend);
+  } else {
+    // We weren't able to allocate it at the beginning of free memory,
+    // so re-allocate it and size it to track all of memory.
+    console.println("First memory hole too small for page metadata array");
+    page_info_len = 1 + mem.max() / PGSIZE;
+    page_info_bytes = page_info_len * sizeof(page_info);
+    page_info_array = (page_info*)mem.alloc(newend, page_info_bytes);
+    page_info_base = 0;
+    // Mark this as a hole in the memory map so we don't use it to
+    // initialize the physical allocator below.
+    mem.remove(v2p(page_info_array), v2p(page_info_array) + page_info_bytes);
+  }
+
+  // XXX(Austin) This handling of page_info_array is somewhat
+  // unfortunate, given how sparse physical memory can be.  We could
+  // break it up into chunks with a fast lookup table.  We could
+  // virtually map it (probably with global large pages), though that
+  // would increase TLB pressure.  If we make it sparse, we could also
+  // make it NUMA aware so the metadata for pages is stored on the
+  // same physical node as the pages.
 
   for (int c = 0; c < NCPU; c++) {
     kmems[c].name[0] = (char) c + '0';
@@ -423,7 +449,7 @@ initkalloc(u64 mbaddr)
     // The rest goes to the page allocator
     // XXX(austin) This should come from NUMA
     for (; k < n; k += PGSIZE) {
-      p = (char*)mem.alloc(p, PGSIZE);
+      p = (char*)mem.alloc(p, PGSIZE, PGSIZE);
       kfree_pool(&kmems[c], p);
       p += PGSIZE;
     }
