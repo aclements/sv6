@@ -3,85 +3,91 @@
 #include "kernel.hh"
 #include "percpu.hh"
 #include "wq.hh"
-#include "kalloc.hh"
 #include "cpputil.hh"
+#include "ilist.hh"
+#include "mtrace.h"
 
 extern "C" void zpage(void*);
-extern "C" void zrun_nc(run*);
+extern "C" void zrun_nc(void*);
 
 static const bool prezero = true;
 
-struct zallocator {
-  kmem   kmem;
-  wframe frame;
-
-  void  init(int);
-  char* alloc(const char*);
-  void  free(void*);
-  void  tryrefill();
+struct free_page
+{
+  ilink<free_page> link;
+  typedef ilist<free_page, &free_page::link> list_t;
 };
-percpu<zallocator, percpu_safety::internal> z_;
+
+struct zallocator {
+  // pages and nPages must only be accessed by the local CPU and must
+  // be accessed with interrupts disabled.
+  free_page::list_t pages;
+  unsigned nPages;
+  wframe frame;
+};
+percpu<zallocator> z_;
 
 struct zwork : public work {
-  zwork(wframe* frame, zallocator* zer)
-    : frame_(frame), zer_(zer)
+  zwork(wframe* frame)
+    : frame_(frame)
   {
     frame_->inc();
   }
 
   virtual void run() {
     for (int i = 0; i < 32; i++) {
-      struct run* r = (struct run*)kalloc("zpage");
+      auto *r = (struct free_page*)kalloc("zpage");
       if (r == nullptr)
         break;
       zrun_nc(r);
-      zer_->kmem.free(r);
+      scoped_cli cli;
+      z_->pages.push_front(r);
+      ++z_->nPages;
     }
     frame_->dec();
     delete this;
   }
 
   wframe* frame_;
-  zallocator* zer_;
 
   NEW_DELETE_OPS(zwork);
 };
 
-//
-// zallocator
-//
-void
-zallocator::tryrefill(void)
+static void
+tryrefill(void)
 {
-  if (prezero && kmem.nfree < 16 && frame.zero()) {
-    zwork* w = new zwork(&frame, this);
-    if (wq_push(w) < 0)
+  int cpu = myid();
+  if (prezero && z_[cpu].nPages < 16 && z_[cpu].frame.zero()) {
+    zwork* w = new zwork(&z_[cpu].frame);
+    if (wqcrit_push(w, cpu) < 0)
       delete w;
   }
 }
 
-void
-zallocator::init(int c)
-{
-  frame.clear();
-  kmem.name[0] = (char) c + '0';
-  safestrcpy(kmem.name+1, "zmem", MAXNAME-1);
-  kmem.size = PGSIZE;
-}
-
+// Allocate a zeroed page.  This page can be freed with kfree or, if
+// it is known to be zeroed when it is freed, zfree.
 char*
-zallocator::alloc(const char* name)
+zalloc(const char* name)
 {
-  char* p;
+  char* p = nullptr;
 
-  p = (char*) kmem.alloc(name);
+  {
+    scoped_cli cli;
+    if (!z_->pages.empty()) {
+      p = (char*)&z_->pages.front();
+      z_->pages.pop_front();
+      --z_->nPages;
+    }
+  }
+
   if (p == nullptr) {
     p = kalloc(name);
     if (p != nullptr)
       zpage(p);
   } else {
-    // Zero the run header used by kmem
-    memset(p, 0, sizeof(struct run));
+    mtlabel(mtrace_label_block, p, PGSIZE, name, strlen(name));
+    // Zero the free_page header
+    memset(p, 0, sizeof(struct free_page));
     if (0)
       for (int i = 0; i < PGSIZE; i++)
         assert(p[i] == 0);
@@ -90,34 +96,20 @@ zallocator::alloc(const char* name)
   return p;
 }
 
+// Free a page that is known to be zero
 void
-zallocator::free(void* p)
+zfree(void* p)
 {
   if (0) 
     for (int i = 0; i < 4096; i++)
       assert(((char*)p)[i] == 0);
 
-  kmem.free((struct run*)p);
-}
-
-// Allocate a zeroed page.  This page can be freed with kfree or, if
-// it is known to be zeroed when it is freed, zfree.
-char*
-zalloc(const char* name)
-{
-  return z_->alloc(name);
-}
-
-// Free a page that is known to be zero
-void
-zfree(void* p)
-{
-  z_->free(p);
+  scoped_cli cli;
+  z_->pages.push_front((struct free_page*)p);
+  ++z_->nPages;
 }
 
 void
 initz(void)
 {
-  for (int c = 0; c < NCPU; c++)
-    z_[c].init(c);
 }
