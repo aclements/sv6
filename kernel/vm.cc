@@ -69,7 +69,6 @@ vmap::alloc(void)
 }
 
 vmap::vmap() : 
-  vmas(PGSHIFT),
   ref(1), kshared((char*) ksalloc(slab_kshared)), brk_(0),
   brklock_("brk_lock", LOCKSTAT_VM),
   pgmap_list_(false)

@@ -1,6 +1,5 @@
 #include "gc.hh"
 #include "atomic.hh"
-#include "radix.hh"
 #include "cpputil.hh"
 #include "hwvm.hh"
 #include "distref.hh"
@@ -99,8 +98,6 @@ void to_stream(class print_stream *s, const vmdesc &vmd);
 // An address space. This manages the mapping from virtual addresses
 // to virtual memory descriptors.
 struct vmap {
-  struct radix vmas;
-
   static vmap* alloc();
 
   atomic<u64> ref;
