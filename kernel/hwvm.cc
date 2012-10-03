@@ -134,41 +134,6 @@ setupkvm(void)
   return pml4;
 }
 
-int
-mapkva(pgmap *pml4, char* kva, uptr uva, size_t size)
-{
-  for (u64 off = 0; off < size; off+=4096) {
-    atomic<pme_t> *pte = walkpgdir(pml4, (u64) (uva+off), 1);
-    if (pte == nullptr)
-      return -1;
-    *pte = v2p(kva+off) | PTE_P | PTE_U | PTE_W;
-  }
-  return 0;
-}
-
-int
-setupuvm(pgmap *pml4, char *kshared, char *uwq)
-{
-  struct todo {
-    char *kvm;
-    char *uvm;
-    size_t size;
-  } todo[] = {
-    { kshared, (char*)KSHARED, KSHAREDSIZE },
-    { uwq,     (char*)USERWQ,  USERWQSIZE }
-  };
-
-  for (int i = 0; i < NELEM(todo); i++) {
-    for (u64 off = 0; off < todo[i].size; off+=4096) {
-      atomic<pme_t> *pte = walkpgdir(pml4, (u64) (todo[i].uvm+off), 1);
-      if (pte == nullptr)
-        return -1;
-      *pte = v2p(todo[i].kvm+off) | PTE_P | PTE_U | PTE_W;
-    }
-  }
-  return 0;
-}
-
 // Switch h/w page table register to the kernel-only page table,
 // for when no process is running.
 static void
