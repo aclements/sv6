@@ -144,12 +144,22 @@ doheap(vmap* vmp)
   return 0;
 }
 
-static void
-exec_cleanup(vmap *oldvmap, proc_pgmap* oldpgmap)
+struct cleanup_work : public work
 {
-  oldvmap->decref();
-  oldpgmap->dec();
-}
+  cleanup_work(vmap* oldvmap, proc_pgmap* oldpgmap)
+    : work(), oldvmap_(oldvmap), oldpgmap_(oldpgmap) {}
+  
+  virtual void run() {
+    oldvmap_->decref();
+    oldpgmap_->dec();
+    delete this;
+  }
+
+  vmap* oldvmap_;
+  proc_pgmap* oldpgmap_;
+
+  NEW_DELETE_OPS(cleanup_work)
+};
 
 int
 exec(const char *path, const char * const *argv, void *ascopev)
@@ -167,7 +177,7 @@ exec(const char *path, const char * const *argv, void *ascopev)
   int i;
   proc_pgmap* oldpgmap;
   vmap* oldvmap;
-  cwork* w;
+  cleanup_work* w;
   long sp;
 
   if((ip = namei(myproc()->cwd, path)) == 0)
@@ -255,11 +265,7 @@ exec(const char *path, const char * const *argv, void *ascopev)
 
   switchvm(myproc());
 
-  w = new cwork();
-  assert(w);
-  w->rip = (void*) exec_cleanup;
-  w->arg0 = oldvmap;
-  w->arg1 = oldpgmap;
+  w = new cleanup_work(oldvmap, oldpgmap);
   assert(wqcrit_push(w, myproc()->data_cpuid) >= 0);
   myproc()->data_cpuid = myid();
 
