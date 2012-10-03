@@ -14,6 +14,7 @@ void            initwq(void);
 void            exitwq(void);
 
 struct work {
+  work() : prev(nullptr), next(nullptr) {}
   virtual void run() = 0;
 
 private:  
