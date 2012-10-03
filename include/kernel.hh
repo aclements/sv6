@@ -227,7 +227,7 @@ int             doexec(const char* upath,
 
 // string.c
 extern  "C" int  memcmp(const void*, const void*, size_t);
-void*           memmove(void*, const void*, size_t);
+extern "C" void* memmove(void*, const void*, size_t);
 extern "C" void* memset(void*, int, size_t);
 extern "C" void* memcpy(void*, const void *, size_t);
 char*           safestrcpy(char*, const char*, size_t);
