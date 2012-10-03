@@ -107,16 +107,15 @@ struct vmap {
   void incref();
 
   // Copy this vmap's structure and share pages copy-on-write.
-  vmap* copy(proc_pgmap* pgmap);
+  vmap* copy();
 
   // Map desc from virtual addresses start to start+len.
-  long insert(const vmdesc &desc, uptr start, uptr len, proc_pgmap* pgmap,
-              bool dotlb = true);
+  long insert(const vmdesc &desc, uptr start, uptr len, bool dotlb = true);
 
   // Unmap from virtual addresses start to start+len.
-  int remove(uptr start, uptr len, proc_pgmap* pgmap);
+  int remove(uptr start, uptr len);
 
-  int pagefault(uptr va, u32 err, proc_pgmap* pgmap);
+  int pagefault(uptr va, u32 err);
 
   // Map virtual address va in this address space to a kernel virtual
   // address, performing the equivalent of a read page fault if
@@ -128,9 +127,6 @@ struct vmap {
   // when vmap is not the current page table.
   int copyout(uptr va, const void *p, u64 len);
   int sbrk(ssize_t n, uptr *addr);
-
-  void add_pgmap(proc_pgmap* pgmap);
-  void rem_pgmap(proc_pgmap* pgmap);
 
   // Print this vmap to the console
   void dump();
@@ -149,6 +145,9 @@ private:
   NEW_DELETE_OPS(vmap)
   uptr unmapped_area(size_t n);
 
+  pgmap* const pml4;
+  friend void switchvm(struct proc *p);
+
   // Virtual page frames
   typedef radix_array<vmdesc, USERTOP / PGSIZE, PGSIZE,
                       kalloc_allocator<vmdesc> > vpf_array;
@@ -166,11 +165,4 @@ private:
   // locking vpfs_ at @c it.  This throws bad_alloc if a page must be
   // allocated and cannot be.
   page_info *ensure_page(const vpf_array::iterator &it, access_type type);
-
-  // XXX(sbw) most likely an awful hash function
-  static u64 proc_pgmap_hash(proc_pgmap* const & p)
-  {
-    return (u64) p;
-  }
-  xns<proc_pgmap*, proc_pgmap*, proc_pgmap_hash> pgmap_list_;
 };

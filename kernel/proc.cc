@@ -31,38 +31,6 @@ struct kstack_tag kstack_tag[NCPU];
 
 enum { sched_debug = 0 };
 
-proc_pgmap::proc_pgmap(vmap* vmap)
-  : rcu_freed("proc_pgmap"), pml4(setupkvm()), vmp(vmap)
-{
-  if (pml4 == nullptr) {
-    cprintf("proc_pgmap::proc_pgmap: setupkvm out of memory\n");
-    throw_bad_alloc();
-  }
-
-  vmp->ref++;  
-  vmp->add_pgmap(this);
-}
-
-proc_pgmap*
-proc_pgmap::alloc(vmap* vmap)
-{
-  return new proc_pgmap(vmap);
-}
-
-proc_pgmap::~proc_pgmap(void)
-{
-  freevm(pml4);
-}
-
-void
-proc_pgmap::onzero() const
-{
-  proc_pgmap* p = (proc_pgmap*) this;
-  p->vmp->rem_pgmap(p);
-  p->vmp->decref();
-  gc_delayed(p);
-}
-
 proc::proc(int npid) :
   rcu_freed("proc"), vmap(0), kstack(0),
   pid(npid), parent(0), tf(0), context(0), killed(0),
@@ -71,7 +39,7 @@ proc::proc(int npid) :
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
   user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
   uaccess_(0), yield_(false), upath(0), uargv(userptr<const char>(nullptr)),
-  exception_inuse(0), magic(PROC_MAGIC), pgmap(0), state_(EMBRYO)
+  exception_inuse(0), magic(PROC_MAGIC), state_(EMBRYO)
 {
   snprintf(lockname, sizeof(lockname), "cv:proc:%d", pid);
   lock = spinlock(lockname+3, LOCKSTAT_PROC);
@@ -464,16 +432,9 @@ fork(int flags)
   if(flags & FORK_SHARE_VMAP) {
     np->vmap = myproc()->vmap;
     np->vmap->ref++;
-    if (flags & FORK_SEPARATE_PGMAP) {
-      np->pgmap = proc_pgmap::alloc(np->vmap);
-    } else {
-      np->pgmap = myproc()->pgmap;
-      myproc()->pgmap->inc();
-    }
   } else {
     // Copy process state from p.
-    np->vmap = myproc()->vmap->copy(myproc()->pgmap);
-    np->pgmap = proc_pgmap::alloc(np->vmap);
+    np->vmap = myproc()->vmap->copy();
   }
 
   np->parent = myproc();
@@ -515,8 +476,6 @@ finishproc(struct proc *p, bool removepid)
     panic("finishproc: ns_remove");
   if (p->vmap != nullptr)
     p->vmap->decref();
-  if (p->pgmap != nullptr)
-    p->pgmap->dec();
   if (p->kstack)
     ksfree(slab_stack, p->kstack);
 

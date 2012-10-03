@@ -19,21 +19,6 @@ struct gc_handle;
   }
 #endif
 
-struct proc_pgmap : public referenced, public rcu_freed {
-  pgmap* const pml4;
-  vmap* const vmp;
-
-  static proc_pgmap* alloc(vmap* vmap);
-  virtual void onzero() const;
-  virtual void do_gc(void) { delete this; }
-  proc_pgmap& operator=(const proc_pgmap&) = delete;
-  proc_pgmap(const proc_pgmap& x) = delete;
-private:
-  proc_pgmap(vmap* vmap);
-  ~proc_pgmap();
-  NEW_DELETE_OPS(proc_pgmap)
-};
-
 // Saved registers for kernel context switches.
 // (also implicitly defined in swtch.S)
 struct context {
@@ -115,7 +100,6 @@ struct proc : public rcu_freed, public sched_link {
   std::atomic<int> exception_inuse;
   u8 exception_buf[256];
   u64 magic;
-  proc_pgmap* pgmap;
 
   static proc* alloc();
   void         set_state(procstate_t s);

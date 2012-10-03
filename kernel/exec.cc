@@ -52,7 +52,7 @@ dosegment(inode* ip, vmap* vmp, u64 off)
       return -1;
     }
     if (vmp->insert(vmdesc(sref<inode>::newref(ip), ph.vaddr - ph.offset),
-                    va_start, mapped_end - va_start, nullptr) < 0)
+                    va_start, mapped_end - va_start) < 0)
       return -1;
   }
 
@@ -60,8 +60,7 @@ dosegment(inode* ip, vmap* vmp, u64 off)
     // There's some file data that we can't directly map because
     // another segment may begin on the same page as this segment
     // ends.
-    if (vmp->insert(vmdesc::anon_desc, mapped_end, backed_end - mapped_end,
-                    nullptr) < 0)
+    if (vmp->insert(vmdesc::anon_desc, mapped_end, backed_end - mapped_end) < 0)
       return -1;
     size_t seg_pos = mapped_end - va_start;
     char buf[512];
@@ -83,8 +82,7 @@ dosegment(inode* ip, vmap* vmp, u64 off)
     // separately both to avoid mapping non-zero data that follows
     // this segment in the file and so we don't try to fault beyond
     // the end of the file.
-    if (vmp->insert(vmdesc::anon_desc, backed_end, va_end - backed_end,
-                    nullptr) < 0)
+    if (vmp->insert(vmdesc::anon_desc, backed_end, va_end - backed_end) < 0)
       return -1;
   }
 
@@ -108,7 +106,7 @@ dostack(vmap* vmp, const char* const * argv, const char* path)
 
   // Allocate a stack at the top of the (user) address space
   if (vmp->insert(vmdesc::anon_desc, USERTOP - (USTACKPAGES*PGSIZE),
-                  USTACKPAGES * PGSIZE, nullptr) < 0)
+                  USTACKPAGES * PGSIZE) < 0)
     return -1;
 
   for (argc = 0; argv[argc]; argc++)
@@ -146,17 +144,15 @@ doheap(vmap* vmp)
 
 struct cleanup_work : public work
 {
-  cleanup_work(vmap* oldvmap, proc_pgmap* oldpgmap)
-    : work(), oldvmap_(oldvmap), oldpgmap_(oldpgmap) {}
+  cleanup_work(vmap* oldvmap)
+    : work(), oldvmap_(oldvmap) {}
   
   virtual void run() {
     oldvmap_->decref();
-    oldpgmap_->dec();
     delete this;
   }
 
   vmap* oldvmap_;
-  proc_pgmap* oldpgmap_;
 
   NEW_DELETE_OPS(cleanup_work)
 };
@@ -167,7 +163,6 @@ exec(const char *path, const char * const *argv, void *ascopev)
   ANON_REGION(__func__, &perfgroup);
   struct inode *ip = nullptr;
   struct vmap *vmp = nullptr;
-  proc_pgmap *pgmap = nullptr;
   const char *s, *last;
   char buf[1024];
   int sz;
@@ -175,7 +170,6 @@ exec(const char *path, const char * const *argv, void *ascopev)
   struct proghdr ph;
   u64 off;
   int i;
-  proc_pgmap* oldpgmap;
   vmap* oldvmap;
   cleanup_work* w;
   long sp;
@@ -220,8 +214,6 @@ exec(const char *path, const char * const *argv, void *ascopev)
 
   if((vmp = vmap::alloc()) == 0)
     goto bad;
-  if ((pgmap = proc_pgmap::alloc(vmp)) == 0)
-    goto bad;
 
   for(i=0, off=elf->phoff; i<elf->phnum; i++, off+=sizeof(ph)){
     Elf64_Word type;
@@ -250,9 +242,7 @@ exec(const char *path, const char * const *argv, void *ascopev)
 
   // Commit to the user image.
   oldvmap = myproc()->vmap;
-  oldpgmap = myproc()->pgmap;
 
-  myproc()->pgmap = pgmap;
   myproc()->vmap = vmp;
   myproc()->tf->rip = elf->entry;
   myproc()->tf->rsp = sp;
@@ -265,7 +255,7 @@ exec(const char *path, const char * const *argv, void *ascopev)
 
   switchvm(myproc());
 
-  w = new cleanup_work(oldvmap, oldpgmap);
+  w = new cleanup_work(oldvmap);
   assert(wqcrit_push(w, myproc()->data_cpuid) >= 0);
   myproc()->data_cpuid = myid();
 

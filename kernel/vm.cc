@@ -48,20 +48,6 @@ void to_stream(class print_stream *s, const vmdesc &vmd)
  * vmap
  */
 
-void
-vmap::add_pgmap(proc_pgmap* pgmap)
-{
-  if (pgmap_list_.insert(pgmap, pgmap) < 0)
-    panic("vmap::add_pgmap");
-}
-
-void
-vmap::rem_pgmap(proc_pgmap* pgmap)
-{
-  if (!pgmap_list_.remove(pgmap, nullptr))
-    panic("vmap::rem_pgmap");
-}
-
 vmap*
 vmap::alloc(void)
 {
@@ -70,8 +56,8 @@ vmap::alloc(void)
 
 vmap::vmap() : 
   ref(1), kshared((char*) ksalloc(slab_kshared)), brk_(0),
-  brklock_("brk_lock", LOCKSTAT_VM),
-  pgmap_list_(false)
+  pml4(setupkvm()),
+  brklock_("brk_lock", LOCKSTAT_VM)
 {
   if (kshared == nullptr) {
     cprintf("vmap::vmap: kshared out of memory\n");
@@ -89,6 +75,8 @@ vmap::~vmap()
 {
   if (kshared)
     ksfree(slab_kshared, kshared);
+  if (pml4)
+    freevm(pml4);
 }
 
 void
@@ -105,7 +93,7 @@ vmap::incref()
 }
 
 vmap*
-vmap::copy(proc_pgmap* pgmap)
+vmap::copy()
 {
   verbose.println("vm: copy pid ", myproc()->pid);
 
@@ -132,7 +120,7 @@ vmap::copy(proc_pgmap* pgmap)
       if (it->page && !(it->flags & vmdesc::FLAG_COW)) {
         verbose.println("vm: mark COW");
         it->flags |= vmdesc::FLAG_COW;
-        atomic<pme_t> *pte = walkpgdir(pgmap->pml4, it.index() * PGSIZE, 0);
+        atomic<pme_t> *pte = walkpgdir(pml4, it.index() * PGSIZE, 0);
         if (pte) {
           for (;;) {
             pme_t v = pte->load();
@@ -169,20 +157,18 @@ vmap::copy(proc_pgmap* pgmap)
 }
 
 long
-vmap::insert(const vmdesc &desc, uptr start, uptr len, proc_pgmap* pgmap,
-             bool dotlb)
+vmap::insert(const vmdesc &desc, uptr start, uptr len, bool dotlb)
 {
   ANON_REGION("vmap::insert", &perfgroup);
 
   verbose.println("vm: insert(", desc, ",", shex(start), ",", shex(len),
-                  ",", pgmap, ",", dotlb, ")");
+                  ",", dotlb, ")");
 
   assert(start % PGSIZE == 0);
   assert(len % PGSIZE == 0);
 
   bool replaced = false;
   bool fixed = (start != 0);
-  bool updateall = !never_updateall;
 
 again:
   if (!fixed) {
@@ -222,7 +208,7 @@ again:
 
   bool needtlb = false;
 
-  auto update = [&needtlb, &updateall](atomic<pme_t> *p) {
+  auto update = [&needtlb](atomic<pme_t> *p) {
     for (;;) {
       pme_t v = p->load();
       if (v & PTE_LOCK)
@@ -230,30 +216,21 @@ again:
       if (!(v & PTE_P))
         break;
       if (cmpxch(p, v, (pme_t) 0)) {
-        needtlb = true && updateall;
+        needtlb = true;
         break;
       }
     }
   };
 
   if (replaced) {
-    if (updateall) {
-      scoped_gc_epoch gc;
-      pgmap_list_.enumerate([&](proc_pgmap* const &p,
-                                proc_pgmap* const &x)->bool
-      {
-        updatepages(p->pml4, start, start + len, update);
-        return false;
-      });
-    } else
-      updatepages(pgmap->pml4, start, start + len, update);
+    updatepages(pml4, start, start + len, update);
   }
 
   if (tlb_shootdown) {
     if (needtlb && dotlb)
       tlbflush();
     else
-      if (tlb_lazy && updateall)
+      if (tlb_lazy)
         tlbflush(myproc()->unmap_tlbreq_);
   }
 
@@ -261,9 +238,8 @@ again:
 }
 
 int
-vmap::remove(uptr start, uptr len, proc_pgmap* pgmap)
+vmap::remove(uptr start, uptr len)
 {
-  bool updateall = !never_updateall;
   {
     // new scope to release the search lock before tlbflush
     auto begin = vpfs_.find(start / PGSIZE);
@@ -275,7 +251,7 @@ vmap::remove(uptr start, uptr len, proc_pgmap* pgmap)
 
   bool needtlb = false;
 
-  auto update = [&needtlb, &updateall](atomic<pme_t> *p) {
+  auto update = [&needtlb](atomic<pme_t> *p) {
     for (;;) {
       pme_t v = p->load();
       if (v & PTE_LOCK)
@@ -283,22 +259,13 @@ vmap::remove(uptr start, uptr len, proc_pgmap* pgmap)
       if (!(v & PTE_P))
         break;
       if (cmpxch(p, v, (pme_t) 0)) {
-        needtlb = true && updateall;
+        needtlb = true;
         break;
       }
     }
   };
 
-  if (updateall) {
-    scoped_gc_epoch gc;
-    pgmap_list_.enumerate([&](proc_pgmap* const &p,
-                              proc_pgmap* const &x)->bool
-    {
-      updatepages(p->pml4, start, start + len, update);
-      return false;
-    });
-  } else
-    updatepages(pgmap->pml4, start, start + len, update);
+  updatepages(pml4, start, start + len, update);
 
   if (tlb_shootdown && needtlb) {
     if (tlb_lazy) {
@@ -315,18 +282,15 @@ vmap::remove(uptr start, uptr len, proc_pgmap* pgmap)
  */
 
 int
-vmap::pagefault(uptr va, u32 err, proc_pgmap* pgmap)
+vmap::pagefault(uptr va, u32 err)
 {
   access_type type = (err & FEC_WR) ? access_type::WRITE : access_type::READ;
   sref<class page_info> old_page;
 
-  if (pgmap == nullptr)
-    panic("vmap::pagefault no pgmap");
-
   if (va >= USERTOP)
     return -1;
 
-  atomic<pme_t> *pte = walkpgdir(pgmap->pml4, va, 1);
+  atomic<pme_t> *pte = walkpgdir(pml4, va, 1);
   if (pte == nullptr)
     throw_bad_alloc();
 
@@ -388,7 +352,7 @@ vmap::pagefault(uptr va, u32 err, proc_pgmap* pgmap)
 }
 
 int
-pagefault(vmap *vmap, uptr va, u32 err, proc_pgmap* pgmap)
+pagefault(vmap *vmap, uptr va, u32 err)
 {
 #if MTRACE
   mt_ascope ascope("%s(%p,%#lx)", __func__, vmap, va);
@@ -399,7 +363,7 @@ pagefault(vmap *vmap, uptr va, u32 err, proc_pgmap* pgmap)
 #if EXCEPTIONS
     try {
 #endif
-      return vmap->pagefault(va, err, pgmap);
+      return vmap->pagefault(va, err);
 #if EXCEPTIONS
     } catch (std::bad_alloc& e) {
       cprintf("%d: pagefault retry\n", myproc()->pid);

@@ -128,8 +128,7 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
   }
 #endif
 
-  uptr r = myproc()->vmap->insert(vmdesc::anon_desc, start, end - start,
-                                  myproc()->pgmap);
+  uptr r = myproc()->vmap->insert(vmdesc::anon_desc, start, end - start);
   if (r < 0)
     return MAP_FAILED;
 
@@ -150,7 +149,7 @@ sys_munmap(userptr<void> addr, size_t len)
 
   uptr align_addr = PGROUNDDOWN(addr);
   uptr align_len = PGROUNDUP(addr + len) - align_addr;
-  if (myproc()->vmap->remove(align_addr, align_len, myproc()->pgmap) < 0)
+  if (myproc()->vmap->remove(align_addr, align_len) < 0)
     return -1;
 
   return 0;

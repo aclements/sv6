@@ -30,7 +30,6 @@ static inline void *p2v(uptr a) {
   return (u8 *) a + KCODE;
 }
 
-struct proc_pgmap;
 struct trapframe;
 struct spinlock;
 struct condvar;
@@ -283,7 +282,7 @@ void            uartintr(void);
 
 // vm.c
 void            switchvm(struct proc*);
-int             pagefault(struct vmap*, uptr, u32, proc_pgmap* pgmap);
+int             pagefault(struct vmap*, uptr, u32);
 void*           pagelookup(struct vmap*, uptr);
 // Slowly but carefully read @c n bytes from virtual address @c src
 // into @c dst, without any page faults.  Return the number of bytes
