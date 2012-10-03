@@ -62,6 +62,7 @@ OBJS = \
 	distref.o \
 	semaphore.o \
 	version.o \
+	buddy.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
