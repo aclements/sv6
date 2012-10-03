@@ -13,7 +13,6 @@
 #include "gc.hh"
 #include "cpputil.hh"
 #include "sperf.hh"
-#include "uwq.hh"
 #include "kmtrace.hh"
 #include "kstream.hh"
 #include "page_info.hh"

@@ -296,9 +296,6 @@ sched(void)
   mycpu()->proc = next;
   mycpu()->prev = prev;
 
-  if (mycpu()->uwq != nullptr || next->uwq != nullptr)
-    mycpu()->uwq = next->uwq;
-
   if (prev->get_state() == ZOMBIE)
     mtstop(prev);
   else

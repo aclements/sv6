@@ -64,7 +64,7 @@ proc_pgmap::onzero() const
 }
 
 proc::proc(int npid) :
-  rcu_freed("proc"), vmap(0), uwq(0), worker(0), kstack(0),
+  rcu_freed("proc"), vmap(0), kstack(0),
   pid(npid), parent(0), tf(0), context(0), killed(0),
   ftable(0), cwd(0), tsc(0), curcycles(0), cpuid(0),
   cpu_pin(0), oncv(0), cv_wakeup(0),
@@ -517,8 +517,6 @@ finishproc(struct proc *p, bool removepid)
     p->vmap->decref();
   if (p->pgmap != nullptr)
     p->pgmap->dec();
-  if (p->uwq != nullptr)
-    p->uwq->dec();
   if (p->kstack)
     ksfree(slab_stack, p->kstack);
 

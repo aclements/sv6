@@ -46,7 +46,6 @@ OBJS = \
 	sysproc.o \
 	uart.o \
         user.o \
-	uwq.o \
 	vm.o \
 	trap.o \
         uaccess.o \

@@ -8,8 +8,6 @@
 #include "filetable.hh"
 #include "sched.hh"
 
-class uwq;
-class uwq_worker;
 struct pgmap;
 struct gc_handle;
 
@@ -74,8 +72,6 @@ typedef enum procstate {
 // Per-process state
 struct proc : public rcu_freed, public sched_link {
   struct vmap *vmap;           // va -> vma
-  uwq* uwq;
-  uwq_worker* worker;
   char *kstack;                // Bottom of kernel stack for this process
   volatile int pid;            // Process ID
   struct proc *parent;         // Parent process

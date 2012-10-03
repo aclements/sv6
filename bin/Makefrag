@@ -17,7 +17,6 @@ UPROGS= \
 	mapbench \
 	maptest \
 	mkdir \
-	mktree \
 	sh \
 	nsh \
 	halt \
@@ -29,14 +28,10 @@ UPROGS= \
 	preadtest \
 	scripttest \
 	ftest \
-	wqsh \
 	cp \
 	perf \
         xtime \
 	asharing \
-	xls \
-	xdu \
-	wqtest \
 	rm \
 	avar \
 	schedbench \

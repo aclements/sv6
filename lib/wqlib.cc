@@ -3,7 +3,7 @@
 #elif defined(XV6_KERNEL)
 #include "wqkernel.hh"
 #else
-#include "wquser.hh"
+#error "WQ not supported"
 #endif
 #include "wq.hh"
 

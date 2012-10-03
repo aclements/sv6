@@ -7,7 +7,6 @@
 #include "cpu.hh"
 #include "percpu.hh"
 #include "wq.hh"
-#include "uwq.hh"
 #include "kmtrace.hh"
 #include "bits.hh"
 
@@ -120,9 +119,6 @@ idleloop(void)
           p->cwd = nullptr;
           myidle->heir = p;
         }
-
-        if (uwq_trywork())
-          break;
 
         worked = wq_trywork();
         // If we are no longer the idle thread, exit

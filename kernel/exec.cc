@@ -145,10 +145,8 @@ doheap(vmap* vmp)
 }
 
 static void
-exec_cleanup(vmap *oldvmap, uwq *olduwq, proc_pgmap* oldpgmap)
+exec_cleanup(vmap *oldvmap, proc_pgmap* oldpgmap)
 {
-  if (olduwq != nullptr)
-    olduwq->dec();
   oldvmap->decref();
   oldpgmap->dec();
 }
@@ -169,7 +167,6 @@ exec(const char *path, const char * const *argv, void *ascopev)
   int i;
   proc_pgmap* oldpgmap;
   vmap* oldvmap;
-  uwq* olduwq;
   cwork* w;
   long sp;
 
@@ -178,9 +175,6 @@ exec(const char *path, const char * const *argv, void *ascopev)
   auto cleanup = scoped_cleanup([&ip](){
     iput(ip);
   });
-
-  if(myproc()->worker != nullptr)
-    return -1;
 
   gc_begin_epoch();
 
@@ -246,7 +240,6 @@ exec(const char *path, const char * const *argv, void *ascopev)
 
   // Commit to the user image.
   oldvmap = myproc()->vmap;
-  olduwq = myproc()->uwq;
   oldpgmap = myproc()->pgmap;
 
   myproc()->pgmap = pgmap;
@@ -266,8 +259,7 @@ exec(const char *path, const char * const *argv, void *ascopev)
   assert(w);
   w->rip = (void*) exec_cleanup;
   w->arg0 = oldvmap;
-  w->arg1 = olduwq;
-  w->arg2 = oldpgmap;
+  w->arg1 = oldpgmap;
   assert(wqcrit_push(w, myproc()->data_cpuid) >= 0);
   myproc()->data_cpuid = myid();
 

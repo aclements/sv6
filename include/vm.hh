@@ -3,7 +3,6 @@
 #include "radix.hh"
 #include "cpputil.hh"
 #include "hwvm.hh"
-#include "uwq.hh"
 #include "distref.hh"
 #include "bit_spinlock.hh"
 #include "radix_array.hh"
