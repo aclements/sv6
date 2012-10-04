@@ -21,6 +21,8 @@ fetchmem(void* dst, const void* usrc, u64 size)
 {
   if(mycpu()->ncli != 0)
     panic("fetchstr: cli'd");
+  if ((uintptr_t)usrc >= USERTOP || (uintptr_t)usrc + size >= USERTOP)
+    return -1;
   // __uaccess_mem can't handle size == 0
   if(size == 0)
     return 0;
@@ -32,6 +34,8 @@ putmem(void *udst, const void *src, u64 size)
 {
   if(mycpu()->ncli != 0)
     panic("fetchstr: cli'd");
+  if ((uintptr_t)udst >= USERTOP || (uintptr_t)udst + size >= USERTOP)
+    return -1;
   if(size == 0)
     return 0;
   return __uaccess_mem(udst, src, size);
@@ -42,6 +46,11 @@ fetchstr(char* dst, const char* usrc, u64 size)
 {
   if(mycpu()->ncli != 0)
     panic("fetchstr: cli'd");
+  // XXX(Austin) Need to check end against USERTOP, too.
+  // Unfortunately, attempting to copy past USERTOP will dereference
+  // non-canonical addresses, resulting in a GPF.
+  if ((uintptr_t)usrc >= USERTOP)
+    return -1;
   return __uaccess_str(dst, usrc, size);
 }
 
@@ -50,6 +59,8 @@ fetchint64(uptr addr, u64 *ip)
 {
   if(mycpu()->ncli != 0)
     panic("fetchstr: cli'd");
+  if ((uintptr_t)addr >= USERTOP || (uintptr_t)addr + sizeof(*ip) >= USERTOP)
+    return -1;
   return __uaccess_int64(addr, ip);
 }
 
