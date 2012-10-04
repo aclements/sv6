@@ -49,9 +49,31 @@ public:
     return (uptr)ptr;
   }
 
+  // Store a value to this pointer.  Returns true if successful, false
+  // if the user pointer is illegal.
   bool store(const T *val) const
   {
     return !putmem(unsafe_get(), val, sizeof(T));
+  }
+
+  bool store(const T *val, std::size_t count) const
+  {
+    return !putmem(unsafe_get(), val, sizeof(T) * count);
+  }
+
+  // Load a value from this pointer.  Returns true if successful,
+  // false if the user pointer is illegal.
+  bool load(T *val) const
+  {
+    if (sizeof(T) == sizeof(uint64_t))
+      return !fetchint64(this, static_cast<uint64_t*>(val));
+    else
+      return !fetchmem(val, unsafe_get(), sizeof(T));
+  }
+
+  bool load(T *val, std::size_t count) const
+  {
+    return fetchmem(val, unsafe_get(), sizeof(T) * count) >= 0;
   }
 };
 
