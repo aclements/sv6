@@ -290,19 +290,6 @@ vmap::pagefault(uptr va, u32 err)
   if (va >= USERTOP)
     return -1;
 
-  atomic<pme_t> *pte = walkpgdir(pml4, va, 1);
-  if (pte == nullptr)
-    throw_bad_alloc();
-
- retry:
-  pme_t ptev = pte->load();
-
-  // Optimize checks of args to syscalls.
-  if ((ptev & (PTE_P|PTE_U|PTE_W)) == (PTE_P|PTE_U|PTE_W)) {
-    // XXX using pagefault() as a security check in syscalls is prone to races
-    return 0;
-  }
-
   // Hold lock until TLB flush
   {
     auto it = vpfs_.find(va / PGSIZE);
@@ -311,9 +298,6 @@ vmap::pagefault(uptr va, u32 err)
       return -1;
     verbose.println("vm: pagefault err ", shex(err), " va ", shex(va),
                     " desc ", *it, " pid ", myproc()->pid);
-
-    if (ptev != pte->load())
-      goto retry;
 
     // If this is a COW fault, we need to hold a reference to the old
     // physical page until we've cleared the PTE and done TLB shoot
@@ -330,6 +314,11 @@ vmap::pagefault(uptr va, u32 err)
     // Record that we wrote this physical page
     mtwriteavar("ppn:%#lx", va >> PGSHIFT);
 
+    // Get PTE
+    atomic<pme_t> *pte = walkpgdir(pml4, va, 1);
+    if (!pte)
+      throw_bad_alloc();
+
     // If this is a read COW fault, we can reuse the COW page, but
     // don't mark it writable!
     if (desc.flags & vmdesc::FLAG_COW)
@@ -344,7 +333,7 @@ vmap::pagefault(uptr va, u32 err)
     // but right now separate pgmaps don't mix with COW fork anyway.
     if (tlb_shootdown && !never_updateall) {
       tlbflush();
-    } else if (ptev & PTE_P) {
+    } else {
       lcr3(rcr3());
     }
   }
