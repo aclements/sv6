@@ -343,50 +343,24 @@ netclose(int sock)
 }
 
 int
-netwrite(int sock, const char *ubuf, int len)
+netwrite(int sock, const char *buf, int len)
 {
-  void *kbuf;
-  int cc;
   int r;
 
-  kbuf = kalloc("(netwrite)");
-  if (kbuf == nullptr)
-    return -1;
-
-  cc = MIN(len, PGSIZE);
-  if (fetchmem(kbuf, ubuf, cc)) {
-    kfree(kbuf);
-    return -1;
-  }
   lwip_core_lock();
-  r = lwip_write(sock, kbuf, cc);
+  r = lwip_write(sock, buf, len);
   lwip_core_unlock();
-  kfree(kbuf);
   return r;
 }
 
 int
-netread(int sock, char *ubuf, int len)
+netread(int sock, char *buf, int len)
 {
-  void *kbuf;
-  int cc;
   int r;
 
-  kbuf = kalloc("(netread)");
-  if (kbuf == nullptr)
-    return -1;
-
-  cc = MIN(len, PGSIZE);
   lwip_core_lock();
-  r = lwip_read(sock, kbuf, cc);
+  r = lwip_read(sock, buf, len);
   lwip_core_unlock();
-  if (r < 0) {
-    kfree(kbuf);
-    return r;
-  }
-
-  putmem(ubuf, kbuf, r);
-  kfree(kbuf);
   return r;
 }
 

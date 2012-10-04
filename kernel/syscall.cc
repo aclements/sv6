@@ -64,37 +64,6 @@ fetchint64(uptr addr, u64 *ip)
   return __uaccess_int64(addr, ip);
 }
 
-// Fetch the nul-terminated string at addr from process p.
-// Doesn't actually copy the string - just sets *pp to point at it.
-// Returns length of string, not including nul.
-int
-argcheckstr(const char *addr)
-{
-  const char *s = addr;
-
-  while(1){
-    if(pagefault(myproc()->vmap, (uptr) s, 0) < 0)
-      return -1;
-    if(*s == 0)
-      return s - addr;
-    s++;
-  }
-  return -1;
-}
-
-// Fetch the nth word-sized system call argument as a pointer
-// to a block of memory of size n bytes.  Check that the pointer
-// lies within the process address space.
-int
-argcheckptr(const void *p, int size)
-{
-  u64 i = (u64) p;
-  for(uptr va = PGROUNDDOWN(i); va < i+size; va = va + PGSIZE)
-    if(pagefault(myproc()->vmap, va, 0) < 0)
-      return -1;
-  return 0;
-}
-
 extern u64 (*syscalls[])(u64, u64, u64, u64, u64, u64);
 extern const int nsyscalls;
 

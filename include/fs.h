@@ -54,3 +54,7 @@ struct dirent {
   u16 inum;
   char name[DIRSIZ];
 };
+
+// XXX(Austin) PATH_MAX sucks.  It would be nice if we didn't need it
+// to size kernel copy buffers.
+#define PATH_MAX 256

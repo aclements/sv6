@@ -48,13 +48,24 @@ sys_dup(int ofd)
 
 //SYSCALL
 ssize_t
-sys_read(int fd, void *p, size_t n)
+sys_read(int fd, userptr<void> p, size_t n)
 {
   sref<file> f;
 
-  if(!getfile(fd, &f) || argcheckptr(p, n) < 0)
+  if(!getfile(fd, &f))
     return -1;
-  return f->read(static_cast<char*>(p), n);
+  char *b = kalloc("readbuf");
+  if (!b)
+    return -1;
+  auto cleanup = scoped_cleanup([b](){kfree(b);});
+  // XXX(Austin) Too bad
+  if (n > PGSIZE)
+    n = PGSIZE;
+  if ((n = f->read(b, n)) < 0)
+    return -1;
+  if (!userptr<char>(p).store(b, n))
+    return -1;
+  return n;
 }
 
 //SYSCALL
@@ -65,35 +76,37 @@ sys_pread(int fd, void *ubuf, size_t count, off_t offset)
   if (!getfile(fd, &f))
     return -1;
 
-  if (count < PGSIZE) {
-    ssize_t r;
-    char* b;
-    b = kalloc("preadbuf");
-    r = f->pread(b, count, offset);
-    if (r > 0)
-      putmem(ubuf, b, r);
-    kfree(b);
-    return r;
-  } else {
-    // XXX(sbw) pagefaulting doesn't guarantee ubuf is mapped 
-    // while pread executes
-    uptr i = (uptr)ubuf;
-    for(uptr va = PGROUNDDOWN(i); va < i+count; va = va + PGSIZE)
-      if(pagefault(myproc()->vmap, va, 0) < 0)
-        return -1;
-    return f->pread((char*)ubuf, count, offset);
-  }
+  if (count > 4*1024*1024)
+    count = 4*1024*1024;
+
+  ssize_t r;
+  char* b;
+  b = (char*)kmalloc(count, "preadbuf");
+  r = f->pread(b, count, offset);
+  if (r > 0)
+    putmem(ubuf, b, r);
+  kmfree(b, count);
+  return r;
 }
 
 //SYSCALL
 ssize_t
-sys_write(int fd, const void *p, size_t n)
+sys_write(int fd, userptr<const void> p, size_t n)
 {
   sref<file> f;
 
-  if (!getfile(fd, &f) || argcheckptr(p, n) < 0)
+  if (!getfile(fd, &f))
     return -1;
-  return f->write(static_cast<const char*>(p), n);
+  char *b = kalloc("writebuf");
+  if (!b)
+    return -1;
+  auto cleanup = scoped_cleanup([b](){kfree(b);});
+  // XXX(Austin) Too bad
+  if (n > PGSIZE)
+    n = PGSIZE;
+  if (!userptr<char>(p).load(b, n))
+    return -1;
+  return f->write(b, n);
 }
 
 //SYSCALL
@@ -104,23 +117,16 @@ sys_pwrite(int fd, const void *ubuf, size_t count, off_t offset)
   if (!getfile(fd, &f))
     return -1;
 
-  if (count < PGSIZE) {
-    ssize_t r;
-    char* b;
-    b = kalloc("pwritebuf");
-    fetchmem(b, ubuf, count);
-    r = f->pwrite(b, count, offset);
-    kfree(b);
-    return r;
-  } else {
-    // XXX(sbw) pagefaulting doesn't guarantee ubuf is mapped 
-    // while pread executes
-    uptr i = (uptr)ubuf;
-    for(uptr va = PGROUNDDOWN(i); va < i+count; va = va + PGSIZE)
-      if(pagefault(myproc()->vmap, va, 0) < 0)
-        return -1;
-    return f->pwrite((char*)ubuf, count, offset);
-  }
+  if (count > 4*1024*1024)
+    count = 4*1024*1024;
+
+  ssize_t r;
+  char* b;
+  b = (char*)kmalloc(count, "pwritebuf");
+  fetchmem(b, ubuf, count);
+  r = f->pwrite(b, count, offset);
+  kmfree(b, count);
+  return r;
 }
 
 //SYSCALL
@@ -137,24 +143,30 @@ sys_close(int fd)
 
 //SYSCALL
 int
-sys_fstat(int fd, struct stat *st)
+sys_fstat(int fd, userptr<struct stat> st)
 {
+  struct stat st_buf;
   sref<file> f;
   
-  if (!getfile(fd, &f) || argcheckptr(st, sizeof(*st)) < 0)
+  if (!getfile(fd, &f))
     return -1;
-  return f->stat(st);
+  if (f->stat(&st_buf) < 0)
+    return -1;
+  if (!st.store(&st_buf))
+    return -1;
+  return 0;
 }
 
 // Create the path new as a link to the same inode as old.
 //SYSCALL
 int
-sys_link(const char *old, const char *newn)
+sys_link(userptr_str old_name, userptr_str new_name)
 {
+  char old[PATH_MAX], newn[PATH_MAX];
   char name[DIRSIZ];
   struct inode *dp, *ip;
 
-  if(argcheckstr(old) < 0 || argcheckstr(newn) < 0)
+  if (!old_name.load(old, sizeof old) || !new_name.load(newn, sizeof newn))
     return -1;
   if((ip = namei(myproc()->cwd, old)) == 0)
     return -1;
@@ -203,17 +215,18 @@ isdirempty(struct inode *dp)
 
 //SYSCALL
 int
-sys_unlink(const char *path)
+sys_unlink(userptr_str path)
 {
+  char path_copy[PATH_MAX];
   struct inode *ip, *dp;
   char name[DIRSIZ];
   bool haveref = false;
 
-  if(argcheckstr(path) < 0)
+  if (!path.load(path_copy, sizeof path_copy))
     return -1;
 
   scoped_gc_epoch e;
-  if((dp = __nameiparent(myproc()->cwd, path, name, &haveref)) == 0)
+  if((dp = __nameiparent(myproc()->cwd, path_copy, name, &haveref)) == 0)
     return -1;
   if(dp->type != T_DIR)
     panic("sys_unlink");
@@ -330,8 +343,9 @@ create(inode *cwd, const char *path, short type, short major, short minor)
 
 //SYSCALL
 int
-sys_openat(int dirfd, const char *path, int omode, ...)
+sys_openat(int dirfd, userptr_str path, int omode, ...)
 {
+  char path_copy[PATH_MAX];
   int fd;
   struct file *f;
   struct inode *ip;
@@ -348,23 +362,23 @@ sys_openat(int dirfd, const char *path, int omode, ...)
     cwd = fdir->ip;
   }
 
-  if(argcheckstr(path) < 0)
+  if (!path.load(path_copy, sizeof path_copy))
     return -1;
 
   // Reads the dirfd FD, dirfd's inode, the inodes of all files in
   // path; writes the returned FD
-  mt_ascope ascope("%s(%d,%s,%d)", __func__, dirfd, path, omode);
+  mt_ascope ascope("%s(%d,%s,%d)", __func__, dirfd, path_copy, omode);
   mtreadavar("inode:%x.%x", cwd->dev, cwd->inum);
 
   if(omode & O_CREAT){
-    if((ip = create(cwd, path, T_FILE, 0, 0)) == 0)
+    if((ip = create(cwd, path_copy, T_FILE, 0, 0)) == 0)
       return -1;
     if(omode & O_WAIT){
       // XXX wake up any open(..., O_WAIT).
       // there's a race here that's hard to fix because
       // of how non-locking create() is.
       char dummy[DIRSIZ];
-      struct inode *pip = nameiparent(cwd, path, dummy);
+      struct inode *pip = nameiparent(cwd, path_copy, dummy);
       if(pip){
         acquire(&pip->lock);
         pip->cv.wake_all();
@@ -376,13 +390,13 @@ sys_openat(int dirfd, const char *path, int omode, ...)
     mtwriteavar("inode:%x.%x", ip->dev, ip->inum);
   } else {
  retry:
-    if((ip = namei(cwd, path)) == 0){
+    if((ip = namei(cwd, path_copy)) == 0){
       if(omode & O_WAIT){
         char dummy[DIRSIZ];
-        struct inode *pip = nameiparent(cwd, path, dummy);
+        struct inode *pip = nameiparent(cwd, path_copy, dummy);
         if(pip == 0)
           return -1;
-        cprintf("O_WAIT waiting %s %p %d...\n", path, pip, pip->inum);
+        cprintf("O_WAIT waiting %s %p %d...\n", path_copy, pip, pip->inum);
         // XXX wait for pip->cv.wake_all above
         acquire(&pip->lock);
         pip->cv.sleep(&pip->lock);
@@ -432,8 +446,9 @@ sys_openat(int dirfd, const char *path, int omode, ...)
 
 //SYSCALL
 int
-sys_mkdirat(int dirfd, const char *path, mode_t mode)
+sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
 {
+  char path_copy[PATH_MAX];
   struct inode *cwd;
   struct inode *ip;
 
@@ -447,9 +462,9 @@ sys_mkdirat(int dirfd, const char *path, mode_t mode)
     cwd = fdir->ip;
   }
 
-  if (argcheckstr(path) < 0)
+  if (!path.load(path_copy, sizeof path_copy))
     return -1;
-  ip = create(cwd, path, T_DIR, 0, 0);
+  ip = create(cwd, path_copy, T_DIR, 0, 0);
   if (ip == nullptr)
     return -1;
   iunlockput(ip);
@@ -458,13 +473,13 @@ sys_mkdirat(int dirfd, const char *path, mode_t mode)
 
 //SYSCALL
 int
-sys_mknod(const char *path, int major, int minor)
+sys_mknod(userptr_str path, int major, int minor)
 {
+  char path_copy[PATH_MAX];
   struct inode *ip;
-  int len;
   
-  if((len=argcheckstr(path)) < 0 ||
-     (ip = create(myproc()->cwd, path, T_DEV, major, minor)) == 0)
+  if(!path.load(path_copy, sizeof path_copy) ||
+     (ip = create(myproc()->cwd, path_copy, T_DEV, major, minor)) == 0)
     return -1;
   iunlockput(ip);
   return 0;
@@ -472,11 +487,13 @@ sys_mknod(const char *path, int major, int minor)
 
 //SYSCALL
 int
-sys_chdir(const char *path)
+sys_chdir(userptr_str path)
 {
+  char path_copy[PATH_MAX];
   struct inode *ip;
 
-  if(argcheckstr(path) < 0 || (ip = namei(myproc()->cwd, path)) == 0)
+  if(!path.load(path_copy, sizeof path_copy) ||
+     (ip = namei(myproc()->cwd, path_copy)) == 0)
     return -1;
   ilock(ip, 0);
   if(ip->type != T_DIR){
@@ -544,24 +561,26 @@ sys_exec(const char *upath, userptr<userptr<const char> > uargv)
 
 //SYSCALL
 int
-sys_pipe(int *fd, int flag)
+sys_pipe(userptr<int> fd, int flag)
 {
   struct file *rf, *wf;
-  int fd0, fd1;
+  int fd_buf[2];
 
-  if(argcheckptr(fd, 2*sizeof(fd[0])) < 0)
-    return -1;
   if(pipealloc(&rf, &wf, flag) < 0)
     return -1;
-  fd0 = -1;
-  if((fd0 = fdalloc(rf)) < 0 || (fd1 = fdalloc(wf)) < 0){
-    if(fd0 >= 0)
-      myproc()->ftable->close(fd0);
-    wf->dec();
+  fd_buf[0] = fd_buf[1] = -1;
+  if ((fd_buf[0] = fdalloc(rf)) < 0 || (fd_buf[1] = fdalloc(wf)) < 0 ||
+      !fd.store(fd_buf, 2)) {
+    if (fd_buf[0] >= 0)
+      myproc()->ftable->close(fd_buf[0]);
+    else
+      rf->dec();
+    if (fd_buf[1] >= 0)
+      myproc()->ftable->close(fd_buf[1]);
+    else
+      wf->dec();
     return -1;
   }
-  fd[0] = fd0;
-  fd[1] = fd1;
   return 0;
 }
 

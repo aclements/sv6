@@ -213,8 +213,6 @@ int             steal(void);
 void            addrun(struct proc*);
 
 // syscall.c
-int             argcheckptr(const void *argval, int);
-int             argcheckstr(const char*);
 int             fetchint64(uptr, u64*);
 int             fetchstr(char*, const char*, u64);
 int             fetchmem(void*, const void*, u64);
