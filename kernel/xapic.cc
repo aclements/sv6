@@ -190,10 +190,12 @@ xapic_lapic::eoi()
 void
 xapic_lapic::send_ipi(struct cpu *c, int ino)
 {
+  pushcli();
   xapicw(ICRHI, c->hwid.num << 24);
   xapicw(ICRLO, FIXED | DEASSERT | ino);
   if (xapicwait() < 0)
     panic("xapic_lapic::send_ipi: xapicwait failure");
+  popcli();
 }
 
 // Start additional processor running bootstrap code at addr.
