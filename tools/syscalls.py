@@ -95,6 +95,8 @@ class Syscall(object):
                 if atype2 == atype:
                     break
                 atype = atype2
+            if atype == "userptr_str":
+                atype = "const char *"
             uargs.append(atype)
         self.uargs = uargs
 

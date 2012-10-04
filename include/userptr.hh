@@ -1,5 +1,16 @@
 #pragma once
 
+#include <cstddef>
+
+// XXX(Austin) Avoiding TOCTTOU bugs when dealing with user-provided
+// pointers in the presence of shared memory requires copying.  A
+// possibly better approach would be to force some region of the
+// address space to be thread-local and unshared and to require
+// system call arguments to point in to this region.  We still have to
+// validate such pointers (that the pages are mapped and that their
+// length doesn't extend out of the region), but we wouldn't need to
+// copy them in the kernel.
+
 // A protected pointer to user data.  These act like pointers (and
 // their in-memory representation is identical), but userptr's cannot
 // be dereferenced without explicit checks.
@@ -50,3 +61,22 @@ public:
 // trivial destructor.
 static_assert(sizeof(userptr<void>) == sizeof(void*), "userptr is wrong size");
 static_assert(__is_pod(userptr<void>), "userptr is not a POD");
+
+// A protected pointer to a string from user space.
+class userptr_str
+{
+  userptr<const char> ptr;
+
+public:
+  explicit userptr_str(const char* p) : ptr(p) { }
+  userptr_str() = default;
+  userptr_str(const userptr_str &o) = default;
+  userptr_str(userptr_str &&o) = default;
+  userptr_str& operator=(const userptr_str& o) = default;
+
+  bool load(char *dst, std::size_t size)
+  {
+    extern int fetchstr(char* dst, const char* usrc, u64 size);
+    return !fetchstr(dst, ptr.unsafe_get(), size);
+  }
+};
