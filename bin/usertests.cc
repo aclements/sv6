@@ -1827,6 +1827,81 @@ vmoverlap(void)
   printf("vmoverlap ok\n");
 }
 
+void*
+vmconcurrent_thr(void *arg)
+{
+  int core = (uintptr_t)arg;
+  setaffinity(core);
+
+  char *base = (char*)0x1000;
+  for (int i = 0; i < 500; ++i) {
+    void *res = mmap(base, 4096, PROT_READ|PROT_WRITE,
+                     MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0);
+    if (res == MAP_FAILED)
+      die("vmconcurrent_thr: mmap failed");
+    *(char*)res = 42;
+  }
+  return nullptr;
+}
+
+void
+vmconcurrent(void)
+{
+  printf("vmconcurrent\n");
+
+  for (int i = 0; i < nthread; i++) {
+    pthread_t tid;
+    pthread_create(&tid, 0, &vmconcurrent_thr, (void*)(uintptr_t)i);
+  }
+
+  for(int i = 0; i < nthread; i++)
+    wait();
+
+  printf("vmconcurrent ok\n");
+}
+
+void*
+tlb_thr(void *arg)
+{
+  // Pass a token around and have each thread read from the mapped
+  // region, re-map the region, then write to the mapped region.
+  static volatile int curcore = 0;
+  int core = (uintptr_t)arg;
+  setaffinity(core);
+
+  volatile char *base = (char*)0x1000;
+  for (int i = 0; i < 50; i++) {
+    while (core != curcore);
+    if (core > 0)
+      assert(*base == i + core - 1);
+    else if (i != 0)
+      assert(*base == i + nthread - 2);
+    void *res = mmap((void*)base, 4096, PROT_READ|PROT_WRITE,
+                     MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0);
+    if (res == MAP_FAILED)
+      die("tlb_thr: mmap failed");
+    *base = i + core;
+    curcore = (curcore + 1) % nthread;
+  }
+  return nullptr;
+}
+
+void
+tlb(void)
+{
+  printf("tlb\n");
+
+  for (int i = 0; i < nthread; i++) {
+    pthread_t tid;
+    pthread_create(&tid, 0, &tlb_thr, (void*)(uintptr_t)i);
+  }
+
+  for(int i = 0; i < nthread; i++)
+    wait();
+
+  printf("tlb ok\n");
+}
+
 static int nenabled;
 static char **enabled;
 
@@ -1869,6 +1944,8 @@ main(int argc, char *argv[])
 
   TEST(unmappedtest);
   TEST(vmoverlap);
+  TEST(vmconcurrent);
+  TEST(tlb);
 
   TEST(validatetest);
 
