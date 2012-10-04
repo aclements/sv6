@@ -280,6 +280,34 @@ prefetch(void *a)
   __asm volatile("prefetch (%0)" : : "r" (a));
 }
 
+static inline int
+popcnt64(u64 v)
+{
+  u64 val;
+  __asm volatile("popcntq %1,%0" : "=r" (val) : "r" (v));
+  return val;
+}
+
+// Atomically set bit nr of *a.  nr must be <= 64.
+static inline void
+locked_set_bit(int nr, volatile void *a)
+{
+  __asm volatile("lock; btsq %1,%0"
+                 : "+m" (*(volatile uint64_t*)a)
+                 : "lr" (nr)
+                 : "memory");
+}
+
+// Atomically clear bit nr of *a.  nr must be <= 64.
+static inline void
+locked_reset_bit(int nr, volatile void *a)
+{
+  __asm volatile("lock; btrq %1,%0"
+                 : "+m" (*(volatile uint64_t*)a)
+                 : "lr" (nr)
+                 : "memory");
+}
+
 // Atomically set bit nr of *a and return its old value
 static inline int
 locked_test_and_set_bit(int nr, volatile void *a)
