@@ -27,11 +27,14 @@
 static int panicked = 0;
 
 static struct cons {
-  struct spinlock lock;
   int locking;
+  struct spinlock lock;
+  struct cpu* holder;
+  int nesting_count;
 
   constexpr cons()
-    : lock("console", LOCKSTAT_CONSOLE), locking(0) { }
+    : locking(0), lock("console", LOCKSTAT_CONSOLE),
+      holder(nullptr), nesting_count(0) { }
 } cons;
 
 static void
@@ -370,6 +373,38 @@ consoleread(struct inode *ip, char *dst, u32 off, u32 n)
 }
 
 // Console stream support
+
+void
+console_stream::_begin_print()
+{
+  if (!cons.locking)
+    return;
+
+  // Acquire cons.lock in a reentrant way.  The holder check is
+  // technically racy, but can't succeed unless this CPU is the
+  // holder, in which case it's not racy.
+  if (cons.holder == mycpu()) {
+    ++cons.nesting_count;
+    return;
+  }
+  acquire(&cons.lock);
+  cons.holder = mycpu();
+  cons.nesting_count = 1;
+}
+
+void
+console_stream::end_print()
+{
+  if (!cons.locking)
+    return;
+
+  if (--cons.nesting_count != 0)
+    return;
+
+  assert(cons.holder == mycpu());
+  cons.holder = nullptr;
+  release(&cons.lock);
+}
 
 void
 console_stream::write(char c)

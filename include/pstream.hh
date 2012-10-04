@@ -29,36 +29,41 @@ struct sbuf
 class print_stream
 {
 public:
-  // By making this constexpr (and assuming derived classes have
-  // either no constructor or a constexpr constructor), print_streams
-  // can be fully initialized at compile time, including the vtable
-  // pointer (meaning global print_streams don't require static
-  // construction).
-  constexpr print_stream() : enabled(true) { }
   virtual ~print_stream() { }
 
   // Write each of the arguments to this stream in order.
   template<typename... T>
   void print(T&&... args)
   {
-    if (enabled)
+    if (begin_print()) {
       _print(std::forward<T>(args)...);
+      end_print();
+    }
   }
 
   // Like print, but append a newline.
   template<typename... T>
   void println(T&&... args)
   {
-    if (enabled) {
+    if (begin_print()) {
       _print(std::forward<T>(args)...);
       write('\n');
+      end_print();
     }
   }
 
 protected:
-  bool enabled;
+  // Called when beginning a print call.  This should return true to
+  // allow the print, or false to suppress it.  This can also be used
+  // for locking, but any locking needs to be re-entrant.
+  virtual bool begin_print()
+  {
+    return true;
+  }
 
-  constexpr print_stream(bool enabled) : enabled(enabled) { }
+  // Called after printing.  Always paired with begin_print() when
+  // begin_print() returns true.
+  virtual void end_print() { }
 
   virtual void write(char c)
   {
@@ -83,10 +88,12 @@ private:
 
 class null_stream : public print_stream
 {
-public:
-  constexpr null_stream() : print_stream(false) { }
-
 protected:
+  bool begin_print()
+  {
+    return false;
+  }
+
   void write(char c) { }
   void write(sbuf buf) { }
 };
