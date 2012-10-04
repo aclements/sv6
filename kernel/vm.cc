@@ -333,8 +333,6 @@ vmap::pagefault(uptr va, u32 err)
     // but right now separate pgmaps don't mix with COW fork anyway.
     if (tlb_shootdown && !never_updateall) {
       tlbflush();
-    } else {
-      lcr3(rcr3());
     }
   }
   return 1;
