@@ -20,7 +20,7 @@ void initpg(void);
 void inittls(struct cpu *);
 void initnmi(void);
 void inittrap(void);
-void initseg(void);
+void initseg(struct cpu *);
 void initkalloc(u64 mbaddr);
 void initz(void);
 void initrcu(void);
@@ -56,9 +56,9 @@ static cpuid_t bcpuid;
 void
 mpboot(void)
 {
-  inittls(&cpus[bcpuid]);
+  initseg(&cpus[bcpuid]);
+  inittls(&cpus[bcpuid]);       // Requires initseg
 
-  initseg();
   initlapic();
   initsamp();
   initidle();
@@ -145,7 +145,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   inituart();
   initpg();
   inithz();        // CPU Hz, microdelay
-  inittls(&cpus[0]);       // thread local storage
+  initseg(&cpus[0]);
+  inittls(&cpus[0]);       // Requires initseg
 
   initacpitables();        // Requires initpg, inittls
   initlapic();             // Requires initpg
@@ -165,7 +166,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
       (*__init_array_start[i])(0, nullptr, nullptr);
 
-  initseg();
   inittrap();
   initcmdline();
   initkalloc(mbaddr);

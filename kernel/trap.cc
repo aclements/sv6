@@ -237,17 +237,14 @@ initnmi(void)
 }
 
 void
-initseg(void)
+initseg(struct cpu *c)
 {
   volatile struct desctr dtr;
-  struct cpu *c;
 
   dtr.limit = sizeof(idt) - 1;
   dtr.base = (u64)idt;
   lidt((void *)&dtr.limit);
 
-  // TLS might not be ready
-  c = &cpus[myid()];
   // Load per-CPU GDT
   memmove(c->gdt, bootgdt, sizeof(bootgdt));
   dtr.limit = sizeof(c->gdt) - 1;
