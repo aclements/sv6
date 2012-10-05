@@ -2,11 +2,7 @@
 
 #include "atomic.hh"
 
-struct pgmap {
-  std::atomic<pme_t> e[PGSIZE / sizeof(pme_t)];
-};
-
-extern pgmap kpml4;
+struct pgmap;
 
 void            freevm(pgmap *pml4);
 pgmap*          setupkvm(void);

@@ -17,6 +17,7 @@ void inituartcons(void);
 void initcga(void);
 void initconsole(void);
 void initpg(void);
+void cleanuppg(void);
 void inittls(struct cpu *);
 void initnmi(void);
 void inittrap(void);
@@ -195,8 +196,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   inituser();      // first user process
   initnmi();
   bootothers();    // start other processors
-  kpml4.e[0] = 0;  // don't need 1 GB identity mapping anymore
-  lcr3(rcr3());
+  cleanuppg();             // Requires bootothers
   initcpprt();
   initwd();                // Requires initnmi
 

@@ -21,6 +21,12 @@ static const char *levelnames[] = {
   "PT", "PD", "PDP", "PML4"
 };
 
+struct pgmap {
+  std::atomic<pme_t> e[PGSIZE / sizeof(pme_t)];
+};
+
+extern pgmap kpml4;
+
 static pgmap*
 descend(pgmap *dir, u64 va, u64 flags, int create, int level)
 {
@@ -117,6 +123,15 @@ initpg(void)
 
   // Enable global pages.  This has to happen on every core.
   lcr4(rcr4() | CR4_PGE);
+}
+
+// Clean up mappings that were only required during early boot.
+void
+cleanuppg(void)
+{
+  // Remove 1GB identity mapping
+  kpml4.e[0] = 0;
+  lcr3(rcr3());
 }
 
 // Set up kernel part of a page table.
