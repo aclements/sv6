@@ -78,7 +78,7 @@ warmreset(u32 addr)
   // the AP startup code prior to the [universal startup algorithm]."
   outb(IO_RTC, 0xF);  // offset 0xF is shutdown code
   outb(IO_RTC+1, 0x0A);
-  wrv = (u16*)(0x40<<4 | 0x67);  // Warm reset vector
+  wrv = (u16*)p2v(0x40<<4 | 0x67);  // Warm reset vector
   wrv[0] = 0;
   wrv[1] = addr >> 4;
 }
@@ -91,7 +91,7 @@ rstrreset(void)
   // Paranoid: set warm reset code and vector back to defaults
   outb(IO_RTC, 0xF);
   outb(IO_RTC+1, 0);
-  wrv = (u16*)(0x40<<4 | 0x67);
+  wrv = (u16*)p2v(0x40<<4 | 0x67);
   wrv[0] = 0;
   wrv[1] = 0;
 }
