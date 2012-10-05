@@ -1,6 +1,7 @@
 #pragma once
 
 #include "refcache.hh"
+#include "gc.hh"
 #include "types.h"
 
 #include <cstddef>
@@ -15,15 +16,22 @@ extern std::size_t page_info_len;
 // Physical address of the page whose info is in page_info_array[0]
 extern paddr page_info_base;
 
-class page_info : public refcache::referenced
+class page_info : public refcache::referenced, rcu_freed
 {
 protected:
   void onzero()
+  {
+    gc_delayed(this);
+  }
+
+  void do_gc()
   {
     kfree(va());
   }
 
 public:
+  page_info() : rcu_freed("page_info") { }
+
   // Only placement new is allowed, because page_info must only be
   // constructed in the page_info_array.
   static void* operator new(unsigned long nbytes, page_info *buf)

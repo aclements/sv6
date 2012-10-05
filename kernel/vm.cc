@@ -160,6 +160,9 @@ again:
   auto end = vpfs_.find((start + len) / PGSIZE);
   mmu::shootdown shootdown;
 
+  // Don't free backing pages until after the shootdown
+  scoped_gc_epoch gc;
+
   {
     // New scope to release the search lock before shootdown
     auto lock = vpfs_.acquire(begin, end);
@@ -173,7 +176,6 @@ again:
 
     cache.invalidate(start, len, begin, &shootdown);
 
-    // XXX(Austin) This will free backing pages before TLB shootdowns
     vpfs_.fill(begin, end, desc);
   }
 
@@ -189,13 +191,15 @@ vmap::remove(uptr start, uptr len)
 
   mmu::shootdown shootdown;
 
+  // Don't free backing pages until after the shootdown
+  scoped_gc_epoch gc;
+
   {
     // New scope to release the search lock before shootdown
     auto begin = vpfs_.find(start / PGSIZE);
     auto end = vpfs_.find((start + len) / PGSIZE);
     auto lock = vpfs_.acquire(begin, end);
     cache.invalidate(start, len, begin, &shootdown);
-    // XXX(Austin) This will free backing pages before TLB shootdowns
     vpfs_.unset(begin, end);
   }
 
@@ -212,11 +216,13 @@ int
 vmap::pagefault(uptr va, u32 err)
 {
   access_type type = (err & FEC_WR) ? access_type::WRITE : access_type::READ;
-  sref<class page_info> old_page;
   mmu::shootdown shootdown;
 
   if (va >= USERTOP)
     return -1;
+
+  // If we replace a page, hold a reference until after the shootdown.
+  sref<class page_info> old_page;
 
   // When we clear from va to va+PGSIZE, make sure that's just this
   // page.
