@@ -58,7 +58,8 @@ sys_script(void *addr, u64 len, u64 chunk)
     wq_trywork();
   }
 
-  tlbflush();
+  // XXX(Austin) Not sure why this was here.  It seems unnecessary.
+//  tlbflush();
 
   return 0;
 }

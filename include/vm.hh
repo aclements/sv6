@@ -16,7 +16,7 @@ using std::atomic;
 // address space.  This plays a similar role to the more traditional
 // "virtual memory area," but this does not know its size (it could
 // represent a single page or the entire address space).
-struct vmdesc
+struct vmdesc : public mmu::tracker
 {
   enum {
     // Bit used for radix tree range locking
@@ -145,8 +145,8 @@ private:
   NEW_DELETE_OPS(vmap)
   uptr unmapped_area(size_t n);
 
-  pgmap* const pml4;
-  friend void switchvm(struct proc *p);
+  mmu::page_map_cache cache;
+  friend void switchvm(struct proc *);
 
   // Virtual page frames
   typedef radix_array<vmdesc, USERTOP / PGSIZE, PGSIZE,

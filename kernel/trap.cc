@@ -13,6 +13,7 @@
 #include "kalloc.hh"
 #include "apic.hh"
 #include "kstream.hh"
+#include "hwvm.hh"
 
 extern "C" void __uaccess_end(void);
 
@@ -155,9 +156,7 @@ trap(struct trapframe *tf)
     break;
   case T_TLBFLUSH: {
     lapiceoi();
-    u64 nreq = tlbflush_req.load();
-    lcr3(rcr3());
-    mycpu()->tlbflush_done = nreq;
+    mmu::shootdown::on_ipi();
     break;
   }
   case T_SAMPCONF:

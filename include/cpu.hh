@@ -5,8 +5,6 @@
 
 using std::atomic;
 
-extern atomic<u64> tlbflush_req;
-
 // Per-CPU state
 struct cpu {
   cpuid_t id;                  // Index into cpus[] below

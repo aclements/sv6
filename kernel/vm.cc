@@ -56,7 +56,6 @@ vmap::alloc(void)
 
 vmap::vmap() : 
   ref(1), kshared((char*) ksalloc(slab_kshared)), brk_(0),
-  pml4(setupkvm()),
   brklock_("brk_lock", LOCKSTAT_VM)
 {
   if (kshared == nullptr) {
@@ -75,8 +74,6 @@ vmap::~vmap()
 {
   if (kshared)
     ksfree(slab_kshared, kshared);
-  if (pml4)
-    freevm(pml4);
 }
 
 void
@@ -98,7 +95,7 @@ vmap::copy()
   verbose.println("vm: copy pid ", myproc()->pid);
 
   vmap *nm = new vmap();
-  bool needtlb = false;
+  mmu::shootdown shootdown;
 
   // Hold lock until TLB flush
   {
@@ -120,16 +117,8 @@ vmap::copy()
       if (it->page && !(it->flags & vmdesc::FLAG_COW)) {
         verbose.println("vm: mark COW");
         it->flags |= vmdesc::FLAG_COW;
-        atomic<pme_t> *pte = walkpgdir(pml4, it.index() * PGSIZE, 0);
-        if (pte) {
-          for (;;) {
-            pme_t v = pte->load();
-            if (!(v & PTE_P) || !(v & PTE_U) || !(v & PTE_W) ||
-                cmpxch(pte, v, PTE_ADDR(v) | PTE_P | PTE_U | PTE_COW))
-              break;
-          }
-          needtlb = true;
-        }
+        // XXX(Austin) Should we try to invalidate in larger chunks?
+        cache.invalidate(it.index() * PGSIZE, PGSIZE, it, &shootdown);
       }
 
       // Copy the descriptor, except its lock bit
@@ -143,14 +132,7 @@ vmap::copy()
     }
   }
 
-  // Reload hardware page table
-  if (needtlb) {
-    if (tlb_shootdown) {
-      tlbflush();
-    } else {
-      lcr3(rcr3());
-    }
-  }
+  shootdown.perform();
 
   nm->brk_ = brk_;
   return nm;
@@ -167,7 +149,6 @@ vmap::insert(const vmdesc &desc, uptr start, uptr len, bool dotlb)
   assert(start % PGSIZE == 0);
   assert(len % PGSIZE == 0);
 
-  bool replaced = false;
   bool fixed = (start != 0);
 
 again:
@@ -181,58 +162,26 @@ again:
 
   auto begin = vpfs_.find(start / PGSIZE);
   auto end = vpfs_.find((start + len) / PGSIZE);
+  mmu::shootdown shootdown;
 
   {
-    // new scope to release the search lock before tlbflush
+    // New scope to release the search lock before shootdown
     auto lock = vpfs_.acquire(begin, end);
-    for (auto it = begin; it < end; it += it.span()) {
-      if (!it.is_set())
-        continue;
-      if (!fixed)
-        goto again;
-      else {
-        // XXX(austin) I don't think anything prevents a page fault
-        // from reading the old VMA now and installing the new page
-        // for the old VMA after the updatepages.  Certainly not
-        // PTE_LOCK, since we don't take that here.  Why not just use
-        // the lock in the radix tree?  (We can't do that with crange,
-        // though, since it can only lock complete ranges.)
-        replaced = true;
-        break;
-      }
+
+    if (!fixed) {
+      // Verify unmapped region now that we hold the lock
+      for (auto it = begin; it < end; it += it.span())
+        if (it.is_set())
+          goto again;
     }
 
-    // XXX(sbw) Replace should tell what cores to update
+    cache.invalidate(start, len, begin, &shootdown);
+
+    // XXX(Austin) This will free backing pages before TLB shootdowns
     vpfs_.fill(begin, end, desc);
   }
 
-  bool needtlb = false;
-
-  auto update = [&needtlb](atomic<pme_t> *p) {
-    for (;;) {
-      pme_t v = p->load();
-      if (v & PTE_LOCK)
-        continue;
-      if (!(v & PTE_P))
-        break;
-      if (cmpxch(p, v, (pme_t) 0)) {
-        needtlb = true;
-        break;
-      }
-    }
-  };
-
-  if (replaced) {
-    updatepages(pml4, start, start + len, update);
-  }
-
-  if (tlb_shootdown) {
-    if (needtlb && dotlb)
-      tlbflush();
-    else
-      if (tlb_lazy)
-        tlbflush(myproc()->unmap_tlbreq_);
-  }
+  shootdown.perform();
 
   return start;
 }
@@ -240,40 +189,22 @@ again:
 int
 vmap::remove(uptr start, uptr len)
 {
+  verbose.println("vm: remove(", start, ",", len, ")");
+
+  mmu::shootdown shootdown;
+
   {
-    // new scope to release the search lock before tlbflush
+    // New scope to release the search lock before shootdown
     auto begin = vpfs_.find(start / PGSIZE);
     auto end = vpfs_.find((start + len) / PGSIZE);
     auto lock = vpfs_.acquire(begin, end);
-    // XXX(austin) This should tell us what cores to update (if any)
+    cache.invalidate(start, len, begin, &shootdown);
+    // XXX(Austin) This will free backing pages before TLB shootdowns
     vpfs_.unset(begin, end);
   }
 
-  bool needtlb = false;
+  shootdown.perform();
 
-  auto update = [&needtlb](atomic<pme_t> *p) {
-    for (;;) {
-      pme_t v = p->load();
-      if (v & PTE_LOCK)
-        continue;
-      if (!(v & PTE_P))
-        break;
-      if (cmpxch(p, v, (pme_t) 0)) {
-        needtlb = true;
-        break;
-      }
-    }
-  };
-
-  updatepages(pml4, start, start + len, update);
-
-  if (tlb_shootdown && needtlb) {
-    if (tlb_lazy) {
-      myproc()->unmap_tlbreq_ = tlbflush_req++;
-    } else {
-      tlbflush();
-    }
-  }
   return 0;
 }
 
@@ -286,9 +217,14 @@ vmap::pagefault(uptr va, u32 err)
 {
   access_type type = (err & FEC_WR) ? access_type::WRITE : access_type::READ;
   sref<class page_info> old_page;
+  mmu::shootdown shootdown;
 
   if (va >= USERTOP)
     return -1;
+
+  // When we clear from va to va+PGSIZE, make sure that's just this
+  // page.
+  va = PGROUNDDOWN(va);
 
   // Hold lock until TLB flush
   {
@@ -303,8 +239,10 @@ vmap::pagefault(uptr va, u32 err)
     // physical page until we've cleared the PTE and done TLB shoot
     // down.
     auto &desc = *it;
-    if (type == access_type::WRITE && (desc.flags & vmdesc::FLAG_COW))
+    if (type == access_type::WRITE && (desc.flags & vmdesc::FLAG_COW)) {
       old_page = desc.page;
+      cache.invalidate(va, PGSIZE, it, &shootdown);
+    }
 
     // Ensure we have a backing page and copy COW pages
     page_info *page = ensure_page(it, type);
@@ -314,27 +252,15 @@ vmap::pagefault(uptr va, u32 err)
     // Record that we wrote this physical page
     mtwriteavar("ppn:%#lx", va >> PGSHIFT);
 
-    // Get PTE
-    atomic<pme_t> *pte = walkpgdir(pml4, va, 1);
-    if (!pte)
-      throw_bad_alloc();
-
     // If this is a read COW fault, we can reuse the COW page, but
     // don't mark it writable!
     if (desc.flags & vmdesc::FLAG_COW)
-      *pte = page->pa() | PTE_P | PTE_U;
+      cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
     else
-      *pte = page->pa() | PTE_P | PTE_U | PTE_W;
+      cache.insert(va, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
   }
 
-  // If we replaced an old page, we need to update the TLB
-  if (old_page) {
-    // XXX(austin) This never_updateall condition is obviously wrong,
-    // but right now separate pgmaps don't mix with COW fork anyway.
-    if (tlb_shootdown && !never_updateall) {
-      tlbflush();
-    }
-  }
+  shootdown.perform();
   return 1;
 }
 

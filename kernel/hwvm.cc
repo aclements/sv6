@@ -12,8 +12,11 @@
 #include "vm.hh"
 #include "wq.hh"
 #include "apic.hh"
+#include "kstream.hh"
 
 using namespace std;
+
+static atomic<u64> tlbflush_req;
 
 bool have_kbase_mapping;
 
@@ -258,20 +261,6 @@ static_assert(sizeof(pgmap) == PGSIZE, "!(sizeof(pgmap) == PGSIZE)");
 
 extern pgmap kpml4;
 
-// Return the address of the PTE in page table pgdir
-// that corresponds to linear address va.  If create!=0,
-// create any required page table pages.
-atomic<pme_t>*
-walkpgdir(pgmap *pml4, u64 va, int create)
-{
-  auto it = pml4->find(va);
-  if (create)
-    it.create(PTE_U);
-  else if (!it.exists())
-    return nullptr;
-  return &*it;
-}
-
 // Create a direct mapping starting at PA 0 to VA KBASE up to
 // KBASEEND.  This augments the KCODE mapping created by the
 // bootloader.  Perform per-core control register set up.
@@ -321,13 +310,6 @@ cleanuppg(void)
   lcr3(rcr3());
 }
 
-// Set up kernel part of a page table.
-pgmap*
-setupkvm(void)
-{
-  return kpml4.kclone();
-}
-
 size_t
 safe_read_hw(void *dst, uintptr_t src, size_t n)
 {
@@ -366,8 +348,10 @@ switchvm(struct proc *p)
   mycpu()->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
   ltr(TSSSEG);
 
-  if (p->vmap != 0 && p->vmap->pml4 != 0)
-    p->vmap->pml4->switch_to();
+  // XXX(Austin) This puts the TLB tracking logic in pgmap, which is
+  // probably the wrong place.
+  if (p->vmap)
+    p->vmap->cache.switch_to();
   else
     kpml4.switch_to();
 
@@ -375,14 +359,6 @@ switchvm(struct proc *p)
   writemsr(MSR_FS_BASE, p->user_fs_);
 
   popcli();
-}
-
-// Free a page table and all the physical memory pages
-// in the user part.
-void
-freevm(pgmap *pml4)
-{
-  delete pml4;
 }
 
 // Set up CPU's kernel segment descriptors.
@@ -398,16 +374,16 @@ inittls(struct cpu *c)
   c->proc = nullptr;
 }
 
-atomic<u64> tlbflush_req;
+static void tlbflush(u64 myreq);
 
-void
+static void
 tlbflush()
 {
   u64 myreq = ++tlbflush_req;
   tlbflush(myreq);
 }
 
-void
+static void
 tlbflush(u64 myreq)
 {
   // the caller may not hold any spinlock, because other CPUs might
@@ -422,4 +398,63 @@ tlbflush(u64 myreq)
   for (int i = 0; i < ncpu; i++)
     while (cpus[i].tlbflush_done < myreq)
       /* spin */ ;
+}
+
+void
+batched_shootdown::perform() const
+{
+  if (!need_shootdown)
+    return;
+
+  tlbflush();
+}
+
+void
+batched_shootdown::on_ipi()
+{
+  pushcli();
+  u64 nreq = tlbflush_req.load();
+  lcr3(rcr3());
+  mycpu()->tlbflush_done = nreq;
+  popcli();
+}
+
+namespace mmu_shared_page_table {
+  page_map_cache::page_map_cache() : pml4(kpml4.kclone())
+  {
+    if (!pml4) {
+      swarn.println("setupkvm out of memory\n");
+      throw_bad_alloc();
+    }
+  }
+
+  page_map_cache::~page_map_cache()
+  {
+    delete pml4;
+  }
+
+  void
+  page_map_cache::__insert(uintptr_t va, pme_t pte)
+  {
+    *pml4->find(va).create(PTE_U) = pte;
+  }
+
+  void
+  page_map_cache::__invalidate(
+    uintptr_t start, uintptr_t len, shootdown *sd)
+  {
+    for (auto it = pml4->find(start); it.index() < start + len;
+         it += it.span()) {
+      if (it.is_set()) {
+        *it = 0;
+        sd->add(it.index());
+      }
+    }
+  }
+
+  void
+  page_map_cache::switch_to() const
+  {
+    pml4->switch_to();
+  }
 }
