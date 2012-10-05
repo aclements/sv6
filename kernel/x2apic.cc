@@ -140,6 +140,10 @@ x2apic_lapic::mask_pc(bool mask)
 void
 x2apic_lapic::send_ipi(struct cpu *c, int ino)
 {
+  // Unlike other MSR writes, x2apic writes are NOT serializing and
+  // hence an IPI may be received before local writes become visible.
+  // Prevent this by first performing an mfence.
+  asm volatile("mfence");
   writemsr(ICR, (((u64)c->hwid.num)<<32) | FIXED | DEASSERT | ino);
 }
 

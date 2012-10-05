@@ -436,7 +436,7 @@ namespace mmu_shared_page_table {
   void
   page_map_cache::__insert(uintptr_t va, pme_t pte)
   {
-    *pml4->find(va).create(PTE_U) = pte;
+    pml4->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
   }
 
   void
@@ -446,7 +446,7 @@ namespace mmu_shared_page_table {
     for (auto it = pml4->find(start); it.index() < start + len;
          it += it.span()) {
       if (it.is_set()) {
-        *it = 0;
+        it->store(0, memory_order_relaxed);
         sd->add(it.index());
       }
     }
