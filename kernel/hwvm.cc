@@ -68,49 +68,55 @@ walkpgdir(pgmap *pml4, u64 va, int create)
 
 // Create a direct mapping starting at PA 0 to VA KBASE up to
 // KBASEEND.  This augments the KCODE mapping created by the
-// bootloader.
+// bootloader.  Perform per-core control register set up.
 void
 initpg(void)
 {
-  u64 va = KBASE;
-  paddr pa = 0;
-  u64 size = PGSIZE*512;
-  int target_level = 1;
+  static bool kpml4_initialized;
 
-  // Can we use 1GB mappings?
-  u32 edx;
-  cpuid(CPUID_EXTENDED_1, nullptr, nullptr, nullptr, &edx);
-  if (edx & CPUID_EXTENDED_1_EDX_Page1GB) {
-    size = PGSIZE*512*512;
-    target_level = 2;
+  if (!kpml4_initialized) {
+    kpml4_initialized = true;
 
-    // Redo KCODE mapping with a 1GB page
-    auto pdpt = descend(&kpml4, KCODE, 0, true, 3);
-    assert(pdpt);
-    pdpt->e[PX(2, KCODE)] = PTE_W | PTE_P | PTE_PS | PTE_G;
-    lcr3(rcr3());
-  }
+    u64 va = KBASE;
+    paddr pa = 0;
+    u64 size = PGSIZE*512;
+    int target_level = 1;
 
-  // Create direct map region
-  while (va < KBASEEND) {
-    auto dir = &kpml4;
-    for (int level = 3; level > target_level; --level) {
-      dir = descend(dir, va, 0, true, level);
-      assert(dir);
+    // Can we use 1GB mappings?
+    u32 edx;
+    cpuid(CPUID_EXTENDED_1, nullptr, nullptr, nullptr, &edx);
+    if (edx & CPUID_EXTENDED_1_EDX_Page1GB) {
+      size = PGSIZE*512*512;
+      target_level = 2;
+
+      // Redo KCODE mapping with a 1GB page
+      auto pdpt = descend(&kpml4, KCODE, 0, true, 3);
+      assert(pdpt);
+      pdpt->e[PX(2, KCODE)] = PTE_W | PTE_P | PTE_PS | PTE_G;
+      lcr3(rcr3());
     }
 
-    atomic<pme_t> *sp = &dir->e[PX(target_level,va)];
-    u64 flags = PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
-    *sp = pa | flags;
-    va += size;
-    pa += size;
+    // Create direct map region
+    while (va < KBASEEND) {
+      auto dir = &kpml4;
+      for (int level = 3; level > target_level; --level) {
+        dir = descend(dir, va, 0, true, level);
+        assert(dir);
+      }
+
+      atomic<pme_t> *sp = &dir->e[PX(target_level,va)];
+      u64 flags = PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
+      *sp = pa | flags;
+      va += size;
+      pa += size;
+    }
+
+    // Inform system that kbase mapping is now usable
+    have_kbase_mapping = true;
   }
 
-  // Enable global pages
+  // Enable global pages.  This has to happen on every core.
   lcr4(rcr4() | CR4_PGE);
-
-  // Inform system that kbase mapping is now usable
-  have_kbase_mapping = true;
 }
 
 // Set up kernel part of a page table.

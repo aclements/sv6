@@ -59,6 +59,7 @@ mpboot(void)
   initseg(&cpus[bcpuid]);
   inittls(&cpus[bcpuid]);       // Requires initseg
 
+  initpg();
   initlapic();
   initsamp();
   initidle();
