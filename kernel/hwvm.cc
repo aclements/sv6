@@ -21,38 +21,225 @@ static const char *levelnames[] = {
   "PT", "PD", "PDP", "PML4"
 };
 
+// One level in an x86-64 page table, typically the top level.  Many
+// of the methods of pgmap assume they are being invoked on a
+// top-level PML4.
 struct pgmap {
+private:
   std::atomic<pme_t> e[PGSIZE / sizeof(pme_t)];
+
+  void free(int level, int end = 512, bool release = true)
+  {
+    if (level != 0) {
+      for (int i = 0; i < end; i++) {
+        pme_t entry = e[i].load(memory_order_relaxed);
+        if (entry & PTE_P)
+          ((pgmap*) p2v(PTE_ADDR(entry)))->free(level - 1);
+      }
+    }
+
+    if (release)
+      kfree(this);
+  }
+
+public:
+  ~pgmap()
+  {
+    // Don't free kernel portion of the pml4 and don't kfree this
+    // page, since operator delete will do that.
+    free(3, PX(3, KBASE), false);
+  }
+
+  // Delete'ing a ::pgmap also frees all sub-pgmaps (except those
+  // shared with kpml4), but does not free any non-page structure
+  // pages pointed to by the page table.  Note that there is no
+  // operator new; the only way to get a new ::pgmap is kclone().
+  static void operator delete(void *p)
+  {
+    kfree(p);
+  }
+
+  // Allocate and return a new pgmap the clones the kernel part of
+  // this pgmap.
+  pgmap *kclone() const
+  {
+    pgmap *pml4 = (pgmap*)kalloc("PML4");
+    if (!pml4)
+      throw_bad_alloc();
+    size_t k = PX(3, KBASE);
+    memset(&pml4->e[0], 0, 8*k);
+    memmove(&pml4->e[k], &e[k], 8*(512-k));
+    return pml4;
+  }
+
+  // Make this page table active on this CPU.
+  void switch_to()
+  {
+    auto nreq = tlbflush_req.load();
+    lcr3(v2p(this));
+    mycpu()->tlbflush_done = nreq;
+  }
+
+  // An iterator that references the page structure entry on a fixed
+  // level of the page structure tree for some virtual address.
+  // Moving the iterator changes the virtual address, but not the
+  // level.
+  class iterator
+  {
+    struct pgmap *pml4;
+    uintptr_t va;
+
+    // The target pgmap level of this iterator.
+    int level;
+
+    // The actual level resolve() was able to reach.  If <tt>reached
+    // > level<tt> then @c cur will be null.  If <tt>reached ==
+    // level</tt>, then @c cur will be non-null.
+    int reached;
+
+    // The pgmap containing @c va on level @c level.  As long as the
+    // iterator moves within this pgmap, we don't have to re-walk the
+    // page structure tree.
+    struct pgmap *cur;
+
+    friend class pgmap;
+
+    iterator(struct pgmap *pml4, uintptr_t va, int level)
+      : pml4(pml4), va(va), level(level)
+    {
+      resolve();
+    }
+
+    // Walk the page table structure to find @c va at @c level and set
+    // @c cur.  If @c create is zero and the path to @c va does not
+    // exist, sets @c cur to nullptr.  Otherwise, the path will be
+    // created with the flags @c create.
+    void resolve(pme_t create = 0)
+    {
+      cur = pml4;
+      for (reached = 3; reached > level; reached--) {
+        atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
+        pme_t entry = entryp->load(memory_order_relaxed);
+      retry:
+        if (entry & PTE_P) {
+          cur = (pgmap*) p2v(PTE_ADDR(entry));
+        } else if (!create) {
+          cur = nullptr;
+          break;
+        } else {
+          // XXX(Austin) Could use zalloc except during really early
+          // boot (really, zalloc shouldn't crash during early boot).
+          pgmap *next = (pgmap*) kalloc(levelnames[reached - 1]);
+          if (!next)
+            throw_bad_alloc();
+          memset(next, 0, sizeof *next);
+          if (!atomic_compare_exchange_weak(
+                entryp, &entry, v2p(next) | create)) {
+            // The above call updated entry with the current value in
+            // entryp, so retry after the entry load.
+            kfree(next);
+            goto retry;
+          }
+          cur = next;
+        }
+      }
+    }
+
+  public:
+    // Default constructor
+    constexpr iterator() : pml4(nullptr), va(0), level(0), reached(0),
+                           cur(nullptr) { }
+
+    // Return the page structure level this iterator is traversing.
+    int get_level() const
+    {
+      return level;
+    }
+
+    // Return the pgmap containing the entry returned by operator*.
+    // exists() must be true.
+    pgmap *get_pgmap() const
+    {
+      return cur;
+    }
+
+    // Return the virtual address this iterator current points to.
+    uintptr_t index() const
+    {
+      return va;
+    }
+
+    // Return the "span" over which the entry this iterator refers to
+    // will remain the same.  That is, if exists() is false, then it
+    // will be false for at least [index(), index()+span()).
+    // Otherwise, &*it will be the same for [index(), index()+span()).
+    uintptr_t span() const
+    {
+      // Calculate the beginning of the next entry on level 'reached'
+      uintptr_t next = (va | ((1ull << PXSHIFT(reached)) - 1)) + 1;
+      return next - va;
+    }
+
+    // Create this entry if it doesn't already exist.  Any created
+    // directory entries will have flags <tt>flags|PTE_P|PTE_W</tt>.
+    // After this, exists() will be true (though is_set() will only be
+    // set if is_set() was already true).
+    iterator &create(pme_t flags)
+    {
+      if (!cur)
+        resolve(flags | PTE_P | PTE_W);
+      return *this;
+    }
+
+    // Return true if this entry can be retrieved and set.  The entry
+    // itself might not be marked present.
+    bool exists() const
+    {
+      return cur;
+    }
+
+    // Return true if this entry both exists and is marked present.
+    bool is_set() const
+    {
+      return cur && ((*this)->load(memory_order_relaxed) & PTE_P);
+    }
+
+    // Return a reference to the current page structure entry.  This
+    // operation is only legal if exists() is true.
+    atomic<pme_t> &operator*() const
+    {
+      return cur->e[PX(level, va)];
+    }
+
+    atomic<pme_t> *operator->() const
+    {
+      return &**this;
+    }
+
+    // Increment the iterator by @c x.
+    iterator &operator+=(uintptr_t x)
+    {
+      uintptr_t prev = va;
+      va += x;
+      if ((va >> PXSHIFT(level + 1)) != (prev >> PXSHIFT(level + 1))) {
+        // The bottom level changed.  Re-resolve.
+        resolve();
+      }
+      return *this;
+    }
+  };
+
+  // Return an iterator pointing to @c va at page structure level @c
+  // level, where level 0 is the page table.
+  iterator find(uintptr_t va, int level = 0)
+  {
+    return iterator(this, va, level);
+  }
 };
 
+static_assert(sizeof(pgmap) == PGSIZE, "!(sizeof(pgmap) == PGSIZE)");
+
 extern pgmap kpml4;
-
-static pgmap*
-descend(pgmap *dir, u64 va, u64 flags, int create, int level)
-{
-  atomic<pme_t> *entryp;
-  pme_t entry;
-  pgmap *next;
-
-retry:
-  entryp = &dir->e[PX(level, va)];
-  entry = entryp->load();
-  if (entry & PTE_P) {
-    next = (pgmap*) p2v(PTE_ADDR(entry));
-  } else {
-    if (!create)
-      return nullptr;
-    next = (pgmap*) kalloc(levelnames[level-1]);
-    if (!next)
-      return nullptr;
-    memset(next, 0, PGSIZE);
-    if (!cmpxch(entryp, entry, v2p(next) | PTE_P | PTE_W | flags)) {
-      kfree((void*) next);
-      goto retry;
-    }
-  }
-  return next;
-}
 
 // Return the address of the PTE in page table pgdir
 // that corresponds to linear address va.  If create!=0,
@@ -60,16 +247,12 @@ retry:
 atomic<pme_t>*
 walkpgdir(pgmap *pml4, u64 va, int create)
 {
-  auto pdp = descend(pml4, va, PTE_U, create, 3);
-  if (pdp == nullptr)
+  auto it = pml4->find(va);
+  if (create)
+    it.create(PTE_U);
+  else if (!it.exists())
     return nullptr;
-  auto pd = descend(pdp, va, PTE_U, create, 2);
-  if (pd == nullptr)
-    return nullptr;
-  auto pt = descend(pd, va, PTE_U, create, 1);
-  if (pt == nullptr)
-    return nullptr;
-  return &pt->e[PX(0,va)];
+  return &*it;
 }
 
 // Create a direct mapping starting at PA 0 to VA KBASE up to
@@ -83,38 +266,25 @@ initpg(void)
   if (!kpml4_initialized) {
     kpml4_initialized = true;
 
-    u64 va = KBASE;
-    paddr pa = 0;
-    u64 size = PGSIZE*512;
-    int target_level = 1;
+    int level = 1;
+    pgmap::iterator it;
 
     // Can we use 1GB mappings?
     u32 edx;
     cpuid(CPUID_EXTENDED_1, nullptr, nullptr, nullptr, &edx);
     if (edx & CPUID_EXTENDED_1_EDX_Page1GB) {
-      size = PGSIZE*512*512;
-      target_level = 2;
+      level = 2;
 
       // Redo KCODE mapping with a 1GB page
-      auto pdpt = descend(&kpml4, KCODE, 0, true, 3);
-      assert(pdpt);
-      pdpt->e[PX(2, KCODE)] = PTE_W | PTE_P | PTE_PS | PTE_G;
+      *kpml4.find(KCODE, level).create(0) = PTE_W | PTE_P | PTE_PS | PTE_G;
       lcr3(rcr3());
     }
 
     // Create direct map region
-    while (va < KBASEEND) {
-      auto dir = &kpml4;
-      for (int level = 3; level > target_level; --level) {
-        dir = descend(dir, va, 0, true, level);
-        assert(dir);
-      }
-
-      atomic<pme_t> *sp = &dir->e[PX(target_level,va)];
-      u64 flags = PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
-      *sp = pa | flags;
-      va += size;
-      pa += size;
+    for (auto it = kpml4.find(KBASE, level); it.index() < KBASEEND;
+         it += it.span()) {
+      paddr pa = it.index() - KBASE;
+      *it.create(0) = pa | PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
     }
 
     // Inform system that kbase mapping is now usable
@@ -130,7 +300,7 @@ void
 cleanuppg(void)
 {
   // Remove 1GB identity mapping
-  kpml4.e[0] = 0;
+  *kpml4.find(0, 3) = 0;
   lcr3(rcr3());
 }
 
@@ -138,23 +308,7 @@ cleanuppg(void)
 pgmap*
 setupkvm(void)
 {
-  pgmap *pml4;
-  int k;
-
-  if((pml4 = (pgmap*)kalloc("PML4")) == 0)
-    return 0;
-  k = PX(3, KBASE);
-  memset(&pml4->e[0], 0, 8*k);
-  memmove(&pml4->e[k], &kpml4.e[k], 8*(512-k));
-  return pml4;
-}
-
-// Switch h/w page table register to the kernel-only page table,
-// for when no process is running.
-static void
-switchkvm(void)
-{
-  lcr3(v2p(&kpml4));   // switch to the kernel page table
+  return kpml4.kclone();
 }
 
 size_t
@@ -195,12 +349,10 @@ switchvm(struct proc *p)
   mycpu()->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
   ltr(TSSSEG);
 
-  u64 nreq = tlbflush_req.load();
   if (p->vmap != 0 && p->vmap->pml4 != 0)
-    lcr3(v2p(p->vmap->pml4));  // switch to new address space
+    p->vmap->pml4->switch_to();
   else
-    switchkvm();
-  mycpu()->tlbflush_done = nreq;
+    kpml4.switch_to();
 
   writefs(UDSEG);
   writemsr(MSR_FS_BASE, p->user_fs_);
@@ -208,43 +360,12 @@ switchvm(struct proc *p)
   popcli();
 }
 
-static void
-freepm(pgmap *pm, int level)
-{
-  int i;
-
-  if (level != 0) {
-    for (i = 0; i < 512; i++) {
-      pme_t entry = pm->e[i];
-      if (entry & PTE_P)
-        freepm((pgmap*) p2v(PTE_ADDR(entry)), level - 1);
-    }
-  }
-
-  kfree(pm);
-}
-
 // Free a page table and all the physical memory pages
 // in the user part.
 void
 freevm(pgmap *pml4)
 {
-  int k;
-  int i;
-
-  if(pml4 == 0)
-    panic("freevm: no pgdir");
-
-  // Don't free kernel portion of the pml4
-  k = PX(3, KBASE);
-  for (i = 0; i < k; i++) {
-    pme_t entry = pml4->e[i];
-    if (entry & PTE_P) {
-      freepm((pgmap*) p2v(PTE_ADDR(entry)), 2);
-    }
-  }
-  
-  kfree(pml4);
+  delete pml4;
 }
 
 // Set up CPU's kernel segment descriptors.
