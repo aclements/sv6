@@ -25,6 +25,23 @@ static const char *levelnames[] = {
 // of the methods of pgmap assume they are being invoked on a
 // top-level PML4.
 struct pgmap {
+  enum {
+    // Page table levels
+    L_PT = 0,
+    L_PD = 1,
+    L_PDPT = 2,
+    L_PML4 = 3,
+
+    // By the size of an entry on that level
+    L_4K = L_PT,
+    L_2M = L_PD,
+    L_1G = L_PDPT,
+    L_512G = L_PML4,
+
+    // Semantic names
+    L_PGSIZE = L_4K,
+  };
+
 private:
   std::atomic<pme_t> e[PGSIZE / sizeof(pme_t)];
 
@@ -47,7 +64,7 @@ public:
   {
     // Don't free kernel portion of the pml4 and don't kfree this
     // page, since operator delete will do that.
-    free(3, PX(3, KBASE), false);
+    free(L_PML4, PX(L_PML4, KBASE), false);
   }
 
   // Delete'ing a ::pgmap also frees all sub-pgmaps (except those
@@ -66,7 +83,7 @@ public:
     pgmap *pml4 = (pgmap*)kalloc("PML4");
     if (!pml4)
       throw_bad_alloc();
-    size_t k = PX(3, KBASE);
+    size_t k = PX(L_PML4, KBASE);
     memset(&pml4->e[0], 0, 8*k);
     memmove(&pml4->e[k], &e[k], 8*(512-k));
     return pml4;
@@ -117,7 +134,7 @@ public:
     void resolve(pme_t create = 0)
     {
       cur = pml4;
-      for (reached = 3; reached > level; reached--) {
+      for (reached = L_PML4; reached > level; reached--) {
         atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
         pme_t entry = entryp->load(memory_order_relaxed);
       retry:
@@ -231,7 +248,7 @@ public:
 
   // Return an iterator pointing to @c va at page structure level @c
   // level, where level 0 is the page table.
-  iterator find(uintptr_t va, int level = 0)
+  iterator find(uintptr_t va, int level = L_PGSIZE)
   {
     return iterator(this, va, level);
   }
@@ -266,14 +283,14 @@ initpg(void)
   if (!kpml4_initialized) {
     kpml4_initialized = true;
 
-    int level = 1;
+    int level = pgmap::L_2M;
     pgmap::iterator it;
 
     // Can we use 1GB mappings?
     u32 edx;
     cpuid(CPUID_EXTENDED_1, nullptr, nullptr, nullptr, &edx);
     if (edx & CPUID_EXTENDED_1_EDX_Page1GB) {
-      level = 2;
+      level = pgmap::L_1G;
 
       // Redo KCODE mapping with a 1GB page
       *kpml4.find(KCODE, level).create(0) = PTE_W | PTE_P | PTE_PS | PTE_G;
@@ -300,7 +317,7 @@ void
 cleanuppg(void)
 {
   // Remove 1GB identity mapping
-  *kpml4.find(0, 3) = 0;
+  *kpml4.find(0, pgmap::L_PML4) = 0;
   lcr3(rcr3());
 }
 
@@ -323,7 +340,7 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
     uintptr_t va = src + i;
     void *obj = pml4;
     int level;
-    for (level = 4; level >= 0; level--) {
+    for (level = pgmap::L_PML4; level >= 0; level--) {
       pme_t entry = ((mypgmap*)obj)->e[PX(level, va)];
       if (!(entry & PTE_P))
         return i;
