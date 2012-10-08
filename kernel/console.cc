@@ -167,15 +167,16 @@ printtrace(u64 rbp)
     __cprintf("  %016lx\n", pc[i]);
 }
 
-void __noret__
-kerneltrap(struct trapframe *tf)
+void
+printtrap(struct trapframe *tf, bool lock)
 {
   const char *name = "(no name)";
   void *kstack = nullptr;
   int pid = 0;
 
-  cli();
-  acquire(&cons.lock);
+  lock_guard<spinlock> l;
+  if (lock && cons.locking)
+    l = cons.lock.guard();
 
   if (myproc() != nullptr) {
     if (myproc()->name && myproc()->name[0] != 0)
@@ -183,7 +184,8 @@ kerneltrap(struct trapframe *tf)
     pid = myproc()->pid;
     kstack = myproc()->kstack;
   }
-  __cprintf("kernel trap %lu err 0x%x cpu %u cs %u ds %u ss %u\n"
+
+  __cprintf("trap %lu err 0x%x cpu %u cs %u ds %u ss %u\n"
             // Basic machine state
             "  rip %016lx rsp %016lx rbp %016lx\n"
             "  cr2 %016lx cr3 %016lx cr4 %016lx\n"
@@ -207,7 +209,7 @@ kerneltrap(struct trapframe *tf)
             name, pid, kstack);
   // Trap decoding
   if (tf->trapno == T_PGFLT) {
-    __cprintf("  %s %s %016lx from %s mode\n",
+    __cprintf("  page fault: %s %s %016lx from %s mode\n",
               tf->err & FEC_PR ?
               "protection violation" :
               "non-present page",
@@ -215,6 +217,16 @@ kerneltrap(struct trapframe *tf)
               rcr2(),
               tf->err & FEC_U ? "user" : "kernel");
   }
+}
+
+void __noret__
+kerneltrap(struct trapframe *tf)
+{
+  cli();
+  acquire(&cons.lock);
+
+  __cprintf("kernel ");
+  printtrap(tf, false);
   printtrace(tf->rbp);
 
   panicked = 1;

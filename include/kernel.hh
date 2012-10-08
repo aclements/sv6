@@ -85,6 +85,7 @@ void            panic(const char*, ...)
 void            kerneltrap(struct trapframe *tf) __noret__;
 void            vsnprintf(char *buf, u32 n, const char *fmt, va_list ap);
 void            snprintf(char *buf, u32 n, const char *fmt, ...);
+void            printtrap(struct trapframe *, bool lock = true);
 void            printtrace(u64 rbp);
 
 // e1000.c
