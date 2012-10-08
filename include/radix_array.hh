@@ -659,6 +659,16 @@ public:
       return old;
     }
 
+    /**
+     * Return a copy of this iterator incremented by @c skip.
+     */
+    iterator operator+(difference_type skip)
+    {
+      iterator copy = *this;
+      copy += skip;
+      return copy;
+    }
+
     /** Equality operator. */
     bool operator==(const iterator &o) const
     {
