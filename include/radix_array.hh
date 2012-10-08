@@ -159,47 +159,12 @@ private:
   struct leaf_node;
 
   static constexpr std::size_t
-  round_up_div(std::size_t a, std::size_t b)
-  {
-    return (a + b - 1) / b;
-  }
-
-  static constexpr std::size_t
   log2_exact(std::size_t x, std::size_t accum = 0)
   {
     return (x == 0) ? (1/x)
       : (x == 1) ? accum
       : ((x & 1) == 0) ? log2_exact(x >> 1, accum + 1)
       : ~0;
-  }
-
-  static constexpr std::size_t
-  log2_ceil(std::size_t x)
-  {
-    return (x == 0) ? (1/x)
-      : (x == 1) ? 0
-      : 1 + log2_ceil(x >> 1);
-  }
-
-  static constexpr key_type
-  key_shift(unsigned level)
-  {
-    return level == 0 ? 0 : LEAF_BITS + ((level - 1) * UPPER_BITS);
-  }
-
-  static constexpr key_type
-  key_mask(unsigned level)
-  {
-    return level == 0 ? (LEAF_FANOUT - 1) : (UPPER_FANOUT - 1);
-  }
-
-  /**
-   * Return the key space spanned by one slot on level @c level.
-   */
-  static constexpr key_type
-  level_span(unsigned level)
-  {
-    return (key_type)1 << key_shift(level);
   }
 
   static_assert(NodeBytes != 0, "NodeBytes must be > 0");
@@ -215,18 +180,41 @@ private:
   // Work around a bug in GCC 4.6 (fixed in 4.7) where log2 can't be
   // used in an enum.
   static constexpr std::size_t UPPER_BITS = log2_exact(UPPER_FANOUT);
-  static constexpr std::size_t LEAF_BITS = log2_exact(LEAF_FANOUT);
-  static constexpr std::size_t KEY_BITS = log2_ceil(N);
 
   static_assert(UPPER_BITS != ~0, "NodeBytes must be a power of 2");
-  static_assert(LEAF_BITS != ~0, "sizeof(T) must be a power of 2");
 
   /**
-   * Number of levels (both upper and leaf).  Derived from
-   * <tt>KEY_BITS = LEAF_BITS + (LEVELS - 1) * UPPER_BITS</tt>.
+   * Return the key space spanned by one slot on level @c level.
    */
-  static constexpr unsigned LEVELS =
-    1 + round_up_div(KEY_BITS - LEAF_BITS, UPPER_BITS);
+  static constexpr key_type
+  level_span(unsigned level)
+  {
+    return level == 0 ? 1 :
+      LEAF_FANOUT * ((key_type)1 << ((level - 1) * UPPER_BITS));
+  }
+
+  static constexpr unsigned
+  num_levels(unsigned level = 0)
+  {
+    return level_span(level) >= N ? level : num_levels(level + 1);
+  }
+
+  /**
+   * Number of levels (both upper and leaf).
+   */
+  static constexpr unsigned LEVELS = num_levels();
+
+  static constexpr key_type
+  key_div(unsigned level)
+  {
+    return level_span(level);
+  }
+
+  static constexpr key_type
+  key_mod(unsigned level)
+  {
+    return level == 0 ? LEAF_FANOUT : UPPER_FANOUT;
+  }
 
   /**
    * Return the index into @c level for the given key.  The leaf level
@@ -235,7 +223,7 @@ private:
   static constexpr unsigned
   subkey(key_type k, unsigned level)
   {
-    return (k >> key_shift(level)) & key_mask(level);
+    return (k / key_div(level)) % key_mod(level);
   }
 
 public:
@@ -356,7 +344,7 @@ public:
     }
 
     /**
-     * Set <tt>[k, k + 1<<key_shift(level))</tt> to @c x.
+     * Set <tt>[k, k + level_span(level))</tt> to @c x.
      */
     void set_at_level(unsigned level, const value_type &x) const
     {
@@ -621,8 +609,7 @@ public:
       // (e.g., null) to a non-terminal pointer (e.g., a leaf node
       // pointer); in this case operator* will lazily force the node
       // pointer further down the tree.
-      if ((k_ >> key_shift(node_level_)) !=
-          ((k_ + skip) >> key_shift(node_level_)))
+      if (k_ / key_div(node_level_) != (k_ + skip) / key_div(node_level_))
         reset_node();
       k_ += skip;
       return *this;
@@ -737,8 +724,8 @@ public:
      */
     size_type span() const
     {
-      auto bspan = base_span();
-      return bspan - (k_ & (bspan - 1));
+      auto bs = base_span();
+      return (1 + k_ / bs) * bs - k_;
     }
 
     /**
@@ -752,9 +739,9 @@ public:
      */
     size_type base() const
     {
-      // Round k_ down to the nearest multiple of the base span, where
-      // the base span is a power of two.
-      return k_ & ~(base_span() - 1);
+      // Round k_ down to the nearest multiple of the base span.
+      auto bs = base_span();
+      return (k_ / bs) * bs;
     }
 
     /**
@@ -1254,6 +1241,10 @@ private:
   struct leaf_node
   {
     T child[LEAF_FANOUT];
+
+    // Make sure leaf_node is NodeBytes big, even if sizeof(T) doesn't
+    // divide NodeBytes.
+    char _pad[0] __attribute__((aligned(NodeBytes)));
 
     /**
      * Call #create() instead.  If T's default constructor is trivial,
