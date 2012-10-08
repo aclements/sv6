@@ -165,11 +165,11 @@ private:
   }
 
   static constexpr std::size_t
-  log2_exact(std::size_t x)
+  log2_exact(std::size_t x, std::size_t accum = 0)
   {
     return (x == 0) ? (1/x)
-      : (x == 1) ? 0
-      : ((x & 1) == 0) ? 1 + log2_exact(x >> 1)
+      : (x == 1) ? accum
+      : ((x & 1) == 0) ? log2_exact(x >> 1, accum + 1)
       : ~0;
   }
 
