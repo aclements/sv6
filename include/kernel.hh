@@ -245,6 +245,37 @@ void            pushcli(void);
 void            popcli(void);
 void            getcallerpcs(void*, uptr*, int);
 
+class scoped_cli
+{
+  bool have;
+public:
+  scoped_cli() : have(true)
+  {
+    pushcli();
+  }
+
+  ~scoped_cli()
+  {
+    if (have)
+      popcli();
+  }
+
+  scoped_cli(const scoped_cli &o) = delete;
+  scoped_cli &operator=(const scoped_cli &o) = delete;
+
+  scoped_cli(scoped_cli &&o) : have(o.have)
+  {
+    o.have = false;
+  }
+
+  scoped_cli &operator=(scoped_cli &&o)
+  {
+    have = o.have;
+    o.have = false;
+    return *this;
+  }
+};
+
 // uart.c
 void            uartputc(char c);
 void            uartintr(void);
