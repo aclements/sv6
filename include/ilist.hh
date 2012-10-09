@@ -41,7 +41,7 @@
  */
 template<class Container, class Member>
 Container *
-container_from_member(Member *member, const Member Container::* mem_ptr)
+container_from_member(const Member *member, const Member Container::* mem_ptr)
 {
   // List of compilers where this trick works from Boost.Intrusive.
 #if defined(__GNUC__) || defined(__HP_aCC) || defined(__IBMCPP__) || \
@@ -370,13 +370,13 @@ struct ilist
   }
 
   iterator
-  begin() noexcept
+  begin() const noexcept
   {
     return iterator(head.next);
   }
 
   iterator
-  end() noexcept
+  end() const noexcept
   {
     return iterator(container_from_member(&head, L));
   }
@@ -384,7 +384,7 @@ struct ilist
   bool
   empty() const noexcept
   {
-    return head.next == head.prev;
+    return head.next == container_from_member(&head, L);
   }
 
   T&
@@ -470,7 +470,7 @@ struct ilist
   /**
    * Return an iterator pointing to elem, which must be in this list.
    */
-  iterator
+  static iterator
   iterator_to(T *elem)
   {
     return iterator(elem);
