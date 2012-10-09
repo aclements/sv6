@@ -15,6 +15,21 @@
 #include "page_info.hh"
 #include "kstream.hh"
 
+struct run {
+  struct run *next;
+};
+
+struct kmem {
+  char name[MAXNAME];
+  u64 size;
+  u64 ninit;
+  versioned<vptr48<run*>> freelist;
+  std::atomic<u64> nfree;
+
+  run* alloc(const char* name);
+  void free(run* r);
+};
+
 percpu<kmem, percpu_safety::internal> kmems;
 percpu<kmem, percpu_safety::internal> slabmem[slab_type_max];
 
@@ -453,6 +468,7 @@ initkalloc(u64 mbaddr)
       kfree_pool(&kmems[c], p);
       p += PGSIZE;
     }
+    cpus[c].kmem = &kmems[c];
 
     k = 0;
   }

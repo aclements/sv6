@@ -241,15 +241,12 @@ freevm(pgmap *pml4)
 void
 inittls(struct cpu *c)
 {
-  cpuid_t id = c - cpus;
-
   // Initialize cpu-local storage.
   writegs(KDSEG);
   writemsr(MSR_GS_BASE, (u64)&c->cpu);
   writemsr(MSR_GS_KERNBASE, (u64)&c->cpu);
   c->cpu = c;
   c->proc = nullptr;
-  c->kmem = &kmems[id];
 }
 
 atomic<u64> tlbflush_req;

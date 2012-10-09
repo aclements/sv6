@@ -52,21 +52,6 @@ class versioned {
   }
 };
 
-struct run {
-  struct run *next;
-};
-
-struct kmem {
-  char name[MAXNAME];
-  u64 size;
-  u64 ninit;
-  versioned<vptr48<run*>> freelist;
-  std::atomic<u64> nfree;
-
-  run* alloc(const char* name);
-  void free(run* r);
-};
-
 enum {
   slab_stack,
   slab_perf,
