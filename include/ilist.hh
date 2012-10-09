@@ -366,6 +366,7 @@ struct ilist
     head = o.head;
     // Reset other list
     o.clear();
+    return *this;
   }
 
   iterator
