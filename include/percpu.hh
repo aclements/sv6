@@ -115,16 +115,7 @@ private:
   // being stored.  This lets const members return non-const pointers
   // to this data, just like a T* const.
   mutable struct {
-#if NCPU * CACHELINE < 4096
     T v_ __mpalign__;
     __padout__;
-#else
-    // For large core counts, percpu with padding will exceed a page,
-    // which means we can't dynamically allocate objects with percpu
-    // fields.  In this case, disable the padding, but warn because
-    // this can introduce unexpected false sharing.
-#pragma message "Disabling percpu padding for large core count"
-    T v_;
-#endif
   } pad_[NCPU];
 };
