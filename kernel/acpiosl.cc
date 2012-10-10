@@ -85,13 +85,7 @@ enum {
   // This needs to be large enough to keep the allocated data type
   // aligned to ABI requirements
   ALLOC_HDR = 8,
-  // The maximum size that can be kmalloc'd.
-  ALLOC_LIMIT = PGSIZE,
 };
-
-static char alloc_bigbuf[16*1024];
-static char *alloc_pos;
-static unsigned alloc_used;
 
 void *
 AcpiOsAllocate(ACPI_SIZE size)
@@ -99,21 +93,9 @@ AcpiOsAllocate(ACPI_SIZE size)
   uint8_t *base;
   ACPI_SIZE alloc_size = size + ALLOC_HDR;
 
-  if (alloc_size < ALLOC_LIMIT) {
-    base = (uint8_t*)kmalloc(alloc_size, "(acpi)");
-    if (!base)
-      return nullptr;
-  } else {
-    // kmalloc can't handle this, but large allocations are
-    // short-lived in practice, so we use a simple scratch allocator.
-    if (alloc_used == 0)
-      alloc_pos = alloc_bigbuf;
-    base = (uint8_t*)alloc_pos;
-    alloc_pos += alloc_size;
-    alloc_used += alloc_size;
-    if (alloc_pos > alloc_bigbuf + sizeof(alloc_bigbuf))
-      panic("AcpiOsAllocate: overflowed alloc_bigbuf");
-  }
+  base = (uint8_t*)kmalloc(alloc_size, "(acpi)");
+  if (!base)
+    return nullptr;
 
   static_assert(sizeof(ACPI_SIZE) <= ALLOC_HDR, "ALLOC_HDR too small");
   *(ACPI_SIZE*)base = alloc_size;
@@ -125,10 +107,7 @@ AcpiOsFree(void *ptr)
 {
   uint8_t *base = (uint8_t*)ptr - ALLOC_HDR;
   ACPI_SIZE alloc_size = *(ACPI_SIZE*)base;
-  if (ptr >= alloc_bigbuf && ptr < alloc_bigbuf + sizeof(alloc_bigbuf))
-    alloc_used -= alloc_size;
-  else
-    kmfree(base, alloc_size);
+  kmfree(base, alloc_size);
 }
 
 // Multithreading
