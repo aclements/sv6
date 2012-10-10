@@ -377,13 +377,10 @@ consoleread(struct inode *ip, char *dst, u32 off, u32 n)
 void
 console_stream::_begin_print()
 {
-  if (!cons.locking)
-    return;
-
   // Acquire cons.lock in a reentrant way.  The holder check is
   // technically racy, but can't succeed unless this CPU is the
   // holder, in which case it's not racy.
-  if (cons.holder == mycpu()) {
+  if (!cons.locking || cons.holder == mycpu()) {
     ++cons.nesting_count;
     return;
   }
@@ -395,10 +392,7 @@ console_stream::_begin_print()
 void
 console_stream::end_print()
 {
-  if (!cons.locking)
-    return;
-
-  if (--cons.nesting_count != 0)
+  if (--cons.nesting_count != 0 || !cons.locking)
     return;
 
   assert(cons.holder == mycpu());
