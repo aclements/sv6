@@ -20,6 +20,7 @@
 #define RCU_TYPE_DEBUG DEBUG
 #define LOCKSTAT      DEBUG
 #define ALLOC_MEMSET  DEBUG
+#define BUDDY_DEBUG   DEBUG
 #define KSHAREDSIZE   (32 << 10)
 #define USERWQSIZE    (1 << 14)
 #define USTACKPAGES   8

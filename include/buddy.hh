@@ -6,6 +6,10 @@
 
 #include "ilist.hh"
 
+#ifndef BUDDY_DEBUG
+#define BUDDY_DEBUG 1
+#endif
+
 // Binary buddy allocator.
 class buddy_allocator
 {
@@ -49,6 +53,9 @@ private:
   // Flip the bitmap bit for the buddy pair containing ptr and return
   // its new value.
   bool flip_bit(void *ptr, std::size_t order);
+
+  bool is_allocated(void *ptr, std::size_t order);
+  void mark_allocated(void *ptr, std::size_t order, bool allocated);
 
 public:
   // Construct a buddy allocator with no memory.  Useful in
@@ -123,5 +130,13 @@ private:
     // will be combined and live on a higher-order list).  In total,
     // these bitmaps add up to 1 bit of metadata per MIN_SIZE block.
     unsigned char *bitmap;
+
+#if BUDDY_DEBUG
+    // Debug bitmap.  Same layout as bitmap, but indicates the status
+    // of the first buddy in each pair: 0 if free and 1 if allocated.
+    // XOR'ing this with the corresponding bit in bitmap will give the
+    // status of the other buddy in the pair.
+    unsigned char *debug;
+#endif
   } orders[MAX_ORDER + 1];
 };

@@ -1,4 +1,7 @@
 #include "buddy.hh"
+#if BUDDY_DEBUG
+#include "kstream.hh"
+#endif
 
 #include <cassert>
 #include <cstring>
@@ -15,12 +18,20 @@ buddy_allocator::buddy_allocator(void *base, size_t len)
     orders[i].bitmap = (unsigned char*)base;
     memset(orders[i].bitmap, 0, bitmapSize);
     base = (char*)base + bitmapSize;
+#if BUDDY_DEBUG
+    orders[i].debug = (unsigned char*)base;
+    memset(orders[i].debug, 0, bitmapSize);
+    base = (char*)base + bitmapSize;
+#endif
     nBlocks /= 2;
   }
 
   // The MAX_ORDER bitmap is unused because it doesn't have buddy
   // pairs.
   orders[MAX_ORDER].bitmap = nullptr;
+#if BUDDY_DEBUG
+  orders[MAX_ORDER].debug = nullptr;
+#endif
 
   // Round both bounds to multiples of MIN_SIZE << MAX_ORDER.  Without
   // this, some blocks wouldn't have buddies, which would complicate
@@ -48,6 +59,7 @@ buddy_allocator::alloc_order(size_t order)
       // Now both buddies must be allocated (otherwise they would have
       // been promoted).
       assert(state == 0);
+      mark_allocated(block, order, true);
     }
 
     return (void*)block;
@@ -67,6 +79,7 @@ buddy_allocator::alloc_order(size_t order)
     // Mark this pair as half-allocated
     bool state = flip_bit(parent, order);
     assert(state == 1);
+    mark_allocated(parent, order, true);
 
     return parent;
   }
@@ -75,6 +88,19 @@ buddy_allocator::alloc_order(size_t order)
 void
 buddy_allocator::free_order(void *ptr, size_t order)
 {
+  assert(base <= (uintptr_t)ptr && (uintptr_t)ptr < limit);
+#if BUDDY_DEBUG
+  if (order < MAX_ORDER)
+    if (!is_allocated(ptr, order))
+      spanic.println("double free or too-small free of ", ptr,
+                     " of size ", MIN_SIZE << order, " (order ", order, ")");
+  if (order > 0)
+    if (is_allocated(ptr, order - 1))
+      spanic.println("too-large free of ", ptr,
+                     " of size ", MIN_SIZE << order, " (order ", order, ")");
+#endif
+  mark_allocated(ptr, order, false);
+
   if (order < MAX_ORDER && flip_bit(ptr, order) == 0) {
     // This block's buddy is also free.  Remove the buddy from its
     // list, combine them, and free to the higher order.
@@ -97,6 +123,42 @@ buddy_allocator::flip_bit(void *ptr, size_t order)
   unsigned char mask = 1 << (bit % 8);
   return (orders[order].bitmap[bit / 8] ^= mask) & mask;
 }
+
+#if BUDDY_DEBUG
+bool
+buddy_allocator::is_allocated(void *ptr, size_t order)
+{
+  size_t bit = (((uintptr_t)ptr - base) / MIN_SIZE) >> (order + 1);
+  unsigned char mask = 1 << (bit % 8);
+  uintptr_t parent = (uintptr_t)ptr & ~((uintptr_t)MIN_SIZE << order);
+  bool debug = orders[order].debug[bit / 8] & mask;
+  if ((uintptr_t)ptr == parent)
+    // First of buddy pair
+    return debug;
+  else
+    // Second of buddy pair
+    return debug ^ !!(orders[order].bitmap[bit / 8] & mask);
+}
+
+void
+buddy_allocator::mark_allocated(void *ptr, std::size_t order, bool allocated)
+{
+  uintptr_t parent = (uintptr_t)ptr & ~((uintptr_t)MIN_SIZE << order);
+  if ((uintptr_t)ptr != parent)
+    return;
+  size_t bit = (((uintptr_t)ptr - base) / MIN_SIZE) >> (order + 1);
+  unsigned char mask = 1 << (bit % 8);
+  if (allocated)
+    orders[order].debug[bit / 8] |= mask;
+  else
+    orders[order].debug[bit / 8] &= ~mask;
+}
+#else
+void
+buddy_allocator::mark_allocated(void *ptr, std::size_t order, bool allocated)
+{
+}
+#endif
 
 void
 buddy_allocator::get_stats(stats *out) const
