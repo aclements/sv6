@@ -24,6 +24,9 @@
 // region spans a physical memory hole.
 #define MAX_BUDDIES (NCPU + 16)
 
+// The maximum number of recently freed pages to cache per core.
+#define MAX_HOT_PAGES 128
+
 // Our slabs aren't really slabs.  They're just pre-sized and
 // pre-named regions.
 struct slab {
@@ -53,6 +56,9 @@ static size_t nbuddies;
 struct cpu_mem
 {
   size_t first_buddy;
+  // Hot page cache of recently freed pages
+  void *hot_pages[MAX_HOT_PAGES];
+  size_t nhot;
 };
 
 // Prefer mycpu()->mem for local access to this.
@@ -303,11 +309,37 @@ kalloc(const char *name, size_t size)
 
   void *res = nullptr;
 
-  auto first = mycpu()->mem->first_buddy;
-  for (int b = 0; !res && b < nbuddies; b++) {
-    auto &lb = buddies[(b + first) % nbuddies];
-    auto l = lb.lock.guard();
-    res = lb.alloc.alloc_nothrow(size);
+  if (size == PGSIZE) {
+    // Go to the hot list
+    scoped_cli cli;
+    auto mem = mycpu()->mem;
+    if (mem->nhot == 0) {
+      // No hot pages; fill half of the cache
+      auto &lb = buddies[mem->first_buddy];
+      auto l = lb.lock.guard();
+      while (mem->nhot < MAX_HOT_PAGES) {
+        void *page = lb.alloc.alloc_nothrow(PGSIZE);
+        if (!page) {
+          if (mem->nhot == 0)
+            // We couldn't allocate any pages; drop through to the
+            // general allocation path
+            goto general;
+          break;
+        }
+        mem->hot_pages[mem->nhot++] = page;
+      }
+    }
+    res = mem->hot_pages[--mem->nhot];
+  } else {
+    // General allocation path for non-PGSIZE allocations or if we
+    // can't fill our hot page cache.
+  general:
+    auto first = mycpu()->mem->first_buddy;
+    for (int b = 0; !res && b < nbuddies; b++) {
+      auto &lb = buddies[(b + first) % nbuddies];
+      auto l = lb.lock.guard();
+      res = lb.alloc.alloc_nothrow(size);
+    }
   }
 
   if (res) {
@@ -395,6 +427,7 @@ initkalloc(u64 mbaddr)
     // XXX(austin) The physical regions for each core should come from NUMA
     cpus[c].mem = &cpu_mem[c];
     cpu_mem[c].first_buddy = nbuddies;
+    cpu_mem[c].nhot = 0;
     size_t core_size = mem.bytes_after(p) / (NCPU - c);
     while (core_size > buddy_allocator::MAX_SIZE) {
       if (nbuddies == MAX_BUDDIES)
@@ -433,6 +466,46 @@ initkalloc(u64 mbaddr)
 void
 kfree(void *v, size_t size)
 {
+  // Fill with junk to catch dangling refs.
+  if (ALLOC_MEMSET && kinited && size <= 16384)
+    memset(v, 1, size);
+
+  if (kinited)
+    mtunlabel(mtrace_label_block, v);
+
+  if (size == PGSIZE) {
+    // Free to the hot list
+    scoped_cli cli;
+    auto mem = mycpu()->mem;
+    if (mem->nhot == MAX_HOT_PAGES) {
+      // There's no more room in the hot pages list, so free half of
+      // it.  We sort the list so we can merge it with the buddy
+      // allocator list, minimizing and batching our locks.
+      std::sort(mem->hot_pages, mem->hot_pages + (MAX_HOT_PAGES / 2));
+      size_t buddy = -1;
+      lock_guard<spinlock> lock;
+      for (size_t i = 0; i < MAX_HOT_PAGES / 2; ++i) {
+        void *ptr = mem->hot_pages[i];
+        if (buddy == -1 || ptr >= buddies[buddy].alloc.get_limit()) {
+          // Find the allocator containing ptr.
+          for (++buddy; ptr >= buddies[buddy].alloc.get_limit(); ++buddy);
+          assert(buddy < nbuddies);
+          lock.release();
+          lock = buddies[buddy].lock.guard();
+        }
+        buddies[buddy].alloc.free(ptr, PGSIZE);
+      }
+      lock.release();
+      // Shift hot page list down
+      // XXX(Austin) Could use two lists and switch off
+      mem->nhot = MAX_HOT_PAGES - (MAX_HOT_PAGES / 2);
+      memmove(mem->hot_pages, mem->hot_pages + (MAX_HOT_PAGES / 2),
+              mem->nhot * sizeof *mem->hot_pages);
+    }
+    mem->hot_pages[mem->nhot++] = v;
+    return;
+  }
+
   // Find the allocator to return v to.
   locked_buddy *lb = nullptr;
 
@@ -450,13 +523,6 @@ kfree(void *v, size_t size)
     if (v < lb->alloc.get_base())
       panic("kfree: pointer %p is not in an allocated region", v);
   }
-
-  // Fill with junk to catch dangling refs.
-  if (ALLOC_MEMSET && kinited && size <= 16384)
-    memset(v, 1, size);
-
-  if (kinited)
-    mtunlabel(mtrace_label_block, v);
 
   assert(lb);
   auto l = lb->lock.guard();
