@@ -95,6 +95,16 @@ kmalloc_small(size_t b, const char *name)
     }
   }
 
+  if (ALLOC_MEMSET) {
+    char* chk = (char*)h + sizeof(struct header);
+    for (int i = 0; i < (1<<b)-sizeof(struct header); i++)
+      if (chk[i] != 3) {
+        console.print(shexdump(chk, 1<<b));
+        panic("kmalloc: free memory was overwritten %p+%x", chk, i);
+      }
+    memset(h, 4, (1<<b));
+  }
+
   return h;
 }
 
@@ -113,16 +123,6 @@ kmalloc(u64 nbytes, const char *name)
 
   mtlabel(mtrace_label_heap, (void*) h, nbytes, name, strlen(name));
 
-  if (ALLOC_MEMSET) {
-    char* chk = (char*)h + sizeof(struct header);
-    for (int i = 0; i < (1<<b)-sizeof(struct header); i++)
-      if (chk[i] != 3) {
-        console.print(shexdump(chk, nbytes));
-        panic("kmalloc: free memory was overwritten %p+%x", chk, i);
-      }
-    memset(h, 4, (1<<b));
-  }
-
   return h;
 }
 
@@ -132,14 +132,14 @@ kmfree(void *ap, u64 nbytes)
   int b = bucket(nbytes);
 
   struct header *h = (struct header *) ap;
-  if (ALLOC_MEMSET)
-    memset(ap, 3, (1<<b));
-
   mtunlabel(mtrace_label_heap, ap);
 
   if (b >= PGSHIFT) {
     kfree(ap, (size_t)1 << b);
   } else {
+    if (ALLOC_MEMSET)
+      memset(ap, 3, (1<<b));
+
     int c = mycpu()->id;
     for (;;) {
       auto headptr = freelists[c].buckets[b].load();

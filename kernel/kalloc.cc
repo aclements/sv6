@@ -343,8 +343,20 @@ kalloc(const char *name, size_t size)
   }
 
   if (res) {
-    if (ALLOC_MEMSET && size <= 16384)
+    if (ALLOC_MEMSET && size <= 16384) {
+      char* chk = (char*)res;
+      for (int i = 0; i < size - 2*sizeof(void*); i++) {
+        // Ignore buddy allocator list links at the beginning of each
+        // page
+        if ((uintptr_t)&chk[i] % PGSIZE < sizeof(void*)*2)
+          continue;
+        if (chk[i] != 1)
+          spanic.println(shexdump(chk, size),
+                         "kalloc: free memory was overwritten ",
+                         (void*)chk, "+", i);
+      }
       memset(res, 2, size);
+    }
     if (!name)
       name = "kmem";
     mtlabel(mtrace_label_block, res, size, name, strlen(name));
@@ -435,6 +447,8 @@ initkalloc(u64 mbaddr)
       // Make sure we have enough space for an allocator
       p = (char*)mem.alloc(p, buddy_allocator::MAX_SIZE);
       size_t size = std::min(core_size, mem.max_alloc(p));
+      if (ALLOC_MEMSET)
+        memset(p, 1, size);
       buddies[nbuddies].lock = spinlock("buddy");
       buddies[nbuddies].alloc = buddy_allocator(p, size);
       p = (char*)buddies[nbuddies].alloc.get_limit();
