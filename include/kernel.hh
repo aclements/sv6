@@ -142,8 +142,8 @@ struct proc *   idleproc(void);
 void            idlezombie(struct proc*);
 
 // kalloc.c
-char*           kalloc(const char *name);
-void            kfree(void*);
+char*           kalloc(const char *name, size_t size = PGSIZE);
+void            kfree(void*, size_t size = PGSIZE);
 void*           ksalloc(int slabtype);
 void            ksfree(int slabtype, void*);
 void*           kmalloc(u64 nbytes, const char *name);

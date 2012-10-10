@@ -14,24 +14,24 @@
 #include "wq.hh"
 #include "page_info.hh"
 #include "kstream.hh"
+#include "buddy.hh"
+#include "log2.hh"
 
-struct run {
-  struct run *next;
-};
+#include <algorithm>
 
-struct kmem {
+// The maximum number of buddy allocators.  Each CPU needs at least
+// one buddy allocator, and we need some margin in case a CPU's memory
+// region spans a physical memory hole.
+#define MAX_BUDDIES (NCPU + 16)
+
+// Our slabs aren't really slabs.  They're just pre-sized and
+// pre-named regions.
+struct slab {
   char name[MAXNAME];
-  u64 size;
-  u64 ninit;
-  versioned<vptr48<run*>> freelist;
-  std::atomic<u64> nfree;
-
-  run* alloc(const char* name);
-  void free(run* r);
+  u64 order;
 };
 
-percpu<kmem, percpu_safety::internal> kmems;
-percpu<kmem, percpu_safety::internal> slabmem[slab_type_max];
+struct slab slabmem[slab_type_max];
 
 extern char end[]; // first address after kernel loaded from ELF file
 char *newend;
@@ -39,6 +39,24 @@ char *newend;
 page_info *page_info_array;
 std::size_t page_info_len;
 paddr page_info_base;
+
+struct locked_buddy
+{
+  spinlock lock;
+  buddy_allocator alloc;
+  __padout__;
+};
+
+static locked_buddy buddies[MAX_BUDDIES];
+static size_t nbuddies;
+
+struct cpu_mem
+{
+  size_t first_buddy;
+};
+
+// Prefer mycpu()->mem for local access to this.
+static percpu<struct cpu_mem> cpu_mem;
 
 static int kinited __mpalign__;
 
@@ -156,12 +174,36 @@ public:
     panic("phys_map: bad start address %p", start);
   }
 
+  // Return the maximum allocation size for an allocation starting at
+  // @c start.
+  size_t max_alloc(void *start) const
+  {
+    uintptr_t pa = v2p(start);
+    for (size_t i = 0; i < nregions; ++i)
+      if (regions[i].base <= pa && pa <= regions[i].end)
+        return regions[i].end - (uintptr_t)pa;
+    panic("phys_map: bad start address %p", start);
+  }
+
   // Return the total number of bytes in the memory map.
   size_t bytes() const
   {
     size_t total = 0;
     for (size_t i = 0; i < nregions; ++i)
       total += regions[i].end - regions[i].base;
+    return total;
+  }
+
+  // Return the total number of bytes after address start.
+  size_t bytes_after(void *start) const
+  {
+    uintptr_t pa = v2p(start);
+    size_t total = 0;
+    for (size_t i = 0; i < nregions; ++i)
+      if (regions[i].base > pa)
+        total += regions[i].end - regions[i].base;
+      else if (regions[i].base <= pa && pa <= regions[i].end)
+        total += regions[i].end - (uintptr_t)pa;
     return total;
   }
 
@@ -229,146 +271,70 @@ pgalloc(void)
   return (char*) p;
 }
 
-//
-// kmem
-//
-run*
-kmem::alloc(const char* name)
-{
-  run* r;
-
-  for (;;) {
-    auto headval = freelist.load();
-    r = headval.ptr();
-    if (!r)
-      return nullptr;
-    
-    run *nxt = r->next;
-    if (freelist.compare_exchange(headval, nxt)) {
-      if (r->next != nxt)
-        panic("kmem:alloc: aba race %p %p %p\n",
-              r, r->next, nxt);
-      nfree--;
-      if (!name)
-        name = this->name;
-      mtlabel(mtrace_label_block, r, size, name, strlen(name));
-      return r;
-    }
-  }
-}
-
-void
-kmem::free(run* r)
-{
-  if (kinited)
-    mtunlabel(mtrace_label_block, r);
-
-  for (;;) {
-    auto headval = freelist.load();
-    r->next = headval.ptr();
-    if (freelist.compare_exchange(headval, r))
-      break;
-  }
-  nfree++;
-}
-
-// Free the page of physical memory pointed at by v,
-// which normally should have been returned by a
-// call to kalloc().  (The exception is when
-// initializing the allocator; see kinit above.)
-static void
-kfree_pool(struct kmem *m, char *v)
-{
-  if ((uptr)v % PGSIZE) 
-    panic("kfree_pool: misaligned %p", v);
-
-  // Fill with junk to catch dangling refs.
-  if (ALLOC_MEMSET && kinited && m->size <= 16384)
-    memset(v, 1, m->size);
-
-  m->free((run*)v);
-}
-
-static void
-kmemprint_pool(const percpu<kmem, percpu_safety::internal> &km)
-{
-  cprintf("pool %s: [ ", &km[0].name[1]);
-  for (u32 i = 0; i < NCPU; i++)
-    if (i == mycpu()->id)
-      cprintf("<%lu> ", km[i].nfree.load());
-    else
-      cprintf("%lu ", km[i].nfree.load());
-  cprintf("]\n");
-}
-
 void
 kmemprint()
 {
-  kmemprint_pool(kmems);
-  for (int i = 0; i < slab_type_max; i++)
-    kmemprint_pool(slabmem[i]);
+  for (int cpu = 0; cpu < NCPU; ++cpu) {
+    size_t last = cpu + 1 < NCPU ? cpu_mem[cpu + 1].first_buddy : nbuddies;
+    console.print("cpu ", cpu, ":");
+    for (auto buddy = cpu_mem[cpu].first_buddy; buddy < last; ++buddy) {
+      buddy_allocator::stats stats;
+      {
+        auto l = buddies[buddy].lock.guard();
+        buddies[buddy].alloc.get_stats(&stats);
+      }
+      console.print(" ", buddy, ":[");
+      for (size_t order = 0; order <= buddy_allocator::MAX_ORDER; ++order)
+        console.print(stats.nfree[order], " ");
+      console.print("free ", stats.free, "]");
+    }
+    console.println();
+  }
 }
 
-
-static char*
-kalloc_pool(const percpu<kmem, percpu_safety::internal> &km, const char *name)
-{
-  struct run *r = 0;
-  struct kmem *m;
-
-  u32 startcpu = mycpu()->id;
-  for (u32 i = 0; r == 0 && i < NCPU; i++) {
-    int cn = (i + startcpu) % NCPU;
-    m = &km[cn];
-    r = m->alloc(name);
-  }
-
-  if (r == 0) {
-    cprintf("kalloc: out of memory in pool %s\n", km.get_unchecked()->name);
-    // kmemprint();
-    return 0;
-  }
-
-  if (ALLOC_MEMSET && m->size <= 16384)
-    memset(r, 2, m->size);
-  return (char*)r;
-}
-
-// Allocate one 4096-byte page of physical memory.
-// Returns a pointer that the kernel can use.
-// Returns 0 if the memory cannot be allocated.
 char*
-kalloc(const char *name)
+kalloc(const char *name, size_t size)
 {
-  if (!kinited)
+  if (!kinited) {
+    // XXX Could have a less restricted boot allocator
+    assert(size == PGSIZE);
     return pgalloc();
-  return kalloc_pool(kmems, name);
+  }
+
+  void *res = nullptr;
+
+  auto first = mycpu()->mem->first_buddy;
+  for (int b = 0; !res && b < nbuddies; b++) {
+    auto &lb = buddies[(b + first) % nbuddies];
+    auto l = lb.lock.guard();
+    res = lb.alloc.alloc_nothrow(size);
+  }
+
+  if (res) {
+    if (ALLOC_MEMSET && size <= 16384)
+      memset(res, 2, size);
+    if (!name)
+      name = "kmem";
+    mtlabel(mtrace_label_block, res, size, name, strlen(name));
+    return (char*)res;
+  } else {
+    cprintf("kalloc: out of memory\n");
+    return nullptr;
+  }
 }
 
 void *
 ksalloc(int slab)
 {
-  return kalloc_pool(slabmem[slab], nullptr);
+  // XXX(Austin) kalloc should have a kalloc_order variant
+  return kalloc(slabmem[slab].name, 1 << slabmem[slab].order);
 }
-
-void
-slabinit(struct kmem *k, char **p, u64 *off)
-{
-  for (int i = 0; i < k->ninit; i++) {
-    *p = (char*)mem.alloc(*p, k->size, PGSIZE);
-    kfree_pool(k, *p);
-    *p += k->size;
-    *off = *off+k->size;
-  }
-}  
 
 // Initialize free list of physical pages.
 void
 initkalloc(u64 mbaddr)
 {
   char *p;
-  u64 n;
-  u64 k;
 
   parse_mb_map((Mbdata*) p2v(mbaddr));
 
@@ -420,71 +386,85 @@ initkalloc(u64 mbaddr)
   // make it NUMA aware so the metadata for pages is stored on the
   // same physical node as the pages.
 
-  for (int c = 0; c < NCPU; c++) {
-    kmems[c].name[0] = (char) c + '0';
-    safestrcpy(kmems[c].name+1, "kmem", MAXNAME-1);
-    kmems[c].size = PGSIZE;
-  }
-
   if (VERBOSE)
     cprintf("%lu mbytes\n", mem.bytes() / (1<<20));
-  n = (mem.bytes() - v2p(newend)) / NCPU;
-  if (n & (PGSIZE-1))
-    n = PGROUNDDOWN(n);
 
+  // Construct buddy allocators
   p = (char*)PGROUNDUP((uptr)newend);
-  k = 0;
   for (int c = 0; c < NCPU; c++) {
-    // Fill slab allocators
-    strncpy(slabmem[slab_stack][c].name, " kstack", MAXNAME);
-    slabmem[slab_stack][c].size = KSTACKSIZE;
-    slabmem[slab_stack][c].ninit = CPUKSTACKS;
-
-    strncpy(slabmem[slab_perf][c].name, " kperf", MAXNAME);
-    slabmem[slab_perf][c].size = PERFSIZE;
-    slabmem[slab_perf][c].ninit = 1;
-
-    strncpy(slabmem[slab_kshared][c].name, " kshared", MAXNAME);
-    slabmem[slab_kshared][c].size = KSHAREDSIZE;
-    slabmem[slab_kshared][c].ninit = CPUKSTACKS;
-
-    strncpy(slabmem[slab_wq][c].name, " wq", MAXNAME);
-    slabmem[slab_wq][c].size = PGROUNDUP(wq_size());
-    slabmem[slab_wq][c].ninit = 2;
-
-    strncpy(slabmem[slab_userwq][c].name, " uwq", MAXNAME);
-    slabmem[slab_userwq][c].size = USERWQSIZE;
-    slabmem[slab_userwq][c].ninit = CPUKSTACKS;
-
-    for (int i = 0; i < slab_type_max; i++) {
-      slabmem[i][c].name[0] = (char) c + '0';
-      slabinit(&slabmem[i][c], &p, &k);
+    // XXX(austin) The physical regions for each core should come from NUMA
+    cpus[c].mem = &cpu_mem[c];
+    cpu_mem[c].first_buddy = nbuddies;
+    size_t core_size = mem.bytes_after(p) / (NCPU - c);
+    while (core_size > buddy_allocator::MAX_SIZE) {
+      if (nbuddies == MAX_BUDDIES)
+        panic("MAX_BUDDIES is too low");
+      // Make sure we have enough space for an allocator
+      p = (char*)mem.alloc(p, buddy_allocator::MAX_SIZE);
+      size_t size = std::min(core_size, mem.max_alloc(p));
+      buddies[nbuddies].lock = spinlock("buddy");
+      buddies[nbuddies].alloc = buddy_allocator(p, size);
+      p = (char*)buddies[nbuddies].alloc.get_limit();
+      core_size -= size;
+      ++nbuddies;
     }
-   
-    // The rest goes to the page allocator
-    // XXX(austin) This should come from NUMA
-    for (; k < n; k += PGSIZE) {
-      p = (char*)mem.alloc(p, PGSIZE, PGSIZE);
-      kfree_pool(&kmems[c], p);
-      p += PGSIZE;
-    }
-    cpus[c].kmem = &kmems[c];
-
-    k = 0;
   }
+
+  // Configure slabs
+  strncpy(slabmem[slab_stack].name, "kstack", MAXNAME);
+  slabmem[slab_stack].order = ceil_log2(KSTACKSIZE);
+
+  strncpy(slabmem[slab_perf].name, "kperf", MAXNAME);
+  slabmem[slab_perf].order = ceil_log2(PERFSIZE);
+
+  strncpy(slabmem[slab_kshared].name, "kshared", MAXNAME);
+  slabmem[slab_kshared].order = ceil_log2(KSHAREDSIZE);
+
+  strncpy(slabmem[slab_wq].name, "wq", MAXNAME);
+  slabmem[slab_wq].order = ceil_log2(PGROUNDUP(wq_size()));
+
+  strncpy(slabmem[slab_userwq].name, "uwq", MAXNAME);
+  slabmem[slab_userwq].order = ceil_log2(USERWQSIZE);
 
   kminit();
   kinited = 1;
 }
 
 void
-kfree(void *v)
+kfree(void *v, size_t size)
 {
-  kfree_pool(mykmem(), (char*) v);
+  // Find the allocator to return v to.
+  locked_buddy *lb = nullptr;
+
+  // Fast path for allocations from our allocator.
+  auto first = mycpu()->mem->first_buddy;
+  if (buddies[first].alloc.get_base() <= v &&
+      v < buddies[first].alloc.get_limit()) {
+    lb = &buddies[first];
+  } else {
+    // Find the allocator
+    lb = std::lower_bound(buddies, buddies + nbuddies, v,
+                          [](locked_buddy &lb, void *v) {
+                            return lb.alloc.get_limit() < v;
+                          });
+    if (v < lb->alloc.get_base())
+      panic("kfree: pointer %p is not in an allocated region", v);
+  }
+
+  // Fill with junk to catch dangling refs.
+  if (ALLOC_MEMSET && kinited && size <= 16384)
+    memset(v, 1, size);
+
+  if (kinited)
+    mtunlabel(mtrace_label_block, v);
+
+  assert(lb);
+  auto l = lb->lock.guard();
+  lb->alloc.free(v, size);
 }
 
 void
 ksfree(int slab, void *v)
 {
-  kfree_pool(&*slabmem[slab], (char*) v);
+  kfree(v, 1 << slabmem[slab].order);
 }

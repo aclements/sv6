@@ -25,7 +25,7 @@ struct cpu {
   // Cpu-local storage variables; see below
   struct cpu *cpu;
   struct proc *proc;           // The currently-running process.
-  struct kmem *kmem;           // The per-core memory table
+  struct cpu_mem *mem;         // The per-core memory metadata
   u64 syscallno;               // Temporary used by sysentry
 } __mpalign__;
 
