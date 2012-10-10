@@ -166,21 +166,12 @@ namespace __cxxabiv1 {
   void (*__unexpected_handler)() = cxx_unexpected;
 };
 
-static char malloc_buf[65536];
-static std::atomic<size_t> malloc_idx;
 static bool malloc_proc = false;
 
 extern "C" void* malloc(size_t);
 void*
 malloc(size_t n)
 {
-  if (n > PGSIZE) {
-    // libgcc_eh needs to allocate a large chunk of memory once
-    size_t myoff = atomic_fetch_add(&malloc_idx, n);
-    assert(myoff + n <= sizeof(malloc_buf));
-    return &malloc_buf[myoff];
-  }
-
   if (malloc_proc) {
     assert(n <= sizeof(myproc()->exception_buf));
     assert(cmpxch(&myproc()->exception_inuse, 0, 1));
@@ -196,9 +187,6 @@ extern "C" void free(void*);
 void
 free(void* vp)
 {
-  if (vp >= malloc_buf && vp < malloc_buf + sizeof(malloc_buf))
-    return;
-
   if (vp == myproc()->exception_buf) {
     myproc()->exception_inuse = 0;
     return;
