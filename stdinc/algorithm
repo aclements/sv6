@@ -1,0 +1,142 @@
+// -*- c++ -*-
+
+#pragma once
+
+namespace std {
+  // [C++11 25.4.7]
+  template<class T>
+  const T& min(const T& a, const T& b)
+  {
+    if (b < a)
+      return b;
+    return a;
+  }
+
+  template<class T, class Compare>
+  const T& min(const T& a, const T& b, Compare comp)
+  {
+    if (Compare(b, a))
+      return b;
+    return a;
+  }
+
+  template<class T>
+  const T& max(const T& a, const T& b)
+  {
+    if (a < b)
+      return b;
+    return a;
+  }
+
+  template<class T, class Compare>
+  const T& max(const T& a, const T& b, Compare comp)
+  {
+    if (Compare(a, b))
+      return b;
+    return a;
+  }
+
+  template<class RandomAccessIterator, class Compare>
+  void sort(RandomAccessIterator first, RandomAccessIterator last,
+            Compare comp)
+  {
+    auto dist = last - first;
+    if (dist <= 1)
+      return;
+    // Move pivot to the end
+    auto pivot = last;
+    --pivot;
+    std::swap(*(first + dist / 2), *pivot);
+    // Partition
+    auto store = first;
+    for (auto it = first; it != last; ++it) {
+      if (*it < *pivot) {
+        std::swap(*store, *it);
+        ++store;
+      }
+    }
+    // Move pivot to final location
+    std::swap(*store, *pivot);
+    // Sort partitions
+    sort(first, store, comp);
+    sort(store, last, comp);
+  }
+
+  template<class RandomAccessIterator>
+  void sort(RandomAccessIterator first, RandomAccessIterator last)
+  {
+    sort(first, last, [](decltype(*first)& a,
+                         decltype(*first)& b) { return a < b; });
+  }
+
+  // Returns an iterator pointing to @c value, or, if @c value isn't
+  // present, an iterator pointing to @c value's successor.  @c comp
+  // must take a dereferenced iterator and value and return true if
+  // the first is strictly less than the second.
+  //
+  // 0   2   4 <- Collection
+  //   1 2     <- Values that return 2
+  template<class ForwardIterator, class T, class Compare>
+  ForwardIterator
+  lower_bound(ForwardIterator first, ForwardIterator last,
+              const T& value, Compare comp)
+  {
+    auto dist = last - first;
+    while (dist > 0) {
+      auto mid = first;
+      mid += dist / 2;
+      if (comp(*mid, value)) {
+        first = mid;
+        ++first;
+        dist = dist - dist / 2 - 1;
+      } else {
+        dist /= 2;
+      }
+    }
+    return first;
+  }
+
+  template<class ForwardIterator, class T>
+  ForwardIterator
+  lower_bound(ForwardIterator first, ForwardIterator last,
+              const T& value)
+  {
+    return lower_bound(first, last, value,
+                       [](const T& a, const T& b) { return a < b; });
+  }
+
+  // Returns an iterator pointing to @c value's successor.  @c comp
+  // must take value and a dereferenced iterator and return true if
+  // the first is strictly less than the second.
+  //
+  // 0   2   4 <- Collection
+  // 0 1       <- Values that return 2
+  template<class ForwardIterator, class T, class Compare>
+  ForwardIterator
+  upper_bound(ForwardIterator first, ForwardIterator last,
+              const T& value, Compare comp)
+  {
+    auto dist = last - first;
+    while (dist > 0) {
+      auto mid = first;
+      mid += dist / 2;
+      if (comp(value, *mid)) {
+        dist /= 2;
+      } else {
+        first = mid;
+        ++first;
+        dist = dist - dist / 2 - 1;
+      }
+    }
+    return first;
+  }
+
+  template<class ForwardIterator, class T>
+  ForwardIterator
+  upper_bound(ForwardIterator first, ForwardIterator last,
+              const T& value)
+  {
+    return upper_bound(first, last, value,
+                       [](const T& a, const T& b) { return a < b; });
+  }
+}
