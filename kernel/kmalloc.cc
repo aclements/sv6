@@ -10,6 +10,7 @@
 #include "mtrace.h"
 #include "cpu.hh"
 #include "kstream.hh"
+#include "log2.hh"
 
 // allocate in power-of-two sizes up to 2^KMMAX (PGSIZE)
 #define KMMAX 12
@@ -63,29 +64,16 @@ morecore(int c, int b)
 static int
 bucket(u64 nbytes)
 {
-  static int bucketmap[] = {
-    6,
-    7,
-    8,  8,
-    9,  9,  9,  9,
-    10, 10, 10, 10, 10, 10, 10, 10,
-    11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-    12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
-    12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
-    12,
-  };
-
-  assert(nbytes <= PGSIZE);
-  int b = bucketmap[nbytes >> 6];
+  int b = ceil_log2(nbytes);
+  if (b < 6)
+    b = 6;
   assert((1<<b) >= nbytes);
   return b;
 }
 
-void *
-kmalloc(u64 nbytes, const char *name)
+static void *
+kmalloc_small(size_t b, const char *name)
 {
-  int b = bucket(nbytes);
-
   struct header *h;
   int c = mycpu()->id;
 
@@ -94,7 +82,7 @@ kmalloc(u64 nbytes, const char *name)
     h = headptr.ptr();
     if (!h) {
       if (morecore(c, b) < 0) {
-        cprintf("kmalloc(%d) failed\n", (int) nbytes);
+        cprintf("kmalloc(%d) failed\n", 1 << b);
         return 0;
       }
     } else {
@@ -107,11 +95,27 @@ kmalloc(u64 nbytes, const char *name)
     }
   }
 
+  return h;
+}
+
+void *
+kmalloc(u64 nbytes, const char *name)
+{
+  void *h;
+  int b = bucket(nbytes);
+
+  if (b >= PGSHIFT)
+    h = kalloc(name, (size_t)1 << b);
+  else
+    h = kmalloc_small(b, name);
+  if (!h)
+    return nullptr;
+
   mtlabel(mtrace_label_heap, (void*) h, nbytes, name, strlen(name));
 
   if (ALLOC_MEMSET) {
-    char* chk = (char*)(h + 1);
-    for (int i = 0; i < (1<<b)-sizeof(*h); i++)
+    char* chk = (char*)h + sizeof(struct header);
+    for (int i = 0; i < (1<<b)-sizeof(struct header); i++)
       if (chk[i] != 3) {
         console.print(shexdump(chk, nbytes));
         panic("kmalloc: free memory was overwritten %p+%x", chk, i);
@@ -133,12 +137,16 @@ kmfree(void *ap, u64 nbytes)
 
   mtunlabel(mtrace_label_heap, ap);
 
-  int c = mycpu()->id;
-  for (;;) {
-    auto headptr = freelists[c].buckets[b].load();
-    h->next = headptr.ptr();
-    if (freelists[c].buckets[b].compare_exchange(headptr, h))
-      break;
+  if (b >= PGSHIFT) {
+    kfree(ap, (size_t)1 << b);
+  } else {
+    int c = mycpu()->id;
+    for (;;) {
+      auto headptr = freelists[c].buckets[b].load();
+      h->next = headptr.ptr();
+      if (freelists[c].buckets[b].compare_exchange(headptr, h))
+        break;
+    }
   }
 }
 
