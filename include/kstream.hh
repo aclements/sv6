@@ -27,10 +27,22 @@ private:
   void _begin_print();
 };
 
+class panic_stream : public console_stream
+{
+public:
+  constexpr panic_stream() : console_stream(true) { }
+protected:
+  bool begin_print();
+  void end_print();
+};
+
 extern console_stream console;
 
 // Warning stream
 extern console_stream swarn;
+
+// Panic stream.  Printing to this will cause a panic.
+extern panic_stream spanic;
 
 // Errors caused by user processes (page faults, failed system calls,
 // etc.)

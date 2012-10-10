@@ -419,7 +419,33 @@ console_stream::write(sbuf buf)
     consputc(buf.base[i]);
 }
 
+bool
+panic_stream::begin_print()
+{
+  cli();
+  console_stream::begin_print();
+  if (cons.nesting_count == 1) {
+    print("cpu ", myid(), " (", myproc() ? myproc()->name : "unknown",
+          ") panic: ");
+  }
+  return true;
+}
+
+void
+panic_stream::end_print()
+{
+  if (cons.nesting_count > 1) {
+    console_stream::end_print();
+  } else {
+    printtrace(rrbp());
+    panicked = 1;
+    halt();
+    for(;;);
+  }
+}
+
 console_stream console, swarn;
+panic_stream spanic;
 console_stream uerr(false);
 
 void
