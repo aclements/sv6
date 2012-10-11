@@ -117,10 +117,8 @@ vmap::copy()
         cache.invalidate(it.index() * PGSIZE, PGSIZE, it, &shootdown);
       }
 
-      // Copy the descriptor, except its lock bit
-      auto desc = *it;
-      desc.get_lock().release(bit_spinlock::cli_caller);
-      nm->vpfs_.fill(out, desc);
+      // Copy the descriptor
+      nm->vpfs_.fill(out, it->dup());
 
       // Next page
       ++out;

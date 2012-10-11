@@ -84,6 +84,16 @@ struct vmdesc : public mmu::tracker
     return flags & FLAG_MAPPED;
   }
 
+  // Duplicate this descriptor for use in another vmap.  This copies
+  // the descriptor except for its lock bit (since it should be
+  // initially unlocked in the new vmap) and its tracker (since it is
+  // now associated with a new page_map_cache and hence not cached on
+  // any core).
+  vmdesc dup() const
+  {
+    return vmdesc(flags & ~FLAG_LOCK, page, inode, start);
+  }
+
   // We need new/delete so the radix_array can allocate external nodes
   // when performing node compression.
   NEW_DELETE_OPS(vmdesc)
@@ -91,6 +101,11 @@ struct vmdesc : public mmu::tracker
 private:
   vmdesc(u64 flags)
     : flags(flags), page(), inode(), start() { }
+
+  // Create a new vmdesc with an empty tracker.
+  vmdesc(u64 flags, const sref<class page_info> &page,
+         const sref<struct inode> &inode, intptr_t start)
+    : flags(flags), page(page), inode(inode), start(start) { }
 };
 
 void to_stream(class print_stream *s, const vmdesc &vmd);
