@@ -163,6 +163,12 @@ trap(struct trapframe *tf)
     lapiceoi();
     sampconf();  
     break;
+  case T_IPICALL: {
+    extern void on_ipicall();
+    lapiceoi();
+    on_ipicall();
+    break;
+  }
   default:
     if (tf->trapno == e1000irq.vector) {
       e1000intr();

@@ -372,6 +372,7 @@ inittls(struct cpu *c)
   writemsr(MSR_GS_KERNBASE, (u64)&c->cpu);
   c->cpu = c;
   c->proc = nullptr;
+  c->ipi_tail = &c->ipi;
 }
 
 static void tlbflush(u64 myreq);

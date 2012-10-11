@@ -2,6 +2,12 @@
 
 #include "mmu.h"
 #include "atomic.hh"
+#ifndef XV6_USER
+// XXX(Austin) lib/wqalloc.c includes percpu, which includes cpu.hh.
+// I don't understand at all how percpu works in user space, but
+// spinlock definitely doesn't work in user space.
+#include "spinlock.h"
+#endif
 
 using std::atomic;
 
@@ -17,6 +23,14 @@ struct cpu {
   int timer_printpc;
   atomic<u64> tlbflush_done;   // last tlb flush req done on this cpu
   struct proc *prev;           // The previously-running process
+
+#ifndef XV6_USER
+  // The list of IPI calls to this CPU
+  atomic<struct ipi_call *> ipi __mpalign__;
+  atomic<struct ipi_call *> *ipi_tail;
+  // The lock protecting updates to ipi and ipi_tail.
+  spinlock ipi_lock;
+#endif
 
   hwid_t hwid __mpalign__;     // Local APIC ID, accessed by other CPUs
 
