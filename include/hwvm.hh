@@ -90,4 +90,4 @@ namespace mmu_shared_page_table {
   };
 }
 
-namespace mmu = mmu_shared_page_table;
+namespace mmu = MMU_SCHEME;
