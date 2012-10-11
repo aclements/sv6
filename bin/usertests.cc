@@ -1802,7 +1802,7 @@ vmoverlap(void)
       if (op == 0) {
         // Check that it zeroed the range
         if (base[i*4096] != 0)
-          die("did not zero mapped-over region");
+          die("did not zero mapped-over region at %p", &base[i*4096]);
         // Fill it in
         base[i*4096] = mapn;
         // Update the expected mapping
