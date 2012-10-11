@@ -20,10 +20,6 @@
 static console_stream verbose(false);
 
 enum { vm_debug = 0 };
-enum { tlb_shootdown = VM_TLB_SHOOTDOWN };
-enum { tlb_lazy = VM_TLB_LAZY };
-// XXX(sbw) has the same behavior as tlb_shootdown when pgmaps are shared
-enum { never_updateall = VM_NEVER_UPDATEALL };
 
 /*
  * vmdesc

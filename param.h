@@ -27,9 +27,6 @@
 #define WQSHIFT       7
 #define EXECSWITCH    1
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
-#define VM_TLB_SHOOTDOWN 1
-#define VM_TLB_LAZY   1
-#define VM_NEVER_UPDATEALL 0
 #if defined(HW_qemu)
 #define DEBUG         0
 #define NCPU          8   // maximum number of CPUs
