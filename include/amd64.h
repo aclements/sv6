@@ -280,6 +280,12 @@ prefetch(void *a)
   __asm volatile("prefetch (%0)" : : "r" (a));
 }
 
+static inline void
+invlpg(void *a)
+{
+  __asm volatile("invlpg (%0)" : : "r" (a) : "memory");
+}
+
 static inline int
 popcnt64(u64 v)
 {

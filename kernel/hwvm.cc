@@ -13,6 +13,7 @@
 #include "wq.hh"
 #include "apic.hh"
 #include "kstream.hh"
+#include "ipi.hh"
 
 using namespace std;
 
@@ -457,5 +458,59 @@ namespace mmu_shared_page_table {
   page_map_cache::switch_to() const
   {
     pml4->switch_to();
+  }
+}
+
+namespace mmu_per_core_page_table {
+  static percpu<const page_map_cache*> cur_cache;
+
+  void
+  page_map_cache::insert(uintptr_t va, tracker *t, pme_t pte)
+  {
+    scoped_cli cli;
+    auto mypml4 = *pml4;
+    assert(mypml4);
+    mypml4->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
+    t->tracker_cores.set(myid());
+  }
+
+  void
+  page_map_cache::switch_to() const
+  {
+    auto &mypml4 = *pml4;
+    if (!mypml4)
+      mypml4 = kpml4.kclone();
+    mypml4->switch_to();
+    *cur_cache = this;
+  }
+
+  void
+  page_map_cache::clear(uintptr_t start, uintptr_t end)
+  {
+    bool current = (*cur_cache == this);
+    pgmap *mypml4 = *pml4;
+    assert(mypml4);
+    for (auto it = mypml4->find(start); it.index() < end; it += it.span()) {
+      if (it.is_set()) {
+        it->store(0, memory_order_relaxed);
+        if (current)
+          invlpg((void*)it.index());
+      }
+    }
+  }
+
+  void
+  shootdown::perform() const
+  {
+    // XXX Alternatively, we could reach into the per-core page tables
+    // directly from invalidate.  Then it would be able to zero them
+    // directly and gather PTE_P bits (instead of using a separate
+    // tracker), but it would probably require more communication.
+    if (targets.none())
+      return;
+    assert(start < end && end <= USERTOP);
+    run_on_cpus(targets, [this]() {
+        cache->clear(start, end);
+      });
   }
 }
