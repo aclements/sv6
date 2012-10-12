@@ -27,7 +27,7 @@
 #define PGOFFSET(a) ((a) & ((1<<PGSHIFT)-1))
 
 // Address in page table or page directory entry
-#define PTE_ADDR(pte)	((uptr)(pte) & ~0xFFF)
+#define PTE_ADDR(pte)	((uptr)(pte) & 0x7FFFFFFFFFFFF000u)
 
 #ifndef __ASSEMBLER__
 struct segdesc {
