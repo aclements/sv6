@@ -293,17 +293,21 @@ popcli(void)
 void
 getcallerpcs(void *v, uptr pcs[], int n)
 {
-  uptr *rbp;
+  uintptr_t rbp;
   int i;
 
-  rbp = (uptr*)v;
+  rbp = (uintptr_t)v;
   for(i = 0; i < n; i++){
-    if(rbp == 0 || rbp < (uptr*)KBASE || rbp == (uptr*)(~0UL) ||
-       (rbp >= (uptr*)KBASEEND && rbp < (uptr*)KCODE))
+    // Read saved %rip
+    uintptr_t saved_rip;
+    if (safe_read_vm(&saved_rip, rbp + sizeof(uintptr_t), sizeof(saved_rip)) !=
+        sizeof(saved_rip))
       break;
-    pcs[i] = rbp[1] - 1; // saved %rip; - 1 so it points to the call
-                         // instruction
-    rbp = (uptr*)rbp[0]; // saved %rbp
+    // Subtract 1 so it points to the call instruction
+    pcs[i] = saved_rip - 1;
+    // Read saved %rbp
+    if (safe_read_vm(&rbp, rbp, sizeof(rbp)) != sizeof(rbp))
+      break;
   }
   for(; i < n; i++)
     pcs[i] = 0;
