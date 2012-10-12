@@ -285,6 +285,14 @@ void            uartintr(void);
 void            switchvm(struct proc*);
 int             pagefault(struct vmap*, uptr, u32, proc_pgmap* pgmap);
 void*           pagelookup(struct vmap*, uptr);
+// Slowly but carefully read @c n bytes from virtual address @c src
+// into @c dst, without any page faults.  Return the number of bytes
+// successfully read.  These are meant for debugging purposes.
+// safe_read_hw() uses the current hardware page table, while
+// safe_read_vm() uses the current vmap (and falls back to
+// safe_read_hw above USERTOP).
+size_t          safe_read_hw(void *dst, uintptr_t src, size_t n);
+size_t          safe_read_vm(void *dst, uintptr_t src, size_t n);
 
 // zalloc.cc
 char*           zalloc(const char* name);

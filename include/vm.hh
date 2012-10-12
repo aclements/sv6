@@ -138,6 +138,10 @@ struct vmap {
   // Print this vmap to the console
   void dump();
 
+  // Slowly by carefully read @c n bytes from virtual address @c src
+  // into @c dst.
+  size_t safe_read(void *dst, uintptr_t src, size_t n);
+
   uptr brk_;                    // Top of heap
 
 private:

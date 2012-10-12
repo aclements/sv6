@@ -171,6 +171,31 @@ switchkvm(void)
   lcr3(v2p(&kpml4));   // switch to the kernel page table
 }
 
+size_t
+safe_read_hw(void *dst, uintptr_t src, size_t n)
+{
+  scoped_cli cli;
+  struct mypgmap
+  {
+    pme_t e[PGSIZE / sizeof(pme_t)];
+  } *pml4 = (struct mypgmap*)p2v(rcr3());
+  for (size_t i = 0; i < n; ++i) {
+    uintptr_t va = src + i;
+    void *obj = pml4;
+    int level;
+    for (level = 4; level >= 0; level--) {
+      pme_t entry = ((mypgmap*)obj)->e[PX(level, va)];
+      if (!(entry & PTE_P))
+        return i;
+      obj = p2v(PTE_ADDR(entry));
+      if (entry & PTE_PS)
+        break;
+    }
+    ((char*)dst)[i] = ((char*)obj)[va % (1ull << PXSHIFT(level))];
+  }
+  return n;
+}
+
 // Switch TSS and h/w page table to correspond to process p.
 void
 switchvm(struct proc *p)

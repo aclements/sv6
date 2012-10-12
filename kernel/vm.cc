@@ -613,3 +613,31 @@ vmap::dump()
                     shex((it.base() + it.base_span()) * PGSIZE), " ", *it);
   }
 }
+
+size_t
+vmap::safe_read(void *dst, uintptr_t src, size_t n)
+{
+  for (size_t i = 0; i < n; ++i) {
+    auto it = vpfs_.find((src + i) / PGSIZE);
+    if (!it.is_set())
+      return i;
+    auto page_info = it->page.get();
+    if (!page_info)
+      return i;
+    void *page = page_info->va();
+    ((char*)dst)[i] = ((char*)page)[(src + i) % PGSIZE];
+  }
+  return n;
+}
+
+size_t
+safe_read_vm(void *dst, uintptr_t src, size_t n)
+{
+  if (src >= USERTOP)
+    return safe_read_hw(dst, src, n);
+
+  scoped_cli cli;
+  if (!myproc() || !myproc()->vmap)
+    return 0;
+  return myproc()->vmap->safe_read(dst, src, n);
+}
