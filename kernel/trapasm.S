@@ -130,7 +130,6 @@ trapcommon:
         swapgs
 
 1:      movq %rsp, %rdi  // first argument to trap
-        xor %rbp, %rbp
         call trap
         // Fall through to trapret
         
