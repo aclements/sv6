@@ -315,18 +315,24 @@ kalloc(const char *name, size_t size)
     auto mem = mycpu()->mem;
     if (mem->nhot == 0) {
       // No hot pages; fill half of the cache
-      auto &lb = buddies[mem->first_buddy];
-      auto l = lb.lock.guard();
-      while (mem->nhot < MAX_HOT_PAGES) {
-        void *page = lb.alloc.alloc_nothrow(PGSIZE);
+      auto first = mem->first_buddy;
+      auto lb = &buddies[first];
+      auto l = lb->lock.guard();
+      for (int b = 0; mem->nhot < MAX_HOT_PAGES && b < nbuddies; ) {
+        void *page = lb->alloc.alloc_nothrow(PGSIZE);
         if (!page) {
-          if (mem->nhot == 0)
-            // We couldn't allocate any pages; drop through to the
-            // general allocation path
+          // Move to the next allocator
+          if (++b == nbuddies && mem->nhot == 0) {
+            // We couldn't allocate any pages; we're probably out of
+            // memory, but drop through to the more aggressive
+            // general-purpose allocator.
             goto general;
-          break;
+          }
+          lb = &buddies[(b + first) % nbuddies];
+          l = lb->lock.guard();
+        } else {
+          mem->hot_pages[mem->nhot++] = page;
         }
-        mem->hot_pages[mem->nhot++] = page;
       }
     }
     res = mem->hot_pages[--mem->nhot];
@@ -335,6 +341,8 @@ kalloc(const char *name, size_t size)
     // can't fill our hot page cache.
   general:
     auto first = mycpu()->mem->first_buddy;
+    // XXX(Austin) Would it be better to linear scan our local buddies
+    // and then randomly traverse the others to avoid hot-spots?
     for (int b = 0; !res && b < nbuddies; b++) {
       auto &lb = buddies[(b + first) % nbuddies];
       auto l = lb.lock.guard();
