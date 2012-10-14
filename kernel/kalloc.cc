@@ -449,11 +449,13 @@ initkalloc(u64 mbaddr)
     cpu_mem[c].first_buddy = nbuddies;
     cpu_mem[c].nhot = 0;
     size_t core_size = mem.bytes_after(p) / (NCPU - c);
-    while (core_size > buddy_allocator::MAX_SIZE) {
+    // Use 2*MAX_SIZE to make sure the allocator has room for its
+    // metadata in addition to at least one block.
+    while (core_size > 2*buddy_allocator::MAX_SIZE) {
       if (nbuddies == MAX_BUDDIES)
         panic("MAX_BUDDIES is too low");
       // Make sure we have enough space for an allocator
-      p = (char*)mem.alloc(p, buddy_allocator::MAX_SIZE);
+      p = (char*)mem.alloc(p, 2*buddy_allocator::MAX_SIZE);
       size_t size = std::min(core_size, mem.max_alloc(p));
       if (ALLOC_MEMSET)
         memset(p, 1, size);
