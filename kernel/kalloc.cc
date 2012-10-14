@@ -27,6 +27,9 @@
 // The maximum number of recently freed pages to cache per core.
 #define MAX_HOT_PAGES 128
 
+// Print memory steal events
+#define PRINT_STEAL 0
+
 // Our slabs aren't really slabs.  They're just pre-sized and
 // pre-named regions.
 struct slab {
@@ -55,7 +58,7 @@ static size_t nbuddies;
 
 struct cpu_mem
 {
-  size_t first_buddy;
+  size_t first_buddy, nbuddies;
   // Hot page cache of recently freed pages
   void *hot_pages[MAX_HOT_PAGES];
   size_t nhot;
@@ -330,6 +333,11 @@ kalloc(const char *name, size_t size)
           }
           lb = &buddies[(b + first) % nbuddies];
           l = lb->lock.guard();
+#if PRINT_STEAL
+          if (b >= mem->nbuddies)
+            cprintf("CPU %d stealing hot list from buddy %lu\n",
+                    myid(), (b + first) % nbuddies);
+#endif
         } else {
           mem->hot_pages[mem->nhot++] = page;
         }
@@ -347,6 +355,10 @@ kalloc(const char *name, size_t size)
       auto &lb = buddies[(b + first) % nbuddies];
       auto l = lb.lock.guard();
       res = lb.alloc.alloc_nothrow(size);
+#if PRINT_STEAL
+      if (res && b >= mycpu()->mem->nbuddies)
+        cprintf("CPU %d stole from buddy %lu\n", myid(), (b + first) % nbuddies);
+#endif
     }
   }
 
@@ -447,6 +459,7 @@ initkalloc(u64 mbaddr)
     // XXX(austin) The physical regions for each core should come from NUMA
     cpus[c].mem = &cpu_mem[c];
     cpu_mem[c].first_buddy = nbuddies;
+    cpu_mem[c].nbuddies = 0;
     cpu_mem[c].nhot = 0;
     size_t core_size = mem.bytes_after(p) / (NCPU - c);
     // Use 2*MAX_SIZE to make sure the allocator has room for its
@@ -454,6 +467,7 @@ initkalloc(u64 mbaddr)
     while (core_size > 2*buddy_allocator::MAX_SIZE) {
       if (nbuddies == MAX_BUDDIES)
         panic("MAX_BUDDIES is too low");
+      ++cpu_mem[c].nbuddies;
       // Make sure we have enough space for an allocator
       p = (char*)mem.alloc(p, 2*buddy_allocator::MAX_SIZE);
       size_t size = std::min(core_size, mem.max_alloc(p));
@@ -516,6 +530,11 @@ kfree(void *v, size_t size)
           assert(buddy < nbuddies);
           lock.release();
           lock = buddies[buddy].lock.guard();
+#if PRINT_STEAL
+          if (buddy < mem->first_buddy ||
+              buddy >= mem->first_buddy + mem->nbuddies)
+            cprintf("CPU %d returning hot list to buddy %lu\n", myid(), buddy);
+#endif
         }
         buddies[buddy].alloc.free(ptr, PGSIZE);
       }
