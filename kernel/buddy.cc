@@ -148,6 +148,8 @@ buddy_allocator::is_allocated(void *ptr, size_t order)
 void
 buddy_allocator::mark_allocated(void *ptr, std::size_t order, bool allocated)
 {
+  if (order == MAX_ORDER)
+    return;
   uintptr_t parent = (uintptr_t)ptr & ~((uintptr_t)MIN_SIZE << order);
   if ((uintptr_t)ptr != parent)
     return;
