@@ -50,6 +50,7 @@ public:
   // ::lock_guard.
   lock_guard& operator=(lock_guard &&o)
   {
+    release();
     l_ = o.l_;
     o.l_ = nullptr;
     return *this;
