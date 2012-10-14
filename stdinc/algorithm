@@ -49,7 +49,7 @@ namespace std {
     std::swap(*(first + dist / 2), *pivot);
     // Partition
     auto store = first;
-    for (auto it = first; it != last; ++it) {
+    for (auto it = first; it != pivot; ++it) {
       if (*it < *pivot) {
         std::swap(*store, *it);
         ++store;
@@ -59,6 +59,7 @@ namespace std {
     std::swap(*store, *pivot);
     // Sort partitions
     sort(first, store, comp);
+    ++store;
     sort(store, last, comp);
   }
 
