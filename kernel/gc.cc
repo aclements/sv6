@@ -322,6 +322,11 @@ initgc(void)
 void
 gc_delayed(rcu_freed *e)
 {
+#if RCU_TYPE_DEBUG
+  if (e->_rcu_next)
+    panic("double gc_delayed(%p) (of type %s)", e, e->_rcu_type);
+#endif
+
   int c =  mycpu()->id;
   struct gc_state *gs = &gc_states[c];
 

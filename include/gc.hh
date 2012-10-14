@@ -25,7 +25,7 @@ class rcu_freed {
 
   rcu_freed(const char *debug_type)
 #if RCU_TYPE_DEBUG
-    : _rcu_type(debug_type)
+    : _rcu_next(nullptr), _rcu_type(debug_type)
 #endif
   {}
 
