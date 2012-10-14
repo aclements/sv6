@@ -245,6 +245,7 @@ struct islist
       }
     }
     (pos.elem->*L).next = x.head.next;
+    x.head.next = nullptr;
   }
 
   /**
