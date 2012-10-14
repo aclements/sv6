@@ -11,7 +11,11 @@ using namespace std;
 
 buddy_allocator::buddy_allocator(void *base, size_t len)
 {
+  uintptr_t end = (uintptr_t)base + len;
+
   // Use a linear allocator to allocate buddy bitmaps.
+  // XXX(Austin) Should we check if we have more unaligned space at
+  // the end?  Currently, we skip 16 megs between each buddy region.
   size_t nBlocks = len / MIN_SIZE;
   for (size_t i = 0; i < MAX_ORDER; ++i) {
     size_t bitmapSize = (nBlocks + 7) / 8;
@@ -37,7 +41,8 @@ buddy_allocator::buddy_allocator(void *base, size_t len)
   // this, some blocks wouldn't have buddies, which would complicate
   // other logic.
   this->base = ((uintptr_t)base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
-  limit = ((uintptr_t)base + len) & ~(MAX_SIZE - 1);
+  limit = end & ~(MAX_SIZE - 1);
+  assert(this->base < limit);
 
   // Create block list
   for (uintptr_t block = this->base; block < limit; block += MAX_SIZE)
