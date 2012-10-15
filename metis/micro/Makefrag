@@ -1,0 +1,6 @@
+OBJDIRS += micro
+
+$(O)/micro/%.o: micro/%.c
+	mkdir -p $(@D)
+	$(CC) $(CFLAGS) -o $@ -c $<
+

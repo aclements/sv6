@@ -1,0 +1,36 @@
+Metis MapReduce
+---------------
+
+Metis is tested on 64-bit Linux but also runs on 32-bit Linux.
+
+Some example MapReduce applications are included.  For a list:
+  $ ls app/*.c
+  foo.c wc.c wr.c ...
+
+To build and run the example foo.c do:
+  $ make obj/foo
+  $ obj/foo [args]
+
+If you want to run a MapReduce application that uses Streamflow you
+will need to set the environment variable LD_LIBRARY_PATH so ld.so
+can find libstreamflow.so:
+
+  $ make obj/foo.sf
+  $ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:obj/lib/ obj/foo.sf
+
+The test/test.pl script runs all the tests mentioned in Metis technical
+report. To run the test, you need to download the data files at
+pdos.csail.mit.edu/metis/data.tar.gz into the top-level directory of
+Metis source tree, unpack it, and execute $(Metis_TOP)/data/data-gen.sh
+to generate the inputs for all applications.
+
+Metis can take advantage of Linux super pages to reduce the contentions
+on page faults. The is achieved by modifying Streamflow to allocate
+memory from hugetlbfs. See GNUmakefile for more details about how to
+enable hugetlb.
+
+As described in Metis technical report, Metis can be configured to use
+different data structures to organize the intermediate key/value pairs,
+although we beleive the default configuration is generally efficient
+across all workloads. See lib/mr-conf.h for more details.
+

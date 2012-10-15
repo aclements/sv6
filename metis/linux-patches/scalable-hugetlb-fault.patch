@@ -1,0 +1,69 @@
+---
+
+diff --git a/linux-2.6.30.6/include/linux/mm_types.h b/linux-2.6.30.6/include/linux/mm_types.h
+index 0e80e26..2e3e0ff 100644
+--- a/linux-2.6.30.6/include/linux/mm_types.h
++++ b/linux-2.6.30.6/include/linux/mm_types.h
+@@ -14,6 +14,7 @@
+ #include <linux/page-debug-flags.h>
+ #include <asm/page.h>
+ #include <asm/mmu.h>
++#include <linux/mutex.h>
+ 
+ #ifndef AT_VECTOR_SIZE_ARCH
+ #define AT_VECTOR_SIZE_ARCH 0
+@@ -178,6 +179,7 @@ struct vm_area_struct {
+ #ifdef CONFIG_NUMA
+ 	struct mempolicy *vm_policy;	/* NUMA policy for the VMA */
+ #endif
++	struct mutex hugetlb_instantiation_mutex;
+ };
+ 
+ struct core_thread {
+diff --git a/linux-2.6.30.6/mm/hugetlb.c b/linux-2.6.30.6/mm/hugetlb.c
+index 2403eb9..2643b97 100644
+--- a/linux-2.6.30.6/mm/hugetlb.c
++++ b/linux-2.6.30.6/mm/hugetlb.c
+@@ -2081,7 +2081,8 @@ int hugetlb_fault(struct mm_struct *mm, struct vm_area_struct *vma,
+ 	 * get spurious allocation failures if two CPUs race to instantiate
+ 	 * the same page in the page cache.
+ 	 */
+-	mutex_lock(&hugetlb_instantiation_mutex);
++	//mutex_lock(&hugetlb_instantiation_mutex);
++	mutex_lock(&vma->hugetlb_instantiation_mutex);
+ 	entry = huge_ptep_get(ptep);
+ 	if (huge_pte_none(entry)) {
+ 		ret = hugetlb_no_page(mm, vma, address, ptep, write_access);
+@@ -2136,7 +2137,8 @@ out_page_table_lock:
+ 	}
+ 
+ out_mutex:
+-	mutex_unlock(&hugetlb_instantiation_mutex);
++	//mutex_unlock(&hugetlb_instantiation_mutex);
++	mutex_unlock(&vma->hugetlb_instantiation_mutex);
+ 
+ 	return ret;
+ }
+diff --git a/linux-2.6.30.6/mm/mmap.c b/linux-2.6.30.6/mm/mmap.c
+index 2b43fa1..dcec986 100644
+--- a/linux-2.6.30.6/mm/mmap.c
++++ b/linux-2.6.30.6/mm/mmap.c
+@@ -28,6 +28,7 @@
+ #include <linux/mempolicy.h>
+ #include <linux/rmap.h>
+ #include <linux/mmu_notifier.h>
++#include <linux/mutex.h>
+ 
+ #include <asm/uaccess.h>
+ #include <asm/cacheflush.h>
+@@ -1179,6 +1180,7 @@ munmap_back:
+ 	vma->vm_flags = vm_flags;
+ 	vma->vm_page_prot = vm_get_page_prot(vm_flags);
+ 	vma->vm_pgoff = pgoff;
++	mutex_init(&vma->hugetlb_instantiation_mutex);
+ 
+ 	if (file) {
+ 		error = -EINVAL;
+-- 
+1.5.6.5
+

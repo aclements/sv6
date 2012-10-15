@@ -1,0 +1,46 @@
+OBJDIRS += pkg/streamflow
+
+META_METHOD := RADIX_TREE
+
+ifeq ($(ARCH), i386)
+	SF_ASM  := x86
+	BITS := -m32
+endif
+ifeq ($(ARCH), amd64)
+	SF_ASM  := x86_64
+	BITS := -m64
+	FPIC := -fPIC
+endif
+
+SF_GCC_CFLAGS	:= -D_GNU_SOURCE -Wall $(BITS) -fno-strict-aliasing -DNUMA $(SF_MMOPT)
+SF_GCC_OPT	:= -O3 #-pipe -finline-functions -fomit-frame-pointer
+SF_CFLAGS	:= -D_REENTRANT -D$(SF_ASM) -D$(META_METHOD) $(FPIC)
+SF_CFLAGS 	+= $(SF_GCC_CFLAGS) $(SF_GCC_OPT)
+
+STREAMFLOW_SRC := 	streamflow.c 	\
+			override.c	\
+			ummap.c
+
+STREAMFLOW_OBJ := $(STREAMFLOW_SRC)
+STREAMFLOW_OBJ := $(patsubst %.c, $(O)/pkg/streamflow/%.o, $(STREAMFLOW_OBJ))
+STREAMFLOW_OBJ += $(O)/pkg/streamflow/malloc_new.o
+
+$(O)/pkg/streamflow/malloc_new.o: pkg/streamflow/malloc_new.cpp
+	$(Q)mkdir -p $(@D)
+	@echo "CXX	$<"
+	$(Q)$(CXX) -c $(SF_CFLAGS) -Ipkg/streamflow/include-$(SF_ASM) $< -o $@
+
+$(O)/pkg/streamflow/%.o: pkg/streamflow/%.c
+	$(Q)mkdir -p $(@D)
+	@echo "CC	$<"
+	$(Q)$(CC) -c $(SF_CFLAGS) -Ipkg/streamflow/include-$(SF_ASM) $< -o $@
+
+$(O)/lib/libstreamflow.a: $(STREAMFLOW_OBJ)
+	$(Q)mkdir -p $(@D)
+	@echo "AR	$@"
+	$(Q)$(AR) r $@ $^
+
+$(O)/lib/libstreamflow.so:  $(STREAMFLOW_OBJ)
+	$(Q)mkdir -p $(@D)
+	@echo "SO	$@"
+	$(Q)$(CC) $(SF_CFLAGS) $^ -o $@ -lstdc++ -shared 

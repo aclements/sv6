@@ -1,0 +1,44 @@
+OBJDIRS += lib
+
+LIB_SRCS := lib/mr-sched.c		\
+	    lib/appendbktmgr.c		\
+	    lib/btreebktmgr.c		\
+	    lib/arraybktmgr.c		\
+	    lib/kvstore.c		\
+	    lib/keyvals_array.c		\
+	    lib/keyvals_btree.c		\
+	    lib/keyval_array.c		\
+	    lib/keyvals_len_array.c	\
+	    lib/reduce.c		\
+	    lib/defsplitter.c		\
+	    lib/presplitter.c		\
+	    lib/pthreadpool.c		\
+	    lib/profile.c		\
+	    lib/bsearch.c		\
+	    lib/value_helper.c		\
+	    lib/apphelper.c		\
+	    lib/estimation.c		\
+	    lib/psrs.c			\
+	    lib/ibs.c			\
+	    lib/platform.c		\
+	    lib/cpumap.c		\
+	    lib/mergesort.c		\
+	    lib/rbktsmgr.c
+
+LIB_OBJS := $(patsubst %.c, $(O)/%.o, $(LIB_SRCS))
+LIB_OBJS := $(patsubst %.S, $(O)/%.o, $(LIB_OBJS))
+
+$(O)/lib/%.o: lib/%.c
+	$(Q)mkdir -p $(@D)
+	@echo "CC	$<"
+	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
+
+$(O)/lib/%.o: lib/%.S
+	$(Q)mkdir -p $(@D)
+	@echo "CC	$<"
+	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
+
+$(O)/lib/libmetis.a: $(LIB_OBJS)
+	$(Q)mkdir -p $(@D)
+	@echo "AR	$@"
+	$(Q)$(AR) r $@ $(LIB_OBJS)
