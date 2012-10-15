@@ -50,3 +50,4 @@ $(O)/bin/metis_%.unstripped: $(O)/metis/app/%.o $(O)/libmetis.a $(ULIB)
 	$(Q)mkdir -p $(@D)
 	$(Q)$(LD) $(LDFLAGS) -o $@ $^
 
+.PRECIOUS: $(O)/metis/app/%.o $(O)/bin/metis_%.unstripped
