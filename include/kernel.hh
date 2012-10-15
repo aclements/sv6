@@ -6,7 +6,6 @@ extern "C" {
 
 #include "atomic.hh"
 #include "memlayout.h"
-#include "userptr.hh"
 #include <stdarg.h>
 #include <cassert>
 
@@ -220,6 +219,7 @@ int             putmem(void*, const void*, u64);
 u64             syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num);
 
 // sysfile.cc
+#include "userptr.hh"
 int             doexec(const char* upath,
                        userptr<userptr<const char> > uargv);
 
