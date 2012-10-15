@@ -206,8 +206,10 @@ namespace refcache {
     // way.  Interrupts must be disabled.
     way *get_way(referenced *obj)
     {
-      // XXX Hash pointer better?
-      std::size_t wayno = ((uintptr_t)obj) % CACHE_SLOTS;
+      // XXX Hash pointer better?  This isn't bad: it's very fast and
+      // shouldn't suffer from small alignments.
+      std::size_t wayno = (((uintptr_t)obj) | ((uintptr_t)obj / CACHE_SLOTS))
+        % CACHE_SLOTS;
       struct way *way = &ways_[wayno];
       // XXX More associativity.  Since this is in the critical path
       // of every reference operation, perhaps we should do something
