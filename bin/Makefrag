@@ -56,7 +56,7 @@ FSEXTRA += \
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(LD) $(LDFLAGS) -o $@ $^
+	$(Q)$(LD) -o $@ $< $(LDFLAGS) $(ULIB)
 
 $(O)/bin/%: $(O)/bin/%.unstripped
 	@echo "  STRIP  $@"

@@ -8,4 +8,7 @@ BEGIN_DECLS
 
 unsigned sleep(unsigned);
 
+extern char* optarg;
+int getopt(int ac, char** av, const char* optstring);
+
 END_DECLS
