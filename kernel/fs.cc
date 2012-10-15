@@ -854,11 +854,12 @@ skipelem(const char **rpath, char *name)
   while(*path != '/' && *path != 0)
     path++;
   len = path - s;
-  if(len >= DIRSIZ)
+  if(len > DIRSIZ)
     return -1;
   else {
     memmove(name, s, len);
-    name[len] = 0;
+    if (len < DIRSIZ)
+      name[len] = 0;
   }
   while(*path == '/')
     path++;
