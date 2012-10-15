@@ -2,7 +2,7 @@
 $(O)/bin/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
 $(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER -fno-exceptions -fno-rtti
 
-UPROGS= \
+UPROGS_BIN= \
         bench \
 	cat \
         du \
@@ -42,13 +42,13 @@ UPROGS= \
 	linkbench \
 	crwpbench
 
-        #metis_string_match
-
 ifeq ($(HAVE_LWIP),y)
-UPROGS += \
+UPROGS_BIN += \
        telnetd \
        httpd
 endif
+
+UPROGS := $(UPROGS_BIN) metis_string_match
 
 UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
 
@@ -66,7 +66,7 @@ $(O)/bin/%: $(O)/bin/%.unstripped
 	$(Q)$(STRIP) -o $@ $<
 
 # Assume everything inclues user.h, which includes sysstubs.h
-$(addsuffix .o,$(UPROGS)): $(O)/include/sysstubs.h
+$(patsubst %,$(O)/bin/%.o,$(UPROGS_BIN)): $(O)/include/sysstubs.h
 
 .PRECIOUS: $(O)/bin/%.o $(O)/bin/%.unstripped
 -include $(O)/bin/*.d

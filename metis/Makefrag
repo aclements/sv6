@@ -40,12 +40,12 @@ $(O)/libmetis.a: $(METIS_OBJFILES)
 	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) r $@ $(METIS_OBJFILES)
 
-$(O)/bin/metis_%.o: metis/app/%.c
+$(O)/metis/app/%.o: metis/app/%.c
 	@echo "  CC     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(CFLAGS) -c -o $@ $< $(METIS_CFLAGS) $(METIS_INCLUDES)
 
-$(O)/bin/metis_%: $(O)/bin/metis_%.o $(O)/libmetis.a $(ULIB)
+$(O)/bin/metis_%.unstripped: $(O)/metis/app/%.o $(O)/libmetis.a $(ULIB)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(LD) $(LDFLAGS) -o $@ $^
