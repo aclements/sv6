@@ -1,12 +1,12 @@
 #include "pchandler.h"
 #include "value_helper.h"
 #include "bsearch.h"
-#include "values.h"
+// #include "values.h"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 #ifdef JOS_USER
-#include <inc/compiler.h>
+// #include <inc/compiler.h>
 #endif
 
 enum { type_leaf = 0, type_internal };

@@ -1,4 +1,4 @@
-#include <math.h>
+//#include <math.h>
 #include <assert.h>
 #include "kvstore.h"
 #include "mbktsmgr.h"
@@ -96,7 +96,9 @@ kvst_sample_finished(int ntotal)
     uint64_t ntasks = nkeys_per_mapper / nkeys_per_bkt;
     while (1) {
 	int prime = 1;
-	for (int q = 2; q < sqrt((double) ntasks); q++) {
+	//for (int q = 2; q < sqrt((double) ntasks); q++) {
+	for (int q = 2; q < ntasks; q++) {
+            if (q*q > ntasks) break;
 	    if (ntasks % q == 0) {
 		prime = 0;
 		break;

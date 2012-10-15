@@ -8,9 +8,9 @@
 #include "reduce.h"
 #include "estimation.h"
 #ifdef JOS_USER
-#include <inc/compiler.h>
-#include <inc/lib.h>
-#include <inc/sysprof.h>
+// #include <inc/compiler.h>
+// #include <inc/lib.h>
+// #include <inc/sysprof.h>
 #endif
 
 typedef struct {

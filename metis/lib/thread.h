@@ -1,7 +1,7 @@
 #ifndef _MR_THREAD_H_
 #define _MR_THREAD_H_
 
-#include <pthread.h>
+#include "pthread.h"
 #include <inttypes.h>
 
 void mthread_init(int used_nlcpus, int main_lcpu);

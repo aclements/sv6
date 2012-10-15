@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <assert.h>
 #ifdef JOS_USER
-#include <inc/compiler.h>
+// #include <inc/compiler.h>
 #endif
-#include "values.h"
+// #include "values.h"
 #include "apphelper.h"
 
 enum { combiner_threshold = 8 };

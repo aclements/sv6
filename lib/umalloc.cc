@@ -109,7 +109,6 @@ initmalloc(void)
   initlock(&lock);
 }
 
-extern "C" void* realloc(void* ap, size_t nbytes);
 void*
 realloc(void* ap, size_t nbytes)
 {
@@ -118,4 +117,17 @@ realloc(void* ap, size_t nbytes)
   memcpy(n, ap, bp->s.size);
   free(ap);
   return n;
+}
+
+void*
+calloc(size_t a, size_t b)
+{
+  size_t n = a * b;
+  if (n / a != b)
+    return 0;
+
+  void* p = malloc(n);
+  if (p)
+    memset(p, 0, n);
+  return p;
 }

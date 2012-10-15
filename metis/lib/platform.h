@@ -6,15 +6,15 @@
 #include <tchar.h>
 #include <time.h>
 #else
-#include <pthread.h>
-#include <sys/unistd.h>
+#include "pthread.h"
+// #include <sys/unistd.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <sched.h>
 #include <inttypes.h>
 #include <sys/time.h>
-#include <sys/resource.h>
+// #include <sys/resource.h>
 #endif
 
 enum { debug = 0 };
@@ -47,7 +47,7 @@ do \
 #define dprintf(x, ...) mr_print(debug, x, __VA_ARGS__)
 
 #define  __attribute__(x)
-#define barrier() __asm volatile ("mfence": : :"memory")
+#define metis_barrier() __asm volatile ("mfence": : :"memory")
 extern char *optarg;
 extern DWORD gFileSize;
 int getopt(int argc, char *const argv[], const char *optstring);
@@ -58,7 +58,7 @@ void closeFileMap();
 
 #define TLS __thread
 
-#define barrier() __asm__ __volatile__("mfence": : :"memory")
+#define metis_barrier() __asm__ __volatile__("mfence": : :"memory")
 #define mr_print(flag, x...) \
 do \
 { \

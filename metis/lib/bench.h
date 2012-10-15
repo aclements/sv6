@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
-#include <pthread.h>
+#include "pthread.h"
 #include <unistd.h>
 #include <assert.h>
 #include <fcntl.h>
@@ -116,16 +116,14 @@ nop_pause(void)
 uint64_t
 usec(void)
 {
-    struct timeval tv;
-    gettimeofday(&tv, 0);
-    return (uint64_t) tv.tv_sec * 1000000 + tv.tv_usec;
+    return 0;
 }
 
 uint64_t
 get_cpu_freq(void)
 {
 #ifdef JOS_USER
-    return 2000 * 1024 * 1024;
+    return 2400ULL * 1000 * 1000;
 #else
     FILE *fd;
     uint64_t freq = 0;
@@ -156,10 +154,14 @@ get_cpu_freq(void)
 uint32_t
 get_core_count(void)
 {
+#ifdef JOS_USER
+    return JOS_NCPU;
+#else
     int r = sysconf(_SC_NPROCESSORS_ONLN);
     if (r < 0)
 	eprint("get_core_count: error: %s\n", strerror(errno));
     return r;
+#endif
 }
 
 int

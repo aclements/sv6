@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <string.h>
 #ifdef JOS_USER
-#include <inc/compiler.h>
+// #include <inc/compiler.h>
 #endif
 
 enum { init_valloclen = 8 };

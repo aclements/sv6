@@ -4,6 +4,11 @@
 #if defined(NDEBUG)
 #  define assert(ignore) ((void)0)
 #elif defined(XV6_USER)
+#ifdef __cplusplus
+extern "C"
+#endif
+void die(const char* errstr, ...)
+  __noret__;
 #  define assert(c)                                                     \
   ((c) ? ((void)0)                                                      \
    : die("Assertion failed: %s, function %s, file %s, line %d",         \

@@ -1,0 +1,43 @@
+-include $(O)/metis/lib/*.d
+
+# LDEPS += $(O)/libmetis.a
+# LFLAGS += -lmetis
+
+METIS_CFLAGS = -DJOS_USER -DXV6_USER -I$(O)/ -Imetis \
+               -DJOS_NCPU=80 -DJSHARED_ATTR= -DJOS_CLINE=64 -DCACHE_LINE_SIZE=64
+METIS_INCLUDES =
+
+METIS_SRCFILES :=                               \
+            metis/lib/mr-sched.c                \
+            metis/lib/appendbktmgr.c            \
+            metis/lib/btreebktmgr.c             \
+            metis/lib/arraybktmgr.c             \
+            metis/lib/kvstore.c                 \
+            metis/lib/keyvals_array.c           \
+            metis/lib/keyvals_btree.c           \
+            metis/lib/keyval_array.c            \
+            metis/lib/keyvals_len_array.c       \
+            metis/lib/reduce.c                  \
+            metis/lib/defsplitter.c             \
+            metis/lib/presplitter.c             \
+            metis/lib/pthreadpool.c             \
+            metis/lib/profile.c                 \
+            metis/lib/bsearch.c                 \
+            metis/lib/value_helper.c            \
+            metis/lib/apphelper.c               \
+            metis/lib/estimation.c              \
+            metis/lib/psrs.c                    \
+            metis/lib/ibs.c                     \
+            metis/lib/platform.c                \
+            metis/lib/cpumap.c                  \
+            metis/lib/mergesort.c               \
+            metis/lib/rbktsmgr.c
+
+METIS_OBJFILES := $(patsubst %.c, $(O)/%.o, $(METIS_SRCFILES))
+
+$(O)/metis/lib/%.o: CFLAGS+= $(METIS_CFLAGS) $(METIS_INCLUDES)
+
+$(O)/libmetis.a: $(METIS_OBJFILES)
+	@echo "  AR     $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AR) r $@ $(METIS_OBJFILES)

@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <assert.h>
 #ifdef JOS_USER
-#include <inc/compiler.h>
+// #include <inc/compiler.h>
 #endif
 
 enum { init_array_size = 8 };

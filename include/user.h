@@ -27,6 +27,8 @@ void* memset(void*, int, unsigned int);
 void* malloc(unsigned int);
 void free(void*);
 int atoi(const char*);
+void* calloc(size_t, size_t);
+void* realloc(void*, size_t);
 
 // uthread.S
 int forkt(void *sp, void *pc, void *arg, int forkflags);

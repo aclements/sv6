@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <inttypes.h>
+#include "pthread.h"
 
 typedef struct {
     void *data;

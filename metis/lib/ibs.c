@@ -77,23 +77,23 @@ ibs_start(int cid)
     char path[512];
     char value[20];
     // clear samples
-    sprintf(path, "/sys/kernel/amd10h-ibs/cpu%d/record", cid);
+    snprintf(path, sizeof(path), "/sys/kernel/amd10h-ibs/cpu%d/record", cid);
     writefile(path, "0");
     // set opdata2
-    sprintf(path, "/sys/kernel/amd10h-ibs/cpu%d/opdata2", cid);
+    snprintf(path, sizeof(path), "/sys/kernel/amd10h-ibs/cpu%d/opdata2", cid);
     // notify the ibs module to record all types of cache refills
     writefile(path, "1 2 3");
     // set opdata3
-    sprintf(path, "/sys/kernel/amd10h-ibs/cpu%d/opdata3", cid);
+    snprintf(path, sizeof(path), "/sys/kernel/amd10h-ibs/cpu%d/opdata3", cid);
     // track loads only (the latency for stores is not valid)
-    sprintf(value, "%x", (1 << 7) | (1 << 0));
+    snprintf(value, sizeof(value), "%x", (1 << 7) | (1 << 0));
     writefile(path, value);
     // set opdata3pred
-    sprintf(path, "/sys/kernel/amd10h-ibs/cpu%d/opdata3pred", cid);
+    snprintf(path, sizeof(path), "/sys/kernel/amd10h-ibs/cpu%d/opdata3pred", cid);
     writefile(path, "=");
     // set opctl to start
-    sprintf(path, "/sys/kernel/amd10h-ibs/cpu%d/opctl", cid);
-    sprintf(value, "%x", (0 << 19) | (1 << 17) | 0xffff);
+    snprintf(path, sizeof(path), "/sys/kernel/amd10h-ibs/cpu%d/opctl", cid);
+    snprintf(value, sizeof(value), "%x", (0 << 19) | (1 << 17) | 0xffff);
     writefile(path, value);
 }
 
@@ -105,9 +105,9 @@ ibs_stop(int cid)
     cid = lcpu_to_pcpu[cid];
     char path[512];
     // set opctl to stop
-    sprintf(path, "/sys/kernel/amd10h-ibs/cpu%d/opctl", cid);
+    snprintf(path, sizeof(path), "/sys/kernel/amd10h-ibs/cpu%d/opctl", cid);
     writefile(path, "0");
-    sprintf(path, "/sys/kernel/amd10h-ibs/cpu%d/record", cid);
+    snprintf(path, sizeof(path), "/sys/kernel/amd10h-ibs/cpu%d/record", cid);
     readsamples(path);
 }
 

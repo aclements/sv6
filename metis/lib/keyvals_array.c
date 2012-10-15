@@ -5,7 +5,7 @@
 #include <string.h>
 #include <assert.h>
 #ifdef JOS_USER
-#include <inc/compiler.h>
+//#include <inc/compiler.h>
 #endif
 
 static key_cmp_t JSHARED_ATTR keycmp = 0;

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include <assert.h>
 #include "mbktsmgr.h"
 #include "apphelper.h"
