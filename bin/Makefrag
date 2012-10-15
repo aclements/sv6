@@ -42,6 +42,8 @@ UPROGS= \
 	linkbench \
 	crwpbench
 
+        #metis_string_match
+
 ifeq ($(HAVE_LWIP),y)
 UPROGS += \
        telnetd \
@@ -56,7 +58,7 @@ FSEXTRA += \
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(LD) -o $@ $< $(LDFLAGS) $(ULIB)
+	$(Q)$(LD) $(LDFLAGS) -o $@ $^
 
 $(O)/bin/%: $(O)/bin/%.unstripped
 	@echo "  STRIP  $@"

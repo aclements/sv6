@@ -75,21 +75,24 @@ rbkts_cat(void)
 void
 rbkts_set_reduce_task(int itask)
 {
-    int mycpu = 0; /* XXX */
+    int mycpu = 0;
+    printf("XXX mycpu\n");
     cur_task[mycpu] = itask;
 }
 
 void
 rbkts_emit_kv(void *key, void *val)
 {
-    int mycpu = 0; /* XXX */
+    int mycpu = 0;
+    printf("XXX mycpu\n");
     rbkt_pch->pch_insert_kv(rbkts_get(cur_task[mycpu]), key, val, 0, 0);
 }
 
 void
 rbkts_emit_kvs_len(void *key, void **vals, uint64_t len)
 {
-    int mycpu = 0; /* XXX */
+    int mycpu = 0;
+    printf("XXX mycpu\n");
     rbkt_pch->pch_insert_kvslen(rbkts_get(cur_task[mycpu]), key, vals, len);
 }
 

@@ -20,6 +20,8 @@ typedef std::atomic<unsigned> pthread_barrier_t;
 typedef unsigned pthread_barrier_t;
 #endif
 
+BEGIN_DECLS
+
 int       pthread_create(pthread_t* tid, const pthread_attr_t* attr,
                          void* (*start)(void*), void* arg);
 pthread_t pthread_self(void);
@@ -46,3 +48,5 @@ void      pthread_exit(void *retval) __noret__;
 // Special xv6 pthread_create, flags is FORK_* bits
 int       xthread_create(pthread_t* tid, int flags,
                          void* (*start)(void*), void* arg);
+
+END_DECLS

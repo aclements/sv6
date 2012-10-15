@@ -3,6 +3,7 @@
 #include "user.h"
 #include "atomic.hh"
 #include <unistd.h>
+#include <sched.h>
 
 enum { stack_size = 8192 };
 static std::atomic<int> nextkey;
@@ -45,6 +46,24 @@ xthread_create(pthread_t* tid, int flags,
     return t;
 
   *tid = t;
+  return 0;
+}
+
+void
+pthread_exit(void* retval)
+{
+  exit();
+}
+
+int
+pthread_join(pthread_t tid, void** retval)
+{
+  if (retval) {
+    printf("XXX join retval\n");
+    *retval = 0;
+  }
+
+  printf("XXX join\n");
   return 0;
 }
 
@@ -91,5 +110,12 @@ pthread_barrier_wait(pthread_barrier_t *b)
   (*b)--;
   while (*b != 0)
     ;   // spin
+  return 0;
+}
+
+int
+sched_setaffinity(int pid, size_t cpusetsize, cpu_set_t *mask)
+{
+  printf("XXX sched_setaffinity\n");
   return 0;
 }

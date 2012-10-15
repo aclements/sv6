@@ -1,7 +1,5 @@
 -include $(O)/metis/lib/*.d
 
-LDEPS += $(O)/libmetis.a
-
 METIS_LDFLAGS += $(O)/libmetis.a
 METIS_CFLAGS = -DJOS_USER -DXV6_USER \
                -DJOS_NCPU=80 -DJSHARED_ATTR= -DJOS_CLINE=64 -DCACHE_LINE_SIZE=64
@@ -47,4 +45,8 @@ $(O)/bin/metis_%.o: metis/app/%.c
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(CFLAGS) -c -o $@ $< $(METIS_CFLAGS) $(METIS_INCLUDES)
 
-$(O)/bin/metis_%: LDFLAGS+= $(METIS_LDFLAGS)
+$(O)/bin/metis_%: $(O)/bin/metis_%.o $(O)/libmetis.a $(ULIB)
+	@echo "  LD     $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(LD) $(LDFLAGS) -o $@ $^
+
