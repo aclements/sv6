@@ -65,8 +65,10 @@ refcache::cache::review()
   referenced::list::iterator review_end = review_.end();
   referenced::list new_review;
   referenced::list::iterator new_review_last;
+  uint64_t nreviewed = 0, nfreed = 0, nrequeued = 0, ndisowned = 0;
   while (review != review_end) {
     referenced::list::iterator obj = review++;
+    ++nreviewed;
     scoped_acquire l(&obj->lock_);
     if (obj->refcount_ == 0) {
       // The global count was zero at the last epoch and is zero now.
@@ -80,12 +82,14 @@ refcache::cache::review()
         new_review.push_front(&*obj);
         if (!new_review_last.elem)
           new_review_last = obj;
+        ++nrequeued;
       } else {
         // It was zero for the whole round.  Free it.
         verbose.println("refcache: CPU ", myid(), " freeing obj ", &*obj);
         obj->has_reviewer_ = false;
         l.release();
         obj->onzero();
+        ++nfreed;
       }
     } else {
       // The count is now non-zero and hence clearly unstable.  Drop
@@ -93,6 +97,7 @@ refcache::cache::review()
       // other core will put it on their review list.
       verbose.println("refcache: CPU ", myid(), " disowning obj ", &*obj);
       obj->has_reviewer_ = false;
+      ++ndisowned;
     }
   }
 
@@ -114,7 +119,7 @@ refcache::cache::review()
   // periodically re-enable them during the loop.
   // XXX This can blow through our CPU cache.  Should we keep a
   // summary bitmap of CPU cache lines containing non-zero deltas?
-  std::size_t flushed = 0;
+  std::size_t nflushed = 0;
   for (std::size_t i = 0; i < CACHE_SLOTS; ++i) {
     // Since we have the token now, we can put things directly on
     // the review list for next round because we know that we'll
@@ -122,11 +127,13 @@ refcache::cache::review()
     // token.
     if (ways_[i].delta) {
       evict(&ways_[i], &review_);
-      ++flushed;
+      ++nflushed;
     }
   }
-//  if (flushed)
-//    verbose.println("refcache: CPU ", myid(), " flushed ", flushed, " slots");
+  // if (nreviewed || nflushed)
+  //   console.println("refcache: CPU ", myid(), " reviewed ", nreviewed,
+  //                   " freed ", nfreed, " requeued ", nrequeued, " disowned ",
+  //                   ndisowned, " flushed ", nflushed);
   popcli();
 }
 
