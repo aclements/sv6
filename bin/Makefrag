@@ -48,7 +48,9 @@ UPROGS_BIN += \
        httpd
 endif
 
-UPROGS := $(UPROGS_BIN) metis_string_match
+UPROGS := $(UPROGS_BIN) \
+          metis_string_match \
+          metis_matrix_mult
 
 UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
 

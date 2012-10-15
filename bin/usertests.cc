@@ -13,7 +13,7 @@
 char buf[2048];
 char name[3];
 const char *echoargv[] = { "echo", "ALL", "TESTS", "PASSED", 0 };
-int stdout = 1;
+static int stdout = 1;
 
 // simple file system tests
 
