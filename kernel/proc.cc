@@ -442,6 +442,7 @@ fork(int flags)
   np->cpu_pin = myproc()->cpu_pin;
   np->data_cpuid = myproc()->data_cpuid;
   np->run_cpuid_ = myproc()->run_cpuid_;
+  np->user_fs_ = myproc()->user_fs_;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->rax = 0;
