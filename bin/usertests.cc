@@ -1073,12 +1073,12 @@ longname(void)
 {
   fprintf(stdout, "longname\n");
   for (int i = 0; i < 100; i++) {
-    if (open("12345678901234", O_CREAT, 0666) != -1) {
-      fprintf(stdout, "open 12345678901234, O_CREAT succeeded!\n");
+    if (open("123456789012345", O_CREAT, 0666) != -1) {
+      fprintf(stdout, "open 123456789012345, O_CREAT succeeded!\n");
       exit();
     }  
-    if (mkdir("12345678901234", 0777) != -1) {
-      fprintf(stdout, "mkdir 12345678901234 succeeded!\n");
+    if (mkdir("123456789012345", 0777) != -1) {
+      fprintf(stdout, "mkdir 123456789012345 succeeded!\n");
       exit();
     }
   }
