@@ -229,10 +229,12 @@ mr_run_scheduler(mr_param_t * param)
     map_time = read_tsc() - start_time;
     if (!mr_state.skip_reduce_phase) {
 	// reduce phase
+        printf("done with map\n");
 	start_time = read_tsc();
 	mr_run_task(REDUCE);
 	reduce_time = read_tsc() - start_time;
     }
+    printf("done with map and reduce\n");
     // merge phase
     start_time = read_tsc();
     if (use_psrs) {
