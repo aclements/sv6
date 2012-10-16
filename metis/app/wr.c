@@ -45,13 +45,12 @@
 #include "lib/mr-sched.h"
 #include "lib/bench.h"
 
+/* For generating the input in memory. Use wrmem.c */
+
 #define DEFAULT_NDISP 10
-/* Generate the input in memory. */
-#define RAND_INPUT
 enum { max_key_len = 1024 };
 
 #ifdef JOS_USER
-#ifndef RAND_INPUT
 #include "wc-datafile.h"
 #endif
 //#include <inc/sysprof.h>
@@ -248,33 +247,6 @@ wr_usage(char *prog)
     exit(EXIT_FAILURE);
 }
 
-#ifdef RAND_INPUT
-static char *
-rand_input(size_t *sz)
-{
-  enum { maxlen = 3 };
-  size_t len = *sz = 0x1000000; // 0x40000000;
-  char *fdata = (char *)malloc(len + 1);
-  size_t gened = 0;
-  size_t nwords = 0;
-  uint32_t seed = 0;
-  while (1) {
-    uint32_t wlen = rnd(&seed) % (maxlen - 1) + 1;  // XXX maybe use rnd()
-    wlen = 3;
-    if (gened + wlen > len) {
-      break;
-    }
-    nwords ++;
-    for (uint32_t i = 0; i < wlen; i ++)
-      fdata[gened++] = rnd(&seed) % 26 + 'A';
-    fdata[gened++] = ' ';
-  }
-  printf("generated 0x%lx bytes, %ld words\n", gened + 1, nwords);
-  while (gened < len)
-    fdata[gened++] = 0;
-  return fdata;
-}
-#endif
 
 int
 main(int argc, TCHAR * argv[])
@@ -284,10 +256,8 @@ main(int argc, TCHAR * argv[])
     if (argc < 2)
 	wr_usage(argv[0]);
 
-#ifndef RAND_INPUT
     char *fn;
     fn = argv[1];
-#endif
 
     while ((c = getopt(argc - 1, argv + 1, "p:l:m:r:q")) != -1) {
 	switch (c) {
@@ -315,18 +285,7 @@ main(int argc, TCHAR * argv[])
     /* get input file */
     char *fdata;
     size_t sz;
-#ifdef RAND_INPUT
     fdata = rand_input(&sz);
-#else
-    struct stat finfo;
-    int fd;
-    assert((fd = open(fn, O_RDONLY)) >= 0);
-    assert(fstat(fd, &finfo) == 0);
-    sz = finfo.st_size;
-    assert((fdata = mmap(0, finfo.st_size + 1,
-			 PROT_READ | PROT_WRITE, MAP_PRIVATE, fd,
-			 0)) != MAP_FAILED);
-#endif
     final_data_kvs_len_t wc_vals;
     do_mapreduce(nprocs, map_tasks, reduce_tasks, fdata,
 		 sz, &wc_vals);
@@ -335,10 +294,8 @@ main(int argc, TCHAR * argv[])
 	print_top(&wc_vals, ndisp);
     }
     free(wc_vals.data);
-#ifndef RAND_INPUT
     assert(munmap(fdata, finfo.st_size + 1) == 0);
     assert(close(fd) == 0);
-#endif
     mr_finalize();
     return 0;
 }
