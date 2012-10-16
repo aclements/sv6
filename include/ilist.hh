@@ -274,6 +274,138 @@ struct islist
 };
 
 /**
+ * An intrusive single-linked list with both head and tail pointers.
+ * This is similar to islist (and uses the same link and iterator
+ * type), but can provides O(1) access to the last element in the
+ * list.
+ */
+template<typename T, islink<T> T::* L>
+struct isqueue : private islist<T, L>
+{
+  typedef typename islist<T,L>::iterator iterator;
+  using islist<T,L>::head;
+
+private:
+  T* last;
+
+public:
+  constexpr isqueue() : islist<T,L>(), last(nullptr) { }
+
+  isqueue(const isqueue &o) = delete;
+  isqueue &operator=(const isqueue &o) = delete;
+
+  isqueue(isqueue &&o)
+  {
+    *this = std::move(o);
+  }
+
+  isqueue &operator=(isqueue &&o) noexcept
+  {
+    head = o.head;
+    last = o.last;
+    o.head.next = nullptr;
+    o.last = nullptr;
+    return *this;
+  }
+
+  using islist<T,L>::before_begin;
+
+  iterator
+  before_end() noexcept
+  {
+    if (empty())
+      return before_begin();
+    return iterator_to(last);
+  }
+
+  using islist<T,L>::begin;
+  using islist<T,L>::end;
+  using islist<T,L>::empty;
+  using islist<T,L>::front;
+
+  T&
+  back() noexcept
+  {
+    return *last;
+  }
+
+  void
+  push_front(T *x) noexcept
+  {
+    if (empty())
+      last = x;
+    islist<T, L>::push_front(x);
+  }
+
+  void
+  push_back(T *x) noexcept
+  {
+    insert_after(before_end(), x);
+  }
+
+  void
+  pop_front() noexcept
+  {
+    islist<T, L>::pop_front();
+    if (empty())
+      last = nullptr;
+  }
+
+  iterator
+  insert_after(iterator pos, T* x) noexcept
+  {
+    if (!(pos.elem->*L).next)
+      last = x;
+    return islist<T, L>::insert_after(pos, x);
+  }
+
+  iterator
+  erase_after(iterator pos) noexcept
+  {
+    auto it = islist<T, L>::erase_after(pos);
+    if (empty())
+      last = nullptr;
+    else if (!(pos.elem->*L).next)
+      last = pos.elem;
+    return it;
+  }
+
+  iterator
+  erase_after(iterator pos, iterator last) noexcept
+  {
+    auto it = islist<T, L>::erase_after(pos, last);
+    if (empty())
+      last = nullptr;
+    else if (!(pos.elem->*L).next)
+      last = pos.elem;
+    return it;
+  }
+
+  void
+  clear() noexcept
+  {
+    islist<T, L>::clear();
+    last = nullptr;
+  }
+
+  isqueue
+  cut_after(iterator pos) noexcept
+  {
+    isqueue nq;
+    nq.last = last;
+    auto nl = islist<T, L>::cut_after(pos);
+    nq.head = nl.head;
+    if (empty())
+      last = nullptr;
+    else
+      last = pos.elem;
+    return nq;
+  }
+
+  using islist<T, L>::iterator_to;
+};
+
+/**
  * An embedded link used for doubly-linked lists.
  */
 template<typename T>
