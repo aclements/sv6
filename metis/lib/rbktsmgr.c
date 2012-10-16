@@ -10,7 +10,7 @@ static const pc_handler_t *rbkt_pch = NULL;
 static key_cmp_t JSHARED_ATTR keycmp = NULL;
 static void *rbkts = NULL;
 static int nbkts = 0;
-static int cur_task[JOS_NCPU];
+static JTLS int cur_task;
 
 void
 rbkts_set_pch(const pc_handler_t * pch)
@@ -75,25 +75,19 @@ rbkts_cat(void)
 void
 rbkts_set_reduce_task(int itask)
 {
-    int mycpu = 0;
-    printf("XXX mycpu\n");
-    cur_task[mycpu] = itask;
+    cur_task = itask;
 }
 
 void
 rbkts_emit_kv(void *key, void *val)
 {
-    int mycpu = 0;
-    printf("XXX mycpu\n");
-    rbkt_pch->pch_insert_kv(rbkts_get(cur_task[mycpu]), key, val, 0, 0);
+    rbkt_pch->pch_insert_kv(rbkts_get(cur_task), key, val, 0, 0);
 }
 
 void
 rbkts_emit_kvs_len(void *key, void **vals, uint64_t len)
 {
-    int mycpu = 0;
-    printf("XXX mycpu\n");
-    rbkt_pch->pch_insert_kvslen(rbkts_get(cur_task[mycpu]), key, vals, len);
+    rbkt_pch->pch_insert_kvslen(rbkts_get(cur_task), key, vals, len);
 }
 
 static int

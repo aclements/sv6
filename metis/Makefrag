@@ -1,7 +1,7 @@
 -include $(O)/metis/lib/*.d
 
 METIS_LDFLAGS += $(O)/libmetis.a
-METIS_CFLAGS = -DJOS_USER -DXV6_USER \
+METIS_CFLAGS = -DJOS_USER -DXV6_USER -DJTLS=__thread \
                -DJOS_NCPU=80 -DJSHARED_ATTR= -DJOS_CLINE=64 -DCACHE_LINE_SIZE=64
 METIS_INCLUDES = -I$(O)/ -Imetis -Imetis/lib
 
