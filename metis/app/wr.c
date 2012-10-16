@@ -45,15 +45,16 @@
 #include "lib/mr-sched.h"
 #include "lib/bench.h"
 
-/* For generating the input in memory. Use wrmem.c */
-
 #define DEFAULT_NDISP 10
+/* Generate the input in memory. */
+#define RAND_INPUT
 enum { max_key_len = 1024 };
 
 #ifdef JOS_USER
+#ifndef RAND_INPUT
 #include "wc-datafile.h"
 #endif
-//#include <inc/sysprof.h>
+#include <inc/sysprof.h>
 #endif
 
 static uint64_t nsplits = 0;
@@ -133,7 +134,6 @@ map(split_t * split)
     char tmp_key[max_key_len];
     int ilen = 0;
     char *index = NULL;
-    printf("map %d\n", split->length);
     for (i = 0; i < split->length; i++) {
 	curr_ltr = toupper(data[i]);
 	switch (state) {
@@ -160,7 +160,6 @@ map(split_t * split)
 	}
     }
 
-    printf("map done %d\n", split->length);
     /* add the last word */
     if (state == IN_WORD) {
 	tmp_key[ilen] = 0;
@@ -247,16 +246,15 @@ wr_usage(char *prog)
     exit(EXIT_FAILURE);
 }
 
-
 int
 main(int argc, TCHAR * argv[])
 {
+    char *fn;
     int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0, quiet = 0;
     int c;
     if (argc < 2)
 	wr_usage(argv[0]);
 
-    char *fn;
     fn = argv[1];
 
     while ((c = getopt(argc - 1, argv + 1, "p:l:m:r:q")) != -1) {
@@ -283,12 +281,17 @@ main(int argc, TCHAR * argv[])
 	}
     }
     /* get input file */
+    int fd;
+    struct stat finfo;
     char *fdata;
-    size_t sz;
-    fdata = rand_input(&sz);
+    assert((fd = open(fn, O_RDONLY)) >= 0);
+    assert(fstat(fd, &finfo) == 0);
+    assert((fdata = mmap(0, finfo.st_size + 1,
+			 PROT_READ | PROT_WRITE, MAP_PRIVATE, fd,
+			 0)) != MAP_FAILED);
     final_data_kvs_len_t wc_vals;
     do_mapreduce(nprocs, map_tasks, reduce_tasks, fdata,
-		 sz, &wc_vals);
+		 finfo.st_size, &wc_vals);
     mr_print_stats();
     if (!quiet) {
 	print_top(&wc_vals, ndisp);
