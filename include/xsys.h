@@ -23,7 +23,7 @@ static inline void xwait()
 
 #define xfork() fork(0)
 #define xexit() exit()
-#define xwait() wait()
-#define xpthread_join(tid) xwait()
+#define xwait() wait(-1)
+#define xpthread_join(tid) wait(tid)
 
 #endif

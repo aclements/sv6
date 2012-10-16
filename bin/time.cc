@@ -19,7 +19,7 @@ main(int ac, const char *av[])
     exit();
   }
 
-  wait();
+  wait(-1);
   u64 t1 = rdtsc();
   fprintf(1, "%lu cycles\n", t1-t0);
   exit();

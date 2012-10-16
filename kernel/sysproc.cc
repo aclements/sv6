@@ -34,10 +34,10 @@ sys_exit(void)
 
 //SYSCALL
 int
-sys_wait(void)
+sys_wait(int pid)
 {
   ANON_REGION(__func__, &perfgroup);
-  return wait();
+  return wait(pid);
 }
 
 //SYSCALL

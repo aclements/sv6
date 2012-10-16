@@ -190,7 +190,7 @@ void            pinit(void);
 void            procdumpall(void);
 void            scheduler(void) __noret__;
 void            userinit(void);
-int             wait(void);
+int             wait(int);
 void            yield(void);
 struct proc*    threadalloc(void (*fn)(void*), void *arg);
 struct proc*    threadpin(void (*fn)(void*), void *arg, const char *name, int cpu);

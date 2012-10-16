@@ -90,7 +90,7 @@ pthread_join(pthread_t tid, void** retval)
     *retval = 0;
   }
 
-  printf("XXX join\n");
+  wait(tid);
   return 0;
 }
 

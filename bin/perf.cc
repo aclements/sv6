@@ -45,7 +45,7 @@ main(int ac, const char *av[])
     die("perf: exec failed");
   }
   
-  wait();
+  wait(-1);
   conf(fd, SAMP_DISABLE);
   exit();
 }

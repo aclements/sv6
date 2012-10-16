@@ -171,7 +171,7 @@ main(int argc, char *argv[])
     }
   }
   for (int i = 0; i < nproc; i++)
-    wait();
+    wait(-1);
   printf("done %d %s\n", getpid(), argv[0]);
   exit();
 }

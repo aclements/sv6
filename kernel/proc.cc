@@ -492,7 +492,7 @@ finishproc(struct proc *p, bool removepid)
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
-wait(void)
+wait(int wpid)
 {
   struct proc *p, *np;
   int havekids, pid;
@@ -502,8 +502,9 @@ wait(void)
     havekids = 0;
     acquire(&myproc()->lock);
     SLIST_FOREACH_SAFE(p, &myproc()->childq, child_next, np) {
+      acquire(&p->lock);
+      if (wpid == -1 || wpid == p->pid) {
 	havekids = 1;
-	acquire(&p->lock);
 	if(p->get_state() == ZOMBIE){
 	  release(&p->lock);	// noone else better be trying to lock p
 	  pid = p->pid;
@@ -524,7 +525,8 @@ wait(void)
           }
 	  return pid;
 	}
-	release(&p->lock);
+      }
+      release(&p->lock);
     }
 
     // No point waiting if we don't have any children.

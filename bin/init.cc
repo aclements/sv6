@@ -92,7 +92,7 @@ main(void)
 
   for(;;){
     pid = startone(sh_argv);
-    while((wpid=wait()) >= 0 && wpid != pid)
+    while((wpid=wait(-1)) >= 0 && wpid != pid)
       fprintf(1, "zombie!\n");
   }
 }

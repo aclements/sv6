@@ -22,7 +22,7 @@ execbench(void)
       fprintf(1, "exec failed\n");
       exit();
     } else {
-      wait();
+      wait(-1);
     }
   }
   mtops(NITERS);

@@ -48,7 +48,7 @@ main(int ac, char **av)
     pthread_create(&tid, nullptr, thread, (void*)(long)i);
 
   for (int i = 0; i < 4; i++)
-    wait();
+    wait(-1);
 
   return 0;
 }

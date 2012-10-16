@@ -17,7 +17,7 @@ time_this(const char *av[])
     die("time_this: exec failed %s", av[0]);
   }
 
-  wait();
+  wait(-1);
   u64 t1 = rdtsc();
   return t1-t0;
 }

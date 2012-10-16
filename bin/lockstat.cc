@@ -79,7 +79,7 @@ main(int ac, const char *av[])
     die("lockstat: exec failed");
   }
   
-  wait();
+  wait(-1);
   xwrite(fd, '2');
   stats();
   xwrite(fd, '3');

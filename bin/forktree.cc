@@ -30,13 +30,13 @@ forktree(void)
   }
 
   for (int i = 0; i < NCHILD; i++) {
-    if (wait() < 0) {
+    if (wait(-1) < 0) {
       fprintf(1, "wait stopped early\n");
       exit();
     }
   }
   
-  if (wait() != -1) {
+  if (wait(-1) != -1) {
     fprintf(1, "wait got too many\n");
     exit();
   }

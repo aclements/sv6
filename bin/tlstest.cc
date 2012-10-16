@@ -27,7 +27,7 @@ main(int argc, char *argv[])
   pthread_t tid;
   pthread_create(&tid, 0, th, 0);
   pthread_create(&tid, 0, th, 0);
-  wait();
-  wait();
+  wait(-1);
+  wait(-1);
   exit();
 }
