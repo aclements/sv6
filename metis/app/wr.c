@@ -54,7 +54,7 @@ enum { max_key_len = 1024 };
 #ifndef RAND_INPUT
 #include "wc-datafile.h"
 #endif
-#include <inc/sysprof.h>
+//#include <inc/sysprof.h>
 #endif
 
 static uint64_t nsplits = 0;

@@ -51,7 +51,8 @@ endif
 
 UPROGS := $(UPROGS_BIN) \
           metis_string_match \
-          metis_matrix_mult
+          metis_matrix_mult \
+	  metis_wr
 
 UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
 
