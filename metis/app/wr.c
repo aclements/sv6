@@ -246,16 +246,45 @@ wr_usage(char *prog)
     exit(EXIT_FAILURE);
 }
 
+#ifdef RAND_INPUT
+static char *
+rand_input(size_t *sz)
+{
+  enum { maxlen = 3 };
+  size_t len = *sz = 0x100000; // 0x40000000;
+  char *fdata = (char *)malloc(len + 1);
+  size_t gened = 0;
+  size_t nwords = 0;
+  while (1) {
+    uint32_t wlen = rand() % (maxlen - 1) + 1;
+    wlen = 3;
+    if (gened + wlen > len) {
+      break;
+    }
+    nwords ++;
+    for (uint32_t i = 0; i < wlen; i ++)
+      fdata[gened++] = rand() % 26 + 'A';
+    fdata[gened++] = ' ';
+  }
+  printf("generated 0x%lx bytes, %ld words\n", gened + 1, nwords);
+  while (gened < len)
+    fdata[gened++] = 0;
+  return fdata;
+}
+#endif
+
 int
 main(int argc, TCHAR * argv[])
 {
-    char *fn;
     int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0, quiet = 0;
     int c;
     if (argc < 2)
 	wr_usage(argv[0]);
 
+#ifndef RAND_INPUT
+    char *fn;
     fn = argv[1];
+#endif
 
     while ((c = getopt(argc - 1, argv + 1, "p:l:m:r:q")) != -1) {
 	switch (c) {
@@ -281,24 +310,32 @@ main(int argc, TCHAR * argv[])
 	}
     }
     /* get input file */
-    int fd;
-    struct stat finfo;
     char *fdata;
+    size_t sz;
+#ifdef RAND_INPUT
+    fdata = rand_input(&sz);
+#else
+    struct stat finfo;
+    int fd;
     assert((fd = open(fn, O_RDONLY)) >= 0);
     assert(fstat(fd, &finfo) == 0);
+    sz = finfo.st_size;
     assert((fdata = mmap(0, finfo.st_size + 1,
 			 PROT_READ | PROT_WRITE, MAP_PRIVATE, fd,
 			 0)) != MAP_FAILED);
+#endif
     final_data_kvs_len_t wc_vals;
     do_mapreduce(nprocs, map_tasks, reduce_tasks, fdata,
-		 finfo.st_size, &wc_vals);
+		 sz, &wc_vals);
     mr_print_stats();
     if (!quiet) {
 	print_top(&wc_vals, ndisp);
     }
     free(wc_vals.data);
+#ifndef RAND_INPUT
     assert(munmap(fdata, finfo.st_size + 1) == 0);
     assert(close(fd) == 0);
+#endif
     mr_finalize();
     return 0;
 }
