@@ -68,12 +68,22 @@ __uaccess_end:
 .globl zpage
 .align 8
 zpage:
-        movl $4096/8,%ecx
-	xorl %eax,%eax
-	rep stosq
-	ret
+        mov     $4096/0x40, %rcx
+        mov     $0, %rax
+1:
+        movnti  %rax, (%rdi)
+        movnti  %rax, 0x8(%rdi)
+        movnti  %rax, 0x10(%rdi)
+        movnti  %rax, 0x18(%rdi)
+        movnti  %rax, 0x20(%rdi)
+        movnti  %rax, 0x28(%rdi)
+        movnti  %rax, 0x30(%rdi)
+        movnti  %rax, 0x38(%rdi)
+        lea     0x40(%rdi), %rdi
+        loop    1b
+        sfence
+        ret
 
-// XXX(sbw) should skip first cache line, prefetchnt, then zero
 .globl zrun_nc
 .align 8
 zrun_nc:
