@@ -186,10 +186,16 @@ void __cxa_pure_virtual(void)
   die("__cxa_pure_virtual");
 }
 
+struct proghdr *_dl_phdr;
+size_t _dl_phnum;
+
 void
-usetup(void)
+usetup(u64 elf_phdr, u64 elf_phnum)
 {
-  extern void initmalloc(void);
+  _dl_phdr = (struct proghdr*) elf_phdr;
+  _dl_phnum = elf_phnum;
   forkt_setup(getpid());
+
+  extern void initmalloc(void);
   initmalloc();
 }

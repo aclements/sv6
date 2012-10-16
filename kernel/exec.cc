@@ -19,7 +19,7 @@
 #define BRK (USERTOP >> 1)
 
 static int
-dosegment(inode* ip, vmap* vmp, u64 off)
+dosegment(inode* ip, vmap* vmp, u64 off, u64 *load_addr)
 {
   struct proghdr ph;
   if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -30,6 +30,9 @@ dosegment(inode* ip, vmap* vmp, u64 off)
     return -1;
   if (ph.offset < PGOFFSET(ph.vaddr))
     return -1;
+
+  if (*load_addr == -1)
+    *load_addr = ph.vaddr - ph.offset;
 
   uptr va_start = PGROUNDDOWN(ph.vaddr);
   uptr mapped_end = PGROUNDDOWN(ph.vaddr + ph.filesz);
@@ -173,6 +176,8 @@ exec(const char *path, const char * const *argv, void *ascopev)
   vmap* oldvmap;
   cleanup_work* w;
   long sp;
+  u64 load_addr = -1;
+  u64 phdr = 0;
 
   if((ip = namei(myproc()->cwd, path)) == 0)
     return -1;
@@ -224,7 +229,7 @@ exec(const char *path, const char * const *argv, void *ascopev)
 
     switch (type) {
     case ELF_PROG_LOAD:
-      if (dosegment(ip, vmp, off) < 0)
+      if (dosegment(ip, vmp, off, &load_addr) < 0)
         goto bad;
       break;
     default:
@@ -240,12 +245,18 @@ exec(const char *path, const char * const *argv, void *ascopev)
   if ((sp = dostack(vmp, argv, path)) < 0)
     goto bad;
 
+  // for usetup
+  if (load_addr != -1)
+    phdr = load_addr + elf->phoff;
+
   // Commit to the user image.
   oldvmap = myproc()->vmap;
 
   myproc()->vmap = vmp;
   myproc()->tf->rip = elf->entry;
   myproc()->tf->rsp = sp;
+  myproc()->tf->r12 = phdr;         // AT_PHDR
+  myproc()->tf->r13 = elf->phnum;   // AT_PHNUM
   myproc()->run_cpuid_ = myid();
 
   for(last=s=path; *s; s++)

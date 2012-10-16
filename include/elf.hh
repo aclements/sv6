@@ -49,6 +49,7 @@ struct elfnote {
 // Values for Proghdr type
 #define ELF_PROG_LOAD           1
 #define ELF_PROG_NOTE           4
+#define ELF_PROG_TLS            7
 
 // Flag bits for Proghdr flags
 #define ELF_PROG_FLAG_EXEC      1

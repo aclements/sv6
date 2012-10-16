@@ -40,6 +40,7 @@ UPROGS_BIN= \
 	vmimbalbench \
 	appendtest \
 	linkbench \
+        tlstest \
 	crwpbench
 
 ifeq ($(HAVE_LWIP),y)
