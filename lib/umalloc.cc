@@ -1,6 +1,5 @@
 #include "types.h"
 #include "user.h"
-#include "uspinlock.h"
 
 // Memory allocator by Kernighan and Ritchie,
 // The C programming Language, 2nd ed.  Section 8.7.
@@ -17,10 +16,8 @@ union header {
 
 typedef union header Header;
 
-static Header base;
-static Header *freep;
-
-static struct uspinlock lock;
+static __thread Header base;
+static __thread Header *freep;
 
 static void
 __free(void *ap)
@@ -50,9 +47,7 @@ free(void *ap)
   if (!ap)
     return;
 
-  acquire(&lock);
   __free(ap);
-  release(&lock);
 }
 
 static Header*
@@ -78,7 +73,6 @@ malloc(u32 nbytes)
   Header *p, *prevp;
   u32 nunits;
 
-  acquire(&lock);
   nunits = (nbytes + sizeof(Header) - 1)/sizeof(Header) + 1;
   if((prevp = freep) == 0){
     base.s.ptr = freep = prevp = &base;
@@ -94,14 +88,11 @@ malloc(u32 nbytes)
         p->s.size = nunits;
       }
       freep = prevp;
-      release(&lock);
       return (void*)(p + 1);
     }
     if(p == freep)
-      if((p = morecore(nunits)) == 0) {
-        release(&lock);
+      if((p = morecore(nunits)) == 0)
         return 0;
-      }
   }
 }
 
@@ -109,7 +100,6 @@ extern "C" void initmalloc(void);
 void
 initmalloc(void)
 {
-  initlock(&lock);
 }
 
 void*
