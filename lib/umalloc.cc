@@ -114,7 +114,7 @@ realloc(void* ap, size_t nbytes)
 {
   Header *bp = (header*) ap - 1;
   void* n = malloc(nbytes);
-  memcpy(n, ap, bp->s.size);
+  memcpy(n, ap, bp->s.size * sizeof(Header));
   free(ap);
   return n;
 }
