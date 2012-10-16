@@ -8,8 +8,10 @@
 
 BEGIN_DECLS
 
-void qsort(void *base, size_t nmemb, size_t size,
-           int (*compar)(const void *, const void *));
+typedef int (*__compar_d_fn_t) (const void *, const void *, void *);
+typedef int (*__compar_fn_t) (const void *, const void *);
+
+void qsort(void *base, size_t nmemb, size_t size, __compar_fn_t c);
 
 void srand(unsigned int seed);
 int rand(void);

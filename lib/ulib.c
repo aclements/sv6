@@ -134,6 +134,12 @@ memcpy(void *dst, const void *src, size_t n)
 }
 
 void*
+mempcpy(void *dst, const void *src, size_t n)
+{
+  return memmove(dst, (void *)src, n) + n;
+}
+
+void*
 memmove(void *vdst, const void *vsrc, size_t n)
 {
   const char *src;

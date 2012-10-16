@@ -47,6 +47,9 @@ __free(void *ap)
 void
 free(void *ap)
 {
+  if (!ap)
+    return;
+
   acquire(&lock);
   __free(ap);
   release(&lock);
