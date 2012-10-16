@@ -14,6 +14,7 @@
 #include "apic.hh"
 #include "kstream.hh"
 #include "hwvm.hh"
+#include "refcache.hh"
 
 extern "C" void __uaccess_end(void);
 
@@ -121,6 +122,7 @@ trap(struct trapframe *tf)
     }
     if (mycpu()->id == 0)
       timerintr();
+    refcache::mycache->tick();
     lapiceoi();
     break;
   case T_IRQ0 + IRQ_IDE:

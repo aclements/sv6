@@ -4,88 +4,114 @@
 // per-core reference delta caches.  Increment and decrement
 // operations are expected to be core-local, especially for workloads
 // with good locality.  In contrast with most scalable reference
-// counting mechanisms, this requires space proportional to the sum of
-// the number of reference counted objects and the number of cores,
-// rather than the product, and the per-core overhead can be adjusted
-// to trade off space and scalability by controlling the reference
-// cache eviction rate.  Finally, this mechanism guarantees that
-// objects will be garbage collected within an adjustable time bound
-// of when their reference count drops to zero.
+// counting mechanisms, refcache requires space proportional to the
+// sum of the number of reference counted objects and the number of
+// cores, rather than the product, and the per-core overhead can be
+// adjusted to trade off space and scalability by controlling the
+// reference cache eviction rate.  Finally, this mechanism guarantees
+// that objects will be garbage collected within an adjustable time
+// bound of when their reference count drops to zero.
 //
-// In this scheme, each reference counted object has a global
-// reference count, much like in regular reference counting.  In
-// addition, each core maintains a local, fixed-size cache of deltas
-// to object's reference counts.  The true reference count of an
-// object is the sum of its global count and any local deltas found in
-// per-core caches.  The value of the true count is generally unknown,
-// except when it has been zero for an entire garbage collection
-// round, at which point we know the object can be freed.  Hence, much
-// like regular reference counting, we depend on the fact that once an
-// object's reference count is zero, it cannot go back up.
+// In refcache, each reference counted object has a global reference
+// count (much like a regular reference count) and each core also
+// maintains a local, fixed-size cache of deltas to object's reference
+// counts.  Incrementing or decrementing an object's reference count
+// modifies only the local, cached delta and this delta is
+// periodically flushed to the object's global reference count.  The
+// true reference count of an object is thus the sum of its global
+// count and any local deltas for that object found in the per-core
+// caches.  The value of the true count is generally unknown, but we
+// assume that once it drops to zero, it will remain zero.  We depend
+// on this stability to detect a zero true count after some delay.
 //
-// To detect a zero true reference count and perform garbage
-// collection, we use a token-passing cache flushing scheme.  Cores
-// pass a token around in an arbitrary but fixed order.  When a core
-// has the token, it flushes all of the reference count deltas in its
-// cache, applying these updates to the global reference counts of
-// each object.  As a result, the global count of an object tracks but
-// lags behind the (conceptual) true count.  Because of the skew
-// introduced by token-passing, updates to the global count are not
-// applied in order; however, an update is guaranteed to be applied
-// globally within one round of it occurring locally, as shown in the
-// following figure:
+// To detect a zero true reference count, refcache divides time into
+// periodic *epochs* during which each core flushes all of the
+// reference count deltas in its cache, applying these updates to the
+// global reference count of each object.  The last core in an epoch
+// to finish flushing its cache ends the epoch and after some delay
+// (our implementation uses 10ms) all of the cores repeat this
+// process.  Since these flushes occur in no particular order and the
+// caches batch reference count changes, updates to the reference
+// count can be reordered.  As a result, a zero global reference count
+// does not imply a zero true reference count.  However, once the true
+// count *is* zero, there will be no more updates, so if the global
+// reference count of an object drops to zero and *remains* zero for
+// an entire epoch, then the refcache can guarantee that the true
+// count is zero and free the object.
 //
-//             t ->
-//     core 0  *     -   * 
-//          1    * +       *
-//          2      *         *
-//          3        *         *
-//     global  1 1 1 1 1 0 1 1 1
-//     true    1 1 2 1 1 1 1 1 1
+// This lag between the true reference count and the global reference
+// count of an object is the main complication for refcache.  For
+// example, consider the following sequence of increments, decrements,
+// and flushes for a single object:
 //
-// Because of this reordering, a zero global reference count does not
-// imply a zero true reference count, but because of the bounded
-// delay, if the global reference count is zero and *stays* zero for
-// an entire round, then the true reference count is zero.
+//         t ->
+// core 0     -   *   |       *     * +   |   * +     |
+//      1   +         *     * |     *     |       - * |
+//      2           * |     * |           *         * |
+//      3       *     |     * |         - *           *
+// global  1 1 1 1 0 0 1 1 1 1 1 1 1 1 1 1 0 0 1 1 1 0 0
+// true    1 2 1 1 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 2 1 1 1
+// epoch   ^----1-----^---2---^-----3-----^-----4-----^
 //
-// To detect this, when a core applies an update globally, if this
-// drops an object's global count to zero, the core places the object
-// on a local "review" list (unless it's already on another core's
-// review list).  When that core next gets the token, it scans its
-// review list.  Any objects that had a global reference count of zero
-// for the entire round can be freed.  Because of skew, an object may
-// have a had a non-zero global count during the round, but have a
-// zero reference count again when the reviewer gets the token.  We
-// call this a "dirty" zero.  For example,
+// Because of flush order, the two updates in epoch 1 are applied to
+// the global reference count in the opposite order of how they
+// actually occurred.  As a result, core 0 observes the global count
+// temporarily drop to zero when it flushes in epoch 1, even though
+// the true count is non-zero.  This is remedied as soon as core 1
+// flushes its increment delta, and when core 0 reexamines the object
+// at the end of epoch 2, after all cores have again flushed their
+// reference caches, it can see that the global count is non-zero and
+// hence the zero count it observed was not a true zero and the object
+// should not be freed.
 //
-//             t ->      A         B
-//     core 0  *     -   *         *
-//          1    * +       * +       *
-//          2      *         *         *
-//          3        *        -*         *
-//     global  1 1 1 1 1 0 1 1 0 0 0 1 0 0
-//     true    1 1 2 1 1 1 1 2 1 1 1 1 1 1
+// It is not enough for the global reference count to be zero when an
+// object is reexamined; rather, it must have been zero for the entire
+// epoch.  For example, core 0 will observe a zero global reference
+// count at the end of epoch 3, and again when it reexamines the
+// object at the end of epoch 4.  However, the true count is not zero,
+// and the global reference count was temporarily non-zero during the
+// epoch.  We call this a *dirty* zero and in this situation the
+// refcache will queue the object to be examined again after another
+// epoch.
 //
-// At time A, core 0 will place the object on its review list.
-// Between A and B, the global count becomes temporarily non-zero, but
-// it is zero again at time B, when core 0 scans its review list, even
-// though the true count is never zero.  We distinguish real zeros
-// from dirty zeros by simply setting a dirty flag on an object if we
-// apply an update to it, the global count drops to zero, and we find
-// that the object is already on a core's review list.  When a core
-// finds a dirty zero on its review list, it simply clears the dirty
-// flag and re-enqueues the object to be reviewed again in the next
-// round.
+// The pseudocode for refcache is given below.  Each core maintains a
+// hash table storing its reference delta cache and a "review" queue
+// that tracks objects whose global reference counts reached zero.  A
+// core reviews an object once it can guarantee that all cores have
+// flushed their reference caches after it put the object in its
+// review queue.
 //
-// Finally, since the per-core cache is fixed size, we must also
-// handle capacity evictions.  The same mechanism used for periodic
-// evictions applies to capacity evictions, except that we must be
-// careful to wait at least an entire round before reviewing the
-// object.  In practice, this means we can't simply add the object to
-// the review list, since this will cause it to get reviewed at the
-// end of the *current* round, before the token has passed through all
-// cores.  Instead, we add the object to another list that becomes the
-// initial review list for the next round.
+//   flush():
+//     evict all cache entries
+//     update the current epoch
+//
+//   evict(object, delta):
+//     object.refcnt <- object.refcnt + delta
+//     if object.refcnt = 0:
+//       if object is not on any review queue:
+//         object.dirty <- false
+//         add (object, epoch) to the local review queue
+//       else:
+//         object.dirty <- true
+//
+//   review():
+//     for each (object, oepoch) in local review queue:
+//       if oepoch <= epoch + 2:
+//         remove object from the review queue
+//         if object.refcnt = 0:
+//           if object.dirty:
+//             object.dirty <- false
+//             add (object, epoch) to the review queue
+//           else:
+//             free object
+//
+// For epoch management, our current implementation uses a simple
+// barrier scheme that tracks a global epoch counter, per-core epochs,
+// and a count of how many per-core epochs have reached the current
+// global epoch.  This scheme suffices for our benchmarks, but more
+// scalable schemes are possible, such as the tree-based quiescent
+// state detection scheme used by Linux's hierarchical RCU
+// implementation [http://lwn.net/Articles/305782/].
 
 #pragma once
 
@@ -109,7 +135,7 @@ namespace refcache {
   private:
     friend class cache;
 
-    // XXX This can all be packed into two words
+    // XXX This can all be packed into three words
 
     // This lock protects all of the following fields.
     spinlock lock_;
@@ -123,13 +149,14 @@ namespace refcache {
     // Since the global count can go negative, this must be signed.
     int64_t refcount_;
 
-    // Link used to track this object in the per-core review list or
-    // next-review list.
+    // Link used to track this object in the per-core review list.
     islink<referenced> next_;
-    typedef islist<referenced, &referenced::next_> list;
+    typedef isqueue<referenced, &referenced::next_> list;
 
-    // True if this object is on some core's review list.
-    bool has_reviewer_;
+    // If this object is on a review list, the epoch in which this
+    // object can be reviewed.  0 if this object is not on a review
+    // list.
+    uint64_t review_epoch_;
 
     // True if this object's refcount was non-zero and then zero again
     // since it was last reviewed.
@@ -140,7 +167,7 @@ namespace refcache {
       : lock_("refcache::referenced"),
         refcount_(refcount),
         next_(),
-        has_reviewer_(false),
+        review_epoch_(0),
         dirty_(false) { }
 
     referenced(const referenced &o) = delete;
@@ -191,16 +218,13 @@ namespace refcache {
     // capacity evictions.
     way ways_[CACHE_SLOTS];
 
-    // The list of objects to review the next time this core gets the
-    // round token.  This must be accessed only by the review process.
-    // Since the review process is pinned and naturally serialized, no
-    // protection is necessary.
+    // The list of objects to review in increasing epoch order.  This
+    // must be accessed only by the local core and there must be at
+    // most one reviewer at a time per core.
     referenced::list review_;
 
-    // The head of the list of objects to review two rounds from
-    // now.  Before passing the token on, this becomes the review
-    // list.  This must be accessed with interrupts disabled.
-    referenced::list next_;
+    // The last global epoch number observed by this core.
+    uint64_t local_epoch;
 
     // Place obj in the cache if necessary and return its assigned
     // way.  Interrupts must be disabled.
@@ -218,10 +242,9 @@ namespace refcache {
         // This object is not in the cache
         if (way->delta) {
           // Need to evict to free up an entry.  Since this is a
-          // capacity eviction, we need to review this object not the
-          // next time we get the token, but one round *after* that to
-          // ensure that the token has passed through all cores.
-          evict(way, &next_);
+          // capacity eviction, local_epoch may be behind
+          // global_epoch.
+          evict(way, false);
         }
         // Take this entry
         way->obj = obj;
@@ -229,28 +252,32 @@ namespace refcache {
       return way;
     }
 
-    // Evict the object from way, freeing up this slot.  list must be
-    // either &review_ for periodic evictions or &next_ for capacity
-    // evictions.  way must have a non-zero delta and interrupts must
-    // be disabled.
-    void evict(struct way *way, referenced::list *list);
+    // Evict the object from way, freeing up this slot.  way must have
+    // a non-zero delta and interrupts must be disabled.  If
+    // local_epoch_is_exact, then we assume that local_epoch equals
+    // global_epoch.  Otherwise, local_epoch may be global_epoch or
+    // global_epoch - 1.
+    void evict(struct way *way, bool local_epoch_is_exact);
 
-    // Scan this core's review list and perform periodic eviction.
-    // The calling thread must be pinned (but interrupts may be
-    // enabled).
+    // Flush this core's refcache.
+    void flush();
+
+    // Scan this core's review list.  The calling thread must be
+    // pinned (but interrupts may be enabled).  At most one review
+    // call may be active at a time per core.
     void review();
 
   public:
-    constexpr cache() = default;
+    cache() = default;
     cache(const cache &o) = delete;
     cache(cache &&o) = delete;
     cache &operator=(const cache &o) = delete;
     cache &operator=(cache &&o) = delete;
 
-    // Refcache worker thread.  There should be a single instance of
-    // this.  This thread is the token: it migrates through the cores
-    // performing periodic eviction.
-    static void worker(void *);
+    // Periodic tick handler.  Flushes the refcache and scans review
+    // lists.  The latency of garbage collection is between two and
+    // three times the delay between calls to tic.
+    void tick();
   };
 
   // Per-CPU reference delta cache.  In general this has to be
