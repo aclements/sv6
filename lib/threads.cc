@@ -21,6 +21,7 @@ forkt_setup(u64 pid)
 {
   static size_t memsz;
   static size_t filesz;
+  static size_t align;
   static void* initimage;
 
   if (initimage == 0 && _dl_phdr) {
@@ -29,17 +30,19 @@ forkt_setup(u64 pid)
         memsz = p->memsz;
         filesz = p->filesz;
         initimage = (void *) p->vaddr;
-        // XXX ignore p->align
+        align = p->align;
         break;
       }
     }
   }
 
-  s64 tptr = (s64) sbrk(sizeof(tlsdata) + memsz);
+  u64 memsz_align = (memsz+align-1) & ~(align-1);
+
+  s64 tptr = (s64) sbrk(sizeof(tlsdata) + memsz_align);
   assert(tptr != -1);
 
   memcpy((void*)tptr, initimage, filesz);
-  tlsdata* t = (tlsdata*) (tptr + memsz);
+  tlsdata* t = (tlsdata*) (tptr + memsz_align);
   t->tlsptr[0] = t;
   setfs((u64) t);
 }

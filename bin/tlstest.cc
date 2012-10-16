@@ -2,6 +2,7 @@
 #include "user.h"
 #include "pthread.h"
 
+__thread u8 b = 0xee;
 __thread u64 a = 0xdeadbeef001234;
 
 void*
@@ -10,6 +11,11 @@ th(void*)
   printf("%d: a=%lx\n", getpid(), a);
   a++;
   printf("%d: a=%lx\n", getpid(), a);
+
+  printf("%d: b=%x\n", getpid(), b);
+  b++;
+  printf("%d: b=%x\n", getpid(), b);
+
   return 0;
 }
 
