@@ -258,7 +258,7 @@ sched(void)
   }
 
   if(mycpu()->ncli != 1)
-    panic("sched locks");
+    panic("sched locks (ncli = %d)", mycpu()->ncli);
   if(myproc()->get_state() == RUNNING)
     panic("sched running");
   if(readrflags()&FL_IF)
