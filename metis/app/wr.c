@@ -133,7 +133,6 @@ map(split_t * split)
     char tmp_key[max_key_len];
     int ilen = 0;
     char *index = NULL;
-    printf("map %d\n", split->length);
     for (i = 0; i < split->length; i++) {
 	curr_ltr = toupper(data[i]);
 	switch (state) {
@@ -160,7 +159,6 @@ map(split_t * split)
 	}
     }
 
-    printf("map done %d\n", split->length);
     /* add the last word */
     if (state == IN_WORD) {
 	tmp_key[ilen] = 0;
