@@ -249,6 +249,21 @@ struct islist
   }
 
   /**
+   * Cut this list after the element pointed to by @c pos and return a
+   * new list consisting of all elements starting at <code>pos +
+   * 1</code>.
+   */
+  islist
+  cut_after(iterator pos) noexcept
+  {
+    auto nfirst = (pos.elem->*L).next;
+    (pos.elem->*L).next = nullptr;
+    islist nl;
+    nl.head.next = nfirst;
+    return nl;
+  }
+
+  /**
    * Return an iterator pointing to elem, which must be in this list.
    */
   iterator
