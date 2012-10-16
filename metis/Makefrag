@@ -2,7 +2,7 @@
 
 METIS_LDFLAGS += $(O)/libmetis.a
 METIS_CFLAGS = -DJOS_USER -DXV6_USER -DJTLS=__thread \
-               -DJOS_NCPU=$(QEMUSMP) -DJSHARED_ATTR= -DJOS_CLINE=64 -DCACHE_LINE_SIZE=64
+               -DJOS_NCPU=NCPU -DJSHARED_ATTR= -DJOS_CLINE=64 -DCACHE_LINE_SIZE=64
 METIS_INCLUDES = -I$(O)/ -Imetis -Imetis/lib
 
 METIS_SRCFILES :=                               \
