@@ -41,6 +41,68 @@ void to_stream(class print_stream *s, const vmdesc &vmd)
 }
 
 /*
+ * Page holder
+ */
+
+class page_holder
+{
+  struct batch
+  {
+    struct batch *next;
+    size_t used;
+    sref<class page_info> pages[];
+
+    batch() : next(nullptr), used(0) { }
+    ~batch()
+    {
+      for (size_t i = 0; i < used; ++i)
+        pages[i].~sref();
+    }
+  };
+
+  enum {
+    // The number of pages that can be collected before we need to
+    // heap allocate.
+    NLOCAL = 8,
+    // The number of pages that can be collected in a heap-allocated
+    // page.
+    NHEAP = (PGSIZE - sizeof(batch)) / sizeof(sref<class page_info>)
+  };
+
+  batch *cur;
+  size_t curmax;
+  batch first;
+  char first_buf[NLOCAL * sizeof(sref<class page_info>)];
+
+public:
+  page_holder() : cur(&first), curmax(NLOCAL) {
+    static_assert((char*)&((page_holder*)nullptr)->first.pages[NLOCAL] <=
+                  &((page_holder*)nullptr)->first_buf[sizeof(first_buf)],
+                "stack-local batch reservation hack failed");
+  }
+
+  ~page_holder()
+  {
+    batch *next;
+    for (batch *b = first.next; b; b = next) {
+      next = b->next;
+      b->~batch();
+      kfree(b);
+    }
+  }
+
+  void add(sref<class page_info> &&page)
+  {
+    if (cur->used == curmax) {
+      cur->next = new (kalloc("page_holder::batch")) batch();
+      cur = cur->next;
+      curmax = NHEAP;
+    }
+    new (&cur->pages[cur->used++]) sref<class page_info>(std::move(page));
+  }
+};
+
+/*
  * vmap
  */
 
@@ -157,19 +219,19 @@ again:
   auto begin = vpfs_.find(start / PGSIZE);
   auto end = vpfs_.find((start + len) / PGSIZE);
   mmu::shootdown shootdown;
-
-  // Don't free backing pages until after the shootdown
-  scoped_gc_epoch gc;
+  page_holder pages;
 
   {
     // New scope to release the search lock before shootdown
     auto lock = vpfs_.acquire(begin, end);
 
-    if (!fixed) {
+    for (auto it = begin; it < end; it += it.span()) {
+      if (!it.is_set())
+        continue;
       // Verify unmapped region now that we hold the lock
-      for (auto it = begin; it < end; it += it.span())
-        if (it.is_set())
-          goto again;
+      if (!fixed)
+        goto again;
+      pages.add(std::move(it->page));
     }
 
     cache.invalidate(start, len, begin, &shootdown);
@@ -188,15 +250,16 @@ vmap::remove(uptr start, uptr len)
   verbose.println("vm: remove(", start, ",", len, ")");
 
   mmu::shootdown shootdown;
-
-  // Don't free backing pages until after the shootdown
-  scoped_gc_epoch gc;
+  page_holder pages;
 
   {
     // New scope to release the search lock before shootdown
     auto begin = vpfs_.find(start / PGSIZE);
     auto end = vpfs_.find((start + len) / PGSIZE);
     auto lock = vpfs_.acquire(begin, end);
+    for (auto it = begin; it < end; it += it.span())
+      if (it.is_set())
+        pages.add(std::move(it->page));
     cache.invalidate(start, len, begin, &shootdown);
     vpfs_.unset(begin, end);
   }
