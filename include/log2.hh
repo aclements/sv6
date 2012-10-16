@@ -12,6 +12,16 @@ ceil_log2(std::size_t x)
   return bits;
 }
 
+// Return ceil(log2(x)).  This is slow, but can be evaluated in a
+// constexpr context.
+static constexpr std::size_t
+ceil_log2_const(std::size_t x, bool exact = true)
+{
+  return (x == 0) ? (1/x)
+    : (x == 1) ? (exact ? 0 : 1)
+    : 1 + ceil_log2_const(x >> 1, ((x & 1) == 1) ? false : exact);
+}
+
 // Round up to the nearest power of 2
 static inline std::size_t
 round_up_to_pow2(std::size_t x)
