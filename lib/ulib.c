@@ -44,10 +44,10 @@ strncmp(const char *p, const char *q, size_t n)
   return (u8)*p - (u8)*q;
 }
 
-unsigned int
+size_t
 strlen(const char *s)
 {
-  int n;
+  size_t n;
 
   for(n = 0; s[n]; n++)
     ;
@@ -55,7 +55,7 @@ strlen(const char *s)
 }
 
 void*
-memset(void *dst, int c, unsigned int n)
+memset(void *dst, int c, size_t n)
 {
   stosb(dst, c, n);
   return dst;

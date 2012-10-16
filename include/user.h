@@ -22,8 +22,8 @@ int open(const char*, int, ...);
 int mkdir(const char*, mode_t);
 
 char* gets(char*, int max);
-unsigned int strlen(const char*);
-void* memset(void*, int, unsigned int);
+size_t strlen(const char*);
+void* memset(void*, int, size_t);
 void* malloc(unsigned int);
 void free(void*);
 int atoi(const char*);

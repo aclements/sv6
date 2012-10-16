@@ -57,7 +57,7 @@ main(void)
       exit();
     }
     close(ss);
-    wait();
+    wait(-1);
     fprintf(1, "telnetd: connection closed\n");
   }
 }
