@@ -134,6 +134,7 @@ map(split_t * split)
     char tmp_key[max_key_len];
     int ilen = 0;
     char *index = NULL;
+    printf("map %d\n", split->length);
     for (i = 0; i < split->length; i++) {
 	curr_ltr = toupper(data[i]);
 	switch (state) {
@@ -160,6 +161,7 @@ map(split_t * split)
 	}
     }
 
+    printf("map done %d\n", split->length);
     /* add the last word */
     if (state == IN_WORD) {
 	tmp_key[ilen] = 0;
@@ -251,19 +253,20 @@ static char *
 rand_input(size_t *sz)
 {
   enum { maxlen = 3 };
-  size_t len = *sz = 0x100000; // 0x40000000;
+  size_t len = *sz = 0x1000000; // 0x40000000;
   char *fdata = (char *)malloc(len + 1);
   size_t gened = 0;
   size_t nwords = 0;
+  uint32_t seed = 0;
   while (1) {
-    uint32_t wlen = rand() % (maxlen - 1) + 1;
+    uint32_t wlen = rnd(&seed) % (maxlen - 1) + 1;  // XXX maybe use rnd()
     wlen = 3;
     if (gened + wlen > len) {
       break;
     }
     nwords ++;
     for (uint32_t i = 0; i < wlen; i ++)
-      fdata[gened++] = rand() % 26 + 'A';
+      fdata[gened++] = rnd(&seed) % 26 + 'A';
     fdata[gened++] = ' ';
   }
   printf("generated 0x%lx bytes, %ld words\n", gened + 1, nwords);
