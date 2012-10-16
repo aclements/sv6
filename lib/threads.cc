@@ -147,6 +147,6 @@ pthread_barrier_wait(pthread_barrier_t *b)
 int
 sched_setaffinity(int pid, size_t cpusetsize, cpu_set_t *mask)
 {
-  printf("XXX sched_setaffinity\n");
-  return 0;
+  assert(!mask->empty_flag);
+  return setaffinity(mask->the_cpu);
 }
