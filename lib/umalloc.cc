@@ -1,44 +1,53 @@
 #include "types.h"
 #include "user.h"
 
-// Memory allocator by Kernighan and Ritchie,
-// The C programming Language, 2nd ed.  Section 8.7.
-
-typedef long Align;
-
-union header {
-  struct {
-    union header *ptr;
-    u32 size;
-  } s;
-  Align x;
+struct header {
+  header* next;
+  u32 size;       // in units of sizeof(header), including the header itself
 };
 
-typedef union header Header;
-
-static __thread Header base;
-static __thread Header *freep;
+static __thread header* freelist;
 
 static void
 __free(void *ap)
 {
-  Header *bp, *p;
+  header* bp = ((header*)ap) - 1;
 
-  bp = (Header*)ap - 1;
-  for(p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
-    if(p >= p->s.ptr && (bp > p || bp < p->s.ptr))
-      break;
-  if(bp + bp->s.size == p->s.ptr){
-    bp->s.size += p->s.ptr->s.size;
-    bp->s.ptr = p->s.ptr->s.ptr;
-  } else
-    bp->s.ptr = p->s.ptr;
-  if(p + p->s.size == bp){
-    p->s.size += bp->s.size;
-    p->s.ptr = bp->s.ptr;
-  } else
-    p->s.ptr = bp;
-  freep = p;
+  header** pp = &freelist;
+  while (*pp) {
+    header* p = *pp;
+
+    if (bp && p + p->size == bp) {
+      p->size += bp->size;
+      bp = 0;
+    }
+
+    if (bp && bp + bp->size == p) {
+      bp->size += p->size;
+      bp->next = p->next;
+      *pp = p = bp;
+      bp = 0;
+    }
+
+    if (bp && bp + bp->size < p) {
+      bp->next = p;
+      *pp = bp;
+      bp = 0;
+    }
+
+    while (p->next && p + p->size == p->next) {
+      p->size += p->next->size;
+      p->next = p->next->next;
+    }
+
+    pp = &p->next;
+  }
+
+  if (bp) {
+    assert(*pp == 0);
+    bp->next = 0;
+    *pp = bp;
+  }
 }
 
 void
@@ -50,49 +59,49 @@ free(void *ap)
   __free(ap);
 }
 
-static Header*
+static int
 morecore(u32 nu)
 {
-  char *p;
-  Header *hp;
+  enum { min_alloc_units = 16384 };
+  if (nu < min_alloc_units)
+    nu = min_alloc_units;
 
-  if(nu < 4096)
-    nu = 4096;
-  p = sbrk(nu * sizeof(Header));
-  if(p == (char*)-1)
-    return 0;
-  hp = (Header*)p;
-  hp->s.size = nu;
-  __free((void*)(hp + 1));
-  return freep;
+  char* p = sbrk(nu * sizeof(header));
+  if (p == (char*)-1)
+    return -1;
+
+  header* hp = (header*) p;
+  hp->size = nu;
+  __free(hp + 1);
+  return 0;
 }
 
 void*
 malloc(u32 nbytes)
 {
-  Header *p, *prevp;
-  u32 nunits;
+  u32 nunits = 1 + (nbytes + sizeof(header) - 1) / sizeof(header);
 
-  nunits = (nbytes + sizeof(Header) - 1)/sizeof(Header) + 1;
-  if((prevp = freep) == 0){
-    base.s.ptr = freep = prevp = &base;
-    base.s.size = 0;
-  }
-  for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr){
-    if(p->s.size >= nunits){
-      if(p->s.size == nunits)
-        prevp->s.ptr = p->s.ptr;
-      else {
-        p->s.size -= nunits;
-        p += p->s.size;
-        p->s.size = nunits;
+  for (;;) {
+    header** pp = &freelist;
+    while (*pp) {
+      header* p = *pp;
+      if (p->size >= nunits) {
+        if (p->size == nunits) {
+          *pp = p->next;
+        } else {
+          p->size -= nunits;
+          p += p->size;
+          p->size = nunits;
+        }
+
+        return p+1;
       }
-      freep = prevp;
-      return (void*)(p + 1);
+
+      pp = &p->next;
     }
-    if(p == freep)
-      if((p = morecore(nunits)) == 0)
-        return 0;
+
+    if (morecore(nunits) < 0)
+      return 0;
   }
 }
 
@@ -105,11 +114,16 @@ initmalloc(void)
 void*
 realloc(void* ap, size_t nbytes)
 {
-  Header *bp = (header*) ap - 1;
-  void* n = malloc(nbytes);
-  memcpy(n, ap, bp->s.size * sizeof(Header));
-  free(ap);
-  return n;
+  header *bp = ((header*)ap) - 1;
+
+  if (nbytes <= (bp->size-1) * sizeof(header)) {
+    return ap;
+  } else {
+    void* n = malloc(nbytes);
+    memcpy(n, ap, (bp->size-1) * sizeof(header));
+    free(ap);
+    return n;
+  }
 }
 
 void*
