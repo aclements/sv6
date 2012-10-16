@@ -21,6 +21,8 @@
 #define LOCKSTAT      DEBUG
 #define ALLOC_MEMSET  DEBUG
 #define BUDDY_DEBUG   DEBUG
+#define REFCACHE_DEBUG DEBUG
+#define RADIX_DEBUG   DEBUG
 #define KSHAREDSIZE   (32 << 10)
 #define USERWQSIZE    (1 << 14)
 #define USTACKPAGES   8
