@@ -24,7 +24,7 @@ int mkdir(const char*, mode_t);
 char* gets(char*, int max);
 size_t strlen(const char*);
 void* memset(void*, int, size_t);
-void* malloc(unsigned int);
+void* malloc(size_t);
 void free(void*);
 int atoi(const char*);
 long atol(const char*);
