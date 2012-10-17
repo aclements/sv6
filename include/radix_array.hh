@@ -1016,9 +1016,15 @@ public:
     pushcli();
 #endif
 
-    iterator it(low);
-    for (; it.k_ < high.k_; it += it.span())
+    // We have to iterate from low_key to high_key, rather than just
+    // from low to high, because the shape of the tree might change
+    // between when we computed low_key/high_key and when we finish
+    // with this loop, and we have to ensure that we lock exactly what
+    // we're going to unlock later.
+    iterator it(find(low_key));
+    for (; it.k_ < high_key; it += it.span()) {
       it.lock();
+    }
 
     return lock(this, low_key, high_key);
   }
