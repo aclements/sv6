@@ -229,7 +229,4 @@ usetup(u64 elf_phdr, u64 elf_phnum)
   _dl_phdr = (struct proghdr*) elf_phdr;
   _dl_phnum = elf_phnum;
   forkt_setup(getpid());
-
-  extern void initmalloc(void);
-  initmalloc();
 }

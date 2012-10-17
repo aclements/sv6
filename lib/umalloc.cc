@@ -6,14 +6,22 @@ struct header {
   u32 size;       // in units of sizeof(header), including the header itself
 };
 
-static __thread header* freelist;
+static __thread header* freelist[64];
+
+static int
+floor_log2(u64 x)
+{
+  return 8 * sizeof(long long) - __builtin_clzll(x) - 1;
+}
 
 static void
-__free(void *ap)
+__free(void *ap, int bidx)
 {
   header* bp = ((header*)ap) - 1;
 
-  header** pp = &freelist;
+  if (bidx < 0)
+    bidx = floor_log2(bp->size);
+  header** pp = &freelist[bidx];
   while (*pp) {
     header* p = *pp;
 
@@ -56,12 +64,14 @@ free(void *ap)
   if (!ap)
     return;
 
-  __free(ap);
+  __free(ap, -1);
 }
 
 static int
 morecore(u32 nu)
 {
+  u32 bidx = floor_log2(nu);
+
   enum { min_alloc_units = 16384 };
   if (nu < min_alloc_units)
     nu = min_alloc_units;
@@ -72,17 +82,17 @@ morecore(u32 nu)
 
   header* hp = (header*) p;
   hp->size = nu;
-  __free(hp + 1);
+  __free(hp + 1, bidx);
   return 0;
 }
 
 void*
-malloc(u32 nbytes)
+malloc(size_t nbytes)
 {
   u32 nunits = 1 + (nbytes + sizeof(header) - 1) / sizeof(header);
 
   for (;;) {
-    header** pp = &freelist;
+    header** pp = &freelist[floor_log2(nunits)];
     while (*pp) {
       header* p = *pp;
       if (p->size >= nunits) {
@@ -103,12 +113,6 @@ malloc(u32 nbytes)
     if (morecore(nunits) < 0)
       return 0;
   }
-}
-
-extern "C" void initmalloc(void);
-void
-initmalloc(void)
-{
 }
 
 void*
