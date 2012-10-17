@@ -836,7 +836,7 @@ public:
    * regions are safe.
    */
   void
-  fill(const iterator &low, const iterator &high, const T &x)
+  fill(const iterator &low, const iterator &high, const T &x, bool must_be_unset = false)
   {
     // Range fill requires a bitonic traversal that, moving from left
     // to right, first ascends the tree, then descends the tree.  For
@@ -868,6 +868,8 @@ public:
       // Set at the current key.  set_at_level takes care of creating
       // this level if necessary or filling in children if the tree is
       // already deeper here.
+      if (must_be_unset)
+        assert(!it.is_set());
       it.set_at_level(level, x);
 
       it += span;
