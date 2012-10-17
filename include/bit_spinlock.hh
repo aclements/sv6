@@ -67,14 +67,14 @@ public:
   void init(bool locked = false) const noexcept
   {
     if (locked)
-      *(volatile unsigned long*)lock_ |= 1 << bit_;
+      *(volatile unsigned long*)lock_ |= 1ul << bit_;
     else
       *(volatile unsigned long*)lock_ &= ~(1ul << bit_);
   }
 
   bool is_locked() const noexcept
   {
-    return *(volatile unsigned long*)lock_ & (1 << bit_);
+    return *(volatile unsigned long*)lock_ & (1ul << bit_);
   }
 
   void acquire(cli_manager cli = cli_internal) const noexcept
