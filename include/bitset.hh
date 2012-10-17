@@ -153,9 +153,14 @@ public:
     {
       // Clear least significant bit
       word &= word - 1;
-      if (word == 0)
-        if (++wordidx < NWORDS)
-          word = src->words[wordidx];
+      if (word == 0) {
+        for (++wordidx; wordidx < NWORDS; ++wordidx) {
+          if (src->words[wordidx]) {
+            word = src->words[wordidx];
+            break;
+          }
+        }
+      }
       return *this;
     }
 
