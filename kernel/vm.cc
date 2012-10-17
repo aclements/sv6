@@ -236,7 +236,7 @@ again:
 
     cache.invalidate(start, len, begin, &shootdown);
 
-    vpfs_.fill(begin, end, desc);
+    vpfs_.fill(begin, end, desc, !fixed);
   }
 
   shootdown.perform();
