@@ -1,10 +1,27 @@
+#ifdef XV6
 #include "types.h"
 #include "user.h"
+#else
+#include <assert.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdint.h>
+typedef uint32_t u32;
+typedef uint64_t u64;
+#endif
+
+#include <sys/mman.h>
 
 struct header {
-  header* next;
+  struct header* next;
   u32 size;       // in units of sizeof(header), including the header itself
 };
+
+#ifndef __cplusplus
+typedef struct header header;
+#endif
 
 static __thread header* freelist[64];
 
@@ -76,8 +93,9 @@ morecore(u32 nu)
   if (nu < min_alloc_units)
     nu = min_alloc_units;
 
-  char* p = sbrk(nu * sizeof(header));
-  if (p == (char*)-1)
+  char* p = (char*) mmap(0, nu * sizeof(header), PROT_READ|PROT_WRITE,
+                         MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+  if (p == MAP_FAILED)
     return -1;
 
   header* hp = (header*) p;
