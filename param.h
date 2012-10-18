@@ -29,6 +29,7 @@
 #define WQSHIFT       7
 #define EXECSWITCH    1
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
+#define GC_GLOBAL     true
 // The MMU scheme.  One of:
 //  mmu_shared_page_table
 //  mmu_per_core_page_table

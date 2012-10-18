@@ -43,7 +43,7 @@ using std::atomic;
 // unless nexttofree_epoch >= cur_epoch-2, implicitly also ensuring the
 // constraint that cur_epoch is only increases when min_epoch >= cur_epoch-2.
 
-enum { gc_debug = 0, gc_global = 0 };
+enum { gc_debug = 0, gc_global = GC_GLOBAL };
 
 // Head of a delayed free list. Always read and updated while holding lock_
 struct headinfo {
