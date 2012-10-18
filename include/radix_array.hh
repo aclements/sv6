@@ -437,8 +437,14 @@ public:
         auto leaf = node.as_leaf_node();
         for (std::size_t i = idx; i < idx + len; i++) {
           // Preserve the lock state over the copy
+#if RADIX_DEBUG
+          bool l = leaf->child[i].get_lock().is_locked();
+#endif
           x->get_lock().init(leaf->child[i].get_lock().is_locked());
           leaf->child[i] = *x;
+#if RADIX_DEBUG
+          assert(leaf->child[i].get_lock().is_locked() == l);
+#endif
         }
       } else {
         auto upper = node.as_upper_node();
@@ -523,6 +529,9 @@ public:
         if (c.is_external() || c.is_null()) {
           // See lock()
           node_ptr *c2(reinterpret_cast<node_ptr*>(child));
+#if RADIX_DEBUG
+          assert(c2->get_lock().is_locked());
+#endif
           c2->get_lock().release(bit_spinlock::cli_caller);
           return;
         }
@@ -530,6 +539,9 @@ public:
       }
       // Leaf node
       auto &c = node_.as_leaf_node()->child[subkey(k_, 0)];
+#if RADIX_DEBUG
+      assert(c.get_lock().is_locked());
+#endif
       c.get_lock().release(bit_spinlock::cli_caller);
     }
 
@@ -868,8 +880,10 @@ public:
       // Set at the current key.  set_at_level takes care of creating
       // this level if necessary or filling in children if the tree is
       // already deeper here.
+#if RADIX_DEBUG
       if (must_be_unset)
         assert(!it.is_set());
+#endif
       it.set_at_level(level, x);
 
       it += span;
@@ -1002,9 +1016,15 @@ public:
     pushcli();
 #endif
 
-    iterator it(low);
-    for (; it.k_ < high.k_; it += it.span())
+    // We have to iterate from low_key to high_key, rather than just
+    // from low to high, because the shape of the tree might change
+    // between when we computed low_key/high_key and when we finish
+    // with this loop, and we have to ensure that we lock exactly what
+    // we're going to unlock later.
+    iterator it(find(low_key));
+    for (; it.k_ < high_key; it += it.span()) {
       it.lock();
+    }
 
     return lock(this, low_key, high_key);
   }

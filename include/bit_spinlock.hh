@@ -5,6 +5,12 @@
 #include "kernel.hh"
 #endif
 
+#ifdef DEBUG
+#define BIT_SPINLOCK_DEBUG DEBUG
+#else
+#define BIT_SPINLOCK_DEBUG 0
+#endif
+
 /**
  * A spinlock implemented as a single bit of some other value.
  *
@@ -67,14 +73,14 @@ public:
   void init(bool locked = false) const noexcept
   {
     if (locked)
-      *(volatile unsigned long*)lock_ |= 1 << bit_;
+      *(volatile unsigned long*)lock_ |= 1ul << bit_;
     else
       *(volatile unsigned long*)lock_ &= ~(1ul << bit_);
   }
 
   bool is_locked() const noexcept
   {
-    return *(volatile unsigned long*)lock_ & (1 << bit_);
+    return *(volatile unsigned long*)lock_ & (1ul << bit_);
   }
 
   void acquire(cli_manager cli = cli_internal) const noexcept
@@ -105,6 +111,9 @@ public:
 
   void release(cli_manager cli = cli_internal) const noexcept
   {
+#if BIT_SPINLOCK_DEBUG
+    assert(is_locked());
+#endif
     clear_bit_unlock(bit_, lock_);
 #ifdef XV6_KERNEL
     if (cli == cli_internal)
