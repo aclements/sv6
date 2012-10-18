@@ -38,6 +38,7 @@
 enum { verbose = 0 };
 enum { duration = 5 };
 enum { fault = 1 };
+enum { pipeline_width = 1 };
 
 enum class bench_mode
 {
@@ -69,6 +70,8 @@ enum {
 #define PMCNO 0
 #endif
 
+char * const base = (char*)0x100000000UL;
+
 static int nthread, npg;
 static bench_mode mode;
 
@@ -80,9 +83,10 @@ static __padout__ __attribute__((unused));
 // For PIPELINE mode
 static struct
 {
-  std::atomic<uint64_t> round;
+  std::atomic<uint64_t> head __mpalign__;
+  std::atomic<uint64_t> tail __mpalign__;
   __padout__;
-} cpus[NCPU];
+} channels[NCPU];
 
 // For GLOBAL mode
 static struct
@@ -105,6 +109,7 @@ static struct
 } gbarrier;
 
 static uint64_t start_tscs[NCPU], stop_tscs[NCPU], iters[NCPU], pages[NCPU];
+static std::atomic<uint64_t> total_underflows;
 #ifdef RECORD_PMC
 static uint64_t pmcs[NCPU];
 #endif
@@ -127,13 +132,20 @@ rdpmc(uint32_t ecx)
 }
 #endif
 
+static inline char *
+pipeline_get_region(uint64_t channel, uint64_t step)
+{
+  return base + ((step % pipeline_width) * npg +
+                 channel * npg * pipeline_width) * 0x10000000;
+}
+
 void*
 thr(void *arg)
 {
-  char * const base = (char*)0x100000000UL;
-
   const uintptr_t cpu = (uintptr_t)arg;
-  const uintptr_t sibling = (cpu + 1) % nthread;
+
+  const uint64_t inchan = cpu;
+  const uint64_t outchan = (cpu + 1) % nthread;
 
   if (setaffinity(cpu) < 0)
     die("setaffinity err");
@@ -141,7 +153,7 @@ thr(void *arg)
   pthread_barrier_wait(&bar);
 
   start_tscs[cpu] = rdtsc();
-  uint64_t myiters = 0, mypages = 0;
+  uint64_t myiters = 0, mypages = 0, myunderflows = 0;
 #ifdef RECORD_PMC
   uint64_t pmc1 = rdpmc(PMCNO);
 #endif
@@ -167,41 +179,43 @@ thr(void *arg)
     break;
 
   case bench_mode::PIPELINE: {
-    uint64_t myround = 0;
     while (!stop) {
-      volatile char *p = (base +
-                          cpu * NCPU *       0x10000000 +
-                          (myround % NCPU) * 0x100000);
-      if (mmap((void *) p, npg * PGSIZE, PROT_READ|PROT_WRITE,
-               MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
-        die("%d: map failed", cpu);
+      bool underflow = true;
 
-      if (fault)
-        for (int j = 0; j < npg * PGSIZE; j += PGSIZE)
-          p[j] = '\0';
+      // Fill the outgoing pipeline
+      uint64_t target = channels[outchan].tail + pipeline_width;
+      for (; channels[outchan].head < target; ++channels[outchan].head) {
+        underflow = false;
 
-      // Indicate that my mapping is ready
-      cpus[cpu].round = ++myround;
+        volatile char *p = pipeline_get_region(outchan, channels[outchan].head);
+        if (mmap((void *) p, npg * PGSIZE, PROT_READ|PROT_WRITE,
+                 MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
+          die("%d: map failed", cpu);
 
-      // Wait for sibling to finish its mapping
-      while (cpus[sibling].round < myround && !stop)
-        ;
-      if (stop)
-        break;
+        if (fault)
+          for (int j = 0; j < npg * PGSIZE; j += PGSIZE)
+            p[j] = '\0';
+      }
 
-      // Access and unmap the mapping from our sibling
-      p = (base +
-           sibling * NCPU *   0x10000000 +
-           ((myround-1) % NCPU) * 0x100000);
+      // Consume incoming pipeline
+      target = channels[inchan].head;
+      for (; channels[inchan].tail < target; ++channels[inchan].tail) {
+        underflow = false;
 
-      if (fault)
-        for (int j = 0; j < npg * PGSIZE; j += PGSIZE)
-          p[j] = '\0';
+        volatile char *p = pipeline_get_region(inchan, channels[inchan].tail);
 
-      if (munmap((void *) p, npg * PGSIZE) < 0)
-        die("%d: unmap failed\n", cpu);
+        if (fault)
+          for (int j = 0; j < npg * PGSIZE; j += PGSIZE)
+            p[j] = '\0';
 
-      ++myiters;
+        if (munmap((void *) p, npg * PGSIZE) < 0)
+          die("%d: unmap failed\n", cpu);
+
+        ++myiters;
+      }
+
+      if (underflow)
+        ++myunderflows;
     }
     mypages = myiters * npg * 2;
     break;
@@ -245,6 +259,7 @@ thr(void *arg)
 #endif
   iters[cpu] = myiters;
   pages[cpu] = mypages;
+  total_underflows += myunderflows;
   return nullptr;
 }
 
@@ -295,12 +310,15 @@ main(int argc, char **argv)
   else
     npg = 1;
 
-  printf("# --cores=%d --duration=%ds --mode=%s --fault=%s --npg=%d\n",
+  printf("# --cores=%d --duration=%ds --mode=%s --fault=%s --npg=%d",
          nthread, duration,
          mode == bench_mode::LOCAL ? "local" :
          mode == bench_mode::PIPELINE ? "pipeline" :
          mode == bench_mode::GLOBAL ? "global" : "UNKNOWN",
          fault ? "true" : "false", npg);
+  if (mode == bench_mode::PIPELINE)
+    printf(" --pipeline-width=%d", pipeline_width);
+  printf("\n");
 
 #ifdef RECORD_PMC
   perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|RECORD_PMC, 0);
@@ -329,6 +347,8 @@ main(int argc, char **argv)
   printf("%lu cycles\n", stop_avg - start_avg);
   printf("%lu iterations\n", iter);
   printf("%lu page touches\n", sum(pages, nthread));
+  if (mode == bench_mode::PIPELINE)
+    printf("%lu underflows\n", total_underflows.load());
 #ifdef RECORD_PMC
   printf("%lu total %s\n", sum(pmcs, nthread), STR(RECORD_PMC)+4);
 #endif
