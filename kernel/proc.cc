@@ -39,7 +39,7 @@ proc::proc(int npid) :
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
   user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
   uaccess_(0), yield_(false), upath(0), uargv(userptr<const char>(nullptr)),
-  exception_inuse(0), magic(PROC_MAGIC), state_(EMBRYO)
+  exception_inuse(0), magic(PROC_MAGIC), unmapped_hint(0), state_(EMBRYO)
 {
   snprintf(lockname, sizeof(lockname), "cv:proc:%d", pid);
   lock = spinlock(lockname+3, LOCKSTAT_PROC);
