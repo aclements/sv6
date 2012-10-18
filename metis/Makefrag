@@ -40,7 +40,7 @@ $(O)/libmetis.a: $(METIS_OBJFILES)
 	$(Q)mkdir -p $(@D)
 	$(Q)$(AR) r $@ $(METIS_OBJFILES)
 
-$(O)/metis/app/%.o: metis/app/%.c
+$(O)/metis/app/%.o: metis/app/%.c $(O)/include/sysstubs.h
 	@echo "  CC     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(CFLAGS) -c -o $@ $< $(METIS_CFLAGS) $(METIS_INCLUDES)
