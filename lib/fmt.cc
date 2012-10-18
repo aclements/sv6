@@ -239,6 +239,30 @@ vprintfmt(void (*putch)(int, void*), void *putdat,
       printnum (putch, putdat, num, base, MAX(width, 0), padc, upper);
       break;
 
+#ifndef XV6_KERNEL
+    case 'f': {
+      double dnum;
+      if (precision == -1)
+        precision = 6;
+      dnum = va_arg (ap, double);
+      if (dnum < 0) {
+        putch ('-', putdat);
+        dnum = -dnum;
+      }
+      printnum (putch, putdat, (unsigned long long)dnum, 10, 0, padc, false);
+      if (precision) {
+        putch('.', putdat);
+        dnum -= (unsigned long long)dnum;
+        while (--precision) {
+          dnum *= 10;
+          putch("0123456789"[(unsigned)dnum], putdat);
+          dnum -= (unsigned)dnum;
+        }
+      }
+      break;
+    }
+#endif
+
       // unrecognized escape sequence - just print it literally
     default:
       putch ('%', putdat);
