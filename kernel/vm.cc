@@ -17,6 +17,7 @@
 #include "kstream.hh"
 #include "page_info.hh"
 #include <algorithm>
+#include "kstats.hh"
 
 static console_stream verbose(false);
 
@@ -200,6 +201,9 @@ vmap::insert(const vmdesc &desc, uptr start, uptr len, bool dotlb)
 {
   ANON_REGION("vmap::insert", &perfgroup);
 
+  kstats::inc(&kstats::mmap_count);
+  kstats::timer timer(&kstats::mmap_cycles);
+
   verbose.println("vm: insert(", desc, ",", shex(start), ",", shex(len),
                   ",", dotlb, ")");
 
@@ -248,6 +252,9 @@ again:
 int
 vmap::remove(uptr start, uptr len)
 {
+  kstats::inc(&kstats::munmap_count);
+  kstats::timer timer(&kstats::munmap_cycles);
+
   verbose.println("vm: remove(", start, ",", len, ")");
 
   mmu::shootdown shootdown;
@@ -282,6 +289,9 @@ vmap::pagefault(uptr va, u32 err)
 
   if (va >= USERTOP)
     return -1;
+
+  kstats::inc(&kstats::page_fault_count);
+  kstats::timer timer(&kstats::page_fault_cycles);
 
   // If we replace a page, hold a reference until after the shootdown.
   sref<class page_info> old_page;

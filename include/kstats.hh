@@ -13,7 +13,30 @@
 // constructor magic to build a list of them, and we could avoid this
 // nonsense.  OTOH, this struct is easy to get into user space.
 
-#define KSTATS_ALL(X)
+#define KSTATS_TLB(X)                                                  \
+  /* # of TLB shootdown operations.  One shootdown may target multiple \
+   * cores. */                                                         \
+  X(uint64_t, tlb_shootdown_count)                                     \
+  /* Total number of targets of TLB shootdowns.  This divided by       \
+   * tlb_shootdowns is the average number of targets per shootdown     \
+   * operation. */                                                     \
+  X(uint64_t, tlb_shootdown_targets)                                   \
+  /* Total number of cycles spent in TLB shootdown operations. */      \
+  X(uint64_t, tlb_shootdown_cycles)                                    \
+
+#define KSTATS_VM(X)                            \
+  X(uint64_t, page_fault_count)                 \
+  X(uint64_t, page_fault_cycles)                \
+                                                \
+  X(uint64_t, mmap_count)                       \
+  X(uint64_t, mmap_cycles)                      \
+                                                \
+  X(uint64_t, munmap_count)                     \
+  X(uint64_t, munmap_cycles)                    \
+
+#define KSTATS_ALL(X)                           \
+  KSTATS_TLB(X)                                 \
+  KSTATS_VM(X)                                  \
 
 struct kstats
 {

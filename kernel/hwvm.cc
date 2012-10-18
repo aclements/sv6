@@ -401,9 +401,15 @@ tlbflush(u64 myreq)
   // so we will deadlock waiting for their TLB flush..
   assert(mycpu()->ncli == 0);
 
-  for (int i = 0; i < ncpu; i++)
-    if (cpus[i].tlbflush_done < myreq)
+  kstats::inc(&kstats::tlb_shootdown_count);
+  kstats::timer timer(&kstats::tlb_shootdown_cycles);
+
+  for (int i = 0; i < ncpu; i++) {
+    if (cpus[i].tlbflush_done < myreq) {
       lapic->send_tlbflush(&cpus[i]);
+      kstats::inc(&kstats::tlb_shootdown_targets);
+    }
+  }
 
   for (int i = 0; i < ncpu; i++)
     while (cpus[i].tlbflush_done < myreq)
@@ -520,6 +526,9 @@ namespace mmu_per_core_page_table {
     if (targets.none())
       return;
     assert(start < end && end <= USERTOP);
+    kstats::inc(&kstats::tlb_shootdown_count);
+    kstats::inc(&kstats::tlb_shootdown_targets, targets.count());
+    kstats::timer timer(&kstats::tlb_shootdown_cycles);
     run_on_cpus(targets, [this]() {
         cache->clear(start, end);
       });
