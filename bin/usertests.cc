@@ -1902,6 +1902,47 @@ tlb(void)
   printf("tlb ok\n");
 }
 
+void*
+float_thr(void *arg)
+{
+  setaffinity(0);
+
+  for (int i = 0; i < 100; ++i) {
+    double x = 1;
+    int y = 1;
+
+    for (int j = 0; j < 20; ++j) {
+      x *= 2;
+      y *= 2;
+      yield();
+    }
+
+    assert(x == y);
+  }
+  ++(*(std::atomic<int>*)arg);
+  return nullptr;
+}
+
+void
+floattest(void)
+{
+  printf("floattest\n");
+
+  std::atomic<int> success(0);
+  for (int i = 0; i < nthread; i++) {
+    pthread_t tid;
+    pthread_create(&tid, 0, &float_thr, (void*)&success);
+  }
+
+  for(int i = 0; i < nthread; i++)
+    wait(-1);
+
+  if (success != nthread)
+    die("not all float_thrs succeeded");
+
+  printf("floattest ok\n");
+}
+
 static int nenabled;
 static char **enabled;
 
@@ -1979,7 +2020,9 @@ main(int argc, char *argv[])
   TEST(thrtest);
   TEST(ftabletest);
 
-  TEST(exectest);
+  TEST(floattest);
+
+  TEST(exectest);               // Must be last
 
   exit();
 }
