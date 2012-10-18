@@ -25,6 +25,7 @@ static struct {
   { "/dev/cmdline",   MAJ_CMDLINE},
   { "/dev/gc",   MAJ_GC},
   { "/dev/kconfig",   MAJ_KCONFIG},
+  { "/dev/kstats",    MAJ_KSTATS},
 };
 
 static int

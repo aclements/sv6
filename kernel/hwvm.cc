@@ -14,6 +14,7 @@
 #include "apic.hh"
 #include "kstream.hh"
 #include "ipi.hh"
+#include "kstats.hh"
 
 using namespace std;
 
@@ -367,6 +368,12 @@ switchvm(struct proc *p)
 void
 inittls(struct cpu *c)
 {
+  static struct
+  {
+    struct kstats kstats;
+    __padout__;
+  } percpu[NCPU];
+
   // Initialize cpu-local storage.
   writegs(KDSEG);
   writemsr(MSR_GS_BASE, (u64)&c->cpu);
@@ -374,6 +381,7 @@ inittls(struct cpu *c)
   c->cpu = c;
   c->proc = nullptr;
   c->ipi_tail = &c->ipi;
+  c->kstats = &percpu[c->id].kstats;
 }
 
 static void tlbflush(u64 myreq);

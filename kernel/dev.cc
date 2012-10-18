@@ -3,6 +3,7 @@
 #include "fs.h"
 #include "file.hh"
 #include "major.h"
+#include "kstats.hh"
 
 extern const char *kconfig;
 
@@ -18,9 +19,26 @@ kconfigread(struct inode *inode, char *dst, u32 off, u32 n)
   return n;
 }
 
+static int
+kstatsread(struct inode *inode, char *dst, u32 off, u32 n)
+{
+  kstats total{};
+  if (off >= sizeof total)
+    return 0;
+  for (size_t i = 0; i < ncpu; ++i)
+    total += *cpus[i].kstats;
+  if (n > sizeof total - off)
+    n = sizeof total - off;
+  memmove(dst, (char*)&total + off, n);
+  return n;
+}
+
 void
 initdev(void)
 {
   devsw[MAJ_KCONFIG].write = nullptr;
   devsw[MAJ_KCONFIG].read = kconfigread;
+
+  devsw[MAJ_KSTATS].write = nullptr;
+  devsw[MAJ_KSTATS].read = kstatsread;
 }
