@@ -151,10 +151,11 @@ $(O)/kernel/sysvectors.cc: tools/syscalls.py kernel/*.cc
 $(O)/kernel/version.cc: always
 	@echo "  GEN    $@"
 	$(Q)mkdir -p $(@D)
+	$(Q)echo "const char *xv6_version_string = \"$$(date)\";" > $@.tmp
 	$(Q) \
 		BASE="$$(git describe --long)"; \
 		EXTRA="$$(if ! git diff --quiet || ! git diff --cached --quiet; then echo +; fi)"; \
-		echo "const char *xv6_version_string = \"$$BASE$$EXTRA\";" > \
+		echo "const char *xv6_release_string = \"$$BASE$$EXTRA\";" >> \
 			$@.tmp
 	$(Q)cmp -s $@.tmp $@ || mv $@.tmp $@
 
