@@ -60,6 +60,7 @@ UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
 
 FSEXTRA += \
 	bin/linkbench-tom \
+	bin/mapbench-ben \
 
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB)
 	@echo "  LD     $@"
