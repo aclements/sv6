@@ -2,7 +2,7 @@
 #include "user.h"
 
 // Random number generator for randomized tests
-static u64 rseed;
+static __thread u64 rseed;
 
 u64
 rnd(void)
