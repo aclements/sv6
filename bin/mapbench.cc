@@ -1,6 +1,7 @@
 // To build on Linux:
 //  g++ -O3 -DLINUX -std=c++0x -Wall -g -I.. -pthread mapbench.cc -o mapbench
 
+#include <fcntl.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -27,6 +28,7 @@
 #include "pthread.h"
 #include "bits.hh"
 #include "rnd.hh"
+#include "kstats.hh"
 #include "xsys.h"
 #endif
 
@@ -131,6 +133,44 @@ rdpmc(uint32_t ecx)
   return ((uint64_t) lo) | (((uint64_t) hi) << 32);
 }
 #endif
+
+int
+xread(int fd, const void *buf, size_t n)
+{
+  size_t pos = 0;
+  while (pos < n) {
+    int r = read(fd, (char*)buf + pos, n - pos);
+    if (r < 0)
+      die("read failed");
+    if (r == 0)
+      break;
+    pos += n;
+  }
+  return pos;
+}
+
+#ifndef XV6_USER
+struct kstats
+{
+  kstats operator-(const kstats &o) {
+    return kstats{};
+  }
+};
+#endif
+
+static void
+read_kstats(kstats *out)
+{
+#ifdef XV6_USER
+  int fd = open("/dev/kstats", O_RDONLY);
+  if (fd < 0)
+    die("Couldn't open /dev/kstats");
+  int r = xread(fd, out, sizeof *out);
+  if (r != sizeof *out)
+    die("Short read from /dev/kstats");
+  close(fd);
+#endif
+}
 
 static inline char *
 pipeline_get_region(uint64_t channel, uint64_t step)
@@ -336,14 +376,20 @@ main(int argc, char **argv)
   for(int i = 0; i < nthread; i++)
     xthread_create(&tid[i], 0, thr, (void*)(uintptr_t) i);
 
+  struct kstats kstats_before, kstats_after;
+  read_kstats(&kstats_before);
+
   xpthread_join(timer);
   for(int i = 0; i < nthread; i++)
     xpthread_join(tid[i]);
+
+  read_kstats(&kstats_after);
 
   // Summarize
   uint64_t start_avg = summarize_tsc("start", start_tscs, nthread);
   uint64_t stop_avg = summarize_tsc("stop", stop_tscs, nthread);
   uint64_t iter = sum(iters, nthread);
+
   printf("%lu cycles\n", stop_avg - start_avg);
   printf("%lu iterations\n", iter);
   printf("%lu page touches\n", sum(pages, nthread));
@@ -352,6 +398,50 @@ main(int argc, char **argv)
 #ifdef RECORD_PMC
   printf("%lu total %s\n", sum(pmcs, nthread), STR(RECORD_PMC)+4);
 #endif
+
+#ifdef XV6_USER
+  struct kstats kstats = kstats_after - kstats_before;
+
+  printf("%lu TLB shootdowns\n", kstats.tlb_shootdown_count);
+  printf("%f TLB shootdowns/page touch\n",
+         (double)kstats.tlb_shootdown_count / sum(pages, nthread));
+  printf("%f TLB shootdowns/iteration\n",
+         (double)kstats.tlb_shootdown_count / iter);
+  if (kstats.tlb_shootdown_count) {
+    printf("%f targets/TLB shootdown\n",
+           (double)kstats.tlb_shootdown_targets / kstats.tlb_shootdown_count);
+    printf("%lu cycles/TLB shootdown\n",
+           kstats.tlb_shootdown_cycles / kstats.tlb_shootdown_count);
+  }
+
+  printf("%lu page faults\n", kstats.page_fault_count);
+  printf("%f page faults/page touch\n",
+         (double)kstats.page_fault_count / sum(pages, nthread));
+  printf("%f page faults/iteration\n",
+         (double)kstats.page_fault_count / iter);
+  if (kstats.page_fault_count)
+    printf("%lu cycles/page fault\n",
+           kstats.page_fault_cycles / kstats.page_fault_count);
+
+  printf("%lu mmaps\n", kstats.mmap_count);
+  printf("%f mmaps/page touch\n",
+         (double)kstats.mmap_count / sum(pages, nthread));
+  printf("%f mmaps/iteration\n",
+         (double)kstats.mmap_count / iter);
+  if (kstats.mmap_count)
+    printf("%lu cycles/mmap\n",
+           kstats.mmap_cycles / kstats.mmap_count);
+
+  printf("%lu munmaps\n", kstats.munmap_count);
+  printf("%f munmaps/page touch\n",
+         (double)kstats.munmap_count / sum(pages, nthread));
+  printf("%f munmaps/iteration\n",
+         (double)kstats.munmap_count / iter);
+  if (kstats.munmap_count)
+    printf("%lu cycles/munmap\n",
+           kstats.munmap_cycles / kstats.munmap_count);
+#endif
+
   printf("%lu cycles/iteration\n",
          (sum(stop_tscs, nthread) - sum(start_tscs, nthread))/iter);
   printf("\n");
