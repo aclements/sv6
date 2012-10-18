@@ -42,7 +42,8 @@ UPROGS_BIN= \
 	appendtest \
 	linkbench \
         tlstest \
-	crwpbench
+	crwpbench \
+	benchhdr \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
