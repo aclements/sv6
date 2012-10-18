@@ -1,0 +1,15 @@
+#!/sh
+
+./metis_wrmem -s 1000 -p 1
+./metis_wrmem -s 1000 -p 2
+./metis_wrmem -s 1000 -p 4
+./metis_wrmem -s 1000 -p 8
+./metis_wrmem -s 1000 -p 12
+./metis_wrmem -s 1000 -p 16
+
+./metis_wrmem -s 100 -p 1
+./metis_wrmem -s 100 -p 2
+./metis_wrmem -s 100 -p 4
+./metis_wrmem -s 100 -p 8
+./metis_wrmem -s 100 -p 12
+./metis_wrmem -s 100 -p 16
