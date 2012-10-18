@@ -489,6 +489,9 @@ namespace mmu_per_core_page_table {
   {
     bool current = (*cur_cache == this);
     pgmap *mypml4 = *pml4;
+    // If we're clearing this CPU's page map cache, then we must have
+    // inserted something into it previously.  (Note that this may
+    // not hold if we start tracking shootdowns conservatively.)
     assert(mypml4);
     for (auto it = mypml4->find(start); it.index() < end; it += it.span()) {
       if (it.is_set()) {
