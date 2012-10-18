@@ -368,6 +368,18 @@ fxrstor(volatile void *a)
 }
 
 static inline void
+fninit(void)
+{
+  __asm volatile("fninit");
+}
+
+static inline void
+ldmxcsr(u32 mxcsr)
+{
+  __asm volatile("ldmxcsr %0" : : "m" (mxcsr));
+}
+
+static inline void
 clts()
 {
   __asm volatile("clts");

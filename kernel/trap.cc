@@ -20,6 +20,8 @@ extern "C" void __uaccess_end(void);
 
 struct intdesc idt[256] __attribute__((aligned(16)));
 
+static char fpu_initial_state[FXSAVE_BYTES];
+
 // boot.S
 extern u64 trapentry[];
 
@@ -193,7 +195,7 @@ trap(struct trapframe *tf)
         myproc()->killed = 1;
         break;
       }
-      memset(myproc()->fpu_state, 0, FXSAVE_BYTES);
+      memmove(myproc()->fpu_state, &fpu_initial_state, FXSAVE_BYTES);
     }
     // Restore myproc's FPU state
     fxrstor(myproc()->fpu_state);
@@ -260,6 +262,12 @@ inittrap(void)
     entry = trapentry[i];
     idt[i] = INTDESC(KCSEG, entry, bits);
   }
+
+  // Construct initial FPU state
+  lcr0(rcr0() & ~(CR0_TS | CR0_EM));
+  fninit();
+  ldmxcsr(0x1f80);              // Mask all SSE exceptions
+  fxsave(&fpu_initial_state);
 }
 
 void

@@ -314,11 +314,13 @@ sched(void)
   }
   mtrec();
 
-  // Set task-switched bit so we get a #NM exception if the new
-  // process tries to use FPU instructions.
+  // Set task-switched and monitor coprocessor bit and clear emulation
+  // bit so we get a #NM exception if the new process tries to use FPU
+  // or MMX instructions.
   auto cr0 = rcr0();
-  if (!(cr0 & CR0_TS))
-    lcr0(cr0 | CR0_TS);
+  auto ncr0 = (cr0 | CR0_TS | CR0_MP) & ~CR0_EM;
+  if (cr0 != ncr0)
+    lcr0(ncr0);
 
   swtch(&prev->context, next->context);
   mycpu()->intena = intena;
