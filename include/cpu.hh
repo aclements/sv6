@@ -23,6 +23,7 @@ struct cpu {
   int timer_printpc;
   atomic<u64> tlbflush_done;   // last tlb flush req done on this cpu
   struct proc *prev;           // The previously-running process
+  atomic<struct proc*> fpu_owner; // The proc with the current FPU state
 
 #ifndef XV6_USER
   // The list of IPI calls to this CPU

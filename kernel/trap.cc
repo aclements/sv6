@@ -171,6 +171,35 @@ trap(struct trapframe *tf)
     on_ipicall();
     break;
   }
+  case T_DEVICE: {
+    // Clear "task switched" flag to enable floating-point
+    // instructions.  sched will set this again when it switches
+    // tasks.
+    clts();
+    // Save current FPU state
+    // XXX(Austin) This process could exit and free its fpu_state, but
+    // scoped_gc_epoch breaks if I use it here.
+    // XXX(Austin) Do I need to FWAIT first?
+    struct proc *fpu_owner = mycpu()->fpu_owner;
+    if (fpu_owner) {
+      assert(fpu_owner->fpu_state);
+      fxsave(fpu_owner->fpu_state);
+    }
+    // Lazily allocate myproc's FPU state
+    if (!myproc()->fpu_state) {
+      myproc()->fpu_state = kmalloc(FXSAVE_BYTES, "(fxsave)");
+      if (!myproc()->fpu_state) {
+        console.println("out of memory allocating fxsave region");
+        myproc()->killed = 1;
+        break;
+      }
+      memset(myproc()->fpu_state, 0, FXSAVE_BYTES);
+    }
+    // Restore myproc's FPU state
+    fxrstor(myproc()->fpu_state);
+    mycpu()->fpu_owner = myproc();
+    break;
+  }
   default:
     if (tf->trapno == e1000irq.vector) {
       e1000intr();

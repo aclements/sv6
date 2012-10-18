@@ -34,7 +34,7 @@ enum { sched_debug = 0 };
 proc::proc(int npid) :
   rcu_freed("proc"), vmap(0), kstack(0),
   pid(npid), parent(0), tf(0), context(0), killed(0),
-  ftable(0), cwd(0), tsc(0), curcycles(0), cpuid(0),
+  ftable(0), cwd(0), tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
   cpu_pin(0), oncv(0), cv_wakeup(0),
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
   user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
@@ -55,6 +55,9 @@ proc::proc(int npid) :
 proc::~proc(void)
 {
   magic = 0;
+  if (fpu_state)
+    kmfree(fpu_state, FXSAVE_BYTES);
+  fpu_state = nullptr;
   // delete gc;
 }
 
@@ -185,6 +188,15 @@ exit(void)
 
   if (wakeupinit)
     bootproc->cv.wake_all();
+
+  // Clean up FPU state
+  if (myproc()->fpu_state) {
+    // Make sure no CPUs think this process is the FPU owner
+    for (auto &cpu : cpus) {
+      struct proc *copy = myproc();
+      atomic_compare_exchange_strong(&cpu.fpu_owner, &copy, (proc*)nullptr);
+    }
+  }
 
   // Jump into the scheduler, never to return.
   myproc()->set_state(ZOMBIE);

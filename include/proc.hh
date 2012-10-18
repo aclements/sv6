@@ -69,6 +69,7 @@ struct proc : public rcu_freed, public sched_link {
   u64 tsc;
   u64 curcycles;
   unsigned cpuid;
+  void *fpu_state;             // FXSAVE state, lazily allocated
   struct spinlock lock;
   SLIST_HEAD(childlist, proc) childq;
   SLIST_ENTRY(proc) child_next;

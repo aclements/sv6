@@ -231,9 +231,9 @@ initpagetables:
 
 # Initialize IA-32e mode.  See section 9.8.5 of 253668.pdf.
 init32e:
-        # Set CR4.PAE and CR4.PSE = 1.
+        # Set CR4.PAE = CR4.PSE = CR4.OSFXSR = 1.
 	movl %cr4, %eax
-	orl $0x30, %eax
+	orl $0x230, %eax
 	movl %eax, %cr4
 
 	# Load CR3 with physical base address of level 4 page table.

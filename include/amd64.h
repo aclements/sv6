@@ -269,6 +269,20 @@ rcr2(void)
 }
 
 static inline void
+lcr0(u64 val)
+{
+  __asm volatile("movq %0,%%cr0" : : "r" (val));
+}
+
+static inline u64
+rcr0(void)
+{
+  u64 val;
+  __asm volatile("movq %%cr0,%0" : "=r" (val));
+  return val;
+}
+
+static inline void
 prefetchw(void *a)
 {
   __asm volatile("prefetchw (%0)" : : "r" (a));
@@ -335,6 +349,28 @@ clear_bit_unlock(int nr, volatile void *a)
                  : "+m" (*(volatile uint64_t*)a)
                  : "Ir" (nr)
                  : "memory");
+}
+
+enum {
+  FXSAVE_BYTES = 512
+};
+
+static inline void
+fxsave(volatile void *a)
+{
+  __asm volatile("fxsave (%0)" : : "r" (a) : "memory");
+}
+
+static inline void
+fxrstor(volatile void *a)
+{
+  __asm volatile("fxrstor (%0)" : : "r" (a) : "memory");
+}
+
+static inline void
+clts()
+{
+  __asm volatile("clts");
 }
 
 // Layout of the trap frame built on the stack by the
