@@ -64,6 +64,8 @@ OBJS = \
 	version.o \
 	buddy.o \
 	ipi.o \
+	kconfig.o \
+	dev.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
@@ -109,6 +111,11 @@ $(O)/kernel/%.o: lib/%.cc $(O)/sysroot
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
 
+$(O)/kernel/%.o: $(O)/kernel/%.cc $(O)/sysroot
+	@echo "  CXX    $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
+
 $(O)/kernel/incbin.o: ASFLAGS+=-DMAKE_OUT=$(O)
 $(O)/kernel/incbin.o: $(O)/kernel/initcode $(O)/kernel/bootother $(O)/fs.img
 
@@ -150,6 +157,21 @@ $(O)/kernel/version.cc: always
 		echo "const char *xv6_version_string = \"$$BASE$$EXTRA\";" > \
 			$@.tmp
 	$(Q)cmp -s $@.tmp $@ || mv $@.tmp $@
+
+$(O)/kernel/kconfig.cc: always
+	@echo "  GEN    $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)( \
+	echo "#define STR_1(x...) #x"; \
+	echo "#define STR(x...)   STR_1(x)"; \
+	echo "const char *kconfig ="; \
+	echo | $(CC) $(CFLAGS) -E -dN - -o - | \
+		awk '/^# /{P=0} P{print $$2} /^# 1.*param.h/{P=1}' | \
+		awk '!/^$$/{print "\"" $$1 "=\" STR(" $$1 ") \"\\n\""}'; \
+	echo ";" \
+	) > $@.tmp
+	$(Q)cmp -s $@.tmp $@ || mv $@.tmp $@
+
 .PHONY: always
 
 .PRECIOUS: $(O)/kernel/%.o

@@ -5,3 +5,4 @@
 #define MAJ_STAT     5
 #define MAJ_CMDLINE  6
 #define MAJ_GC       7
+#define MAJ_KCONFIG  8

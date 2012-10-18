@@ -47,6 +47,7 @@ void initcpus(void);
 void initlapic(void);
 void initacpi(void);
 void initwd(void);
+void initdev(void);
 void idleloop(void);
 
 #define IO_RTC  0x70
@@ -189,6 +190,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initacpi();              // Requires initacpitables, initkalloc?
   initpci();               // Suggests initacpi
   initnet();
+  initdev();               // Misc /dev nodes
 
   if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);
