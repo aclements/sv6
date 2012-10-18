@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sched.h>
+#include <sys/types.h>
 
 #define __noret__ __attribute__((noreturn))
 
@@ -77,9 +78,13 @@ spin_delay(uint64_t cycles)
     cpu_relax();
 }
 
-static inline uint32_t
-rnd(uint32_t *seed)
+static __thread uint64_t rseed;
+
+static inline uint64_t
+rnd(void)
 {
-  *seed = *seed * 1103515245 + 12345;
-  return *seed & 0x7fffffff;
+  if (rseed == 0)
+    rseed = rdtsc();
+  rseed = rseed * 6364136223846793005 + 1442695040888963407;
+  return rseed;
 }

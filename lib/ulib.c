@@ -62,7 +62,7 @@ memset(void *dst, int c, size_t n)
 }
 
 char*
-strchr(const char *s, char c)
+strchr(const char *s, int c)
 {
   for(; *s; s++)
     if(*s == c)

@@ -16,6 +16,7 @@
 #include "kmtrace.hh"
 #include "kstream.hh"
 #include "page_info.hh"
+#include <algorithm>
 
 static console_stream verbose(false);
 
@@ -476,14 +477,17 @@ vmap::sbrk(ssize_t n, uptr *addr)
 uptr
 vmap::unmapped_area(size_t npages)
 {
-  uptr start = 0x1000 / PGSIZE;
+  uptr start = std::max(myproc()->unmapped_hint, 1UL);
   auto it = vpfs_.find(start), end = vpfs_.find(USERTOP / PGSIZE);
 
   for (; it < end; it += it.span()) {
-    if (it.is_set())
-      start = it.index() + it.span();
-    else if (it.index() + it.span() - start >= npages)
+    if (it.is_set()) {
+      // Skip by at least 4GB -- might want to round up, too.
+      start = it.index() + std::max(it.span(), 1UL * 1024 * 1024);
+    } else if (it.index() + it.span() - start >= npages) {
+      myproc()->unmapped_hint = start + npages;
       return start * PGSIZE;
+    }
   }
   return 0;
 }

@@ -2,7 +2,47 @@
 
 #pragma once
 
+#include <utility>
+
 namespace std {
+  // [C++11 25.2]
+  template <class InputIterator, class Predicate>
+  bool all_of(InputIterator first, InputIterator last, Predicate pred)
+  {
+    for (; first != last; ++first)
+      if (!pred(*first))
+        return false;
+    return true;
+  }
+
+  template <class InputIterator, class Predicate>
+  bool any_of(InputIterator first, InputIterator last, Predicate pred)
+  {
+    for (; first != last; ++first)
+      if (pred(*first))
+        return true;
+    return false;
+  }
+
+  template <class InputIterator, class Predicate>
+  bool none_of(InputIterator first, InputIterator last, Predicate pred)
+  {
+    for (; first != last; ++first)
+      if (pred(*first))
+        return false;
+    return true;
+  }
+
+  template<class InputIterator, class T>
+  InputIterator find(InputIterator first, InputIterator last,
+                     const T& value)
+  {
+    for (; first != last; ++first)
+      if (*first == value)
+        break;
+    return first;
+  }
+
   // [C++11 25.4.7]
   template<class T>
   const T& min(const T& a, const T& b)

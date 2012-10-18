@@ -132,7 +132,7 @@ refcache::cache::review()
         // might *now* be stable.  Check it again in another round.
         verbose.println("refcache: CPU ", myid(), " re-queueing obj ", &*obj);
         obj->dirty_ = false;
-        obj->review_epoch_ = epoch + 1;
+        obj->review_epoch_ = epoch + 2;
         scoped_cli cli;
         review_.push_back(&*obj);
         ++nrequeued;

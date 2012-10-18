@@ -100,6 +100,7 @@ struct proc : public rcu_freed, public sched_link {
   std::atomic<int> exception_inuse;
   u8 exception_buf[256];
   u64 magic;
+  uptr unmapped_hint;
 
   static proc* alloc();
   void         set_state(procstate_t s);

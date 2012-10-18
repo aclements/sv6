@@ -229,13 +229,14 @@ sys_uname(userptr<struct utsname> buf)
       xstr(XV6_HW),
 #undef xstr
 #undef str
-      "xv6-scale",
+      "",
       "",
       "x86_64"
   };
   static bool initialized;
   if (!initialized) {
     strncpy(uts.version, xv6_version_string, sizeof(uts.version) - 1);
+    strncpy(uts.release, xv6_release_string, sizeof(uts.release) - 1);
     initialized = true;
   }
   if (!buf.store(&uts))

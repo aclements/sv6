@@ -42,7 +42,8 @@ UPROGS_BIN= \
 	appendtest \
 	linkbench \
         tlstest \
-	crwpbench
+	crwpbench \
+	benchhdr \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
@@ -59,6 +60,7 @@ UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
 
 FSEXTRA += \
 	bin/linkbench-tom \
+	bin/mapbench-ben \
 
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB)
 	@echo "  LD     $@"
