@@ -25,9 +25,6 @@
 // region spans a physical memory hole.
 #define MAX_BUDDIES (NCPU + 16)
 
-// The maximum number of recently freed pages to cache per core.
-#define MAX_HOT_PAGES 128
-
 // Print memory steal events
 #define PRINT_STEAL 0
 
@@ -61,7 +58,7 @@ struct cpu_mem
 {
   size_t first_buddy, nbuddies;
   // Hot page cache of recently freed pages
-  void *hot_pages[MAX_HOT_PAGES];
+  void *hot_pages[KALLOC_HOT_PAGES];
   size_t nhot;
 };
 
@@ -323,7 +320,7 @@ kalloc(const char *name, size_t size)
       auto first = mem->first_buddy;
       auto lb = &buddies[first];
       auto l = lb->lock.guard();
-      for (int b = 0; mem->nhot < MAX_HOT_PAGES && b < nbuddies; ) {
+      for (int b = 0; mem->nhot < KALLOC_HOT_PAGES && b < nbuddies; ) {
         void *page = lb->alloc.alloc_nothrow(PGSIZE);
         if (!page) {
           // Move to the next allocator
@@ -520,15 +517,15 @@ kfree(void *v, size_t size)
     // Free to the hot list
     scoped_cli cli;
     auto mem = mycpu()->mem;
-    if (mem->nhot == MAX_HOT_PAGES) {
+    if (mem->nhot == KALLOC_HOT_PAGES) {
       // There's no more room in the hot pages list, so free half of
       // it.  We sort the list so we can merge it with the buddy
       // allocator list, minimizing and batching our locks.
       kstats::inc(&kstats::kalloc_hot_list_flush_count);
-      std::sort(mem->hot_pages, mem->hot_pages + (MAX_HOT_PAGES / 2));
+      std::sort(mem->hot_pages, mem->hot_pages + (KALLOC_HOT_PAGES / 2));
       size_t buddy = -1;
       lock_guard<spinlock> lock;
-      for (size_t i = 0; i < MAX_HOT_PAGES / 2; ++i) {
+      for (size_t i = 0; i < KALLOC_HOT_PAGES / 2; ++i) {
         void *ptr = mem->hot_pages[i];
         if (buddy == -1 || ptr >= buddies[buddy].alloc.get_limit()) {
           // Find the allocator containing ptr.
@@ -547,8 +544,8 @@ kfree(void *v, size_t size)
       lock.release();
       // Shift hot page list down
       // XXX(Austin) Could use two lists and switch off
-      mem->nhot = MAX_HOT_PAGES - (MAX_HOT_PAGES / 2);
-      memmove(mem->hot_pages, mem->hot_pages + (MAX_HOT_PAGES / 2),
+      mem->nhot = KALLOC_HOT_PAGES - (KALLOC_HOT_PAGES / 2);
+      memmove(mem->hot_pages, mem->hot_pages + (KALLOC_HOT_PAGES / 2),
               mem->nhot * sizeof *mem->hot_pages);
     }
     mem->hot_pages[mem->nhot++] = v;

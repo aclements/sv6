@@ -39,6 +39,8 @@
 //  refcache:: for refcache counters
 //  locked_snzi:: for SNZI counters
 #define PAGE_REFCOUNT refcache::
+// The maximum number of recently freed pages to cache per core.
+#define KALLOC_HOT_PAGES 128
 
 #if defined(HW_qemu)
 #define DEBUG         0
