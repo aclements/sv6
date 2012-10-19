@@ -27,6 +27,7 @@
 #define KSTATS_VM(X)                            \
   X(uint64_t, page_fault_count)                 \
   X(uint64_t, page_fault_cycles)                \
+  X(uint64_t, page_alloc_count)                 \
                                                 \
   X(uint64_t, mmap_count)                       \
   X(uint64_t, mmap_cycles)                      \

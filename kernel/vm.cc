@@ -513,6 +513,7 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type)
   }
 
   // Allocate a new page
+  kstats::inc(&kstats::page_alloc_count);
   // XXX(austin) No need to zalloc if this is a file mapping and we
   // memset the tail
   char *p = zalloc("(vmap::pagelookup)");
