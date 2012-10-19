@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ref.hh"
 #include "refcache.hh"
 #include "snzi.hh"
 #include "gc.hh"
