@@ -16,6 +16,7 @@
 #include "kstream.hh"
 #include "buddy.hh"
 #include "log2.hh"
+#include "kstats.hh"
 
 #include <algorithm>
 
@@ -318,6 +319,7 @@ kalloc(const char *name, size_t size)
     auto mem = mycpu()->mem;
     if (mem->nhot == 0) {
       // No hot pages; fill half of the cache
+      kstats::inc(&kstats::kalloc_hot_list_refill_count);
       auto first = mem->first_buddy;
       auto lb = &buddies[first];
       auto l = lb->lock.guard();
@@ -333,6 +335,8 @@ kalloc(const char *name, size_t size)
           }
           lb = &buddies[(b + first) % nbuddies];
           l = lb->lock.guard();
+          if (b == mem->nbuddies)
+            kstats::inc(&kstats::kalloc_hot_list_steal_count);
 #if PRINT_STEAL
           if (b >= mem->nbuddies)
             cprintf("CPU %d stealing hot list from buddy %lu\n",
@@ -344,6 +348,7 @@ kalloc(const char *name, size_t size)
       }
     }
     res = mem->hot_pages[--mem->nhot];
+    kstats::inc(&kstats::kalloc_page_alloc_count);
   } else {
     // General allocation path for non-PGSIZE allocations or if we
     // can't fill our hot page cache.
@@ -519,6 +524,7 @@ kfree(void *v, size_t size)
       // There's no more room in the hot pages list, so free half of
       // it.  We sort the list so we can merge it with the buddy
       // allocator list, minimizing and batching our locks.
+      kstats::inc(&kstats::kalloc_hot_list_flush_count);
       std::sort(mem->hot_pages, mem->hot_pages + (MAX_HOT_PAGES / 2));
       size_t buddy = -1;
       lock_guard<spinlock> lock;
@@ -546,6 +552,7 @@ kfree(void *v, size_t size)
               mem->nhot * sizeof *mem->hot_pages);
     }
     mem->hot_pages[mem->nhot++] = v;
+    kstats::inc(&kstats::kalloc_page_free_count);
     return;
   }
 

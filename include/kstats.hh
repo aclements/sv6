@@ -35,9 +35,17 @@
   X(uint64_t, munmap_count)                     \
   X(uint64_t, munmap_cycles)                    \
 
+#define KSTATS_KALLOC(X)                        \
+  X(uint64_t, kalloc_page_alloc_count)          \
+  X(uint64_t, kalloc_page_free_count)           \
+  X(uint64_t, kalloc_hot_list_refill_count)     \
+  X(uint64_t, kalloc_hot_list_flush_count)      \
+  X(uint64_t, kalloc_hot_list_steal_count)      \
+
 #define KSTATS_ALL(X)                           \
   KSTATS_TLB(X)                                 \
   KSTATS_VM(X)                                  \
+  KSTATS_KALLOC(X)                              \
 
 struct kstats
 {
