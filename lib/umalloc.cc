@@ -89,7 +89,9 @@ morecore(u32 nu)
 {
   u32 bidx = floor_log2(nu);
 
+  // enum { min_alloc_units = 1024*1024 };
   enum { min_alloc_units = 16384 };
+  // enum { min_alloc_units = 4096 };
   if (nu < min_alloc_units)
     nu = min_alloc_units;
 

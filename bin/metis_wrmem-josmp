@@ -1,15 +1,11 @@
 #!/sh
 
-./metis_wrmem -s 1000 -p 1
-./metis_wrmem -s 1000 -p 2
-./metis_wrmem -s 1000 -p 4
-./metis_wrmem -s 1000 -p 8
-./metis_wrmem -s 1000 -p 12
-./metis_wrmem -s 1000 -p 16
-
-./metis_wrmem -s 100 -p 1
-./metis_wrmem -s 100 -p 2
-./metis_wrmem -s 100 -p 4
-./metis_wrmem -s 100 -p 8
-./metis_wrmem -s 100 -p 12
-./metis_wrmem -s 100 -p 16
+./metis_wrmem -s 4000 -p 80
+./metis_wrmem -s 4000 -p 70
+./metis_wrmem -s 4000 -p 60
+./metis_wrmem -s 4000 -p 50
+./metis_wrmem -s 4000 -p 40
+./metis_wrmem -s 4000 -p 30
+./metis_wrmem -s 4000 -p 20
+./metis_wrmem -s 4000 -p 10
+./metis_wrmem -s 4000 -p 1
