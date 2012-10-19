@@ -34,6 +34,12 @@
 //  mmu_shared_page_table
 //  mmu_per_core_page_table
 #define MMU_SCHEME    mmu_per_core_page_table
+// Physical page reference counting scheme.  One of:
+//  :: for shared reference counters
+//  refcache:: for refcache counters
+//  locked_snzi:: for SNZI counters
+#define PAGE_REFCOUNT refcache::
+
 #if defined(HW_qemu)
 #define DEBUG         0
 #define NCPU          8   // maximum number of CPUs

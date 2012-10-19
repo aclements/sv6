@@ -1,6 +1,7 @@
 #pragma once
 
 #include "refcache.hh"
+#include "snzi.hh"
 #include "gc.hh"
 #include "types.h"
 
@@ -16,7 +17,7 @@ extern std::size_t page_info_len;
 // Physical address of the page whose info is in page_info_array[0]
 extern paddr page_info_base;
 
-class page_info : public refcache::referenced
+class page_info : public PAGE_REFCOUNT referenced
 {
 protected:
   void onzero()
