@@ -7,5 +7,7 @@ _start:
         call usetup
         pop %rdi
         mov %rsp, %rsi
+        // 16-byte align stack.  GCC requires this for SSE instructions.
+        andq $~15, %rsp
         call main
         call exit
