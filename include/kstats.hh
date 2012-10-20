@@ -79,6 +79,11 @@ struct kstats
         kstats::inc(field, rdtsc() - start);
       field = nullptr;
     }
+
+    void abort()
+    {
+      field = nullptr;
+    }
   };
 #endif
 
