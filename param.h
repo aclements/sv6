@@ -82,6 +82,11 @@
 #define NCPU          48
 #define MTRACE        0
 #define PERFSIZE      (16<<20ull)
+#elif defined(HW_ugc)
+#define NCPU          256
+#define CACHELINE    64  // cache line size
+#define MTRACE        0
+#define PERFSIZE      (16<<20ull)
 #else
 #error "Unknown HW"
 #endif
