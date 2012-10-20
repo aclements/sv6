@@ -179,5 +179,6 @@ private:
   // responsible for ensuring that there is a mapping at @c it and for
   // locking vpfs_ at @c it.  This throws bad_alloc if a page must be
   // allocated and cannot be.
-  page_info *ensure_page(const vpf_array::iterator &it, access_type type);
+  page_info *ensure_page(const vpf_array::iterator &it, access_type type,
+                         bool *allocated = nullptr);
 };

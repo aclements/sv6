@@ -292,6 +292,8 @@ vmap::pagefault(uptr va, u32 err)
 
   kstats::inc(&kstats::page_fault_count);
   kstats::timer timer(&kstats::page_fault_cycles);
+  kstats::timer timer_alloc(&kstats::page_fault_alloc_cycles);
+  kstats::timer timer_fill(&kstats::page_fault_fill_cycles);
 
   // If we replace a page, hold a reference until after the shootdown.
   sref<class page_info> old_page;
@@ -319,7 +321,15 @@ vmap::pagefault(uptr va, u32 err)
     }
 
     // Ensure we have a backing page and copy COW pages
-    page_info *page = ensure_page(it, type);
+    bool allocated;
+    page_info *page = ensure_page(it, type, &allocated);
+    if (allocated) {
+      kstats::inc(&kstats::page_fault_alloc_count);
+      timer_fill.abort();
+    } else {
+      kstats::inc(&kstats::page_fault_fill_count);
+      timer_alloc.abort();
+    }
     if (!page)
       return -1;
 
@@ -503,17 +513,21 @@ vmap::unmapped_area(size_t npages)
 }
 
 page_info *
-vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type)
+vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
+                  bool *allocated)
 {
   auto &desc = *it;
   bool need_copy = (type == access_type::WRITE &&
                     (desc.flags & vmdesc::FLAG_COW));
   if (desc.page && !need_copy) {
+    if (allocated)
+      *allocated = false;
     return desc.page.get();
   }
 
   // Allocate a new page
-  kstats::inc(&kstats::page_alloc_count);
+  if (allocated)
+    *allocated = true;
   // XXX(austin) No need to zalloc if this is a file mapping and we
   // memset the tail
   char *p = zalloc("(vmap::pagelookup)");
