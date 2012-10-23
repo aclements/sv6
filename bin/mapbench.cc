@@ -44,7 +44,7 @@ enum { pipeline_width = 1 };
 
 enum class bench_mode
 {
-  LOCAL, PIPELINE, GLOBAL
+  LOCAL, PIPELINE, GLOBAL, GLOBAL_FIXED
 };
 
 // XXX(Austin) Do this right.  Put these in a proper PMC library.
@@ -291,6 +291,49 @@ thr(void *arg)
 
       ++myiters;
     }
+    break;
+  }
+
+  case bench_mode::GLOBAL_FIXED: {
+    volatile char *p = (base + (cpu * npg / nthread) * PGSIZE);
+    volatile char *p2 = (base + ((cpu + 1) * npg / nthread) * PGSIZE);
+    if (cpu == nthread - 1)
+      p2 = base + npg * PGSIZE;
+
+    while (!stop) {
+      // Map my part of the "hash table".
+      if (mmap((void *) p, p2 - p, PROT_READ|PROT_WRITE,
+               MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
+        die("%d: map failed", cpu);
+
+      // Wait for all cores to finish mapping the "hash table".
+      gbarrier.wait();
+      if (stop)
+        break;
+
+      // Fault in random pages
+      uint64_t *touched = (uint64_t*)malloc(1 + npg / 8);
+      for (int i = 0; i < npg; ++i) {
+        size_t pg = rnd() % npg;
+        if (!(touched[pg / 64] & (1ull << (pg % 64)))) {
+          base[PGSIZE * pg] = '\0';
+          touched[pg / 64] |= 1ull << (pg % 64);
+          ++mypages;
+        }
+      }
+
+      // Wait for all cores to finish faulting
+      gbarrier.wait();
+      if (stop)
+        break;
+
+      // Unmap
+      if (munmap((void *) p, p2 - p) < 0)
+        die("%d: unmap failed\n", cpu);
+
+      ++myiters;
+    }
+    break;
   }
   }
   stop_tscs[cpu] = rdtsc();
@@ -342,20 +385,29 @@ main(int argc, char **argv)
     mode = bench_mode::PIPELINE;
   else if (strcmp(argv[2], "global") == 0)
     mode = bench_mode::GLOBAL;
+  else if (strcmp(argv[2], "global-fixed") == 0)
+    mode = bench_mode::GLOBAL_FIXED;
   else
     die("bad mode argument");
 
   if (argc >= 4)
     npg = atoi(argv[3]);
+  else if (mode == bench_mode::GLOBAL_FIXED)
+    npg = 64 * 80;
   else
     npg = 1;
 
-  printf("# --cores=%d --duration=%ds --mode=%s --fault=%s --npg=%d",
+  printf("# --cores=%d --duration=%ds --mode=%s --fault=%s",
          nthread, duration,
          mode == bench_mode::LOCAL ? "local" :
          mode == bench_mode::PIPELINE ? "pipeline" :
-         mode == bench_mode::GLOBAL ? "global" : "UNKNOWN",
-         fault ? "true" : "false", npg);
+         mode == bench_mode::GLOBAL ? "global" :
+         mode == bench_mode::GLOBAL_FIXED ? "global-fixed" : "UNKNOWN",
+         fault ? "true" : "false");
+  if (mode == bench_mode::GLOBAL_FIXED)
+    printf(" --totalpg=%d", npg);
+  else
+    printf(" --npg=%d", npg);
   if (mode == bench_mode::PIPELINE)
     printf(" --pipeline-width=%d", pipeline_width);
   printf("\n");
