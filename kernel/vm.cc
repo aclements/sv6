@@ -277,6 +277,32 @@ vmap::remove(uptr start, uptr len)
   return 0;
 }
 
+int
+vmap::dup_page(uptr dest, uptr src)
+{
+  auto srcit = vpfs_.find(src / PGSIZE);
+  vmdesc desc;
+
+  // XXX(Austin) Reading from and duplication srcit needs to be done
+  // atomically, but we can't take a lock here on srcit or it would
+  // defeat the benchmark.  Fixing this is pointless because we're
+  // trying to simulate a unified buffer cache, which would hand us a
+  // physical page directly.
+  if (!srcit.is_set())
+    return -1;
+  desc = srcit->dup();
+
+  auto destit = vpfs_.find(dest / PGSIZE);
+
+  {
+    auto lock = vpfs_.acquire(destit);
+    assert(!destit.is_set());
+    vpfs_.fill(destit, desc);
+  }
+
+  return 0;
+}
+
 /*
  * pagefault handling code on vmap
  */

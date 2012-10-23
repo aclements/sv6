@@ -130,6 +130,10 @@ struct vmap {
   // Unmap from virtual addresses start to start+len.
   int remove(uptr start, uptr len);
 
+  // XXX(Austin) HACK for benchmarking.  Used to simulate the shared
+  // pages we could have if we had a unified buffer cache.
+  int dup_page(uptr dest, uptr src);
+
   int pagefault(uptr va, u32 err);
 
   // Map virtual address va in this address space to a kernel virtual
