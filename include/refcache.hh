@@ -118,6 +118,7 @@
 #include "spinlock.h"
 #include "ilist.hh"
 #include "percpu.hh"
+#include "kstats.hh"
 
 #ifndef REFCACHE_DEBUG
 #define REFCACHE_DEBUG 1
@@ -245,6 +246,7 @@ namespace refcache {
           // capacity eviction, local_epoch may be behind
           // global_epoch.
           evict(way, false);
+          kstats::inc(&kstats::refcache_conflict_count);
         }
         // Take this entry
         way->obj = obj;

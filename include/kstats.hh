@@ -45,10 +45,24 @@
   X(uint64_t, kalloc_hot_list_flush_count)      \
   X(uint64_t, kalloc_hot_list_steal_count)      \
 
+#define KSTATS_REFCACHE(X)                      \
+  X(uint64_t, refcache_review_count)            \
+  X(uint64_t, refcache_review_cycles)           \
+  X(uint64_t, refcache_flush_count)             \
+  X(uint64_t, refcache_flush_cycles)            \
+  X(uint64_t, refcache_item_flushed_count)      \
+  X(uint64_t, refcache_item_reviewed_count)     \
+  X(uint64_t, refcache_item_freed_count)        \
+  X(uint64_t, refcache_item_requeued_count)     \
+  X(uint64_t, refcache_item_disowned_count)     \
+  X(uint64_t, refcache_dirtied_count)           \
+  X(uint64_t, refcache_conflict_count)          \
+
 #define KSTATS_ALL(X)                           \
   KSTATS_TLB(X)                                 \
   KSTATS_VM(X)                                  \
   KSTATS_KALLOC(X)                              \
+  KSTATS_REFCACHE(X)                            \
 
 struct kstats
 {
