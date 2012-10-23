@@ -116,6 +116,37 @@ static std::atomic<uint64_t> total_underflows;
 static uint64_t pmcs[NCPU];
 #endif
 
+#if defined(XV6_USER) && defined(HW_ben)
+int get_cpu_order(int thread)
+{
+  const int cpu_order[] = {
+    // Socket 0
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    // Socket 1
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    // Socket 3
+    30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+    // Socket 2
+    20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+    // Socket 5
+    50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+    // Socket 4
+    40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+    // Socket 6
+    60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+    // Socket 7
+    70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+  };
+
+  return cpu_order[thread];
+}
+#else
+int get_cpu_order(int thread)
+{
+  return thread;
+}
+#endif
+
 void*
 timer_thread(void *)
 {
@@ -187,7 +218,7 @@ thr(void *arg)
   const uint64_t inchan = cpu;
   const uint64_t outchan = (cpu + 1) % nthread;
 
-  if (setaffinity(cpu) < 0)
+  if (setaffinity(get_cpu_order(cpu)) < 0)
     die("setaffinity err");
 
   pthread_barrier_wait(&bar);
