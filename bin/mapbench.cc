@@ -517,6 +517,16 @@ main(int argc, char **argv)
     printf("%lu cycles/page fault\n",
            kstats.page_fault_cycles / kstats.page_fault_count);
 
+  printf("%lu alloc page faults\n", kstats.page_fault_alloc_count);
+  if (kstats.page_fault_alloc_count)
+    printf("%lu cycles/alloc page fault\n",
+           kstats.page_fault_alloc_cycles / kstats.page_fault_alloc_count);
+
+  printf("%lu fill page faults\n", kstats.page_fault_fill_count);
+  if (kstats.page_fault_fill_count)
+    printf("%lu cycles/fill page fault\n",
+           kstats.page_fault_fill_cycles / kstats.page_fault_fill_count);
+
   printf("%lu mmaps\n", kstats.mmap_count);
   printf("%f mmaps/page touch\n",
          (double)kstats.mmap_count / sum(pages, nthread));
