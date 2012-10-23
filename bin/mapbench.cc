@@ -57,18 +57,29 @@ enum class bench_mode
 // PMCs
 enum {
   pmc_llc_misses = 0x2e|(0x41<<8),
+  pmc_instruction_retired = 0xc0,
+
 #if defined(PERF_intel)
   pmc_l2_cache_misses = 0x24|(0xAA<<8), // L2_RQSTS.MISS
   pmc_l2_prefetch_misses = 0x24|(0x80<<8), // L2_RQSTS.PREFETCH_MISS
   pmc_mem_load_retired_other_core_l2_hit_hitm = 0xcb|(0x08<<8),
   pmc_mem_load_retired_l3_miss = 0xcb|(0x10<<8),
+
+  pmc_cache_lock_cycles_l1d_l2 = 0x63|(0x01<<8),
+  pmc_resource_stalls_any = 0xa2|(0x01<<8),
+  pmc_offcore_requests_sq_full = 0xb2|(0x01<<8),
+  pmc_machine_clears_cycles = 0xc3|(0x01<<8),
+  pmc_rat_stalls_any = 0xd2|(0x0f<<8),
+  pmc_rat_stalls_scoreboard = 0xd2|(0x08<<8),
+  pmc_sq_full_stall_cycles  = 0xf6|(0x01<<8),
+
 #elif defined(PERF_amd)
   pmc_l2_cache_misses = 0x7e|((0x2|0x8)<<8),
 #endif
 };
 
 #if !defined(LINUX) && !defined(HW_qemu)
-#define RECORD_PMC pmc_l2_cache_misses
+#define RECORD_PMC pmc_llc_misses
 #define PMCNO 0
 #endif
 
