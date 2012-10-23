@@ -969,9 +969,11 @@ public:
     {
       if (r_) {
         iterator it(r_, low_);
-        iterator high(r_, high_);
-        for (; it.k_ < high.k_; it += it.span())
+        if (low_ + 1 == high_)
           it.unlock();
+        else
+          for (; it.k_ < high_; it += it.span())
+            it.unlock();
         r_ = nullptr;
 #ifdef XV6_KERNEL
         popcli();
