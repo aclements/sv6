@@ -130,6 +130,10 @@ struct vmap {
   // Unmap from virtual addresses start to start+len.
   int remove(uptr start, uptr len);
 
+  // XXX(Austin) HACK for benchmarking.  Used to simulate the shared
+  // pages we could have if we had a unified buffer cache.
+  int dup_page(uptr dest, uptr src);
+
   int pagefault(uptr va, u32 err);
 
   // Map virtual address va in this address space to a kernel virtual
@@ -179,5 +183,6 @@ private:
   // responsible for ensuring that there is a mapping at @c it and for
   // locking vpfs_ at @c it.  This throws bad_alloc if a page must be
   // allocated and cannot be.
-  page_info *ensure_page(const vpf_array::iterator &it, access_type type);
+  page_info *ensure_page(const vpf_array::iterator &it, access_type type,
+                         bool *allocated = nullptr);
 };

@@ -75,6 +75,7 @@ refcache::cache::evict(struct refcache::cache::way *way,
       verbose.println("refcache: CPU ", myid(), " dirtying obj ", obj,
                       " with delta ", delta);
       obj->dirty_ = true;
+      kstats::inc(&kstats::refcache_dirtied_count);
     }
   } else {
     verbose.println("refcache: CPU ", myid(), " evicting obj ", obj,
@@ -85,6 +86,9 @@ refcache::cache::evict(struct refcache::cache::way *way,
 void
 refcache::cache::review()
 {
+  kstats::inc(&kstats::refcache_review_count);
+  kstats::timer timer(&kstats::refcache_review_cycles);
+
   // Scan our review list for objects that can be reviewed.  Since we
   // may have interrupts enabled, first find the cut-off.
   uint64_t epoch = global_epoch;
@@ -157,11 +161,19 @@ refcache::cache::review()
   //   console.println("refcache: CPU ", myid(), " reviewed ", nreviewed,
   //                   " freed ", nfreed, " requeued ", nrequeued,
   //                   " disowned ", ndisowned);
+
+  kstats::inc(&kstats::refcache_item_reviewed_count, nreviewed);
+  kstats::inc(&kstats::refcache_item_freed_count, nfreed);
+  kstats::inc(&kstats::refcache_item_requeued_count, nrequeued);
+  kstats::inc(&kstats::refcache_item_disowned_count, ndisowned);
 }
 
 void
 refcache::cache::flush()
 {
+  kstats::inc(&kstats::refcache_flush_count);
+  kstats::timer timer(&kstats::refcache_flush_cycles);
+
   // XXX Only around flushing?  Depend how flush gets called.
   scoped_cli cli;
 
@@ -204,6 +216,8 @@ refcache::cache::flush()
     global_epoch_left = ncpu;
     ++global_epoch;
   }
+
+  kstats::inc(&kstats::refcache_item_flushed_count, nflushed);
 }
 
 void

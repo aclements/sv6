@@ -343,11 +343,22 @@ locked_test_and_set_bit(int nr, volatile void *a)
 // Atomically clear bit nr of *a, with release semantics appropriate
 // for clearing a lock bit.
 static inline void
-clear_bit_unlock(int nr, volatile void *a)
+locked_clear_bit(int nr, volatile void *a)
 {
   __asm volatile("lock; btrq %1,%0"
                  : "+m" (*(volatile uint64_t*)a)
                  : "Ir" (nr)
+                 : "memory");
+}
+
+// Clear bit nr of *a.  On the x86, this can be used to release a lock
+// as long as nothing else can concurrently modify the same byte.
+static inline void
+clear_bit(int nr, volatile void *a)
+{
+  __asm volatile("btr %1,%0"
+                 : "+m" (*((volatile uint8_t*)a + (nr / 8)))
+                 : "Ir" (nr % 8)
                  : "memory");
 }
 

@@ -243,3 +243,11 @@ sys_uname(userptr<struct utsname> buf)
     return -1;
   return 0;
 }
+
+// XXX(Austin) This is a hack for benchmarking.  See vmap::dup_page.
+//SYSCALL
+int
+sys_dup_page(userptr<void> dest, userptr<void> src)
+{
+  return myproc()->vmap->dup_page(dest, src);
+}

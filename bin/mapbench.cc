@@ -44,7 +44,7 @@ enum { pipeline_width = 1 };
 
 enum class bench_mode
 {
-  LOCAL, PIPELINE, GLOBAL
+  LOCAL, PIPELINE, GLOBAL, GLOBAL_FIXED
 };
 
 // XXX(Austin) Do this right.  Put these in a proper PMC library.
@@ -57,18 +57,29 @@ enum class bench_mode
 // PMCs
 enum {
   pmc_llc_misses = 0x2e|(0x41<<8),
+  pmc_instruction_retired = 0xc0,
+
 #if defined(PERF_intel)
   pmc_l2_cache_misses = 0x24|(0xAA<<8), // L2_RQSTS.MISS
   pmc_l2_prefetch_misses = 0x24|(0x80<<8), // L2_RQSTS.PREFETCH_MISS
   pmc_mem_load_retired_other_core_l2_hit_hitm = 0xcb|(0x08<<8),
   pmc_mem_load_retired_l3_miss = 0xcb|(0x10<<8),
+
+  pmc_cache_lock_cycles_l1d_l2 = 0x63|(0x01<<8),
+  pmc_resource_stalls_any = 0xa2|(0x01<<8),
+  pmc_offcore_requests_sq_full = 0xb2|(0x01<<8),
+  pmc_machine_clears_cycles = 0xc3|(0x01<<8),
+  pmc_rat_stalls_any = 0xd2|(0x0f<<8),
+  pmc_rat_stalls_scoreboard = 0xd2|(0x08<<8),
+  pmc_sq_full_stall_cycles  = 0xf6|(0x01<<8),
+
 #elif defined(PERF_amd)
   pmc_l2_cache_misses = 0x7e|((0x2|0x8)<<8),
 #endif
 };
 
 #if !defined(LINUX) && !defined(HW_qemu)
-#define RECORD_PMC pmc_l2_cache_misses
+#define RECORD_PMC pmc_llc_misses
 #define PMCNO 0
 #endif
 
@@ -114,6 +125,37 @@ static uint64_t start_tscs[NCPU], stop_tscs[NCPU], iters[NCPU], pages[NCPU];
 static std::atomic<uint64_t> total_underflows;
 #ifdef RECORD_PMC
 static uint64_t pmcs[NCPU];
+#endif
+
+#if defined(XV6_USER) && defined(HW_ben)
+int get_cpu_order(int thread)
+{
+  const int cpu_order[] = {
+    // Socket 0
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    // Socket 1
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    // Socket 3
+    30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+    // Socket 2
+    20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+    // Socket 5
+    50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+    // Socket 4
+    40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+    // Socket 6
+    60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+    // Socket 7
+    70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+  };
+
+  return cpu_order[thread];
+}
+#else
+int get_cpu_order(int thread)
+{
+  return thread;
+}
 #endif
 
 void*
@@ -187,7 +229,7 @@ thr(void *arg)
   const uint64_t inchan = cpu;
   const uint64_t outchan = (cpu + 1) % nthread;
 
-  if (setaffinity(cpu) < 0)
+  if (setaffinity(get_cpu_order(cpu)) < 0)
     die("setaffinity err");
 
   pthread_barrier_wait(&bar);
@@ -291,6 +333,49 @@ thr(void *arg)
 
       ++myiters;
     }
+    break;
+  }
+
+  case bench_mode::GLOBAL_FIXED: {
+    volatile char *p = (base + (cpu * npg / nthread) * PGSIZE);
+    volatile char *p2 = (base + ((cpu + 1) * npg / nthread) * PGSIZE);
+    if (cpu == nthread - 1)
+      p2 = base + npg * PGSIZE;
+
+    while (!stop) {
+      // Map my part of the "hash table".
+      if (mmap((void *) p, p2 - p, PROT_READ|PROT_WRITE,
+               MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
+        die("%d: map failed", cpu);
+
+      // Wait for all cores to finish mapping the "hash table".
+      gbarrier.wait();
+      if (stop)
+        break;
+
+      // Fault in random pages
+      uint64_t *touched = (uint64_t*)malloc(1 + npg / 8);
+      for (int i = 0; i < npg; ++i) {
+        size_t pg = rnd() % npg;
+        if (!(touched[pg / 64] & (1ull << (pg % 64)))) {
+          base[PGSIZE * pg] = '\0';
+          touched[pg / 64] |= 1ull << (pg % 64);
+          ++mypages;
+        }
+      }
+
+      // Wait for all cores to finish faulting
+      gbarrier.wait();
+      if (stop)
+        break;
+
+      // Unmap
+      if (munmap((void *) p, p2 - p) < 0)
+        die("%d: unmap failed\n", cpu);
+
+      ++myiters;
+    }
+    break;
   }
   }
   stop_tscs[cpu] = rdtsc();
@@ -342,20 +427,29 @@ main(int argc, char **argv)
     mode = bench_mode::PIPELINE;
   else if (strcmp(argv[2], "global") == 0)
     mode = bench_mode::GLOBAL;
+  else if (strcmp(argv[2], "global-fixed") == 0)
+    mode = bench_mode::GLOBAL_FIXED;
   else
     die("bad mode argument");
 
   if (argc >= 4)
     npg = atoi(argv[3]);
+  else if (mode == bench_mode::GLOBAL_FIXED)
+    npg = 64 * 80;
   else
     npg = 1;
 
-  printf("# --cores=%d --duration=%ds --mode=%s --fault=%s --npg=%d",
+  printf("# --cores=%d --duration=%ds --mode=%s --fault=%s",
          nthread, duration,
          mode == bench_mode::LOCAL ? "local" :
          mode == bench_mode::PIPELINE ? "pipeline" :
-         mode == bench_mode::GLOBAL ? "global" : "UNKNOWN",
-         fault ? "true" : "false", npg);
+         mode == bench_mode::GLOBAL ? "global" :
+         mode == bench_mode::GLOBAL_FIXED ? "global-fixed" : "UNKNOWN",
+         fault ? "true" : "false");
+  if (mode == bench_mode::GLOBAL_FIXED)
+    printf(" --totalpg=%d", npg);
+  else
+    printf(" --npg=%d", npg);
   if (mode == bench_mode::PIPELINE)
     printf(" --pipeline-width=%d", pipeline_width);
   printf("\n");
@@ -422,6 +516,16 @@ main(int argc, char **argv)
   if (kstats.page_fault_count)
     printf("%lu cycles/page fault\n",
            kstats.page_fault_cycles / kstats.page_fault_count);
+
+  printf("%lu alloc page faults\n", kstats.page_fault_alloc_count);
+  if (kstats.page_fault_alloc_count)
+    printf("%lu cycles/alloc page fault\n",
+           kstats.page_fault_alloc_cycles / kstats.page_fault_alloc_count);
+
+  printf("%lu fill page faults\n", kstats.page_fault_fill_count);
+  if (kstats.page_fault_fill_count)
+    printf("%lu cycles/fill page fault\n",
+           kstats.page_fault_fill_cycles / kstats.page_fault_fill_count);
 
   printf("%lu mmaps\n", kstats.mmap_count);
   printf("%f mmaps/page touch\n",

@@ -1,6 +1,6 @@
 #pragma once
 
-template <class T>
+template <class T, typename = void>
 class sref {
 private:
   constexpr explicit sref(T* p) noexcept : ptr_(p) { }
