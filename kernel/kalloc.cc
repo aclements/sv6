@@ -17,6 +17,7 @@
 #include "buddy.hh"
 #include "log2.hh"
 #include "kstats.hh"
+#include "vector.hh"
 
 #include <algorithm>
 
@@ -49,10 +50,12 @@ struct locked_buddy
   spinlock lock;
   buddy_allocator alloc;
   __padout__;
+
+  locked_buddy(buddy_allocator &&alloc)
+    : lock(spinlock("buddy")), alloc(std::move(alloc)) { }
 };
 
-static locked_buddy buddies[MAX_BUDDIES];
-static size_t nbuddies;
+static static_vector<locked_buddy, MAX_BUDDIES> buddies;
 
 struct cpu_mem
 {
@@ -282,7 +285,7 @@ void
 kmemprint()
 {
   for (int cpu = 0; cpu < NCPU; ++cpu) {
-    size_t last = cpu + 1 < NCPU ? cpu_mem[cpu + 1].first_buddy : nbuddies;
+    size_t last = cpu_mem[cpu].first_buddy + cpu_mem[cpu].nbuddies;
     console.print("cpu ", cpu, ":");
     for (auto buddy = cpu_mem[cpu].first_buddy; buddy < last; ++buddy) {
       buddy_allocator::stats stats;
@@ -320,24 +323,24 @@ kalloc(const char *name, size_t size)
       auto first = mem->first_buddy;
       auto lb = &buddies[first];
       auto l = lb->lock.guard();
-      for (int b = 0; mem->nhot < KALLOC_HOT_PAGES && b < nbuddies; ) {
+      for (int b = 0; mem->nhot < KALLOC_HOT_PAGES && b < buddies.size(); ) {
         void *page = lb->alloc.alloc_nothrow(PGSIZE);
         if (!page) {
           // Move to the next allocator
-          if (++b == nbuddies && mem->nhot == 0) {
+          if (++b == buddies.size() && mem->nhot == 0) {
             // We couldn't allocate any pages; we're probably out of
             // memory, but drop through to the more aggressive
             // general-purpose allocator.
             goto general;
           }
-          lb = &buddies[(b + first) % nbuddies];
+          lb = &buddies[(b + first) % buddies.size()];
           l = lb->lock.guard();
           if (b == mem->nbuddies)
             kstats::inc(&kstats::kalloc_hot_list_steal_count);
 #if PRINT_STEAL
           if (b >= mem->nbuddies)
             cprintf("CPU %d stealing hot list from buddy %lu\n",
-                    myid(), (b + first) % nbuddies);
+                    myid(), (b + first) % buddies.size());
 #endif
         } else {
           mem->hot_pages[mem->nhot++] = page;
@@ -353,13 +356,13 @@ kalloc(const char *name, size_t size)
     auto first = mycpu()->mem->first_buddy;
     // XXX(Austin) Would it be better to linear scan our local buddies
     // and then randomly traverse the others to avoid hot-spots?
-    for (int b = 0; !res && b < nbuddies; b++) {
-      auto &lb = buddies[(b + first) % nbuddies];
+    for (int b = 0; !res && b < buddies.size(); b++) {
+      auto &lb = buddies[(b + first) % buddies.size()];
       auto l = lb.lock.guard();
       res = lb.alloc.alloc_nothrow(size);
 #if PRINT_STEAL
       if (res && b >= mycpu()->mem->nbuddies)
-        cprintf("CPU %d stole from buddy %lu\n", myid(), (b + first) % nbuddies);
+        cprintf("CPU %d stole from buddy %lu\n", myid(), (b + first) % buddies.size());
 #endif
     }
   }
@@ -460,14 +463,14 @@ initkalloc(u64 mbaddr)
   for (int c = 0; c < NCPU; c++) {
     // XXX(austin) The physical regions for each core should come from NUMA
     cpus[c].mem = &cpu_mem[c];
-    cpu_mem[c].first_buddy = nbuddies;
+    cpu_mem[c].first_buddy = buddies.size();
     cpu_mem[c].nbuddies = 0;
     cpu_mem[c].nhot = 0;
     size_t core_size = mem.bytes_after(p) / (NCPU - c);
     // Use 2*MAX_SIZE to make sure the allocator has room for its
     // metadata in addition to at least one block.
     while (core_size > 2*buddy_allocator::MAX_SIZE) {
-      if (nbuddies == MAX_BUDDIES)
+      if (buddies.full())
         panic("MAX_BUDDIES is too low");
       ++cpu_mem[c].nbuddies;
       // Make sure we have enough space for an allocator
@@ -475,11 +478,9 @@ initkalloc(u64 mbaddr)
       size_t size = std::min(core_size, mem.max_alloc(p));
       if (ALLOC_MEMSET)
         memset(p, 1, size);
-      buddies[nbuddies].lock = spinlock("buddy");
-      buddies[nbuddies].alloc = buddy_allocator(p, size);
-      p = (char*)buddies[nbuddies].alloc.get_limit();
+      buddies.emplace_back(buddy_allocator(p, size));
+      p = (char*)buddies.back().alloc.get_limit();
       core_size -= size;
-      ++nbuddies;
     }
   }
 
@@ -530,7 +531,7 @@ kfree(void *v, size_t size)
         if (buddy == -1 || ptr >= buddies[buddy].alloc.get_limit()) {
           // Find the allocator containing ptr.
           for (++buddy; ptr >= buddies[buddy].alloc.get_limit(); ++buddy);
-          assert(buddy < nbuddies);
+          assert(buddy < buddies.size());
           lock.release();
           lock = buddies[buddy].lock.guard();
 #if PRINT_STEAL
@@ -563,7 +564,7 @@ kfree(void *v, size_t size)
     lb = &buddies[first];
   } else {
     // Find the allocator
-    lb = std::lower_bound(buddies, buddies + nbuddies, v,
+    lb = std::lower_bound(buddies.begin(), buddies.end(), v,
                           [](locked_buddy &lb, void *v) {
                             return lb.alloc.get_limit() < v;
                           });
