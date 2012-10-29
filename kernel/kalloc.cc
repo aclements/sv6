@@ -20,6 +20,7 @@
 #include "vector.hh"
 
 #include <algorithm>
+#include <iterator>
 
 // The maximum number of buddy allocators.  Each CPU needs at least
 // one buddy allocator, and we need some margin in case a CPU's memory
@@ -74,75 +75,53 @@ static int kinited __mpalign__;
 class phys_map
 {
   // The list of regions, in sorted order and without overlaps.
-  struct
+  struct region
   {
     uintptr_t base, end;
-  } regions[128];
-  size_t nregions;
-
-  // Remove region i.
-  void remove_index(size_t i)
-  {
-    memmove(regions + i, regions + i + 1,
-            (nregions - i - 1) * sizeof(regions[0]));
-    --nregions;
-  }
-
-  // Insert a region at index i.
-  void insert_index(size_t i, uintptr_t base, uintptr_t end)
-  {
-    if (nregions == sizeof(regions)/sizeof(regions[0]))
-      panic("phys_map: too many memory regions");
-    memmove(regions + i + 1, regions + i, (nregions - i) * sizeof(regions[0]));
-    regions[i].base = base;
-    regions[i].end = end;
-    ++nregions;
-  }
+  };
+  static_vector<region, 128> regions;
 
 public:
-  constexpr phys_map() : regions{}, nregions(0) { }
-
   // Add a region to the physical memory map.
   void add(uintptr_t base, uintptr_t end)
   {
     // Scan for overlap
-    size_t i;
-    for (i = 0; i < nregions; ++i) {
-      if (end >= regions[i].base && base <= regions[i].end) {
+    auto it = regions.begin();
+    for (; it != regions.end(); ++it) {
+      if (end >= it->base && base <= it->end) {
         // Found overlapping region
-        uintptr_t new_base = MIN(base, regions[i].base);
-        uintptr_t new_end = MAX(end, regions[i].end);
+        uintptr_t new_base = MIN(base, it->base);
+        uintptr_t new_end = MAX(end, it->end);
         // Re-add expanded region, since it might overlap with another
-        remove_index(i);
+        regions.erase(it);
         add(new_base, new_end);
         return;
       }
-      if (regions[i].base >= base)
+      if (it->base >= base)
         // Found insertion point
         break;
     }
-    insert_index(i, base, end);
+    regions.insert(it, region{base, end});
   }
 
   // Remove a region from the physical memory map.
   void remove(uintptr_t base, uintptr_t end)
   {
     // Scan for overlap
-    for (size_t i = 0; i < nregions; ++i) {
-      if (regions[i].base < base && end < regions[i].end) {
+    for (auto it = regions.begin(); it != regions.end(); ++it) {
+      if (it->base < base && end < it->end) {
         // Split this region
-        insert_index(i + 1, end, regions[i].end);
-        regions[i].end = base;
-      } else if (base <= regions[i].base && regions[i].end <= end) {
+        regions.insert(it + 1, region{end, it->end});
+        it->end = base;
+      } else if (base <= it->base && it->end <= end) {
         // Completely remove region
-        remove_index(i);
-        --i;
-      } else if (base <= regions[i].base && end > regions[i].base) {
+        it = regions.erase(it) - 1;
+      } else if (base <= it->base && end > it->base) {
         // Left truncate
-        regions[i].base = end;
-      } else if (base < regions[i].end && end >= regions[i].end) {
+        it->base = end;
+      } else if (base < it->end && end >= it->end) {
         // Right truncate
-        regions[i].end = base;
+        it->end = base;
       }
     }
   }
@@ -150,9 +129,9 @@ public:
   // Print the memory map.
   void print() const
   {
-    for (size_t i = 0; i < nregions; ++i)
-      console.println("phys: ", shex(regions[i].base).width(18).pad(), "-",
-                      shex(regions[i].end - 1).width(18).pad());
+    for (auto &reg : regions)
+      console.println("phys: ", shex(reg.base).width(18).pad(), "-",
+                      shex(reg.end - 1).width(18).pad());
   }
 
   // Return the first region of physical memory of size @c size at or
@@ -164,23 +143,24 @@ public:
     // the end of a region, in case the caller just right to the last
     // byte of a region.
     uintptr_t pa = v2p(start);
-    for (size_t i = 0; i < nregions; ++i) {
-      if (regions[i].base <= pa && pa <= regions[i].end) {
+    for (auto &reg : regions) {
+      if (pa == 0)
+        pa = reg.base;
+      if (reg.base <= pa && pa <= reg.end) {
         // Align pa (we do this now so it doesn't matter if alignment
         // pushes it outside of a known region).
         if (align)
           pa = (pa + align - 1) & ~(align - 1);
         // Is there enough space?
-        if (pa + size < regions[i].end)
+        if (pa + size < reg.end)
           return p2v(pa);
         // Not enough space.  Move to next region
-        if (i + 1 < nregions)
-          pa = regions[i+1].base;
-        else
-          panic("phys_map: out of memory allocating %lu bytes at %p",
-                size, start);
+        pa = 0;
       }
     }
+    if (pa == 0)
+      panic("phys_map: out of memory allocating %lu bytes at %p",
+            size, start);
     panic("phys_map: bad start address %p", start);
   }
 
@@ -189,9 +169,9 @@ public:
   size_t max_alloc(void *start) const
   {
     uintptr_t pa = v2p(start);
-    for (size_t i = 0; i < nregions; ++i)
-      if (regions[i].base <= pa && pa <= regions[i].end)
-        return regions[i].end - (uintptr_t)pa;
+    for (auto &reg : regions)
+      if (reg.base <= pa && pa <= reg.end)
+        return reg.end - (uintptr_t)pa;
     panic("phys_map: bad start address %p", start);
   }
 
@@ -199,8 +179,8 @@ public:
   size_t bytes() const
   {
     size_t total = 0;
-    for (size_t i = 0; i < nregions; ++i)
-      total += regions[i].end - regions[i].base;
+    for (auto &reg : regions)
+      total += reg.end - reg.base;
     return total;
   }
 
@@ -209,20 +189,20 @@ public:
   {
     uintptr_t pa = v2p(start);
     size_t total = 0;
-    for (size_t i = 0; i < nregions; ++i)
-      if (regions[i].base > pa)
-        total += regions[i].end - regions[i].base;
-      else if (regions[i].base <= pa && pa <= regions[i].end)
-        total += regions[i].end - (uintptr_t)pa;
+    for (auto &reg : regions)
+      if (reg.base > pa)
+        total += reg.end - reg.base;
+      else if (reg.base <= pa && pa <= reg.end)
+        total += reg.end - (uintptr_t)pa;
     return total;
   }
 
   // Return the first physical address above all of the regions.
   size_t max() const
   {
-    if (nregions == 0)
+    if (regions.empty())
       return 0;
-    return regions[nregions - 1].end;
+    return regions.back().end;
   }
 };
 
