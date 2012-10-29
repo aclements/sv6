@@ -113,7 +113,8 @@ struct LoopsBench : public Bench
   NEW_OPERATOR(LoopsBench)
 };
 
-#define CMD(...) new TimedExec((const char *[]){__VA_ARGS__, 0})
+#define CMD(...) ({ const char* args[] = { __VA_ARGS__, 0 }; \
+                    new TimedExec(args); })
 #define STR_1(x...) #x
 #define STR(x...)   STR_1(x)
 
