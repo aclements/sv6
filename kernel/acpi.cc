@@ -6,6 +6,9 @@
 #include "apic.hh"
 #include "pci.hh"
 #include "kstream.hh"
+#include "numa.hh"
+
+#include <algorithm>
 #include <iterator>
 
 extern "C" {
@@ -153,6 +156,7 @@ public:
 
 static bool have_tables, have_acpi;
 static acpi_table<ACPI_TABLE_MADT> madt;
+static acpi_table<ACPI_TABLE_SRAT> srat;
 
 void
 initacpitables(void)
@@ -174,6 +178,23 @@ initacpitables(void)
     panic("acpi: AcpiGetTable failed: %s", AcpiFormatException(r));
   if (r == AE_OK)
     madt = acpi_table<ACPI_TABLE_MADT>(madtp);
+
+  // Get the SRAT
+  ACPI_TABLE_HEADER *sratp;
+  r = AcpiGetTable((char*)ACPI_SIG_SRAT, 0, &sratp);
+  if (ACPI_FAILURE(r) && r != AE_NOT_FOUND)
+    panic("acpi: AcpiGetTable failed: %s", AcpiFormatException(r));
+  if (r == AE_OK)
+    srat = acpi_table<ACPI_TABLE_SRAT>(sratp);
+}
+
+static struct cpu*
+apicid_to_cpu(uint32_t apicid)
+{
+  for (int i = 0; i < ncpu; ++i)
+    if (cpus[i].hwid.num == apicid)
+      return &cpus[i];
+  return nullptr;
 }
 
 bool
@@ -220,6 +241,94 @@ initcpus_acpi(void)
     verbose.println("acpi: CPU ", c->id, " APICID ", c->hwid.num);
   }
   assert(found_bsp);
+
+  // Create NUMA nodes
+  static_vector<uint32_t, MAX_NUMA_NODES> proximity_domains;
+  auto ensure_node = [&](uint32_t domain) -> numa_node* {
+    auto i = std::find(proximity_domains.begin(), proximity_domains.end(),
+                       domain) - proximity_domains.begin();
+    if (i == proximity_domains.size()) {
+      numa_nodes.emplace_back(i);
+      proximity_domains.push_back(domain);
+    }
+    return &numa_nodes[i];
+  };
+  if (!srat.get()) {
+    verbose.println("acpi: No SRAT; assuming single NUMA node");
+    numa_nodes.emplace_back(0);
+    numa_nodes.back().mems.emplace_back(0, ~0ull);
+    for (int i = 0; i < ncpu; ++i) {
+      cpus[i].node = &numa_nodes.back();
+      numa_nodes.back().cpus.push_back(&cpus[i]);
+    }
+  } else {
+    for (auto &sub : srat) {
+      uint32_t proximity_domain, apicid;
+      switch (sub.Type) {
+      case ACPI_SRAT_TYPE_CPU_AFFINITY: {
+        auto aff = (ACPI_SRAT_CPU_AFFINITY&)sub;
+        if (!(aff.Flags & ACPI_SRAT_CPU_USE_AFFINITY))
+          continue;
+        proximity_domain = aff.ProximityDomainLo;
+        if (srat->Header.Revision >= 2)
+          for (int i = 0; i < 3; ++i)
+            proximity_domain |= aff.ProximityDomainHi[i] << (i * 8);
+        apicid = aff.ApicId;
+        goto cpu_common;
+      }
+      case ACPI_SRAT_TYPE_X2APIC_CPU_AFFINITY: {
+        auto aff = (ACPI_SRAT_X2APIC_CPU_AFFINITY&)sub;
+        if (!(aff.Flags & ACPI_SRAT_CPU_ENABLED))
+          continue;
+        proximity_domain = aff.ProximityDomain;
+        apicid = aff.ApicId;
+        goto cpu_common;
+      }
+      cpu_common: {
+          auto cpu = apicid_to_cpu(apicid);
+          auto node = ensure_node(proximity_domain);
+          if (!cpu)
+            panic("SRAT refers to unknown CPU APICID %d", apicid);
+          if (cpu->node)
+            panic("CPU %d is in multiple NUMA nodes", cpu->id);
+          cpu->node = node;
+          node->cpus.push_back(cpu);
+          break;
+        }
+
+      case ACPI_SRAT_TYPE_MEMORY_AFFINITY: {
+        auto aff = (ACPI_SRAT_MEM_AFFINITY&)sub;
+        if (!(aff.Flags & ACPI_SRAT_MEM_ENABLED))
+          continue;
+        proximity_domain = aff.ProximityDomain;
+        if (srat->Header.Revision < 2)
+          proximity_domain &= 0xff;
+        auto node = ensure_node(proximity_domain);
+        node->mems.emplace_back(aff.BaseAddress, aff.Length);
+        break;
+      }
+
+      default:
+        continue;
+      }
+    }
+
+    // Print NUMA node map
+    for (auto &node : numa_nodes) {
+      verbose.print("acpi: NUMA node ", node.id, ": cpus");
+      for (auto &cpu : node.cpus)
+        verbose.print(" ", cpu->id);
+      verbose.print(" mem");
+      for (auto &mem : node.mems)
+        verbose.print(" ", shex(mem.base), "-", shex(mem.base+mem.length-1));
+      verbose.println();
+    }
+
+    // Check that all CPUs are in a NUMA node
+    for (int c = 0; c < ncpu; ++c)
+      if (!cpus[c].node)
+        panic("CPU %d does not belong to a NUMA node", c);
+  }
 
   return true;
 }

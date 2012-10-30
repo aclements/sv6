@@ -18,6 +18,7 @@
 #include "log2.hh"
 #include "kstats.hh"
 #include "vector.hh"
+#include "numa.hh"
 
 #include <algorithm>
 #include <iterator>
@@ -68,6 +69,8 @@ struct cpu_mem
 
 // Prefer mycpu()->mem for local access to this.
 static percpu<struct cpu_mem> cpu_mem;
+
+static_vector<numa_node, MAX_NUMA_NODES> numa_nodes;
 
 static int kinited __mpalign__;
 

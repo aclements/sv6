@@ -19,6 +19,7 @@ struct cpu {
   atomic<u64> tlbflush_done;   // last tlb flush req done on this cpu
   struct proc *prev;           // The previously-running process
   atomic<struct proc*> fpu_owner; // The proc with the current FPU state
+  struct numa_node *node;
 
   // The list of IPI calls to this CPU
   atomic<struct ipi_call *> ipi __mpalign__;
