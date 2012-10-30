@@ -77,14 +77,23 @@ static int kinited __mpalign__;
 // This class maintains a set of usable physical memory regions.
 class phys_map
 {
+public:
   // The list of regions, in sorted order and without overlaps.
   struct region
   {
     uintptr_t base, end;
   };
-  static_vector<region, 128> regions;
+
+private:
+  typedef static_vector<region, 128> region_vector;
+  region_vector regions;
 
 public:
+  const region_vector &get_regions() const
+  {
+    return regions;
+  }
+
   // Add a region to the physical memory map.
   void add(uintptr_t base, uintptr_t end)
   {
@@ -127,6 +136,28 @@ public:
         it->end = base;
       }
     }
+  }
+
+  // Remove all regions in another physical memory map.
+  void remove(const phys_map &o)
+  {
+    for (auto &reg : o.regions)
+      remove(reg.base, reg.end);
+  }
+
+  // Intersect this physical memory map with another.
+  void intersect(const phys_map &o)
+  {
+    if (o.regions.empty()) {
+      regions.clear();
+      return;
+    }
+    uintptr_t prevend = 0;
+    for (auto &reg : o.regions) {
+      remove(prevend, reg.base);
+      prevend = reg.end;
+    }
+    remove(prevend, ~0);
   }
 
   // Print the memory map.
@@ -386,8 +417,6 @@ ksalloc(int slab)
 void
 initkalloc(u64 mbaddr)
 {
-  char *p;
-
   parse_mb_map((Mbdata*) p2v(mbaddr));
 
   // Consider first 1MB of memory unusable
@@ -430,42 +459,59 @@ initkalloc(u64 mbaddr)
     mem.remove(v2p(page_info_array), v2p(page_info_array) + page_info_bytes);
   }
 
+  // Remove memory before newend from the memory map
+  mem.remove(0, v2p(newend));
+
   // XXX(Austin) This handling of page_info_array is somewhat
   // unfortunate, given how sparse physical memory can be.  We could
   // break it up into chunks with a fast lookup table.  We could
   // virtually map it (probably with global large pages), though that
-  // would increase TLB pressure.  If we make it sparse, we could also
-  // make it NUMA aware so the metadata for pages is stored on the
-  // same physical node as the pages.
+  // would increase TLB pressure.
+
+  // XXX(Austin) Spread page_info_array across the NUMA nodes, both to
+  // limit the impact on node 0's space and to co-locate it with the
+  // pages it stores metadata for.
 
   if (VERBOSE)
     cprintf("%lu mbytes\n", mem.bytes() / (1<<20));
 
-  // Construct buddy allocators
-  p = (char*)PGROUNDUP((uptr)newend);
-  for (int c = 0; c < NCPU; c++) {
-    // XXX(austin) The physical regions for each core should come from NUMA
-    cpus[c].mem = &cpu_mem[c];
-    cpu_mem[c].first_buddy = buddies.size();
-    cpu_mem[c].nbuddies = 0;
-    cpu_mem[c].nhot = 0;
-    size_t core_size = mem.bytes_after(p) / (NCPU - c);
-    // Use 2*MAX_SIZE to make sure the allocator has room for its
-    // metadata in addition to at least one block.
-    while (core_size > 2*buddy_allocator::MAX_SIZE) {
-      if (buddies.full())
-        panic("MAX_BUDDIES is too low");
-      ++cpu_mem[c].nbuddies;
-      // Make sure we have enough space for an allocator
-      p = (char*)mem.alloc(p, 2*buddy_allocator::MAX_SIZE);
-      size_t size = std::min(core_size, mem.max_alloc(p));
+  // Construct one or more buddy allocators for each NUMA node
+  // XXX(austin) To reduce lock pressure, we might want to further
+  // subdivide these and spread out CPUs within a node (but still
+  // prefer stealing from the same node before others).
+  for (auto &node : numa_nodes) {
+    // Intersect node memory region with physical memory map to get
+    // the available physical memory in the node
+    phys_map node_mem;
+    for (auto &mem : node.mems)
+      node_mem.add(mem.base, mem.base + mem.length);
+    node_mem.intersect(mem);
+    // Remove this node from the physical memory map, just in case
+    // there are overlaps between nodes
+    mem.remove(node_mem);
+
+    // Create buddies
+    size_t first = buddies.size();
+    for (auto &reg : node_mem.get_regions()) {
       if (ALLOC_MEMSET)
-        memset(p, 1, size);
-      buddies.emplace_back(buddy_allocator(p, size));
-      p = (char*)buddies.back().alloc.get_limit();
-      core_size -= size;
+        memset(p2v(reg.base), 1, reg.end - reg.base);
+      auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base);
+      if (!buddy.empty())
+        buddies.emplace_back(std::move(buddy));
+    }
+
+    // Associate buddies with CPUs
+    for (auto &cpu : node.cpus) {
+      cpu->mem = &cpu_mem[cpu->id];
+      cpu->mem->first_buddy = first;
+      cpu->mem->nbuddies = buddies.size() - first;
+      cpu->mem->nhot = 0;
     }
   }
+
+  if (!mem.get_regions().empty())
+    // XXX(Austin) Maybe just warn?
+    panic("Physical memory regions missing from NUMA map");
 
   // Configure slabs
   strncpy(slabmem[slab_stack].name, "kstack", MAXNAME);
