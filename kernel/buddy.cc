@@ -42,7 +42,6 @@ buddy_allocator::buddy_allocator(void *base, size_t len)
   // other logic.
   this->base = ((uintptr_t)base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
   limit = end & ~(MAX_SIZE - 1);
-  assert(this->base < limit);
 
   // Create block list
   for (uintptr_t block = this->base; block < limit; block += MAX_SIZE)
