@@ -114,6 +114,7 @@ $(O)/fs.img: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
 ## qemu
 ##
 QEMUOPTS = -smp $(QEMUSMP) -m 512 -serial mon:stdio -nographic \
+	-numa node -numa node \
 	-net user -net nic,model=e1000 \
 	-redir tcp:2323::23 -redir tcp:8080::80 \
 	$(if $(RUN),-append "\$$ $(RUN)",)
