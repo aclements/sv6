@@ -1,13 +1,13 @@
 #pragma once
 // Routines to let C code use special x86 instructions.
 
-#include "types.h"
+#include <stdint.h>
 
 static inline void
-cpuid(u32 info, u32 *eaxp, u32 *ebxp,
-      u32 *ecxp, u32 *edxp)
+cpuid(uint32_t info, uint32_t *eaxp, uint32_t *ebxp,
+      uint32_t *ecxp, uint32_t *edxp)
 {
-  u32 eax, ebx, ecx, edx;
+  uint32_t eax, ebx, ecx, edx;
   __asm volatile("cpuid" 
                  : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
                  : "a" (info));
@@ -21,47 +21,47 @@ cpuid(u32 info, u32 *eaxp, u32 *ebxp,
     *edxp = edx;
 }
 
-static inline u8
-inb(u16 port)
+static inline uint8_t
+inb(uint16_t port)
 {
-  u8 data = 0;
+  uint8_t data = 0;
 
   __asm volatile("inb %1,%0" : "=a" (data) : "d" (port));
   return data;
 }
 
-static inline u16
-inw(u16 port)
+static inline uint16_t
+inw(uint16_t port)
 {
-  u16 data = 0;
+  uint16_t data = 0;
 
   __asm volatile("inw %1,%0" : "=a" (data) : "d" (port));
   return data;
 }
 
-static inline u32
-inl(u16 port)
+static inline uint32_t
+inl(uint16_t port)
 {
-  u32 data = 0;
+  uint32_t data = 0;
 
   __asm volatile("inl %w1,%0" : "=a" (data) : "d" (port));
   return data;
 }
 
 static inline void
-outb(u16 port, u8 data)
+outb(uint16_t port, uint8_t data)
 {
   __asm volatile("outb %0,%1" : : "a" (data), "d" (port));
 }
 
 static inline void
-outw(u16 port, u16 data)
+outw(uint16_t port, uint16_t data)
 {
   __asm volatile("outw %0,%1" : : "a" (data), "d" (port));
 }
 
 static inline void
-outl(u16 port, u32 data)
+outl(uint16_t port, uint32_t data)
 {
   __asm volatile("outl %0,%w1" : : "a" (data), "d" (port));
 }
@@ -75,10 +75,10 @@ stosb(void *addr, int data, int cnt)
                  "memory", "cc");
 }
 
-static inline u32
-xchg32(volatile u32 *addr, u32 newval)
+static inline uint32_t
+xchg32(volatile uint32_t *addr, uint32_t newval)
 {
-  u32 result;
+  uint32_t result;
   
   // The + in "+m" denotes a read-modify-write operand.
   __asm volatile("lock; xchgl %0, %1" :
@@ -88,8 +88,8 @@ xchg32(volatile u32 *addr, u32 newval)
   return result;
 }
 
-static inline u64
-xchg(u64 *ptr, u64 val)
+static inline uint64_t
+xchg(uint64_t *ptr, uint64_t val)
 {
   __asm volatile(
     "lock; xchgq %0, %1\n\t"
@@ -99,10 +99,10 @@ xchg(u64 *ptr, u64 val)
   return val;
 }
 
-static inline u64
+static inline uint64_t
 readrflags(void)
 {
-  u64 rflags;
+  uint64_t rflags;
   __asm volatile("pushfq; popq %0" : "=r" (rflags));
   return rflags;
 }
@@ -144,69 +144,69 @@ lgdt(void *p)
 }
 
 static inline void
-ltr(u16 sel)
+ltr(uint16_t sel)
 {
   __asm volatile("ltr %0" : : "r" (sel));
 }
 
 static inline void
-writefs(u16 v)
+writefs(uint16_t v)
 {
   __asm volatile("movw %0, %%fs" : : "r" (v));
 }
 
-static inline u16
+static inline uint16_t
 readfs(void)
 {
-  u16 v;
+  uint16_t v;
   __asm volatile("movw %%fs, %0" : "=r" (v));
   return v;
 }
 
 static inline void
-writegs(u16 v)
+writegs(uint16_t v)
 {
   __asm volatile("movw %0, %%gs" : : "r" (v));
 }
 
-static inline u16
+static inline uint16_t
 readgs(void)
 {
-  u16 v;
+  uint16_t v;
   __asm volatile("movw %%gs, %0" : "=r" (v));
   return v;
 }
 
-static inline u64
-readmsr(u32 msr)
+static inline uint64_t
+readmsr(uint32_t msr)
 {
-  u32 hi, lo;
+  uint32_t hi, lo;
   __asm volatile("rdmsr" : "=d" (hi), "=a" (lo) : "c" (msr));
-  return ((u64) lo) | (((u64) hi) << 32);
+  return ((uint64_t) lo) | (((uint64_t) hi) << 32);
 }
 
 static inline void
-writemsr(u64 msr, u64 val)
+writemsr(uint64_t msr, uint64_t val)
 {
-  u32 lo = val & 0xffffffff;
-  u32 hi = val >> 32;
+  uint32_t lo = val & 0xffffffff;
+  uint32_t hi = val >> 32;
   __asm volatile("wrmsr" : : "c" (msr), "a" (lo), "d" (hi) : "memory");
 }
 
-static inline u64
+static inline uint64_t
 rdtsc(void)
 {
-  u32 hi, lo;
+  uint32_t hi, lo;
   __asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
-  return ((u64)lo)|(((u64)hi)<<32);
+  return ((uint64_t)lo)|(((uint64_t)hi)<<32);
 }
 
-static inline u64
-rdpmc(u32 ecx)
+static inline uint64_t
+rdpmc(uint32_t ecx)
 {
-  u32 hi, lo;
+  uint32_t hi, lo;
   __asm volatile("rdpmc" : "=a" (lo), "=d" (hi) : "c" (ecx));
-  return ((u64) lo) | (((u64) hi) << 32);
+  return ((uint64_t) lo) | (((uint64_t) hi) << 32);
 }
 
 
@@ -216,68 +216,68 @@ void hlt(void)
   __asm volatile("hlt");
 }
 
-static inline u64
+static inline uint64_t
 rrsp(void)
 {
-  u64 val;
+  uint64_t val;
   __asm volatile("movq %%rsp,%0" : "=r" (val));
   return val;
 }
 
-static inline u64
+static inline uint64_t
 rrbp(void)
 {
-  u64 val;
+  uint64_t val;
   __asm volatile("movq %%rbp,%0" : "=r" (val));
   return val;
 }
 
 static inline void
-lcr4(u64 val)
+lcr4(uint64_t val)
 {
   __asm volatile("movq %0,%%cr4" : : "r" (val));
 }
 
-static inline u64
+static inline uint64_t
 rcr4(void)
 {
-  u64 val;
+  uint64_t val;
   __asm volatile("movq %%cr4,%0" : "=r" (val));
   return val;
 }
 
 static inline void
-lcr3(u64 val)
+lcr3(uint64_t val)
 {
   __asm volatile("movq %0,%%cr3" : : "r" (val));
 }
 
-static inline u64
+static inline uint64_t
 rcr3(void)
 {
-  u64 val;
+  uint64_t val;
   __asm volatile("movq %%cr3,%0" : "=r" (val));
   return val;
 }
 
-static inline uptr
+static inline uintptr_t
 rcr2(void)
 {
-  uptr val;
+  uintptr_t val;
   __asm volatile("movq %%cr2,%0" : "=r" (val));
   return val;
 }
 
 static inline void
-lcr0(u64 val)
+lcr0(uint64_t val)
 {
   __asm volatile("movq %0,%%cr0" : : "r" (val));
 }
 
-static inline u64
+static inline uint64_t
 rcr0(void)
 {
-  u64 val;
+  uint64_t val;
   __asm volatile("movq %%cr0,%0" : "=r" (val));
   return val;
 }
@@ -301,9 +301,9 @@ invlpg(void *a)
 }
 
 static inline int
-popcnt64(u64 v)
+popcnt64(uint64_t v)
 {
-  u64 val;
+  uint64_t val;
   __asm volatile("popcntq %1,%0" : "=r" (val) : "r" (v));
   return val;
 }
@@ -385,7 +385,7 @@ fninit(void)
 }
 
 static inline void
-ldmxcsr(u32 mxcsr)
+ldmxcsr(uint32_t mxcsr)
 {
   __asm volatile("ldmxcsr %0" : : "m" (mxcsr));
 }
@@ -400,38 +400,38 @@ clts()
 // hardware and by trapasm.S, and passed to trap().
 // Also used by sysentry (but sparsely populated).
 struct trapframe {
-  u16 padding3[7];
-  u16 ds;
+  uint16_t padding3[7];
+  uint16_t ds;
 
   // amd64 ABI callee saved registers
-  u64 r15;
-  u64 r14;
-  u64 r13;
-  u64 r12;
-  u64 rbp;
-  u64 rbx;
+  uint64_t r15;
+  uint64_t r14;
+  uint64_t r13;
+  uint64_t r12;
+  uint64_t rbp;
+  uint64_t rbx;
 
   // amd64 ABI caller saved registers
-  u64 r11;
-  u64 r10;
-  u64 r9;
-  u64 r8;
-  u64 rax;
-  u64 rcx;
-  u64 rdx;
-  u64 rsi;
-  u64 rdi;
-  u64 trapno;
+  uint64_t r11;
+  uint64_t r10;
+  uint64_t r9;
+  uint64_t r8;
+  uint64_t rax;
+  uint64_t rcx;
+  uint64_t rdx;
+  uint64_t rsi;
+  uint64_t rdi;
+  uint64_t trapno;
 
   // Below here defined by amd64 hardware
-  u32 err;
-  u16 padding2[2];
-  u64 rip;
-  u16 cs;
-  u16 padding1[3];
-  u64 rflags;
+  uint32_t err;
+  uint16_t padding2[2];
+  uint64_t rip;
+  uint16_t cs;
+  uint16_t padding1[3];
+  uint64_t rflags;
   // Unlike 32-bit, amd64 hardware always pushes below
-  u64 rsp;
-  u16 ss;
-  u16 padding0[3];
+  uint64_t rsp;
+  uint16_t ss;
+  uint16_t padding0[3];
 } __attribute__((packed));

@@ -1,10 +1,14 @@
 #pragma once
 
+#ifndef __ASSEMBLER__
+#include <stdint.h>
+#endif
+
 #define PGSIZE          4096
 #define PGSHIFT		12		// log2(PGSIZE)
 
 #define PXSHIFT(n)	(PGSHIFT+(9*(n)))
-#define PX(n, la)	((((uptr) (la)) >> PXSHIFT(n)) & 0x1FF)
+#define PX(n, la)	((((uintptr_t) (la)) >> PXSHIFT(n)) & 0x1FF)
 
 // Page table/directory entry flags.
 #define PTE_P		0x001	// Present
@@ -22,38 +26,38 @@
 #define PTE_COW         0x800   // xv6: copy-on-write
 #define PTE_NX		0x8000000000000000ull // No-execute enable
 
-#define PGROUNDUP(a)  ((__typeof__(a))((((uptr)a)+PGSIZE-1) & ~(PGSIZE-1)))
-#define PGROUNDDOWN(a) ((__typeof__(a))((((uptr)(a)) & ~(PGSIZE-1))))
+#define PGROUNDUP(a)  ((__typeof__(a))((((uintptr_t)a)+PGSIZE-1) & ~(PGSIZE-1)))
+#define PGROUNDDOWN(a) ((__typeof__(a))((((uintptr_t)(a)) & ~(PGSIZE-1))))
 #define PGOFFSET(a) ((a) & ((1<<PGSHIFT)-1))
 
 // Address in page table or page directory entry
-#define PTE_ADDR(pte)	((uptr)(pte) & 0x7FFFFFFFFFFFF000u)
+#define PTE_ADDR(pte)	((uintptr_t)(pte) & 0x7FFFFFFFFFFFF000u)
 
 #ifndef __ASSEMBLER__
 struct segdesc {
-  u16 limit0;
-  u16 base0;
-  u8 base1;
-  u8 bits;
-  u8 bitslimit1;
-  u8 base2;
+  uint16_t limit0;
+  uint16_t base0;
+  uint8_t base1;
+  uint8_t bits;
+  uint8_t bitslimit1;
+  uint8_t base2;
 };
 #endif
 
 // SEGDESC constructs a segment descriptor literal
 // with the given, base, limit, and type bits.
 #define SEGDESC(base, limit, bits) { \
-  (limit)&0xffff, (u16) ((base)&0xffff), \
-  (u8) (((base)>>16)&0xff), \
+  (limit)&0xffff, (uint16_t) ((base)&0xffff), \
+  (uint8_t) (((base)>>16)&0xff), \
   (bits)&0xff, \
   (((bits)>>4)&0xf0) | ((limit>>16)&0xf), \
-  (u8) (((base)>>24)&0xff), \
+  (uint8_t) (((base)>>24)&0xff), \
 }
 
 // SEGDESCHI constructs an extension segment descriptor
 // literal that records the high bits of base.
 #define SEGDESCHI(base) { \
-  (u16) (((base)>>32)&0xffff), (u16) (((base)>>48)&0xffff), \
+  (uint16_t) (((base)>>32)&0xffff), (uint16_t) (((base)>>48)&0xffff), \
 }
 
 // Segment selectors (indexes) in our GDTs.
@@ -94,37 +98,37 @@ struct segdesc {
 #ifndef __ASSEMBLER__
 struct intdesc
 {
-  u16 rip0;
-  u16 cs;
-  u8 ist;
-  u8 bits;
-  u16 rip1;
-  u32 rip2;
-  u32 reserved1;
+  uint16_t rip0;
+  uint16_t cs;
+  uint8_t ist;
+  uint8_t bits;
+  uint16_t rip1;
+  uint32_t rip2;
+  uint32_t reserved1;
 } __attribute__((packed, aligned(16)));
 
 // See section 4.6 of amd64 vol2
 struct desctr
 {
-  u16 limit;
-  u64 base;
+  uint16_t limit;
+  uint64_t base;
 } __attribute__((packed, aligned(16)));
 
 struct taskstate
 {
-  u8 reserved0[4];
-  u64 rsp[3];
-  u64 ist[8];
-  u8 reserved1[10];
-  u16 iomba;
-  u8 iopb[0];
+  uint8_t reserved0[4];
+  uint64_t rsp[3];
+  uint64_t ist[8];
+  uint8_t reserved1[10];
+  uint16_t iomba;
+  uint8_t iopb[0];
 } __attribute__ ((packed, aligned(16)));
 
 typedef struct hwid { 
-  u32 num;
+  uint32_t num;
 } hwid_t;
 
-#define HWID(xnum) (struct hwid){ num: (u32)(xnum) }
+#define HWID(xnum) (struct hwid){ num: (uint32_t)(xnum) }
 #endif
 
 #define INT_P      (1<<7)      /* interrupt descriptor present */
@@ -132,7 +136,8 @@ typedef struct hwid {
 // INTDESC constructs an interrupt descriptor literal
 // that records the given code segment, instruction pointer,
 // and type bits.
-#define INTDESC(cs, rip, bits) (struct intdesc){ \
-	(u16) ((rip)&0xffff), (cs), 0, bits, (u16) (((rip)>>16)&0xffff), \
-	(u32) ((u64)(rip)>>32), 0, \
+#define INTDESC(cs, rip, bits) (struct intdesc){  \
+    (uint16_t) ((rip)&0xffff), (cs), 0, bits,     \
+    (uint16_t) (((rip)>>16)&0xffff),              \
+    (uint32_t) ((uint64_t)(rip)>>32), 0,          \
 }
