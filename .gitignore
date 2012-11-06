@@ -10,7 +10,6 @@ o.qemu/
 o.ben/
 o.josmp/
 o.tom/
-.gdbinit
 /mtrace.out
 /mtrace.txt
 /mscan.out

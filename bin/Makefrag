@@ -44,6 +44,8 @@ UPROGS_BIN= \
         tlstest \
 	crwpbench \
 	benchhdr \
+	monkstats \
+	countbench \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
@@ -62,6 +64,7 @@ FSEXTRA += \
 	bin/linkbench-tom \
 	bin/mapbench-ben \
 	bin/metis_wrmem-josmp \
+	bin/countbench-ben \
 
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB)
 	@echo "  LD     $@"

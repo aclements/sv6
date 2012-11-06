@@ -4,6 +4,7 @@
 #include "log2.hh"
 
 #include <cstddef>
+#include <type_traits>
 
 namespace locked_snzi
 {
@@ -52,33 +53,45 @@ namespace locked_snzi
     }
 
   public:
-    referenced() : nodes{}
-    {
-      std::size_t node = myid() + FIRST_LEAF;
-      while (true) {
-        nodes[node].val = 1;
-        if (node == 0)
-          break;
-        node = parent(node);
-      }
-    }
+    referenced() : nodes{} { }
 
     referenced(const referenced &o) = delete;
     referenced(referenced &&o) = delete;
     referenced &operator=(const referenced &o) = delete;
     referenced &operator=(referenced &&o) = delete;
 
-    void inc()
+    typedef uint16_t cookie;
+    static_assert(NCPU < (256 << sizeof(cookie)),
+                  "cookie too small for NCPU");
+
+    // XXX This is awkward.  Unlike all other referenced types, we
+    // initialize the count to zero and require an initial_inc because
+    // the caller needs the cookie.  This also screws up the transfer
+    // method of sref<locked_snzi::referenced>.
+    cookie initial_inc()
     {
-      std::size_t node = myid() + FIRST_LEAF;
-      // XXX Don't need lock on leaf nodes (just CLI; would save
-      // memory fences)
+      assert(nodes[0].val == 0);
+      cookie leaf = myid();
+      std::size_t node = leaf + FIRST_LEAF;
+      while (true) {
+        nodes[node].val = 1;
+        if (node == 0)
+          break;
+        node = parent(node);
+      }
+      return leaf;
+    }
+
+    cookie inc()
+    {
+      cookie leaf = myid();
+      std::size_t node = leaf + FIRST_LEAF;
       nodes[node].lock.acquire();
       while (true) {
         if (nodes[node].val++ || node == 0) {
           // Already non-zero or we've reached the root
           nodes[node].lock.release();
-          return;
+          return leaf;
         } else {
           // Transitioned from zero to non-zero
           std::size_t next = parent(node);
@@ -87,13 +100,15 @@ namespace locked_snzi
           node = next;
         }
       }
+      return leaf;
     }
 
-    void dec()
+    void dec(cookie c)
     {
-      std::size_t node = myid() + FIRST_LEAF;
+      std::size_t node = c + FIRST_LEAF;
       nodes[node].lock.acquire();
       while (true) {
+        assert(nodes[node].val);
         if (--nodes[node].val) {
           // Still non-zero
           nodes[node].lock.release();
@@ -118,3 +133,72 @@ namespace locked_snzi
     virtual void onzero() { delete this; }
   };
 }
+
+template<class T>
+class sref<T, typename std::enable_if<std::is_base_of<locked_snzi::referenced, T>::value>::type>
+{
+  T *ptr_;
+  // XXX(Austin) Cookies are small.  Could possibly tuck away in
+  // unused bits of ptr_.
+  typename T::cookie cookie_;
+
+  constexpr sref(T *ptr, typename T::cookie cookie) noexcept
+    : ptr_(ptr), cookie_(cookie) { }
+
+public:
+  constexpr sref() noexcept : ptr_(nullptr), cookie_() { }
+
+  sref(const sref &o) : ptr_(o.ptr_)
+  {
+    if (ptr_)
+      cookie_ = ptr_->inc();
+  }
+
+  sref(sref &&o) noexcept : ptr_(o.ptr_), cookie_(o.cookie_)
+  {
+    o.ptr_ = nullptr;
+  }
+
+  ~sref()
+  {
+    if (ptr_)
+      ptr_->dec(cookie_);
+  }
+
+  sref& operator=(const sref& o)
+  {
+    T *optr = o.ptr_;
+    if (optr != ptr_) {
+      typename T::cookie ocookie = 0;
+      if (optr)
+        ocookie = optr->inc();
+      if (ptr_)
+        ptr_->dec(cookie_);
+      ptr_ = optr;
+      cookie_ = ocookie;
+    }
+    return *this;
+  }
+
+  sref& operator=(sref&& o) {
+    if (ptr_)
+      ptr_->dec(cookie_);
+    ptr_ = o.ptr_;
+    cookie_ = o.cookie_;
+    o.ptr_ = nullptr;
+    return *this;
+  }
+
+  static sref transfer(T* p) {
+    // XXX(Austin) This is a complete hack.  See comment on
+    // initial_inc.
+    typename T::cookie c = p->initial_inc();
+    return sref(p, c);
+  }
+
+  explicit operator bool() const noexcept { return !!ptr_; }
+
+  T * operator->() const noexcept { return ptr_; }
+  T & operator*() const noexcept { return *ptr_; }
+  T * get() const noexcept { return ptr_; }
+};

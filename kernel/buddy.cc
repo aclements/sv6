@@ -42,7 +42,6 @@ buddy_allocator::buddy_allocator(void *base, size_t len)
   // other logic.
   this->base = ((uintptr_t)base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
   limit = end & ~(MAX_SIZE - 1);
-  assert(this->base < limit);
 
   // Create block list
   for (uintptr_t block = this->base; block < limit; block += MAX_SIZE)
@@ -67,6 +66,7 @@ buddy_allocator::alloc_order(size_t order)
       mark_allocated(block, order, true);
     }
 
+    assert((uintptr_t)block >= base && (uintptr_t)block < limit);
     return (void*)block;
   } else if (order == MAX_ORDER) {
     return nullptr;
@@ -86,6 +86,7 @@ buddy_allocator::alloc_order(size_t order)
     assert(state == 1);
     mark_allocated(parent, order, true);
 
+    assert((uintptr_t)parent >= base && (uintptr_t)parent < limit);
     return parent;
   }
 }

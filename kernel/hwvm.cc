@@ -235,7 +235,7 @@ public:
 
     atomic<pme_t> *operator->() const
     {
-      return &**this;
+      return &cur->e[PX(level, va)];
     }
 
     // Increment the iterator by @c x.

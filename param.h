@@ -39,6 +39,8 @@
 //  refcache:: for refcache counters
 //  locked_snzi:: for SNZI counters
 #define PAGE_REFCOUNT refcache::
+// The maximum number of recently freed pages to cache per core.
+#define KALLOC_HOT_PAGES 128
 
 #if defined(HW_qemu)
 #define DEBUG         0
@@ -80,6 +82,11 @@
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_bench)
 #define NCPU          48
+#define MTRACE        0
+#define PERFSIZE      (16<<20ull)
+#elif defined(HW_ugc)
+#define NCPU          256
+#define CACHELINE    64  // cache line size
 #define MTRACE        0
 #define PERFSIZE      (16<<20ull)
 #else

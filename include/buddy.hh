@@ -72,6 +72,15 @@ public:
   // Move assignment.
   buddy_allocator &operator=(buddy_allocator &&o) = default;
 
+  // Return true if this buddy allocator has no available memory.
+  bool empty() const
+  {
+    for (auto &order : orders)
+      if (!order.blocks.empty())
+        return false;
+    return true;
+  }
+
   // Allocate a region of the given size, which must be between
   // MIN_SIZE and MAX_SIZE and must be a power of two.  Returns
   // nullptr if out of memory.  Throws std::domain_error if size does

@@ -1,0 +1,34 @@
+#!/sh
+
+./benchhdr bench=countbench
+echo
+
+./monkstats ./countbench 1
+./monkstats ./countbench 10
+./monkstats ./countbench 20
+./monkstats ./countbench 30
+./monkstats ./countbench 40
+./monkstats ./countbench 50
+./monkstats ./countbench 60
+./monkstats ./countbench 70
+./monkstats ./countbench 80
+
+./monkstats ./countbench 1
+./monkstats ./countbench 10
+./monkstats ./countbench 20
+./monkstats ./countbench 30
+./monkstats ./countbench 40
+./monkstats ./countbench 50
+./monkstats ./countbench 60
+./monkstats ./countbench 70
+./monkstats ./countbench 80
+
+./monkstats ./countbench 1
+./monkstats ./countbench 10
+./monkstats ./countbench 20
+./monkstats ./countbench 30
+./monkstats ./countbench 40
+./monkstats ./countbench 50
+./monkstats ./countbench 60
+./monkstats ./countbench 70
+./monkstats ./countbench 80

@@ -114,7 +114,7 @@ public:
 #if BIT_SPINLOCK_DEBUG
     assert(is_locked());
 #endif
-    clear_bit_unlock(bit_, lock_);
+    clear_bit(bit_, lock_);
 #ifdef XV6_KERNEL
     if (cli == cli_internal)
       popcli();

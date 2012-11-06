@@ -113,7 +113,8 @@ struct LoopsBench : public Bench
   NEW_OPERATOR(LoopsBench)
 };
 
-#define CMD(...) new TimedExec((const char *[]){__VA_ARGS__, 0})
+#define CMD(...) ({ const char* args[] = { __VA_ARGS__, 0 }; \
+                    new TimedExec(args); })
 #define STR_1(x...) #x
 #define STR(x...)   STR_1(x)
 
@@ -142,7 +143,7 @@ main(int ac, char **av)
   //the_bench[n++] = CMD("mapbench", "2");
   //the_bench[n++] = CMD("mapbench", "16");
   //the_bench[n++] = CMD("gcbench", "16");
-  the_bench[n++] = CMD("metis_wrmem-jo");
+  //the_bench[n++] = CMD("metis_wrmem-jo");
   
   for (int i = 0; i < n; i++)
     the_bench[i]->run();

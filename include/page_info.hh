@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ref.hh"
 #include "refcache.hh"
 #include "snzi.hh"
 #include "gc.hh"
@@ -21,6 +22,13 @@ class page_info : public PAGE_REFCOUNT referenced
 {
 protected:
   void onzero()
+  {
+    kfree(va());
+  }
+
+  // XXX(Austin) ::referenced expects const onzero, refcache and
+  // locked_snzi expect non-const onzero.  Make this consistent.
+  void onzero() const
   {
     kfree(va());
   }

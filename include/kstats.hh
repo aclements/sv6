@@ -27,7 +27,10 @@
 #define KSTATS_VM(X)                            \
   X(uint64_t, page_fault_count)                 \
   X(uint64_t, page_fault_cycles)                \
-  X(uint64_t, page_alloc_count)                 \
+  X(uint64_t, page_fault_alloc_count)                 \
+  X(uint64_t, page_fault_alloc_cycles)                \
+  X(uint64_t, page_fault_fill_count)                  \
+  X(uint64_t, page_fault_fill_cycles)                 \
                                                 \
   X(uint64_t, mmap_count)                       \
   X(uint64_t, mmap_cycles)                      \
@@ -35,9 +38,31 @@
   X(uint64_t, munmap_count)                     \
   X(uint64_t, munmap_cycles)                    \
 
+#define KSTATS_KALLOC(X)                        \
+  X(uint64_t, kalloc_page_alloc_count)          \
+  X(uint64_t, kalloc_page_free_count)           \
+  X(uint64_t, kalloc_hot_list_refill_count)     \
+  X(uint64_t, kalloc_hot_list_flush_count)      \
+  X(uint64_t, kalloc_hot_list_steal_count)      \
+
+#define KSTATS_REFCACHE(X)                      \
+  X(uint64_t, refcache_review_count)            \
+  X(uint64_t, refcache_review_cycles)           \
+  X(uint64_t, refcache_flush_count)             \
+  X(uint64_t, refcache_flush_cycles)            \
+  X(uint64_t, refcache_item_flushed_count)      \
+  X(uint64_t, refcache_item_reviewed_count)     \
+  X(uint64_t, refcache_item_freed_count)        \
+  X(uint64_t, refcache_item_requeued_count)     \
+  X(uint64_t, refcache_item_disowned_count)     \
+  X(uint64_t, refcache_dirtied_count)           \
+  X(uint64_t, refcache_conflict_count)          \
+
 #define KSTATS_ALL(X)                           \
   KSTATS_TLB(X)                                 \
   KSTATS_VM(X)                                  \
+  KSTATS_KALLOC(X)                              \
+  KSTATS_REFCACHE(X)                            \
 
 struct kstats
 {
@@ -69,6 +94,11 @@ struct kstats
     {
       if (field)
         kstats::inc(field, rdtsc() - start);
+      field = nullptr;
+    }
+
+    void abort()
+    {
       field = nullptr;
     }
   };

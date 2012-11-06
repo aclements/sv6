@@ -5,6 +5,7 @@
 #include "cpu.hh"
 #include "apic.hh"
 #include "kstream.hh"
+#include "numa.hh"
 
 static console_stream verbose(true);
 
@@ -83,6 +84,11 @@ initcpus(void)
   verbose.println("mp: Initializing CPUs (uniprocessor mode)");
   cpus[0].id = 0;
   ncpu = 1;
+
+  numa_nodes.emplace_back(0);
+  numa_nodes.back().mems.emplace_back(0, ~0ull);
+  cpus[0].node = &numa_nodes.back();
+  numa_nodes.back().cpus.push_back(&cpus[0]);
 }
 
 void
