@@ -45,20 +45,24 @@
 #if defined(HW_qemu)
 #define DEBUG         0
 #define NCPU          8   // maximum number of CPUs
+#define NSOCKET       2
 #define MTRACE        0
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_josmp)
 #define DEBUG         0
 #define NCPU          16  // maximum number of CPUs
+#define NSOCKET       4
 #define MTRACE        0
 #define PERFSIZE      (1<<20ull)
 #elif defined(HW_ud0)
 #define NCPU          4   // maximum number of CPUs
+#define NSOCKET       2
 #define MTRACE        0
 #define PERFSIZE      (512<<20ull)
 #elif defined(HW_tom)
 #define DEBUG         0
 #define NCPU          48  // maximum number of CPUs
+#define NSOCKET       8
 #define MTRACE        0
 #define PERFSIZE      (1<<20ull)
 // tom's IPMI SOL console looses sync if we don't delay
@@ -66,6 +70,7 @@
 #elif defined(HW_ben)
 #define DEBUG         0
 #define NCPU          80  // maximum number of CPUs
+#define NSOCKET       8
 #define MTRACE        0
 #define PERFSIZE      (1<<20ull)
 #elif defined(HW_user)

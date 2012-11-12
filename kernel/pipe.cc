@@ -11,6 +11,7 @@
 #include "ilist.hh"
 #include "uk/unistd.h"
 #include "rnd.hh"
+#include "lb.hh"
 
 #define PIPESIZE 512
 
@@ -113,42 +114,46 @@ struct ordered : pipe {
 // XXX Should pipe track #readers, #writers?  so that we don't have to allocate
 // NCPU per-core pipes.
 
-struct corepipe {
+struct corepipe : balance_pool {
   u32 nread;
   u32 nwrite;
   char data[PIPESIZE];
   struct spinlock lock;
-  corepipe() : nread(0), nwrite(0),
-               lock("corepipe", LOCKSTAT_PIPE) {}
+  corepipe() : nread(0), nwrite(0), lock("corepipe", LOCKSTAT_PIPE) {}
   ~corepipe() {}
   NEW_DELETE_OPS(corepipe);
 
-  int write(const char *addr, int n) {
-    scoped_acquire l(&lock);
-
-    if (nwrite + n < nread + PIPESIZE) {
-      for (int i = 0; i < n; i++)
-        data[nwrite++ % PIPESIZE] = addr[i];
-      return n;
-    }
-
-    return 0;
+  bool balance_low() const {
+    return (nwrite-nread) < PIPESIZE/4;
   }
 
-  int read(char *addr, int n) {
-    scoped_acquire l(&lock);
+  bool balance_high() const {
+    return (nwrite-nread) > PIPESIZE*3/4;
+  }
 
-    if (nread + n <= nwrite) {
-      for (int i = 0; i < n; i++)
-        addr[i] = data[nread++ % PIPESIZE];
-      return n;
+  void balance_move_to(balance_pool* other) {
+    corepipe* target = (corepipe*) other;
+
+    // XXX might be useful to enforce lock order, but it's alright
+    // because of try_acquire.
+
+    assert(this != target);
+    if (!lock.try_acquire())
+      return;
+    if (!target->lock.try_acquire()) {
+      lock.release();
+      return;
     }
 
-    return 0;
+    while ((target->nwrite - target->nread) < (nwrite - nread))
+      target->data[target->nwrite++ % PIPESIZE] = data[nread++ % PIPESIZE];
+
+    lock.release();
+    target->lock.release();
   }
 };
 
-struct unordered : pipe {
+struct unordered : pipe, balance_pool_dir {
   atomic<corepipe*> pipes[NCPU];
 
   // no locks since only one reader and one writer exist
@@ -156,7 +161,9 @@ struct unordered : pipe {
   int readopen;
   int writeopen;
 
-  unordered() : readopen(1), writeopen(1) {
+  balancer b;
+
+  unordered() : readopen(1), writeopen(1), b(this) {
     for (int i = 0; i < NCPU; i++)
       pipes[i] = 0;
   }
@@ -184,36 +191,50 @@ struct unordered : pipe {
     }
   }
 
+  balance_pool* balance_get(int id) const {
+    return pipes[id];
+  }
+
+  void balance() {
+    b.balance();
+  }
+
   int write(const char *addr, int n) {
-    int r;
-    corepipe *cp = mycorepipe((mycpu()->id) % NCPU);
-    do {
+    for (;;) {
       if (readopen == 0 || myproc()->killed)
         return -1;
 
-      r = cp->write(addr, n);
-      if (r < 0) break;
-      cp = mycorepipe(rnd() % NCPU);    // try another pipe if cp is full
-      // XXX should we give up the CPU at some point?
-    } while (r != n);
-    return r;
+      int id = mycpu()->id;
+      corepipe* cp = mycorepipe(id);
+      if (cp->nwrite + n >= cp->nread + PIPESIZE)
+        balance();
+
+      scoped_acquire l(&cp->lock);
+      if (cp->nwrite + n < cp->nread + PIPESIZE) {
+        for (int i = 0; i < n; i++)
+          cp->data[cp->nwrite++ % PIPESIZE] = addr[i];
+        return n;
+      }
+    }
   }
 
   int read(char *addr, int n) {
-    int r;
-    while (1) {
-      for (int i = (mycpu()->id + 1) % NCPU; i != mycpu()->id; 
-           i = (i + 1) % NCPU) {
-        r = mycorepipe(i)->read(addr, n);
-        if (r == n) return r;
-      }
-      if (writeopen == 0 || myproc()->killed) return -1;
-      r = mycorepipe(mycpu()->id)->read(addr, n);
-      if (r == n) return r;
-      // XXX should we give up the CPU at some point?
-    }
+    for (;;) {
+      if (writeopen == 0 || myproc()->killed)
+        return -1;
 
-    return r;
+      int id = mycpu()->id;
+      corepipe* cp = mycorepipe(id);
+      if (cp->nread + n > cp->nwrite)
+        balance();
+
+      scoped_acquire l(&cp->lock);
+      if (cp->nread + n <= cp->nwrite) {
+        for (int i = 0; i < n; i++)
+          addr[i] = cp->data[cp->nread++ % PIPESIZE];
+        return n;
+      }
+    }
   }
 
   int close(int writeable) {
