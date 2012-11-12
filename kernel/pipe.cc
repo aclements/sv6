@@ -124,7 +124,7 @@ struct corepipe {
     lock = spinlock("corepipe", LOCKSTAT_PIPE);
     cv = condvar("pipe");
   };
-  ~corepipe();
+  ~corepipe() {};
   NEW_DELETE_OPS(corepipe);
 
   int write(const char *addr, int n, int sleep) {
@@ -166,24 +166,41 @@ struct corepipe {
 };
 
 struct unordered : pipe {
-  corepipe *pipes[NCPU]; 
+  atomic<corepipe*> pipes[NCPU];
   int writeopen;
   unordered() : writeopen(1) {
-    for (int i = 0; i < NCPU; i++) {
-      pipes[i] = new corepipe();
-    }
+    for (int i = 0; i < NCPU; i++)
+      pipes[i] = 0;
   };
   ~unordered() {
+    for (int i = 0; i < NCPU; i++) {
+      corepipe* c = pipes[i].load();
+      if (c)
+        delete c;
+    }
   };
   NEW_DELETE_OPS(unordered);
 
+  corepipe* mycorepipe(int id) {
+    for (;;) {
+      corepipe* c = pipes[id];
+      if (c)
+        return c;
+
+      c = new corepipe;
+      if (cmpxch(&pipes[id], (corepipe*) 0, c))
+        return c;
+      delete c;
+    }
+  }
+
   int write(const char *addr, int n) {
     int r;
-    corepipe *cp = pipes[(mycpu()->id) % NCPU]; 
+    corepipe *cp = mycorepipe((mycpu()->id) % NCPU);
     do {
       r = cp->write(addr, n, 0);
       if (r < 0) break;
-      cp = pipes[rnd() % NCPU];    // try another pipe if cp is full
+      cp = mycorepipe(rnd() % NCPU);    // try another pipe if cp is full
       // XXX should we give up the CPU at some point?
     } while (r != n);
     return r;
@@ -194,11 +211,11 @@ struct unordered : pipe {
     while (1) {
       for (int i = (mycpu()->id + 1) % NCPU; i != mycpu()->id; 
            i = (i + 1) % NCPU) {
-        r = pipes[i]->read(addr, n);
+        r = mycorepipe(i)->read(addr, n);
         if (r == n) return r;
       }
       if (writeopen == 0 || myproc()->killed) return -1;
-      r = pipes[mycpu()->id]->read(addr, n);
+      r = mycorepipe(mycpu()->id)->read(addr, n);
       if (r == n) return r;
       // XXX should we give up the CPU at some point?
     }
@@ -209,18 +226,18 @@ struct unordered : pipe {
   int close(int writeable) {
     int readopen = 1;
     int r = 0;
-    for (int i = 0; i < NCPU; i++) acquire(&pipes[i]->lock);
+    for (int i = 0; i < NCPU; i++) acquire(&mycorepipe(i)->lock);
     if(writeable){
       writeopen = 0;
     } else {
-      for (int i = 0; i < NCPU; i++) pipes[i]->readopen = 0;
+      for (int i = 0; i < NCPU; i++) mycorepipe(i)->readopen = 0;
       readopen = 0;
     }
-    for (int i = 0; i < NCPU; i++) pipes[i]->cv.wake_all();
+    for (int i = 0; i < NCPU; i++) mycorepipe(i)->cv.wake_all();
     if(readopen == 0 && writeopen == 0) {
       r = 1;
     }
-    for (int i = 0; i < NCPU; i++) release(&pipes[i]->lock);
+    for (int i = 0; i < NCPU; i++) release(&mycorepipe(i)->lock);
     return r;
   }
 };
