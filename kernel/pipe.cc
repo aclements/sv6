@@ -119,48 +119,36 @@ struct corepipe {
   int readopen;
   char data[PIPESIZE];
   struct spinlock lock;
-  struct condvar  cv;
   corepipe() : nread(0), nwrite(0), readopen(1),
-               lock("corepipe", LOCKSTAT_PIPE),
-               cv("pipe") {};
+               lock("corepipe", LOCKSTAT_PIPE) {};
   ~corepipe() {};
   NEW_DELETE_OPS(corepipe);
 
-  int write(const char *addr, int n, int sleep) {
-    int r = 0;
-    acquire(&lock);
-    while (1) {
-      if(readopen == 0 || myproc()->killed) {
-        r = -1;
-        break;
-      }
-      if (nwrite + n < nread + PIPESIZE) {
-        for (int i = 0; i < n; i++)
-          data[nwrite++ % PIPESIZE] = addr[i];
-        r = n;
-        break;
-      } else if (sleep) {
-        cprintf("w");
-        cv.sleep(&lock);
-      } else {
-        break;
-      }
+  int write(const char *addr, int n) {
+    scoped_acquire l(&lock);
+
+    if (readopen == 0 || myproc()->killed)
+      return -1;
+
+    if (nwrite + n < nread + PIPESIZE) {
+      for (int i = 0; i < n; i++)
+        data[nwrite++ % PIPESIZE] = addr[i];
+      return n;
     }
-    release(&lock);
-    return r;
+
+    return 0;
   }
 
   int read(char *addr, int n) {
-    int r = 0;
-    acquire(&lock);
+    scoped_acquire l(&lock);
+
     if (nread + n <= nwrite) {
-      for(int i = 0; i < n; i++)
+      for (int i = 0; i < n; i++)
         addr[i] = data[nread++ % PIPESIZE];
-      r = n;
-      // cv.wake_all();   // XXX only wakeup when it was full?
+      return n;
     }
-    release(&lock);
-    return r;
+
+    return 0;
   }
 };
 
@@ -197,7 +185,7 @@ struct unordered : pipe {
     int r;
     corepipe *cp = mycorepipe((mycpu()->id) % NCPU);
     do {
-      r = cp->write(addr, n, 0);
+      r = cp->write(addr, n);
       if (r < 0) break;
       cp = mycorepipe(rnd() % NCPU);    // try another pipe if cp is full
       // XXX should we give up the CPU at some point?
@@ -232,7 +220,6 @@ struct unordered : pipe {
       for (int i = 0; i < NCPU; i++) mycorepipe(i)->readopen = 0;
       readopen = 0;
     }
-    for (int i = 0; i < NCPU; i++) mycorepipe(i)->cv.wake_all();
     if(readopen == 0 && writeopen == 0) {
       r = 1;
     }
