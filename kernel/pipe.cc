@@ -120,10 +120,9 @@ struct corepipe {
   char data[PIPESIZE];
   struct spinlock lock;
   struct condvar  cv;
-  corepipe() : nread(0), nwrite(0), readopen(1) {
-    lock = spinlock("corepipe", LOCKSTAT_PIPE);
-    cv = condvar("pipe");
-  };
+  corepipe() : nread(0), nwrite(0), readopen(1),
+               lock("corepipe", LOCKSTAT_PIPE),
+               cv("pipe") {};
   ~corepipe() {};
   NEW_DELETE_OPS(corepipe);
 
