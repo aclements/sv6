@@ -27,22 +27,30 @@ class random_permutation {
 
 class balance_pool {
  public:
-  virtual bool balance_low() const = 0;
-  virtual bool balance_high() const = 0;
+  balance_pool(u64 max) : balance_max_(max) {}
+
+  virtual u64 balance_count() const = 0;
+
+  virtual bool balanced() const {
+    u64 c = balance_count();
+    return c != 0 && c != balance_max_;
+  }
 
   virtual void balance_with(balance_pool* otherpool) {
-    if (balance_low()) {
-      if (otherpool->balance_low())
-        return;
+    u64 thisbal = balance_count();
+    u64 otherbal = otherpool->balance_count();
+
+    if (thisbal < otherbal) {
       otherpool->balance_move_to(this);
-    } else if (balance_high()) {
-      if (otherpool->balance_high())
-        return;
+    } else {
       balance_move_to(otherpool);
     }
   }
 
   virtual void balance_move_to(balance_pool* other) = 0;
+
+ private:
+  u64 balance_max_;
 };
 
 class balance_pool_dir {
@@ -72,7 +80,7 @@ class balancer {
       balance_pool* otherpool = bd_->balance_get(bal_id);
       if (otherpool) {
         thispool->balance_with(otherpool);
-        if (!thispool->balance_low() && !thispool->balance_high())
+        if (thispool->balanced())
           return;
       }
     }
@@ -84,7 +92,7 @@ class balancer {
       balance_pool* otherpool = bd_->balance_get(bal_id);
       if (otherpool) {
         thispool->balance_with(otherpool);
-        if (!thispool->balance_low() && !thispool->balance_high())
+        if (thispool->balanced())
           return;
       }
     }

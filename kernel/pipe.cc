@@ -119,16 +119,13 @@ struct corepipe : balance_pool {
   u32 nwrite;
   char data[PIPESIZE];
   struct spinlock lock;
-  corepipe() : nread(0), nwrite(0), lock("corepipe", LOCKSTAT_PIPE) {}
+  corepipe() : balance_pool(PIPESIZE), nread(0), nwrite(0),
+               lock("corepipe", LOCKSTAT_PIPE) {}
   ~corepipe() {}
   NEW_DELETE_OPS(corepipe);
 
-  bool balance_low() const {
-    return (nwrite-nread) < PIPESIZE/4;
-  }
-
-  bool balance_high() const {
-    return (nwrite-nread) > PIPESIZE*3/4;
+  u64 balance_count() const {
+    return nwrite-nread;
   }
 
   void balance_move_to(balance_pool* other) {
