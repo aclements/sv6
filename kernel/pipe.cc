@@ -116,19 +116,15 @@ struct ordered : pipe {
 struct corepipe {
   u32 nread;
   u32 nwrite;
-  int readopen;
   char data[PIPESIZE];
   struct spinlock lock;
-  corepipe() : nread(0), nwrite(0), readopen(1),
-               lock("corepipe", LOCKSTAT_PIPE) {};
-  ~corepipe() {};
+  corepipe() : nread(0), nwrite(0),
+               lock("corepipe", LOCKSTAT_PIPE) {}
+  ~corepipe() {}
   NEW_DELETE_OPS(corepipe);
 
   int write(const char *addr, int n) {
     scoped_acquire l(&lock);
-
-    if (readopen == 0 || myproc()->killed)
-      return -1;
 
     if (nwrite + n < nread + PIPESIZE) {
       for (int i = 0; i < n; i++)
@@ -154,18 +150,25 @@ struct corepipe {
 
 struct unordered : pipe {
   atomic<corepipe*> pipes[NCPU];
+
+  // no locks since only one reader and one writer exist
+  // (the fd refcount takes care of the dup's)
+  int readopen;
   int writeopen;
-  unordered() : writeopen(1) {
+
+  unordered() : readopen(1), writeopen(1) {
     for (int i = 0; i < NCPU; i++)
       pipes[i] = 0;
-  };
+  }
+
   ~unordered() {
     for (int i = 0; i < NCPU; i++) {
       corepipe* c = pipes[i].load();
       if (c)
         delete c;
     }
-  };
+  }
+
   NEW_DELETE_OPS(unordered);
 
   corepipe* mycorepipe(int id) {
@@ -185,13 +188,16 @@ struct unordered : pipe {
     int r;
     corepipe *cp = mycorepipe((mycpu()->id) % NCPU);
     do {
+      if (readopen == 0 || myproc()->killed)
+        return -1;
+
       r = cp->write(addr, n);
       if (r < 0) break;
       cp = mycorepipe(rnd() % NCPU);    // try another pipe if cp is full
       // XXX should we give up the CPU at some point?
     } while (r != n);
     return r;
-  };
+  }
 
   int read(char *addr, int n) {
     int r;
@@ -211,20 +217,16 @@ struct unordered : pipe {
   }
 
   int close(int writeable) {
-    int readopen = 1;
-    int r = 0;
-    for (int i = 0; i < NCPU; i++) acquire(&mycorepipe(i)->lock);
-    if(writeable){
+    if (writeable) {
       writeopen = 0;
     } else {
-      for (int i = 0; i < NCPU; i++) mycorepipe(i)->readopen = 0;
       readopen = 0;
     }
-    if(readopen == 0 && writeopen == 0) {
-      r = 1;
+    if (readopen == 0 && writeopen == 0) {
+      return 1;
+    } else {
+      return 0;
     }
-    for (int i = 0; i < NCPU; i++) release(&mycorepipe(i)->lock);
-    return r;
   }
 };
 
