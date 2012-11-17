@@ -1251,9 +1251,28 @@ forktest(void)
 }
 
 void
+memtest(void)
+{
+  if (setaffinity(0) < 0)
+    die("setaffinity err");
+
+  for (int i = 0; i < 1024; i++) {
+    char *p = (char*) mmap(0, 256 * 1024, PROT_READ|PROT_WRITE,
+                           MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    // force allocation of memory
+    // printf("region = %d\n", i);
+    for (int j = 0; j < 256*1024; j += 4096) {
+      p[j] = 1;
+    }
+    if (p == MAP_FAILED)
+      die("%d: map failed");
+  }
+}
+
+void
 sbrktest(void)
 {
-  int fds[2], pid, pids[32];
+  int fds[2], pid, pids[100];
   char *a, *b, *c, *lastaddr, *oldbrk, *p, scratch;
   uptr amt;
 
@@ -1977,10 +1996,13 @@ main(int argc, char *argv[])
 
 #define TEST(name) run_test(#name, name)
 
+  // TEST(memtest);
+  // exit();
   TEST(unopentest);
   TEST(bigargtest);
   TEST(bsstest);
   TEST(sbrktest);
+
   // we should be able to grow a user process to consume all phys mem
 
   TEST(unmappedtest);

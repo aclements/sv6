@@ -74,11 +74,12 @@ class balancer {
 
     scoped_acquire l(&rplock_[myid]);
     rpsock_[myid].reset();
+
     for (int i = 0; i < NCPU_PER_SOCKET-1; i++) {
       int bal_id = sock_first_core +
                    ((sock_myoff + 1 + rpsock_[myid].next()) % NCPU_PER_SOCKET);
       balance_pool* otherpool = bd_->balance_get(bal_id);
-      if (otherpool) {
+      if (otherpool && (thispool != otherpool)) {
         thispool->balance_with(otherpool);
         if (thispool->balanced())
           return;
@@ -90,7 +91,7 @@ class balancer {
       int bal_id = (sock_first_core + NCPU_PER_SOCKET +
                     rpother_[myid].next()) % NCPU;
       balance_pool* otherpool = bd_->balance_get(bal_id);
-      if (otherpool) {
+      if (otherpool && (thispool != otherpool)) {
         thispool->balance_with(otherpool);
         if (thispool->balanced())
           return;

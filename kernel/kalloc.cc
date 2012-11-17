@@ -19,14 +19,73 @@
 #include "kstats.hh"
 #include "vector.hh"
 #include "numa.hh"
+#include "lb.hh"
 
 #include <algorithm>
 #include <iterator>
 
+#define LB  0 // Use lb.hh
+
 // The maximum number of buddy allocators.  Each CPU needs at least
 // one buddy allocator, and we need some margin in case a CPU's memory
 // region spans a physical memory hole.
+
 #define MAX_BUDDIES (NCPU + 16)
+
+struct locked_buddy
+{
+  spinlock lock;
+  buddy_allocator alloc;
+  __padout__;
+
+  locked_buddy(buddy_allocator &&alloc)
+    : lock(spinlock("buddy")), alloc(std::move(alloc)) { }
+};
+
+static static_vector<locked_buddy, MAX_BUDDIES> buddies;
+
+struct mempool : balance_pool {
+  int buddy_;     // the buddy allocator for this pool
+  int steal_buddy;// the buddy allocator from which balance() says to steal from
+
+  mempool(int buddy, int nfree) : balance_pool(nfree), buddy_(buddy), steal_buddy(0) {};
+  ~mempool() {};
+  NEW_DELETE_OPS(mempool);
+
+  u64 balance_count() const {
+    buddy_allocator::stats stats;
+    {
+      auto l = buddies[buddy_].lock.guard();
+      buddies[buddy_].alloc.get_stats(&stats);
+    }
+    return stats.free;
+  };
+
+  void balance_move_to(balance_pool *other) {
+    mempool* target = (mempool*) other;
+    // we don't actually move resources; we temporarily borrow some
+    // we do this partially, a buddy pool can store only addresses in
+    // the ranges of addresses it manages
+    target->steal_buddy = buddy_;
+  };
+
+  char *kalloc(size_t size) 
+  {
+    auto lb = &buddies[buddy_];
+    auto l = lb->lock.guard();
+    void *res = lb->alloc.alloc_nothrow(size);    
+    return (char *) res;
+  }
+
+  void kfree(void *v, size_t size) 
+  {
+    auto lb = &buddies[buddy_];
+    auto l = lb->lock.guard();
+    lb->alloc.free(v, size);
+  }
+};
+
+static static_vector<mempool, MAX_BUDDIES> mempools;
 
 // Print memory steal events
 #define PRINT_STEAL 0
@@ -47,21 +106,11 @@ page_info *page_info_array;
 std::size_t page_info_len;
 paddr page_info_base;
 
-struct locked_buddy
-{
-  spinlock lock;
-  buddy_allocator alloc;
-  __padout__;
-
-  locked_buddy(buddy_allocator &&alloc)
-    : lock(spinlock("buddy")), alloc(std::move(alloc)) { }
-};
-
-static static_vector<locked_buddy, MAX_BUDDIES> buddies;
-
 struct cpu_mem
 {
   size_t first_buddy, nbuddies;
+  int mempool;   // XXX cache align?
+
   // Hot page cache of recently freed pages
   void *hot_pages[KALLOC_HOT_PAGES];
   size_t nhot;
@@ -73,6 +122,144 @@ static percpu<struct cpu_mem> cpu_mem;
 static_vector<numa_node, MAX_NUMA_NODES> numa_nodes;
 
 static int kinited __mpalign__;
+static char *pgalloc();
+
+struct memory : balance_pool_dir {
+  balancer b_;
+
+  memory() : b_(this) {};
+  ~memory() {};
+
+  NEW_DELETE_OPS(memory);
+
+  balance_pool* balance_get(int id) const {
+    auto mempool = cpu_mem[id].mempool;
+    return &(mempools[mempool]);
+  }
+
+  void add(int buddy) {
+    buddy_allocator::stats stats;
+    {
+      auto l = buddies[buddy].lock.guard();
+      buddies[buddy].alloc.get_stats(&stats);
+    }
+    auto m = mempool(buddy, stats.free);
+    mempools.emplace_back(m);
+  }
+
+  char* kalloc(const char *name, size_t size)
+  {
+    if (!kinited) {
+      // XXX Could have a less restricted boot allocator
+      assert(size == PGSIZE);
+      return pgalloc();
+    }
+    void *res = nullptr;
+    auto mem = mycpu()->mem;
+    if (size == PGSIZE) {
+      // allocate from page cache, if possible
+      if (mem->nhot > 0) {
+        res = mem->hot_pages[--mem->nhot];
+      }
+    }
+    if (!res) {
+      res = mempools[mem->mempool].kalloc(size);
+      if (!res) {
+        b_.balance();
+        auto steal = mempools[mem->mempool].steal_buddy;
+#if PRINT_STEAL
+        cprintf("%d steal from %d\n", mem->mempool, steal);
+#endif
+        res = mempools[steal].kalloc(size);
+      }
+    }
+    if (res) {
+      if (ALLOC_MEMSET && size <= 16384) {
+        char* chk = (char*)res;
+        for (int i = 0; i < size - 2*sizeof(void*); i++) {
+          // Ignore buddy allocator list links at the beginning of each
+          // page
+          if ((uintptr_t)&chk[i] % PGSIZE < sizeof(void*)*2)
+            continue;
+          if (chk[i] != 1)
+            spanic.println(shexdump(chk, size),
+                           "kalloc: free memory was overwritten ",
+                           (void*)chk, "+", i);
+        }
+        memset(res, 2, size);
+      }
+      if (!name)
+        name = "kmem";
+      mtlabel(mtrace_label_block, res, size, name, strlen(name));
+      return (char*)res;
+    } else {
+      cprintf("kalloc: out of memory\n");
+      return nullptr;
+    }
+  }
+
+  void kfree_pool(void *v, size_t size) 
+  {
+    // Find the allocator to return v to.
+    // Fast path for allocations from our allocator.
+    auto buddy = mycpu()->mem->mempool;
+    if (!(buddies[buddy].alloc.get_base() <= v &&
+         v < buddies[buddy].alloc.get_limit())) {
+      // Find the allocator
+      auto lb = std::lower_bound(buddies.begin(), buddies.end(), v,
+                            [](locked_buddy &lb, void *v) {
+                              return lb.alloc.get_limit() < v;
+                            });
+      if (v < lb->alloc.get_base())
+        panic("kfree: pointer %p is not in an allocated region", v);
+      buddy = lb - buddies.begin();
+#if PRINT_STEAL
+      cprintf("return memory to buddy %d\n", buddy);
+#endif
+    }
+    mempools[buddy].kfree(v, size);
+  }
+
+  void kfree(void *v, size_t size)
+  {
+    // Fill with junk to catch dangling refs.
+    if (ALLOC_MEMSET && kinited && size <= 16384)
+      memset(v, 1, size);
+
+    if (kinited)
+      mtunlabel(mtrace_label_block, v);
+
+    if (size == PGSIZE) {
+      // Free to the hot list
+      scoped_cli cli;
+      auto mem = mycpu()->mem;
+      if (mem->nhot == KALLOC_HOT_PAGES) {
+        // There's no more room in the hot pages list, so free half of
+        // it.  We sort the list so we can merge it with the buddy
+        // allocator list.
+        kstats::inc(&kstats::kalloc_hot_list_flush_count);
+        std::sort(mem->hot_pages, mem->hot_pages + (KALLOC_HOT_PAGES / 2));
+        // XXX make kfree_batch_pool?
+        for (size_t i = 0; i < KALLOC_HOT_PAGES / 2; ++i) {
+          void *ptr = mem->hot_pages[i];
+          kfree_pool(ptr, size);
+        }
+        // Shift hot page list down
+        // XXX(Austin) Could use two lists and switch off
+        mem->nhot = KALLOC_HOT_PAGES - (KALLOC_HOT_PAGES / 2);
+        memmove(mem->hot_pages, mem->hot_pages + (KALLOC_HOT_PAGES / 2),
+                mem->nhot * sizeof *mem->hot_pages);
+      }
+      mem->hot_pages[mem->nhot++] = v;
+      kstats::inc(&kstats::kalloc_page_free_count);
+      return;
+    }
+    kfree_pool(v, size);
+  }
+};
+
+static memory allmem;
+
 
 // This class maintains a set of usable physical memory regions.
 class phys_map
@@ -316,6 +503,13 @@ kmemprint()
   }
 }
 
+#if LB
+char*
+kalloc(const char *name, size_t size)
+{
+  return allmem.kalloc(name, size);
+}
+#else
 char*
 kalloc(const char *name, size_t size)
 {
@@ -380,7 +574,6 @@ kalloc(const char *name, size_t size)
 #endif
     }
   }
-
   if (res) {
     if (ALLOC_MEMSET && size <= 16384) {
       char* chk = (char*)res;
@@ -405,6 +598,7 @@ kalloc(const char *name, size_t size)
     return nullptr;
   }
 }
+#endif
 
 void *
 ksalloc(int slab)
@@ -496,8 +690,11 @@ initkalloc(u64 mbaddr)
       if (ALLOC_MEMSET)
         memset(p2v(reg.base), 1, reg.end - reg.base);
       auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base);
-      if (!buddy.empty())
+      if (!buddy.empty()) {
         buddies.emplace_back(std::move(buddy));
+        allmem.add(buddies.size()-1);
+      }
+      
     }
 
     // Associate buddies with CPUs
@@ -506,6 +703,7 @@ initkalloc(u64 mbaddr)
       cpu->mem->first_buddy = first;
       cpu->mem->nbuddies = buddies.size() - first;
       cpu->mem->nhot = 0;
+      cpu->mem->mempool = first; 
     }
   }
 
@@ -533,6 +731,13 @@ initkalloc(u64 mbaddr)
   kinited = 1;
 }
 
+#if LB
+void
+kfree(void *v, size_t size)
+{
+  allmem.kfree(v, size);
+}
+#else
 void
 kfree(void *v, size_t size)
 {
@@ -605,6 +810,7 @@ kfree(void *v, size_t size)
   auto l = lb->lock.guard();
   lb->alloc.free(v, size);
 }
+#endif
 
 void
 ksfree(int slab, void *v)
