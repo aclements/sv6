@@ -64,13 +64,15 @@ public:
 
   // Construct a buddy allocator that manages the given memory
   // region.
-  buddy_allocator(void *base, std::size_t len);
+  buddy_allocator(void *base, std::size_t len, bool init);
 
   // Move constructor.
   buddy_allocator(buddy_allocator &&o) = default;
 
   // Move assignment.
   buddy_allocator &operator=(buddy_allocator &&o) = default;
+
+  void free_init(void *base, std::size_t len);
 
   // Return true if this buddy allocator has no available memory.
   bool empty() const

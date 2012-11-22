@@ -9,7 +9,7 @@
 
 using namespace std;
 
-buddy_allocator::buddy_allocator(void *base, size_t len)
+buddy_allocator::buddy_allocator(void *base, size_t len, bool init)
 {
   uintptr_t end = (uintptr_t)base + len;
 
@@ -44,9 +44,22 @@ buddy_allocator::buddy_allocator(void *base, size_t len)
   limit = end & ~(MAX_SIZE - 1);
 
   // Create block list
-  for (uintptr_t block = this->base; block < limit; block += MAX_SIZE)
-    orders[MAX_ORDER].blocks.push_back((struct block*)block);
+  if (init) {
+    for (uintptr_t block = this->base; block < limit; block += MAX_SIZE)
+      orders[MAX_ORDER].blocks.push_back((struct block*)block);
+  }
 }
+
+void
+buddy_allocator::free_init(void *base, std::size_t len)
+{
+  uintptr_t b = ((uintptr_t)base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
+  uintptr_t l = ((uintptr_t)base + len) & ~(MAX_SIZE - 1);
+
+  for (uintptr_t block = b; block < l; block += MAX_SIZE)
+    this->free((void *) block, MAX_SIZE);
+}
+
 
 void*
 buddy_allocator::alloc_order(size_t order)

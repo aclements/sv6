@@ -24,7 +24,11 @@
 #include <algorithm>
 #include <iterator>
 
-#define LB  0 // Use lb.hh
+// Use lb.hh
+#define LB  0
+// Print memory steal events
+#define PRINT_STEAL 0
+
 
 // The maximum number of buddy allocators.  Each CPU needs at least
 // one buddy allocator, and we need some margin in case a CPU's memory
@@ -62,11 +66,19 @@ struct mempool : balance_pool {
   };
 
   void balance_move_to(balance_pool *other) {
+    u64 avail = balance_count();
+    // steal no more than max:
+    size_t size = (buddy_allocator::MAX_SIZE > avail/2) ? avail / 2 : buddy_allocator::MAX_SIZE;
     mempool* target = (mempool*) other;
-    // we don't actually move resources; we temporarily borrow some
-    // we do this partially, a buddy pool can store only addresses in
-    // the ranges of addresses it manages
-    target->steal_buddy = buddy_;
+#if PRINT_STEAL
+    cprintf("balance_move_to: stole %ld from buddy %d\n", size, buddy_);
+#endif
+    auto lb = &buddies[buddy_];
+    auto l = lb->lock.guard();
+    // XXX we should steal memory that is close to us
+    void *res = lb->alloc.alloc_nothrow(size);
+    if (res)
+      target->kfree(res, size);
   };
 
   char *kalloc(size_t size) 
@@ -86,9 +98,6 @@ struct mempool : balance_pool {
 };
 
 static static_vector<mempool, MAX_BUDDIES> mempools;
-
-// Print memory steal events
-#define PRINT_STEAL 0
 
 // Our slabs aren't really slabs.  They're just pre-sized and
 // pre-named regions.
@@ -166,11 +175,7 @@ struct memory : balance_pool_dir {
       res = mempools[mem->mempool].kalloc(size);
       if (!res) {
         b_.balance();
-        auto steal = mempools[mem->mempool].steal_buddy;
-#if PRINT_STEAL
-        cprintf("%d steal from %d\n", mem->mempool, steal);
-#endif
-        res = mempools[steal].kalloc(size);
+        res = mempools[mem->mempool].kalloc(size);
       }
     }
     if (res) {
@@ -203,6 +208,8 @@ struct memory : balance_pool_dir {
     // Find the allocator to return v to.
     // Fast path for allocations from our allocator.
     auto buddy = mycpu()->mem->mempool;
+    // Always return to our pool
+#if 0
     if (!(buddies[buddy].alloc.get_base() <= v &&
          v < buddies[buddy].alloc.get_limit())) {
       // Find the allocator
@@ -215,8 +222,10 @@ struct memory : balance_pool_dir {
       buddy = lb - buddies.begin();
 #if PRINT_STEAL
       cprintf("return memory to buddy %d\n", buddy);
+      panic("xx");
 #endif
     }
+#endif
     mempools[buddy].kfree(v, size);
   }
 
@@ -239,7 +248,7 @@ struct memory : balance_pool_dir {
         // allocator list.
         kstats::inc(&kstats::kalloc_hot_list_flush_count);
         std::sort(mem->hot_pages, mem->hot_pages + (KALLOC_HOT_PAGES / 2));
-        // XXX make kfree_batch_pool?
+        // XXX make kfree_batch_pool to batch moving hot pages
         for (size_t i = 0; i < KALLOC_HOT_PAGES / 2; ++i) {
           void *ptr = mem->hot_pages[i];
           kfree_pool(ptr, size);
@@ -403,6 +412,19 @@ public:
     for (auto &reg : regions)
       total += reg.end - reg.base;
     return total;
+  }
+
+  // Return the lowest base address
+  uintptr_t base() const
+  {
+    uintptr_t b = 0;
+    for (auto &reg : regions) {
+      if (b == 0)
+        b = reg.base;
+      if (reg.base < b)
+        b = reg.base;
+    }
+    return b;
   }
 
   // Return the total number of bytes after address start.
@@ -673,10 +695,13 @@ initkalloc(u64 mbaddr)
   // XXX(austin) To reduce lock pressure, we might want to further
   // subdivide these and spread out CPUs within a node (but still
   // prefer stealing from the same node before others).
+
+  void *base = p2v(mem.base());
+  size_t sz = mem.bytes();
   for (auto &node : numa_nodes) {
+    phys_map node_mem;
     // Intersect node memory region with physical memory map to get
     // the available physical memory in the node
-    phys_map node_mem;
     for (auto &mem : node.mems)
       node_mem.add(mem.base, mem.base + mem.length);
     node_mem.intersect(mem);
@@ -689,7 +714,15 @@ initkalloc(u64 mbaddr)
     for (auto &reg : node_mem.get_regions()) {
       if (ALLOC_MEMSET)
         memset(p2v(reg.base), 1, reg.end - reg.base);
-      auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base);
+#ifdef LB
+      // Make an allocator for [base, base+sz) but only mark [reg.base,
+      // reg.end-reg.base) as free.  This allows us to move phys memory from one
+      // buddy to another during balance_move_to().
+      auto buddy = buddy_allocator(base, sz, 0);
+      buddy.free_init(p2v(reg.base), reg.end - reg.base);
+#else
+      auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base, 1);
+#endif
       if (!buddy.empty()) {
         buddies.emplace_back(std::move(buddy));
         allmem.add(buddies.size()-1);
