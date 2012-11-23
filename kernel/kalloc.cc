@@ -82,8 +82,11 @@ struct mempool : balance_pool {
 #if PRINT_STEAL
     cprintf("balance_move_to: stole %ld at %p from buddy %d\n", size, res, buddy_);
 #endif
-    if (res)
+    if (res) {
+      // XXX not exactly hot list stealing but it is stealing
+      kstats::inc(&kstats::kalloc_hot_list_steal_count);
       target->kfree(res, size);
+    }
   };
 
   void *get_base() const {  
