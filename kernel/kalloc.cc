@@ -25,10 +25,9 @@
 #include <iterator>
 
 // Use lb.hh
-#define LB  0
+#define LB  1
 // Print memory steal events
 #define PRINT_STEAL 0
-
 
 // The maximum number of buddy allocators.  Each CPU needs at least
 // one buddy allocator, and we need some margin in case a CPU's memory
@@ -49,10 +48,12 @@ struct locked_buddy
 static static_vector<locked_buddy, MAX_BUDDIES> buddies;
 
 struct mempool : balance_pool {
-  int buddy_;     // the buddy allocator for this pool
-  int steal_buddy;// the buddy allocator from which balance() says to steal from
+  int buddy_;      // the buddy allocator this pool; it can contain any phys mem
+  uintptr_t base_; // base this pool's local memory
+  uintptr_t lim_;  // first address beyond this pool's local memory
 
-  mempool(int buddy, int nfree) : balance_pool(nfree), buddy_(buddy), steal_buddy(0) {};
+  mempool(int buddy, int nfree, uintptr_t base,  uintptr_t sz) : 
+    balance_pool(nfree), buddy_(buddy), base_(base), lim_ (base+sz) {};
   ~mempool() {};
   NEW_DELETE_OPS(mempool);
 
@@ -68,18 +69,30 @@ struct mempool : balance_pool {
   void balance_move_to(balance_pool *other) {
     u64 avail = balance_count();
     // steal no more than max:
-    size_t size = (buddy_allocator::MAX_SIZE > avail/2) ? avail / 2 : buddy_allocator::MAX_SIZE;
+    size_t size = (buddy_allocator::MAX_SIZE > avail/2) ? 
+      avail / 2 : buddy_allocator::MAX_SIZE;
     mempool* target = (mempool*) other;
-#if PRINT_STEAL
-    cprintf("balance_move_to: stole %ld from buddy %d\n", size, buddy_);
-#endif
     auto lb = &buddies[buddy_];
     auto l = lb->lock.guard();
-    // XXX we should steal memory that is close to us
+    // XXX we should steal memory that is close to us. lb helps with this
+    // because it is aware of interconnect topology, but does this always line
+    // up with NUMA nodes?
+    // XXX update stats
     void *res = lb->alloc.alloc_nothrow(size);
+#if PRINT_STEAL
+    cprintf("balance_move_to: stole %ld at %p from buddy %d\n", size, res, buddy_);
+#endif
     if (res)
       target->kfree(res, size);
   };
+
+  void *get_base() const {  
+    return (void*)base_; 
+  }
+
+  void *get_limit() const { 
+    return (void*)lim_;
+  }
 
   char *kalloc(size_t size) 
   {
@@ -146,13 +159,13 @@ struct memory : balance_pool_dir {
     return &(mempools[mempool]);
   }
 
-  void add(int buddy) {
+  void add(int buddy, void *base, size_t size) {
     buddy_allocator::stats stats;
     {
       auto l = buddies[buddy].lock.guard();
       buddies[buddy].alloc.get_stats(&stats);
     }
-    auto m = mempool(buddy, stats.free);
+    auto m = mempool(buddy, stats.free, (uintptr_t) base, size);
     mempools.emplace_back(m);
   }
 
@@ -203,30 +216,29 @@ struct memory : balance_pool_dir {
     }
   }
 
+  // This returns v to the pool who manages the local memory that contains v.
+  // XXX Is the right policy?  Maybe leave in it this node's pool?  Or, only
+  // return when we have a big chucnk of memory to return? (e.g., a MAX_SIZE
+  // buddy area).
   void kfree_pool(void *v, size_t size) 
   {
     // Find the allocator to return v to.
-    // Fast path for allocations from our allocator.
-    auto buddy = mycpu()->mem->mempool;
-    // Always return to our pool
-#if 0
-    if (!(buddies[buddy].alloc.get_base() <= v &&
-         v < buddies[buddy].alloc.get_limit())) {
-      // Find the allocator
-      auto lb = std::lower_bound(buddies.begin(), buddies.end(), v,
-                            [](locked_buddy &lb, void *v) {
-                              return lb.alloc.get_limit() < v;
-                            });
-      if (v < lb->alloc.get_base())
+    // XXX update stats
+    auto pool = mycpu()->mem->mempool;
+    if (!(mempools[pool].get_base() <= v && v < mempools[pool].get_limit())) {
+      // memory from a remote pool; which one?
+      auto mp = std::lower_bound(mempools.begin(), mempools.end(), v,
+                                 [](mempool &mp, void *v) {
+                                   return mp.get_limit() < v;
+                                 });
+      if (v < mp->get_base())
         panic("kfree: pointer %p is not in an allocated region", v);
-      buddy = lb - buddies.begin();
+      pool = mp - mempools.begin();
 #if PRINT_STEAL
-      cprintf("return memory to buddy %d\n", buddy);
-      panic("xx");
+      cprintf("return memory %p to pool %d\n", v, pool);
 #endif
     }
-#endif
-    mempools[buddy].kfree(v, size);
+    mempools[pool].kfree(v, size);
   }
 
   void kfree(void *v, size_t size)
@@ -725,7 +737,7 @@ initkalloc(u64 mbaddr)
 #endif
       if (!buddy.empty()) {
         buddies.emplace_back(std::move(buddy));
-        allmem.add(buddies.size()-1);
+        allmem.add(buddies.size()-1, p2v(reg.base), reg.end - reg.base);
       }
       
     }
