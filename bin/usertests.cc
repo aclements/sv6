@@ -1253,19 +1253,27 @@ forktest(void)
 void
 memtest(void)
 {
+#define NMAP 1024
+  static void *addr[1024];
   if (setaffinity(0) < 0)
     die("setaffinity err");
-
-  for (int i = 0; i < 1024; i++) {
+  
+  for (int i = 0; i < NMAP; i++) {
+    // allocate enough memory that a core must steal memory from another pool
     char *p = (char*) mmap(0, 256 * 1024, PROT_READ|PROT_WRITE,
                            MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    if (p == MAP_FAILED)
+      die("%d: map failed");
+    addr[i] = p;
     // force allocation of memory
-    // printf("region = %d\n", i);
     for (int j = 0; j < 256*1024; j += 4096) {
       p[j] = 1;
     }
-    if (p == MAP_FAILED)
-      die("%d: map failed");
+  }
+  for (int i = 0; i < NMAP; i++) {
+    int r = munmap(addr[i], 256*1024);
+    if (r < 0)
+      die("memtest: unmap failed");
   }
 }
 
@@ -1996,8 +2004,7 @@ main(int argc, char *argv[])
 
 #define TEST(name) run_test(#name, name)
 
-  // TEST(memtest);
-  // exit();
+  TEST(memtest);
   TEST(unopentest);
   TEST(bigargtest);
   TEST(bsstest);
