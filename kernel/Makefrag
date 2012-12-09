@@ -163,7 +163,7 @@ $(O)/kernel/kconfig.cc: always
 	echo "#define STR_1(x...) #x"; \
 	echo "#define STR(x...)   STR_1(x)"; \
 	echo "const char *kconfig ="; \
-	echo | $(CC) $(CFLAGS) -E -dN - -o - | \
+	echo | $(CC) $(filter-out -MD -MP,$(CFLAGS)) -E -dN - -o - | \
 		awk '/^# /{P=0} P{print $$2} /^# 1.*param.h/{P=1}' | \
 		awk '!/^$$/{print "\"" $$1 "=\" STR(" $$1 ") \"\\n\""}'; \
 	echo ";" \
