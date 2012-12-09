@@ -64,10 +64,31 @@ static inline void mtresume(struct proc *p)
 #define mtrec() mtrace_call_set(1, ~0ull)
 #define mtign() mtrace_call_set(0, ~0ull)
 
-static inline void mtreadavar(const char *fmt, ...)
-  __attribute__((format(printf, 1, 2)));
-static inline void mtwriteavar(const char *fmt, ...)
-  __attribute__((format(printf, 1, 2)));
+static inline void __attribute__((format(printf, 1, 2)))
+mtreadavar(const char *fmt, ...)
+{
+  char name[64];
+  va_list ap;
+
+  va_start(ap, fmt);
+  vsnprintf(name, sizeof(name), fmt, ap);
+  va_end(ap);
+
+  mtrace_avar_register(0, name);
+}
+
+static inline void __attribute__((format(printf, 1, 2)))
+mtwriteavar(const char *fmt, ...)
+{
+  char name[64];
+  va_list ap;
+
+  va_start(ap, fmt);
+  vsnprintf(name, sizeof(name), fmt, ap);
+  va_end(ap);
+
+  mtrace_avar_register(1, name);
+}
 
 class mt_ascope
 {
@@ -113,30 +134,6 @@ public:
     active = false;
   }
 };
-
-static inline void mtreadavar(const char *fmt, ...)
-{
-  char name[64];
-  va_list ap;
-
-  va_start(ap, fmt);
-  vsnprintf(name, sizeof(name), fmt, ap);
-  va_end(ap);
-
-  mtrace_avar_register(0, name);
-}
-
-static inline void mtwriteavar(const char *fmt, ...)
-{
-  char name[64];
-  va_list ap;
-
-  va_start(ap, fmt);
-  vsnprintf(name, sizeof(name), fmt, ap);
-  va_end(ap);
-
-  mtrace_avar_register(1, name);
-}
 
 #else
 #define mtstart(ip, p) do { } while (0)
