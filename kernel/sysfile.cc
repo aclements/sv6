@@ -728,6 +728,16 @@ allocsocket(struct file **rf, int *rfd)
   return 0;
 }
 
+void 
+sockclose(const struct file *f)
+{
+  if (f->socket == PF_LOCAL) {
+    pipesockclose(f->pipe);
+  } else {
+    netclose(f->socket);
+  }
+}
+
 //SYSCALL
 int
 sys_socket(int domain, int type, int protocol)

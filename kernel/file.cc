@@ -31,7 +31,7 @@ file::onzero(void) const
   else if(type == file::FD_INODE)
     iput(ip);
   else if(type == file::FD_SOCKET)
-    netclose(socket);
+    sockclose(this);
   else if(type != file::FD_NONE)
     panic("file::close bad type");
   gc_delayed((file*)this);

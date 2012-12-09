@@ -289,9 +289,19 @@ pipesockalloc()
 }
 
 void
+pipesockclose(struct pipe *p)
+{
+  struct ordered *o = (struct ordered *) p;
+  o->writeopen = 0;   // force p->close() to return 1
+  if (p->close(0)) {
+    delete p;
+  }
+}
+
+void
 pipeclose(struct pipe *p, int writable)
 {
-  if (p->close(writable))
+  if (p->close(0))
     delete p;
 }
 

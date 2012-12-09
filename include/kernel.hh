@@ -179,6 +179,7 @@ void            pipeclose(struct pipe*, int);
 int             piperead(struct pipe*, char*, int);
 int             pipewrite(struct pipe*, const char*, int);
 struct pipe*    pipesockalloc();
+void            pipesockclose(struct pipe *);
 
 // proc.c
 struct proc*    copyproc(struct proc*);
@@ -223,6 +224,7 @@ u64             syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 #include "userptr.hh"
 int             doexec(const char* upath,
                        userptr<userptr<const char> > uargv);
+void            sockclose(const struct file *);
 
 // string.c
 extern  "C" int  memcmp(const void*, const void*, size_t);
