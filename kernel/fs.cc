@@ -516,7 +516,8 @@ iunlockput(struct inode *ip)
 // The contents (data) associated with each inode is stored
 // in a sequence of blocks on the disk.  The first NDIRECT blocks
 // are listed in ip->addrs[].  The next NINDIRECT blocks are 
-// listed in the block ip->addrs[NDIRECT].
+// listed in the block ip->addrs[NDIRECT].  The next NINDIRECT^2
+// blocks are doubly-indirect from ip->addrs[NDIRECT+1].
 
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
@@ -524,6 +525,7 @@ static u32
 bmap(struct inode *ip, u32 bn)
 {
   struct buf *bp;
+  u32* ap;
   u32 addr;
 
   if(bn < NDIRECT){
@@ -539,38 +541,73 @@ bmap(struct inode *ip, u32 bn)
   }
   bn -= NDIRECT;
 
-  if (bn >= NINDIRECT)
-    panic("bmap: out of range");    
+  if (bn < NINDIRECT) {
+  retry1:
+    if (ip->iaddrs == nullptr) {
+      if((addr = ip->addrs[NDIRECT]) == 0) {
+        addr = balloc(ip->dev);
+        if (!cmpxch(&ip->addrs[NDIRECT], (u32)0, addr)) {
+          bfree(ip->dev, addr);
+          goto retry1;
+        }
+      }
 
-retry1:
-  if (ip->iaddrs == nullptr) {
-    if((addr = ip->addrs[NDIRECT]) == 0) {
-      addr = balloc(ip->dev);
-      if (!cmpxch(&ip->addrs[NDIRECT], (u32)0, addr)) {
+      volatile u32* iaddrs = (u32*)kmalloc(IADDRSSZ, "iaddrs");
+      bp = bread(ip->dev, addr, 0);
+      memmove((void*)iaddrs, bp->data, IADDRSSZ);
+      brelse(bp, 0);
+      if (!cmpxch(&ip->iaddrs, (volatile u32*)nullptr, iaddrs)) {
         bfree(ip->dev, addr);
+        kmfree((void*)iaddrs, IADDRSSZ);
         goto retry1;
       }
     }
 
-    volatile u32* iaddrs = (u32*)kmalloc(IADDRSSZ, "iaddrs");
-    bp = bread(ip->dev, addr, 0);
-    memmove((void*)iaddrs, bp->data, IADDRSSZ);
-    brelse(bp, 0);
-    if (!cmpxch(&ip->iaddrs, (volatile u32*)nullptr, iaddrs)) {
+  retry2:
+    if ((addr = ip->iaddrs[bn]) == 0) {
+      addr = balloc(ip->dev);
+      if (!__sync_bool_compare_and_swap(&ip->iaddrs[bn], (u32)0, addr)) {
+        bfree(ip->dev, addr);
+        goto retry2;
+      }
+    }
+
+    return addr;
+  }
+  bn -= NINDIRECT;
+
+  if (bn >= NINDIRECT * NINDIRECT)
+    panic("bmap: %d out of range", bn);
+
+  // Doubly-indirect blocks are currently "slower" because we do not
+  // cache an equivalent of ip->iaddrs.
+
+retry3:
+  if (ip->addrs[NDIRECT+1] == 0) {
+    addr = balloc(ip->dev);
+    if (!cmpxch(&ip->addrs[NDIRECT+1], (u32)0, addr)) {
       bfree(ip->dev, addr);
-      kmfree((void*)iaddrs, IADDRSSZ);
-      goto retry1;
+      goto retry3;
     }
   }
 
-retry2:
-  if ((addr = ip->iaddrs[bn]) == 0) {
-    addr = balloc(ip->dev);
-    if (!__sync_bool_compare_and_swap(&ip->iaddrs[bn], (u32)0, addr)) {
-      bfree(ip->dev, addr);
-      goto retry2;
-    }
+  bp = bread(ip->dev, ip->addrs[NDIRECT+1], 1);
+  ap = (u32*)bp->data;
+  if (ap[bn / NINDIRECT] == 0) {
+    ap[bn / NINDIRECT] = balloc(ip->dev);
+    bwrite(bp);
   }
+  addr = ap[bn / NINDIRECT];
+  brelse(bp, 1);
+
+  bp = bread(ip->dev, addr, 1);
+  ap = (u32*)bp->data;
+  if (ap[bn % NINDIRECT] == 0) {
+    ap[bn % NINDIRECT] = balloc(ip->dev);
+    bwrite(bp);
+  }
+  addr = ap[bn % NINDIRECT];
+  brelse(bp, 1);
 
   return addr;
 }
@@ -596,11 +633,7 @@ class diskblock : public rcu_freed {
 void
 itrunc(struct inode *ip)
 {
-  int i, j;
-  struct buf *bp;
-  u32 *a;
-
-  for(i = 0; i < NDIRECT; i++){
+  for(int i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
       diskblock *db = new diskblock(ip->dev, ip->addrs[i]);
       gc_delayed(db);
@@ -609,11 +642,11 @@ itrunc(struct inode *ip)
   }
   
   if(ip->addrs[NDIRECT]){
-    bp = bread(ip->dev, ip->addrs[NDIRECT], 0);
-    a = (u32*)bp->data;
-    for(j = 0; j < NINDIRECT; j++){
-      if(a[j]) {
-        diskblock *db = new diskblock(ip->dev, a[j]);
+    struct buf* bp = bread(ip->dev, ip->addrs[NDIRECT], 0);
+    u32* a = (u32*)bp->data;
+    for(int i = 0; i < NINDIRECT; i++){
+      if(a[i]) {
+        diskblock *db = new diskblock(ip->dev, a[i]);
         gc_delayed(db);
       }
     }
@@ -622,6 +655,34 @@ itrunc(struct inode *ip)
     diskblock *db = new diskblock(ip->dev, ip->addrs[NDIRECT]);
     gc_delayed(db);
     ip->addrs[NDIRECT] = 0;
+  }
+
+  if(ip->addrs[NDIRECT+1]){
+    struct buf* bp1 = bread(ip->dev, ip->addrs[NDIRECT+1], 0);
+    u32* a1 = (u32*)bp1->data;
+    for(int i = 0; i < NINDIRECT; i++){
+      if(!a1[i])
+        continue;
+
+      struct buf* bp2 = bread(ip->dev, a1[i], 0);
+      u32* a2 = (u32*)bp2->data;
+      for(int j = 0; j < NINDIRECT; j++){
+        if(!a2[j])
+          continue;
+
+        diskblock* db2 = new diskblock(ip->dev, a2[j]);
+        gc_delayed(db2);
+      }
+      brelse(bp2, 0);
+
+      diskblock* db1 = new diskblock(ip->dev, a1[i]);
+      gc_delayed(db1);
+    }
+    brelse(bp1, 0);
+
+    diskblock *db = new diskblock(ip->dev, ip->addrs[NDIRECT+1]);
+    gc_delayed(db);
+    ip->addrs[NDIRECT+1] = 0;
   }
 
   ip->size = 0;

@@ -19,9 +19,9 @@ struct superblock {
   u32 ninodes;      // Number of inodes.
 };
 
-#define NDIRECT 11
+#define NDIRECT 10
 #define NINDIRECT (BSIZE / sizeof(u32))
-#define MAXFILE (NDIRECT + NINDIRECT)
+#define MAXFILE (NDIRECT + NINDIRECT + NINDIRECT*NINDIRECT)
 
 // On-disk inode structure
 // (512 % sizeof(dinode)) == 0
@@ -32,7 +32,7 @@ struct dinode {
   short nlink;          // Number of links to inode in file system
   u32 size;             // Size of file (bytes)
   u32 gen;              // Generation # (to check name cache)
-  u32 addrs[NDIRECT+1]; // Data block addresses
+  u32 addrs[NDIRECT+2]; // Data block addresses
 };
 
 // Inodes per block.

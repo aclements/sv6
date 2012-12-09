@@ -8,9 +8,8 @@
 #include "include/types.h"
 #include "include/fs.h"
 
-int nblocks = 4067;
 int ninodes = 2400;
-int size = 4372;
+int size = 16384;
 
 int fsfd;
 struct superblock sb;
@@ -59,6 +58,7 @@ main(int argc, char *argv[])
   struct dirent de;
   char buf[512];
   struct dinode din;
+  int nblocks;
 
   if(argc < 2){
     fprintf(stderr, "Usage: mkfs fs.img files...\n");
@@ -74,21 +74,21 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  sb.size = xint(size);
-  sb.nblocks = xint(nblocks); // so whole disk is size sectors
-  sb.ninodes = xint(ninodes);
-
   bitblocks = (size+512*8-1)/(512*8);
   usedblocks = ninodes / IPB + 3 + bitblocks;
   freeblock = usedblocks;
 
+  nblocks = size - usedblocks;
+
   printf("used %d (bit %d ninode %zu) free %u total %d\n", usedblocks,
          bitblocks, ninodes/IPB + 1, freeblock, nblocks+usedblocks);
 
-  assert(nblocks + usedblocks == size);
-
   for(i = 0; i < nblocks + usedblocks; i++)
     wsect(i, zeroes);
+
+  sb.size = xint(size);
+  sb.nblocks = xint(nblocks); // so whole disk is size sectors
+  sb.ninodes = xint(ninodes);
 
   memset(buf, 0, sizeof(buf));
   memmove(buf, &sb, sizeof(sb));
@@ -227,16 +227,20 @@ void
 balloc(int used)
 {
   u8 buf[512];
+  int bbn = 0;
   int i;
 
   printf("balloc: first %d blocks have been allocated\n", used);
-  assert(used < 512*8);
-  bzero(buf, 512);
-  for(i = 0; i < used; i++){
-    buf[i/8] = buf[i/8] | (0x1 << (i%8));
+  while (used > 0) {
+    bzero(buf, 512);
+    for(i = 0; i < used && i < 512*8; i++){
+      buf[i/8] = buf[i/8] | (0x1 << (i%8));
+    }
+    printf("balloc: write bitmap block at sector %zu\n", ninodes/IPB + 3 + bbn);
+    wsect(ninodes / IPB + 3 + bbn, buf);
+    bbn++;
+    used -= 512*8;
   }
-  printf("balloc: write bitmap block at sector %zu\n", ninodes/IPB + 3);
-  wsect(ninodes / IPB + 3, buf);
 }
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -263,7 +267,7 @@ iappend(u32 inum, void *xp, int n)
         usedblocks++;
       }
       x = xint(din.addrs[fbn]);
-    } else {
+    } else if (fbn < NDIRECT + NINDIRECT) {
       if(xint(din.addrs[NDIRECT]) == 0){
         // printf("allocate indirect block\n");
         din.addrs[NDIRECT] = xint(freeblock++);
@@ -277,6 +281,32 @@ iappend(u32 inum, void *xp, int n)
         wsect(xint(din.addrs[NDIRECT]), (char*)indirect);
       }
       x = xint(indirect[fbn-NDIRECT]);
+    } else {
+      int i1 = (fbn - NDIRECT - NINDIRECT) / NINDIRECT;
+      int i2 = (fbn - NDIRECT - NINDIRECT) % NINDIRECT;
+      int diblock;
+
+      if (xint(din.addrs[NDIRECT+1]) == 0) {
+        din.addrs[NDIRECT+1] = xint(freeblock++);
+        usedblocks++;
+      }
+
+      rsect(xint(din.addrs[NDIRECT+1]), (char*)indirect);
+      if (indirect[i1] == 0) {
+        indirect[i1] = xint(freeblock++);
+        usedblocks++;
+        wsect(xint(din.addrs[NDIRECT+1]), (char*)indirect);
+      }
+
+      diblock = indirect[i1];
+      rsect(xint(diblock), (char*)indirect);
+      if (indirect[i2] == 0) {
+        indirect[i2] = xint(freeblock++);
+        usedblocks++;
+        wsect(xint(diblock), (char*)indirect);
+      }
+
+      x = xint(indirect[i2]);
     }
     n1 = min(n, (fbn + 1) * 512 - off);
     rsect(x, buf);
