@@ -26,8 +26,17 @@ public:
 
   bool remove(const K& key, const V* vp = nullptr) {
     u32 i = ah(key);
-    if (a_[i].load() != nullptr)
-      return a_[i].load()->remove(key, vp);
+    auto n = a_[i].load();
+    if (n != nullptr)
+      return n->remove(key, vp);
+    return false;
+  }
+
+  bool replace(const K& key, const V& oldval, const V& newval) {
+    u32 i = ah(key);
+    auto n = a_[i].load();
+    if (n != nullptr)
+      return n->replace(key, oldval, newval);
     return false;
   }
 

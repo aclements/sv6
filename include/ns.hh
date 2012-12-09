@@ -116,6 +116,21 @@ class xns : public rcu_freed {
     }
   }
 
+  bool replace(const K &key, const V &oldval, const V &newval) {
+    u64 i = h(key);
+    scoped_gc_epoch gc;
+
+    auto root = table[i].chain.load();
+    for (auto x = root; x; x = x->next) {
+      if (x->key == key && x->val == oldval) {
+        x->val = newval;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   V lookup(const K &key) {
     u64 i = h(key);
 

@@ -46,6 +46,7 @@ UPROGS_BIN= \
 	benchhdr \
 	monkstats \
 	countbench \
+        mv \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \

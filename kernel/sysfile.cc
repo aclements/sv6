@@ -196,6 +196,105 @@ bad:
   return -1;
 }
 
+//SYSCALL
+int
+sys_rename(userptr_str old_name, userptr_str new_name)
+{
+  scoped_gc_epoch e;
+
+  char old[PATH_MAX], newn[PATH_MAX];
+  if (!old_name.load(old, sizeof old) || !new_name.load(newn, sizeof newn))
+    return -1;
+
+  bool haverefold = false;
+  char oldname[DIRSIZ];
+  inode* dpold = __nameiparent(myproc()->cwd, old, oldname, &haverefold);
+  if (!dpold)
+    return -1;
+  if (dpold->type != T_DIR) {
+    iput(dpold, haverefold);
+    return -1;
+  }
+
+  inode* ipold = dirlookup(dpold, oldname);
+  if (!ipold) {
+    iput(dpold, haverefold);
+    return -1;
+  }
+  if (ipold->dev != dpold->dev || ipold->type == T_DIR) {
+    // Renaming directories not currently supported.
+    // Would require checking for loops and dealing with refcounts
+    // on the parent directories.
+    iput(ipold);
+    iput(dpold, haverefold);
+  }
+
+  bool haverefnew = false;
+  char newname[DIRSIZ];
+  inode* dpnew = __nameiparent(myproc()->cwd, newn, newname, &haverefnew);
+  if (!dpnew) {
+    iput(ipold);
+    iput(dpold, haverefold);
+    return -1;
+  }
+  if (dpnew->type != T_DIR || dpnew->dev != dpold->dev) {
+    iput(dpnew, haverefnew);
+    iput(ipold);
+    iput(dpold, haverefold);
+    return -1;
+  }
+
+  if (dpold == dpnew && strbuf<DIRSIZ>(oldname) == strbuf<DIRSIZ>(newname)) {
+    iput(dpnew, haverefnew);
+    iput(ipold);
+    iput(dpold, haverefold);
+    return 0;
+  }
+
+  dir_init(dpold);
+  dir_init(dpnew);
+  inode* ipnew = dirlookup(dpnew, newname);
+  if (ipnew) {
+    if (ipnew->type == T_DIR) {
+      iput(ipnew);
+      iput(dpnew, haverefnew);
+      iput(ipold);
+      iput(dpold, haverefold);
+      return -1;
+    }
+
+    if (!dpnew->dir.load()->replace(strbuf<DIRSIZ>(newname),
+                                    ipnew->inum, ipold->inum)) {
+      iput(ipnew);
+      iput(dpnew, haverefnew);
+      iput(ipold);
+      iput(dpold, haverefold);
+      return -1;
+    }
+  } else {
+    if (dpnew->dir.load()->insert(strbuf<DIRSIZ>(newname), ipold->inum) < 0) {
+      iput(dpnew, haverefnew);
+      iput(ipold);
+      iput(dpold, haverefold);
+      return -1;
+    }
+  }
+
+  assert(dpold->dir.load()->remove(strbuf<DIRSIZ>(oldname), &ipold->inum));
+
+  if (ipnew) {
+    ilock(ipnew, 1);
+    ipnew->unlink();
+    iupdate(ipnew);
+    iunlockput(ipnew);
+  }
+
+  iput(dpnew, haverefnew);
+  iput(ipold);
+  iput(dpold, haverefold);
+  return 0;
+}
+
 // Is the directory dp empty except for "." and ".." ?
 static int
 isdirempty(struct inode *dp)
