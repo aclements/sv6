@@ -47,6 +47,8 @@ UPROGS_BIN= \
 	monkstats \
 	countbench \
         mv \
+	local_server \
+	local_client
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \

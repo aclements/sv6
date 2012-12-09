@@ -178,6 +178,7 @@ int             pipealloc(struct file**, struct file**, int flag);
 void            pipeclose(struct pipe*, int);
 int             piperead(struct pipe*, char*, int);
 int             pipewrite(struct pipe*, const char*, int);
+struct pipe*    pipesockalloc();
 
 // proc.c
 struct proc*    copyproc(struct proc*);
