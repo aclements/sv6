@@ -1,8 +1,19 @@
+#if defined(LINUX)
+#include <stdio.h>
+#include <errno.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#define die perror
+#define SERVER  "/tmp/serversocket"
+#else
 #include "types.h"
 #include "user.h"
 #include "unet.h"
-     
 #define SERVER  "/serversocket"
+#endif
+     
 #define MAXMSG  512
 #define MESSAGE "ni hao"
 
@@ -50,7 +61,7 @@ main (void)
       die ("recfrom (server)");
     }
      
-    fprintf (2, "Server: got message from %s: %s\n", name.sun_path, message);
+    printf ("Server: got message from %s: %s\n", name.sun_path, message);
 
     strcpy(message, MESSAGE);
 

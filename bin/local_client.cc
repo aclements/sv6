@@ -1,9 +1,21 @@
+#if defined(LINUX)
+#include <stdio.h>
+#include <errno.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#define die perror
+#define SERVER  "/tmp/serversocket"
+#define CLIENT  "/tmp/mysocket"
+#else
 #include "types.h"
 #include "user.h"
 #include "unet.h"
-     
 #define SERVER  "/serversocket"
 #define CLIENT  "/mysocket"
+#endif
+
 #define MAXMSG  512
 #define MESSAGE "Hello, local socket server?"
 
@@ -57,7 +69,7 @@ main (void)
     die ("recfrom (client)");
   }
      
-  fprintf (2, "Client: got response: %s\n", message);
+  printf ("Client: got response: %s\n", message);
      
   unlink (CLIENT);
   close (sock);
