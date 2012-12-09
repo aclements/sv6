@@ -1,11 +1,5 @@
 *~
 _*
-*.o
-*.d
-*.sym
-*.asym
-*.asm
-*.out
 o.qemu/
 o.ben/
 o.josmp/
