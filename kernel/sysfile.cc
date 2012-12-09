@@ -772,7 +772,7 @@ sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
 
     if (fetchmem(&uaddr, xaddr, sizeof(sockaddr_un)) < 0) 
       return -1;
-    if((ip = create(myproc()->cwd, uaddr.sun_path, T_SOCKET, 0, 0)) == 0)
+    if((ip = create(myproc()->cwd, uaddr.sun_path, T_SOCKET, 0, 0, true)) == 0)
       return -1;
     ip->pipe = f->pipe;
     f->ip = ip;
