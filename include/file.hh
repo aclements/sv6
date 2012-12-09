@@ -72,6 +72,10 @@ struct inode : public referenced, public rcu_freed
   char lockname[16];
   std::atomic<dirns*> dir;
 
+  // for local socket
+  struct pipe *pipe;
+  char socketpath[PATH_MAX];
+
   short type;        // copy of disk inode
   short major;
   short minor;

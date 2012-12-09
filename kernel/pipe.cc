@@ -282,6 +282,12 @@ pipealloc(struct file **f0, struct file **f1, int flag)
   return -1;
 }
 
+struct pipe*
+pipesockalloc()
+{
+  return new ordered();
+}
+
 void
 pipeclose(struct pipe *p, int writable)
 {
