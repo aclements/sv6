@@ -373,7 +373,7 @@ sys_unlink(userptr_str path)
 }
 
 static struct inode*
-create(inode *cwd, const char *path, short type, short major, short minor)
+create(inode *cwd, const char *path, short type, short major, short minor, bool excl)
 {
   struct inode *ip, *dp;
   char name[DIRSIZ];
@@ -395,7 +395,7 @@ create(inode *cwd, const char *path, short type, short major, short minor)
     if((ip = dirlookup(dp, name)) != 0){
       iput(dp, haveref);
       ilock(ip, 1);
-      if(type == T_FILE && ip->type == T_FILE)
+      if(type == T_FILE && ip->type == T_FILE && !excl)
         return ip;
       iunlockput(ip);
       return nullptr;
@@ -470,7 +470,7 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
   mtreadavar("inode:%x.%x", cwd->dev, cwd->inum);
 
   if(omode & O_CREAT){
-    if((ip = create(cwd, path_copy, T_FILE, 0, 0)) == 0)
+    if((ip = create(cwd, path_copy, T_FILE, 0, 0, omode & O_EXCL)) == 0)
       return -1;
     if(omode & O_WAIT){
       // XXX wake up any open(..., O_WAIT).
@@ -563,7 +563,7 @@ sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
 
   if (!path.load(path_copy, sizeof path_copy))
     return -1;
-  ip = create(cwd, path_copy, T_DIR, 0, 0);
+  ip = create(cwd, path_copy, T_DIR, 0, 0, true);
   if (ip == nullptr)
     return -1;
   iunlockput(ip);
@@ -578,7 +578,7 @@ sys_mknod(userptr_str path, int major, int minor)
   struct inode *ip;
   
   if(!path.load(path_copy, sizeof path_copy) ||
-     (ip = create(myproc()->cwd, path_copy, T_DEV, major, minor)) == 0)
+     (ip = create(myproc()->cwd, path_copy, T_DEV, major, minor, true)) == 0)
     return -1;
   iunlockput(ip);
   return 0;
