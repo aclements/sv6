@@ -11,11 +11,14 @@
 #include "types.h"
 #include "user.h"
 #include "unet.h"
+#include "pthread.h"
 #define SERVER  "/serversocket"
 #endif
      
 #define MAXMSG  512
 #define MESSAGE "ni hao"
+
+int sock;
 
 int
 make_named_socket (const char *filename)
@@ -39,19 +42,16 @@ make_named_socket (const char *filename)
   return sock;
 }
 
-     
-int
-main (void)
+
+static void*
+thread(void* x)
 {
-  int sock;
+  long id = (long)x;
   char message[MAXMSG];
   struct sockaddr_un name;
   socklen_t size;
   int nbytes;
-     
-  unlink (SERVER);
-     
-  sock = make_named_socket (SERVER);
+
   while (1)
   {
     size = sizeof (name);
@@ -61,7 +61,7 @@ main (void)
       die ("recfrom (server)");
     }
      
-    printf ("Server: got message from %s: %s\n", name.sun_path, message);
+    printf ("%d: got message from %s: %s\n", id, name.sun_path, message);
 
     strcpy(message, MESSAGE);
 
@@ -72,4 +72,28 @@ main (void)
       die ("sendto (server)");
     }
   }
+}
+     
+int
+main (int argc, char *argv[])
+{
+  pthread_t tid;
+  int nthread;
+     
+  unlink (SERVER);
+
+  if (argc < 2)
+    die("usage: %s nthreads", argv[0]);
+
+  nthread = atoi(argv[1]);
+     
+  sock = make_named_socket (SERVER);
+
+  for (int i = 0; i < nthread; i++)
+    pthread_create(&tid, nullptr, thread, (void*)(long)i);
+
+  for (int i = 0; i < nthread; i++)
+    wait(-1);
+
+  return 0;
 }

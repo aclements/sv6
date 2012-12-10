@@ -853,6 +853,9 @@ sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,
   if (len > PGSIZE)
     len = PGSIZE;
   struct sockaddr_un uaddr;
+
+  // cprintf("sys_recvfrom: read pipe %ld\n", len);
+
   int n = piperead(f->pipe, (char *) &uaddr, sizeof(uaddr));
   if (src_addr != 0) {
     if (putmem(src_addr, &uaddr, sizeof(uaddr)) || putmem(addrlen, &n, sizeof(u32 *)))
@@ -861,6 +864,9 @@ sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,
   len = piperead(f->pipe, b, len);
   if (!userptr<char>(buf).store(b, len))
     return -1;
+
+  // cprintf("sys_recvfrom: done %ld\n", len);
+
   return len;
 }
 
@@ -899,6 +905,8 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   strncpy(uaddr.sun_path, f->ip->socketpath, UNIX_PATH_MAX);
   n = pipewrite(ip->pipe, (char *) &uaddr, sizeof(uaddr));
   n = pipewrite(ip->pipe, b, len);
+
+  // cprintf("sys_sendto: sent %ld\n", len);
 
   return n;
 }
