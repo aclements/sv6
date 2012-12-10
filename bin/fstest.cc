@@ -85,5 +85,7 @@ main(int ac, char** av)
     pthread_join(tid1, 0);
 
     fstests[i].cleanup();
+
+    printf("test %d completed threads\n", i);
   }
 }
