@@ -177,14 +177,19 @@ exit(void)
     release(&bootproc->lock);
   }
 
-  // Parent might be sleeping in wait().
+  // Lock the parent first, since otherwise we might deadlock.
+  if (myproc()->parent != nullptr)
+    acquire(&myproc()->parent->lock);
+
   acquire(&(myproc()->lock));
 
   // Kernel threads might not have a parent
-  if (myproc()->parent != nullptr)
+  if (myproc()->parent != nullptr) {
+    release(&myproc()->parent->lock);
     myproc()->parent->cv.wake_all();
-  else
+  } else {
     idlezombie(myproc());
+  }
 
   if (wakeupinit)
     bootproc->cv.wake_all();
