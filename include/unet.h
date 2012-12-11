@@ -1,24 +1,6 @@
 #ifdef LWIP
 extern "C" {
 #include "lwip/sockets.h"
-
-#define PF_LOCAL -2
-#define AF_LOCAL (PF_LOCAL)
-#define UNIX_PATH_MAX 128
-
-#define SUN_LEN(su) (sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))
-
-struct sockaddr_un {
-  u8 sun_family; /* PF_LOCAL */
-  char sun_path[UNIX_PATH_MAX];   /* pathname */
-};
-
-// system calls
-extern int socket(int domain, int type, int protocol);
-extern int bind(int sockfd, const struct sockaddr *addr,
-                int addrlen);
-extern int listen(int sockfd, int backlog);
-extern int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 }
 
 static inline const char *
@@ -35,4 +17,29 @@ ipaddr(struct sockaddr_in *sin)
 
   return buf;
 }
+#else // !LWIP
+// Support local sockets
+typedef u32 socklen_t;
+#define SOCK_DGRAM 2
 #endif
+
+#define PF_LOCAL      -2
+#define AF_LOCAL      (PF_LOCAL)
+#define UNIX_PATH_MAX 128
+
+#define SUN_LEN(su) \
+  (sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))
+
+struct sockaddr_un {
+  u8 sun_family;                  // PF_LOCAL
+  char sun_path[UNIX_PATH_MAX];   // pathname
+};
+
+extern "C" {
+// system calls
+extern int socket(int domain, int type, int protocol);
+extern int bind(int sockfd, const struct sockaddr *addr,
+                int addrlen);
+extern int listen(int sockfd, int backlog);
+extern int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+}
