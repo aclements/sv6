@@ -14,9 +14,8 @@
 #include "dirns.hh"
 #include <uk/fcntl.h>
 #include <uk/stat.h>
-#include "unet.h"
 
-static bool
+bool
 getfile(int fd, sref<file> *f)
 {
   return myproc()->ftable->getfile(fd, f);
@@ -24,7 +23,7 @@ getfile(int fd, sref<file> *f)
 
 // Allocate a file descriptor for the given file.
 // Takes over file reference from caller on success.
-static int
+int
 fdalloc(file *f)
 {
   return myproc()->ftable->allocfd(f);
@@ -373,7 +372,7 @@ sys_unlink(userptr_str path)
   return 0;
 }
 
-static struct inode*
+struct inode*
 create(inode *cwd, const char *path, short type, short major, short minor, bool excl)
 {
   struct inode *ip, *dp;
@@ -682,232 +681,5 @@ sys_pipe(userptr<int> fd, int flag)
     return -1;
   }
   return 0;
-}
-
-static void
-freesocket(int fd)
-{
-  myproc()->ftable->close(fd);
-}
-
-static bool
-getsocket(int fd, sref<file> *f)
-{
-  if (!getfile(fd, f))
-    return false;
-  if ((*f)->type != file::FD_SOCKET) {
-    f->init(nullptr);
-    return false;
-  }
-  return true;
-}
-
-static int
-allocsocket(struct file **rf, int *rfd)
-{
-  struct file *f;
-  int fd;
-
-  f = file::alloc();
-  if (f == nullptr)
-    return -1;
-
-  fd = fdalloc(f);
-  if (fd < 0) {
-    f->dec();
-    return fd;
-  }
-
-  f->type = file::FD_SOCKET;
-  f->off = 0;
-  f->readable = 1;
-  f->writable = 1;
- 
-  *rf = f;
-  *rfd = fd;
-  return 0;
-}
-
-void 
-sockclose(const struct file *f)
-{
-  if (f->socket == PF_LOCAL) {
-    pipesockclose(f->pipe);
-  } else {
-    netclose(f->socket);
-  }
-}
-
-//SYSCALL
-int
-sys_socket(int domain, int type, int protocol)
-{
-  extern long netsocket(int domain, int type, int protocol);
-  struct file *f;
-  int fd;
-  int s;
-
-  if (allocsocket(&f, &fd))
-    return -1;
-
-  if (domain == PF_LOCAL) {
-    s = PF_LOCAL;
-    f->pipe = pipesockalloc();
-  } else {
-    s = netsocket(domain, type, protocol);
-    if (s < 0) {
-      myproc()->ftable->close(fd);
-      return s;
-    }
-  }
-
-  f->socket = s;
-  return fd;
-}
-
-//SYSCALL
-int
-sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
-{
-  extern long netbind(int, const struct sockaddr*, int);
-  sref<file> f;
-  int r;
-
-  if (!getsocket(xsock, &f))
-    return -1;
-
-  if (f->socket == PF_LOCAL) {
-    struct inode *ip;
-    struct sockaddr_un uaddr;
-
-    if (fetchmem(&uaddr, xaddr, sizeof(sockaddr_un)) < 0) 
-      return -1;
-    if((ip = create(myproc()->cwd, uaddr.sun_path, T_SOCKET, 0, 0, true)) == 0)
-      return -1;
-    ip->pipe = f->pipe;
-    f->ip = ip;
-    strncpy(ip->socketpath, uaddr.sun_path, UNIX_PATH_MAX);
-
-    iunlockput(ip);
-    return 0;
-  }  else {
-    r = netbind(f->socket, xaddr, xaddrlen);
-  }
-  return r;
-}
-
-//SYSCALL
-int
-sys_listen(int xsock, int backlog)
-{
-  extern long netlisten(int, int);
-  sref<file> f;
-
-  if (!getsocket(xsock, &f))
-    return -1;
-
-  return netlisten(f->socket, backlog);
-}
-
-//SYSCALL
-int
-sys_accept(int xsock, struct sockaddr* xaddr, u32* xaddrlen)
-{
-  extern long netaccept(int, struct sockaddr*, u32*);
-  file *cf;
-  sref<file> f;
-  int cfd;
-  int ss;
-
-  if (!getsocket(xsock, &f))
-    return -1;
-
-  if (allocsocket(&cf, &cfd))
-    return -1;
-
-  ss = netaccept(f->socket, xaddr, xaddrlen);
-  if (ss < 0) {
-    freesocket(cfd);
-    return ss;
-  }  
-
-  cf->socket = ss;
-  return cfd;
-}
-
-//SYSCALL
-int
-sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,  
-             struct sockaddr *src_addr, u32 *addrlen)
-{
-  sref<file> f;
-  if (!getsocket(sockfd, &f))
-    return -1;
-
-  char *b = kalloc("readbuf");
-  if (!b)
-    return -1;
-
-  auto cleanup = scoped_cleanup([b](){kfree(b);});
-  // XXX(Austin) Too bad
-  if (len > PGSIZE)
-    len = PGSIZE;
-  struct sockaddr_un uaddr;
-
-  // cprintf("sys_recvfrom: read pipe %ld\n", len);
-
-  int n = piperead(f->pipe, (char *) &uaddr, sizeof(uaddr));
-  if (src_addr != 0) {
-    if (putmem(src_addr, &uaddr, sizeof(uaddr)) || putmem(addrlen, &n, sizeof(u32 *)))
-      return -1;
-  }
-  len = piperead(f->pipe, b, len);
-  if (!userptr<char>(buf).store(b, len))
-    return -1;
-
-  // cprintf("sys_recvfrom: done %ld\n", len);
-
-  return len;
-}
-
-//SYSCALL
-int 
-sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags, 
-           const struct sockaddr *dest_addr, u32 addrlen)
-{
-  struct inode *ip;
-  struct sockaddr_un uaddr;
-  sref<file> f;
-  int n;
-
-  if (!getsocket(sockfd, &f))
-    return -1;
-
-  if (fetchmem(&uaddr, dest_addr, sizeof(sockaddr_un)) < 0) 
-    return -1;
-  ip = namei(myproc()->cwd, uaddr.sun_path);
-  if (ip == 0)
-    return -1;
-  if (ip->type != T_SOCKET)
-    return -1;
-
-  char *b = kalloc("writebuf");
-  if (!b)
-    return -1;
-
-  auto cleanup = scoped_cleanup([b](){kfree(b);});
-  // XXX(Austin) Too bad
-  if (len > PGSIZE)
-    len = PGSIZE;
-  if (!userptr<char>(buf).load(b, len))
-    return -1;
-
-  strncpy(uaddr.sun_path, f->ip->socketpath, UNIX_PATH_MAX);
-  n = pipewrite(ip->pipe, (char *) &uaddr, sizeof(uaddr));
-  n = pipewrite(ip->pipe, b, len);
-
-  // cprintf("sys_sendto: sent %ld\n", len);
-
-  return n;
 }
 

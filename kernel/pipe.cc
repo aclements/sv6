@@ -95,24 +95,6 @@ struct ordered : pipe {
   }
 };
 
-// Initial support for unordered pipes by having per-core pipes.  A writer
-// writes n bytes as a single unit in its local per-core pipe, from which the
-// neighbor is intended to read the n bytes.  If a writer's local pipe is full,
-// it sleeps until a reader to wake it up.  A reader cycles through all per-core
-// pipes, starting from the next core.  If it reads from a full pipe, it wakes up
-// the local writer.  If all pipes are empty, then it keeps trying.
-//
-// tension between load balance and performance: if there is no need for load
-// balance, reader and writer should agree on a given pipe and use only that
-// one.
-//
-// tension between space sharing and time sharing: maybe should read from local
-// pipe, maybe should give up cpu when no pipe has data.
-//
-// XXX shouldn't cpuid has index in pipes because process may be rescheduled.
-//
-// XXX Should pipe track #readers, #writers?  so that we don't have to allocate
-// NCPU per-core pipes.
 
 struct corepipe : balance_pool {
   u32 nread;
@@ -142,8 +124,15 @@ struct corepipe : balance_pool {
       return;
     }
 
-    while ((target->nwrite - target->nread) < (nwrite - nread))
+    int n = 0;
+    while ((target->nwrite - target->nread) < (nwrite - nread)) {
+      n++;
       target->data[target->nwrite++ % PIPESIZE] = data[nread++ % PIPESIZE];
+    }
+
+    // if (n > 0) {
+    //   cprintf("move %d bytes to target\n", n);
+    // }
 
     lock.release();
     target->lock.release();

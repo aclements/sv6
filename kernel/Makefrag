@@ -44,6 +44,7 @@ OBJS = \
 	syscall.o \
 	sysfile.o \
 	sysproc.o \
+	syssocket.o\
 	uart.o \
         user.o \
 	vm.o \
