@@ -85,6 +85,7 @@ zalloc(const char* name)
     if (p != nullptr)
       zpage(p);
   } else {
+    mtunlabel(mtrace_label_block, p);
     mtlabel(mtrace_label_block, p, PGSIZE, name, strlen(name));
     // Zero the free_page header
     memset(p, 0, sizeof(struct free_page));
@@ -105,6 +106,7 @@ zfree(void* p)
       assert(((char*)p)[i] == 0);
 
   scoped_cli cli;
+  mtunlabel(mtrace_label_block, p);
   z_->pages.push_front((struct free_page*)p);
   ++z_->nPages;
 }
