@@ -7,13 +7,16 @@
 
 #define IO_TIMER1       0x040           // 8253 Timer #1
 #define TIMER_FREQ      1193182
-#define	TIMER_CNTR      (IO_TIMER1 + 0)	// timer counter port
+#define	TIMER_CNTR0     (IO_TIMER1 + 0)	// timer counter port 0
+#define	TIMER_CNTR1     (IO_TIMER1 + 1)	// timer counter port 1
 #define TIMER_MODE      (IO_TIMER1 + 3) // timer mode port
 #define TIMER_SEL0      0x00    // select counter 0
+#define TIMER_SEL1      0x40    // select counter 1
 #define TIMER_TCOUNT    0x00    // mode 0, terminal count
 #define TIMER_16BIT     0x30    // r/w counter 16 bits, LSB first
 #define TIMER_STAT      0xe0    // read status mode
 #define TIMER_STAT0     (TIMER_STAT | 0x2)  // status mode counter 0
+#define TIMER_STAT1     (TIMER_STAT | 0x4)  // status mode counter 1
 
 u64 cpuhz;
 
@@ -31,20 +34,20 @@ inithz(void)
 {
   // Setup PIT for terminal count starting from 2^16 - 1
   u64 xticks = 0x000000000000FFFFull;
-  outb(TIMER_MODE, TIMER_SEL0 | TIMER_TCOUNT | TIMER_16BIT);  
-  outb(IO_TIMER1, xticks % 256);
-  outb(IO_TIMER1, xticks / 256);
+  outb(TIMER_MODE, TIMER_SEL1 | TIMER_TCOUNT | TIMER_16BIT);  
+  outb(TIMER_CNTR1, xticks % 256);
+  outb(TIMER_CNTR1, xticks / 256);
 
   // Wait until OUT bit of status byte is set
   u64 s = rdtsc();
   do {
-    outb(TIMER_MODE, TIMER_STAT0);
+    outb(TIMER_MODE, TIMER_STAT1);
     if (rdtsc() - s > 1ULL<<32) {
       cprintf("inithz: PIT stuck, assuming 2GHz\n");
       cpuhz = 2 * 1000 * 1000 * 1000;
       return;
     }
-  } while (!(inb(TIMER_CNTR) & 0x80));
+  } while (!(inb(TIMER_CNTR1) & 0x80));
   u64 e = rdtsc();
 
   cpuhz = ((e-s)*10000000) / ((xticks*10000000)/TIMER_FREQ);
