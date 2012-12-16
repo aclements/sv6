@@ -48,7 +48,8 @@ UPROGS_BIN= \
 	countbench \
         mv \
 	local_server \
-	local_client
+	local_client \
+        fstest \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
