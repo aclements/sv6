@@ -69,10 +69,10 @@ FSEXTRA += \
 	bin/metis_wrmem-josmp \
 	bin/countbench-ben \
 
-$(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB)
+$(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIBA)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(LD) $(LDFLAGS) -o $@ $^
+	$(Q)$(LD) $(LDFLAGS) -o $@ $< $(ULIBA)
 
 $(O)/bin/%: $(O)/bin/%.unstripped
 	@echo "  STRIP  $@"
