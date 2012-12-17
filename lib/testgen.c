@@ -162,15 +162,15 @@ static int xerrno(int r) {
     static void setup_4(void) {
       
       {
-        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i11", "2");
+      link("__i8", "2");
       
-      unlink("__i11");
+      unlink("__i8");
       
     }
     
@@ -201,15 +201,15 @@ static int xerrno(int r) {
     static void setup_5(void) {
       
       {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 9;
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i8", "2");
+      link("__i11", "2");
       
-      unlink("__i8");
+      unlink("__i11");
       
     }
     
@@ -319,7 +319,7 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
@@ -503,7 +503,7 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
@@ -541,15 +541,15 @@ static int xerrno(int r) {
     static void setup_14(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "2");
+      link("__i11", "2");
       
-      unlink("__i7");
+      unlink("__i11");
       
     }
     
@@ -658,15 +658,15 @@ static int xerrno(int r) {
     static void setup_17(void) {
       
       {
-        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i11", "2");
+      link("__i8", "2");
       
-      unlink("__i11");
+      unlink("__i8");
       
     }
     
@@ -843,7 +843,7 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
@@ -881,15 +881,15 @@ static int xerrno(int r) {
     static void setup_23(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "2");
+      link("__i8", "2");
       
-      unlink("__i7");
+      unlink("__i8");
       
     }
     
@@ -1233,15 +1233,15 @@ static int xerrno(int r) {
     static void setup_34(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 9;
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "3");
+      link("__i11", "3");
       
-      unlink("__i7");
+      unlink("__i11");
       
     }
     
@@ -1367,15 +1367,15 @@ static int xerrno(int r) {
     static void setup_38(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 9;
+        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "3");
+      link("__i10", "3");
       
-      unlink("__i7");
+      unlink("__i10");
       
     }
     
@@ -1518,15 +1518,15 @@ static int xerrno(int r) {
     static void setup_43(void) {
       
       {
-        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i10", "3");
+      link("__i7", "3");
       
-      unlink("__i10");
+      unlink("__i7");
       
     }
     
@@ -1557,15 +1557,15 @@ static int xerrno(int r) {
     static void setup_44(void) {
       
       {
-        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i10", "3");
+      link("__i11", "3");
       
-      unlink("__i10");
+      unlink("__i11");
       
     }
     
@@ -1624,15 +1624,15 @@ static int xerrno(int r) {
     static void setup_46(void) {
       
       {
-        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i11", "3");
+      link("__i7", "3");
       
-      unlink("__i11");
+      unlink("__i7");
       
     }
     
@@ -1663,15 +1663,15 @@ static int xerrno(int r) {
     static void setup_47(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "3");
+      link("__i11", "3");
       
-      unlink("__i7");
+      unlink("__i11");
       
     }
     
@@ -1909,15 +1909,15 @@ static int xerrno(int r) {
     static void setup_55(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 9;
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "3");
+      link("__i11", "3");
       
-      unlink("__i7");
+      unlink("__i11");
       
     }
     
@@ -1948,15 +1948,15 @@ static int xerrno(int r) {
     static void setup_56(void) {
       
       {
-        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i11", "3");
+      link("__i7", "3");
       
-      unlink("__i11");
+      unlink("__i7");
       
     }
     
@@ -2160,15 +2160,15 @@ static int xerrno(int r) {
     static void setup_62(void) {
       
       {
-        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i11", "2");
+      link("__i8", "2");
       
-      unlink("__i11");
+      unlink("__i8");
       
     }
     
@@ -2199,15 +2199,15 @@ static int xerrno(int r) {
     static void setup_63(void) {
       
       {
-        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i11", "2");
+      link("__i8", "2");
       
-      unlink("__i11");
+      unlink("__i8");
       
     }
     
@@ -2316,15 +2316,15 @@ static int xerrno(int r) {
     static void setup_66(void) {
       
       {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 9;
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i8", "2");
+      link("__i11", "2");
       
-      unlink("__i8");
+      unlink("__i11");
       
     }
     
@@ -2500,15 +2500,15 @@ static int xerrno(int r) {
     static void setup_71(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "2");
+      link("__i8", "2");
       
-      unlink("__i7");
+      unlink("__i8");
       
     }
     
@@ -2539,15 +2539,15 @@ static int xerrno(int r) {
     static void setup_72(void) {
       
       {
-        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i11", "2");
+      link("__i8", "2");
       
-      unlink("__i11");
+      unlink("__i8");
       
     }
     
@@ -2735,7 +2735,7 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 9;
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
@@ -2774,7 +2774,7 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
@@ -2896,15 +2896,15 @@ static int xerrno(int r) {
     static void setup_82(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 9;
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "3");
+      link("__i11", "3");
       
-      unlink("__i7");
+      unlink("__i11");
       
     }
     
@@ -2935,15 +2935,15 @@ static int xerrno(int r) {
     static void setup_83(void) {
       
       {
-        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i10", "3");
+      link("__i11", "3");
       
-      unlink("__i10");
+      unlink("__i11");
       
     }
     
@@ -3001,6 +3001,54 @@ static int xerrno(int r) {
       
     static void setup_85(void) {
       
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "11");
+      
+      link("__i4", "10");
+      
+      link("__i4", "13");
+      
+      link("__i4", "12");
+      
+      link("__i4", "14");
+      
+      link("__i4", "1");
+      
+      link("__i4", "0");
+      
+      link("__i4", "3");
+      
+      link("__i5", "2");
+      
+      link("__i4", "5");
+      
+      link("__i4", "4");
+      
+      link("__i4", "7");
+      
+      link("__i4", "6");
+      
+      link("__i4", "9");
+      
+      link("__i4", "8");
+      
+      unlink("__i4");
+      
+      unlink("__i5");
+      
     }
     
       static int test_85_0(void) {
@@ -3036,7 +3084,7 @@ static int xerrno(int r) {
       static int test_86_0(void) {
         
       {
-        int fd = open("2", 0x242, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3061,12 +3109,60 @@ static int xerrno(int r) {
       
     static void setup_87(void) {
       
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "11");
+      
+      link("__i4", "10");
+      
+      link("__i4", "13");
+      
+      link("__i4", "12");
+      
+      link("__i4", "14");
+      
+      link("__i4", "1");
+      
+      link("__i4", "0");
+      
+      link("__i4", "3");
+      
+      link("__i5", "2");
+      
+      link("__i4", "5");
+      
+      link("__i4", "4");
+      
+      link("__i4", "7");
+      
+      link("__i4", "6");
+      
+      link("__i4", "9");
+      
+      link("__i4", "8");
+      
+      unlink("__i4");
+      
+      unlink("__i5");
+      
     }
     
       static int test_87_0(void) {
         
       {
-        int fd = open("2", 0x42, 0666);
+        int fd = open("2", 0x242, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3096,7 +3192,7 @@ static int xerrno(int r) {
       static int test_88_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("2", 0x242, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3108,7 +3204,7 @@ static int xerrno(int r) {
       static int test_88_1(void) {
         
       {
-        int fd = open("2", O_RDONLY);
+        int fd = open("3", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
         char c;
@@ -3121,12 +3217,60 @@ static int xerrno(int r) {
       
     static void setup_89(void) {
       
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "11");
+      
+      link("__i4", "10");
+      
+      link("__i4", "13");
+      
+      link("__i4", "12");
+      
+      link("__i4", "14");
+      
+      link("__i4", "1");
+      
+      link("__i4", "0");
+      
+      link("__i4", "3");
+      
+      link("__i5", "2");
+      
+      link("__i4", "5");
+      
+      link("__i4", "4");
+      
+      link("__i4", "7");
+      
+      link("__i4", "6");
+      
+      link("__i4", "9");
+      
+      link("__i4", "8");
+      
+      unlink("__i4");
+      
+      unlink("__i5");
+      
     }
     
       static int test_89_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("2", 0x42, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3138,7 +3282,7 @@ static int xerrno(int r) {
       static int test_89_1(void) {
         
       {
-        int fd = open("2", O_RDONLY);
+        int fd = open("3", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
         char c;
@@ -3156,7 +3300,7 @@ static int xerrno(int r) {
       static int test_90_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("2", 0x42, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3186,7 +3330,7 @@ static int xerrno(int r) {
       static int test_91_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("1", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3198,7 +3342,7 @@ static int xerrno(int r) {
       static int test_91_1(void) {
         
       {
-        int fd = open("3", O_RDONLY);
+        int fd = open("2", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
         char c;
@@ -3216,7 +3360,7 @@ static int xerrno(int r) {
       static int test_92_0(void) {
         
       {
-        int fd = open("2", 0xc2, 0666);
+        int fd = open("1", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3228,7 +3372,7 @@ static int xerrno(int r) {
       static int test_92_1(void) {
         
       {
-        int fd = open("3", O_RDONLY);
+        int fd = open("2", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
         char c;
@@ -3246,7 +3390,7 @@ static int xerrno(int r) {
       static int test_93_0(void) {
         
       {
-        int fd = open("2", 0xc2, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3276,7 +3420,7 @@ static int xerrno(int r) {
       static int test_94_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3306,7 +3450,7 @@ static int xerrno(int r) {
       static int test_95_0(void) {
         
       {
-        int fd = open("2", 0x82, 0666);
+        int fd = open("2", 0xc2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3336,7 +3480,7 @@ static int xerrno(int r) {
       static int test_96_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("2", 0xc2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3360,6 +3504,54 @@ static int xerrno(int r) {
       }
       
     static void setup_97(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "11");
+      
+      link("__i4", "10");
+      
+      link("__i4", "13");
+      
+      link("__i4", "12");
+      
+      link("__i4", "14");
+      
+      link("__i4", "1");
+      
+      link("__i4", "0");
+      
+      link("__i4", "3");
+      
+      link("__i5", "2");
+      
+      link("__i4", "5");
+      
+      link("__i4", "4");
+      
+      link("__i4", "7");
+      
+      link("__i4", "6");
+      
+      link("__i4", "9");
+      
+      link("__i4", "8");
+      
+      unlink("__i4");
+      
+      unlink("__i5");
       
     }
     
@@ -3391,23 +3583,12 @@ static int xerrno(int r) {
       
     static void setup_98(void) {
       
-      {
-        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 5;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i4", "2");
-      
-      unlink("__i4");
-      
     }
     
       static int test_98_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("2", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3419,13 +3600,13 @@ static int xerrno(int r) {
       static int test_98_1(void) {
         
       {
-        int fd = open("2", O_WRONLY | O_TRUNC);
+        int fd = open("3", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
-        char c = 6;
-        ssize_t cc = write(fd, &c, 1);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
         close(fd);
-        return cc;
+        return (cc > 0) ? c : INT_MIN;
       }
       
       }
@@ -3433,13 +3614,50 @@ static int xerrno(int r) {
     static void setup_99(void) {
       
       {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
         write(fd, &c, 1);
         close(fd);
       }
       
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "11");
+      
+      link("__i4", "10");
+      
+      link("__i4", "13");
+      
+      link("__i4", "12");
+      
+      link("__i4", "14");
+      
+      link("__i4", "1");
+      
+      link("__i4", "0");
+      
+      link("__i4", "3");
+      
       link("__i5", "2");
+      
+      link("__i4", "5");
+      
+      link("__i4", "4");
+      
+      link("__i4", "7");
+      
+      link("__i4", "6");
+      
+      link("__i4", "9");
+      
+      link("__i4", "8");
+      
+      unlink("__i4");
       
       unlink("__i5");
       
@@ -3448,7 +3666,7 @@ static int xerrno(int r) {
       static int test_99_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("2", 0x82, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3460,36 +3678,25 @@ static int xerrno(int r) {
       static int test_99_1(void) {
         
       {
-        int fd = open("3", O_WRONLY | O_TRUNC);
+        int fd = open("3", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
-        char c = 7;
-        ssize_t cc = write(fd, &c, 1);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
         close(fd);
-        return cc;
+        return (cc > 0) ? c : INT_MIN;
       }
       
       }
       
     static void setup_100(void) {
       
-      {
-        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 5;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i4", "2");
-      
-      unlink("__i4");
-      
     }
     
       static int test_100_0(void) {
         
       {
-        int fd = open("2", 0x242, 0666);
+        int fd = open("2", 0x82, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3501,36 +3708,25 @@ static int xerrno(int r) {
       static int test_100_1(void) {
         
       {
-        int fd = open("2", O_WRONLY | O_TRUNC);
+        int fd = open("3", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
-        char c = 0;
-        ssize_t cc = write(fd, &c, 1);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
         close(fd);
-        return cc;
+        return (cc > 0) ? c : INT_MIN;
       }
       
       }
       
     static void setup_101(void) {
       
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
     }
     
       static int test_101_0(void) {
         
       {
-        int fd = open("2", 0x242, 0666);
+        int fd = open("2", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3542,18 +3738,48 @@ static int xerrno(int r) {
       static int test_101_1(void) {
         
       {
-        int fd = open("3", O_WRONLY | O_TRUNC);
+        int fd = open("3", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
-        char c = 7;
-        ssize_t cc = write(fd, &c, 1);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
         close(fd);
-        return cc;
+        return (cc > 0) ? c : INT_MIN;
       }
       
       }
       
     static void setup_102(void) {
+      
+    }
+    
+      static int test_102_0(void) {
+        
+      {
+        int fd = open("2", 0x282, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_102_1(void) {
+        
+      {
+        int fd = open("3", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+    static void setup_103(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -3568,51 +3794,10 @@ static int xerrno(int r) {
       
     }
     
-      static int test_102_0(void) {
-        
-      {
-        int fd = open("2", 0x42, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_102_1(void) {
-        
-      {
-        int fd = open("2", O_WRONLY | O_TRUNC);
-        if (fd < 0)
-          return xerrno(fd);
-        char c = 6;
-        ssize_t cc = write(fd, &c, 1);
-        close(fd);
-        return cc;
-      }
-      
-      }
-      
-    static void setup_103(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-    }
-    
       static int test_103_0(void) {
         
       {
-        int fd = open("2", 0x42, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3624,10 +3809,10 @@ static int xerrno(int r) {
       static int test_103_1(void) {
         
       {
-        int fd = open("3", O_WRONLY | O_TRUNC);
+        int fd = open("2", O_WRONLY | O_TRUNC);
         if (fd < 0)
           return xerrno(fd);
-        char c = 7;
+        char c = 6;
         ssize_t cc = write(fd, &c, 1);
         close(fd);
         return cc;
@@ -3653,7 +3838,7 @@ static int xerrno(int r) {
       static int test_104_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3665,7 +3850,7 @@ static int xerrno(int r) {
       static int test_104_1(void) {
         
       {
-        int fd = open("2", O_WRONLY | O_TRUNC);
+        int fd = open("3", O_WRONLY | O_TRUNC);
         if (fd < 0)
           return xerrno(fd);
         char c = 7;
@@ -3678,12 +3863,23 @@ static int xerrno(int r) {
       
     static void setup_105(void) {
       
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 5;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "2");
+      
+      unlink("__i4");
+      
     }
     
       static int test_105_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("2", 0x242, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3698,7 +3894,7 @@ static int xerrno(int r) {
         int fd = open("2", O_WRONLY | O_TRUNC);
         if (fd < 0)
           return xerrno(fd);
-        char c = 7;
+        char c = 0;
         ssize_t cc = write(fd, &c, 1);
         close(fd);
         return cc;
@@ -3709,22 +3905,22 @@ static int xerrno(int r) {
     static void setup_106(void) {
       
       {
-        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 6;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i9", "3");
+      link("__i5", "2");
       
-      unlink("__i9");
+      unlink("__i5");
       
     }
     
       static int test_106_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("2", 0x242, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3749,12 +3945,23 @@ static int xerrno(int r) {
       
     static void setup_107(void) {
       
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 5;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "2");
+      
+      unlink("__i4");
+      
     }
     
       static int test_107_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("2", 0x42, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3766,10 +3973,10 @@ static int xerrno(int r) {
       static int test_107_1(void) {
         
       {
-        int fd = open("3", O_WRONLY | O_TRUNC);
+        int fd = open("2", O_WRONLY | O_TRUNC);
         if (fd < 0)
           return xerrno(fd);
-        char c = 7;
+        char c = 6;
         ssize_t cc = write(fd, &c, 1);
         close(fd);
         return cc;
@@ -3780,22 +3987,22 @@ static int xerrno(int r) {
     static void setup_108(void) {
       
       {
-        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 6;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i9", "3");
+      link("__i5", "2");
       
-      unlink("__i9");
+      unlink("__i5");
       
     }
     
       static int test_108_0(void) {
         
       {
-        int fd = open("2", 0xc2, 0666);
+        int fd = open("2", 0x42, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3820,12 +4027,23 @@ static int xerrno(int r) {
       
     static void setup_109(void) {
       
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
+      
     }
     
       static int test_109_0(void) {
         
       {
-        int fd = open("2", 0xc2, 0666);
+        int fd = open("1", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3837,7 +4055,7 @@ static int xerrno(int r) {
       static int test_109_1(void) {
         
       {
-        int fd = open("3", O_WRONLY | O_TRUNC);
+        int fd = open("2", O_WRONLY | O_TRUNC);
         if (fd < 0)
           return xerrno(fd);
         char c = 7;
@@ -3850,23 +4068,12 @@ static int xerrno(int r) {
       
     static void setup_110(void) {
       
-      {
-        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 5;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i4", "2");
-      
-      unlink("__i4");
-      
     }
     
       static int test_110_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("1", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3881,7 +4088,7 @@ static int xerrno(int r) {
         int fd = open("2", O_WRONLY | O_TRUNC);
         if (fd < 0)
           return xerrno(fd);
-        char c = 0;
+        char c = 7;
         ssize_t cc = write(fd, &c, 1);
         close(fd);
         return cc;
@@ -3892,22 +4099,22 @@ static int xerrno(int r) {
     static void setup_111(void) {
       
       {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 6;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i5", "2");
+      link("__i9", "3");
       
-      unlink("__i5");
+      unlink("__i9");
       
     }
     
       static int test_111_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3932,23 +4139,12 @@ static int xerrno(int r) {
       
     static void setup_112(void) {
       
-      {
-        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 5;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i4", "2");
-      
-      unlink("__i4");
-      
     }
     
       static int test_112_0(void) {
         
       {
-        int fd = open("2", 0x82, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3960,10 +4156,10 @@ static int xerrno(int r) {
       static int test_112_1(void) {
         
       {
-        int fd = open("2", O_WRONLY | O_TRUNC);
+        int fd = open("3", O_WRONLY | O_TRUNC);
         if (fd < 0)
           return xerrno(fd);
-        char c = 6;
+        char c = 7;
         ssize_t cc = write(fd, &c, 1);
         close(fd);
         return cc;
@@ -3972,47 +4168,6 @@ static int xerrno(int r) {
       }
       
     static void setup_113(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-    }
-    
-      static int test_113_0(void) {
-        
-      {
-        int fd = open("2", 0x82, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_113_1(void) {
-        
-      {
-        int fd = open("3", O_WRONLY | O_TRUNC);
-        if (fd < 0)
-          return xerrno(fd);
-        char c = 8;
-        ssize_t cc = write(fd, &c, 1);
-        close(fd);
-        return cc;
-      }
-      
-      }
-      
-    static void setup_114(void) {
       
       {
         int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -4027,10 +4182,40 @@ static int xerrno(int r) {
       
     }
     
+      static int test_113_0(void) {
+        
+      {
+        int fd = open("2", 0xc2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_113_1(void) {
+        
+      {
+        int fd = open("3", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 7;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
+      
+      }
+      
+    static void setup_114(void) {
+      
+    }
+    
       static int test_114_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("2", 0xc2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4055,6 +4240,17 @@ static int xerrno(int r) {
       
     static void setup_115(void) {
       
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 5;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "2");
+      
+      unlink("__i4");
+      
     }
     
       static int test_115_0(void) {
@@ -4075,7 +4271,7 @@ static int xerrno(int r) {
         int fd = open("2", O_WRONLY | O_TRUNC);
         if (fd < 0)
           return xerrno(fd);
-        char c = 6;
+        char c = 0;
         ssize_t cc = write(fd, &c, 1);
         close(fd);
         return cc;
@@ -4087,34 +4283,21 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        char c = 6;
         write(fd, &c, 1);
         close(fd);
       }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "3");
       
       link("__i5", "2");
       
-      link("__i7", "6");
-      
       unlink("__i5");
-      
-      unlink("__i7");
       
     }
     
       static int test_116_0(void) {
         
       {
-        int fd = open("6", 0x2c2, 0666);
+        int fd = open("2", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4125,40 +4308,37 @@ static int xerrno(int r) {
       
       static int test_116_1(void) {
         
-      return unlink("2");
+      {
+        int fd = open("3", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 7;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
       
       }
       
     static void setup_117(void) {
       
       {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 5;
         write(fd, &c, 1);
         close(fd);
       }
       
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
+      link("__i4", "2");
       
-      link("__i6", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i6");
+      unlink("__i4");
       
     }
     
       static int test_117_0(void) {
         
       {
-        int fd = open("3", 0x2c2, 0666);
+        int fd = open("2", 0x82, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4169,7 +4349,15 @@ static int xerrno(int r) {
       
       static int test_117_1(void) {
         
-      return unlink("2");
+      {
+        int fd = open("2", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 6;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
       
       }
       
@@ -4191,7 +4379,7 @@ static int xerrno(int r) {
       static int test_118_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("2", 0x82, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4202,11 +4390,90 @@ static int xerrno(int r) {
       
       static int test_118_1(void) {
         
-      return unlink("3");
+      {
+        int fd = open("3", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 7;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
       
       }
       
     static void setup_119(void) {
+      
+      {
+        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i9", "3");
+      
+      unlink("__i9");
+      
+    }
+    
+      static int test_119_0(void) {
+        
+      {
+        int fd = open("2", 0x282, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_119_1(void) {
+        
+      {
+        int fd = open("3", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 7;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
+      
+      }
+      
+    static void setup_120(void) {
+      
+    }
+    
+      static int test_120_0(void) {
+        
+      {
+        int fd = open("2", 0x282, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_120_1(void) {
+        
+      {
+        int fd = open("2", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 6;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
+      
+      }
+      
+    static void setup_121(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -4234,10 +4501,10 @@ static int xerrno(int r) {
       
     }
     
-      static int test_119_0(void) {
+      static int test_121_0(void) {
         
       {
-        int fd = open("6", 0x242, 0666);
+        int fd = open("6", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4246,13 +4513,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_119_1(void) {
+      static int test_121_1(void) {
         
       return unlink("2");
       
       }
       
-    static void setup_120(void) {
+    static void setup_122(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -4278,89 +4545,10 @@ static int xerrno(int r) {
       
     }
     
-      static int test_120_0(void) {
-        
-      {
-        int fd = open("3", 0x242, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_120_1(void) {
-        
-      return unlink("2");
-      
-      }
-      
-    static void setup_121(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-    }
-    
-      static int test_121_0(void) {
-        
-      {
-        int fd = open("2", 0x242, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_121_1(void) {
-        
-      return unlink("3");
-      
-      }
-      
-    static void setup_122(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "3");
-      
-      link("__i5", "2");
-      
-      link("__i7", "6");
-      
-      unlink("__i5");
-      
-      unlink("__i7");
-      
-    }
-    
       static int test_122_0(void) {
         
       {
-        int fd = open("6", 0x42, 0666);
+        int fd = open("3", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4379,6 +4567,85 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_123_0(void) {
+        
+      {
+        int fd = open("2", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_123_1(void) {
+        
+      return unlink("3");
+      
+      }
+      
+    static void setup_124(void) {
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "3");
+      
+      link("__i5", "2");
+      
+      link("__i7", "6");
+      
+      unlink("__i5");
+      
+      unlink("__i7");
+      
+    }
+    
+      static int test_124_0(void) {
+        
+      {
+        int fd = open("6", 0x242, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_124_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_125(void) {
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 7;
         write(fd, &c, 1);
         close(fd);
@@ -4401,78 +4668,10 @@ static int xerrno(int r) {
       
     }
     
-      static int test_123_0(void) {
-        
-      {
-        int fd = open("3", 0x42, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_123_1(void) {
-        
-      return unlink("2");
-      
-      }
-      
-    static void setup_124(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-    }
-    
-      static int test_124_0(void) {
-        
-      {
-        int fd = open("2", 0x42, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_124_1(void) {
-        
-      return unlink("3");
-      
-      }
-      
-    static void setup_125(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-    }
-    
       static int test_125_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("3", 0x242, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4489,12 +4688,23 @@ static int xerrno(int r) {
       
     static void setup_126(void) {
       
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
+      
     }
     
       static int test_126_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("2", 0x242, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4505,22 +4715,33 @@ static int xerrno(int r) {
       
       static int test_126_1(void) {
         
-      return unlink("2");
+      return unlink("3");
       
       }
       
     static void setup_127(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 9;
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "3");
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
       
-      link("__i7", "4");
+      link("__i5", "3");
+      
+      link("__i5", "2");
+      
+      link("__i7", "6");
+      
+      unlink("__i5");
       
       unlink("__i7");
       
@@ -4529,7 +4750,7 @@ static int xerrno(int r) {
       static int test_127_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("6", 0x42, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4540,7 +4761,7 @@ static int xerrno(int r) {
       
       static int test_127_1(void) {
         
-      return unlink("3");
+      return unlink("2");
       
       }
       
@@ -4548,21 +4769,32 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i5", "3");
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      link("__i5", "2");
       
       unlink("__i5");
+      
+      unlink("__i6");
       
     }
     
       static int test_128_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("3", 0x42, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4573,18 +4805,29 @@ static int xerrno(int r) {
       
       static int test_128_1(void) {
         
-      return unlink("3");
+      return unlink("2");
       
       }
       
     static void setup_129(void) {
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
       
     }
     
       static int test_129_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("2", 0x42, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4602,6 +4845,63 @@ static int xerrno(int r) {
     static void setup_130(void) {
       
       {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "3");
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_130_0(void) {
+        
+      {
+        int fd = open("1", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_130_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_131(void) {
+      
+    }
+    
+      static int test_131_0(void) {
+        
+      {
+        int fd = open("1", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_131_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_132(void) {
+      
+      {
         int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 9;
         write(fd, &c, 1);
@@ -4616,65 +4916,10 @@ static int xerrno(int r) {
       
     }
     
-      static int test_130_0(void) {
-        
-      {
-        int fd = open("2", 0xc2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_130_1(void) {
-        
-      return unlink("3");
-      
-      }
-      
-    static void setup_131(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "3");
-      
-      unlink("__i5");
-      
-    }
-    
-      static int test_131_0(void) {
-        
-      {
-        int fd = open("2", 0xc2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_131_1(void) {
-        
-      return unlink("3");
-      
-      }
-      
-    static void setup_132(void) {
-      
-    }
-    
       static int test_132_0(void) {
         
       {
-        int fd = open("2", 0xc2, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4698,29 +4943,16 @@ static int xerrno(int r) {
         close(fd);
       }
       
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
       link("__i5", "3");
       
-      link("__i5", "2");
-      
-      link("__i7", "6");
-      
       unlink("__i5");
-      
-      unlink("__i7");
       
     }
     
       static int test_133_0(void) {
         
       {
-        int fd = open("6", 0x282, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4731,40 +4963,18 @@ static int xerrno(int r) {
       
       static int test_133_1(void) {
         
-      return unlink("2");
+      return unlink("3");
       
       }
       
     static void setup_134(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i6", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i6");
       
     }
     
       static int test_134_0(void) {
         
       {
-        int fd = open("3", 0x282, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4775,29 +4985,31 @@ static int xerrno(int r) {
       
       static int test_134_1(void) {
         
-      return unlink("2");
+      return unlink("3");
       
       }
       
     static void setup_135(void) {
       
       {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i5", "2");
+      link("__i7", "3");
       
-      unlink("__i5");
+      link("__i7", "4");
+      
+      unlink("__i7");
       
     }
     
       static int test_135_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("2", 0xc2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4815,6 +5027,61 @@ static int xerrno(int r) {
     static void setup_136(void) {
       
       {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_136_0(void) {
+        
+      {
+        int fd = open("2", 0xc2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_136_1(void) {
+        
+      return unlink("3");
+      
+      }
+      
+    static void setup_137(void) {
+      
+    }
+    
+      static int test_137_0(void) {
+        
+      {
+        int fd = open("2", 0xc2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_137_1(void) {
+        
+      return unlink("3");
+      
+      }
+      
+    static void setup_138(void) {
+      
+      {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 8;
         write(fd, &c, 1);
@@ -4840,87 +5107,10 @@ static int xerrno(int r) {
       
     }
     
-      static int test_136_0(void) {
-        
-      {
-        int fd = open("6", 0x82, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_136_1(void) {
-        
-      return unlink("2");
-      
-      }
-      
-    static void setup_137(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i6", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_137_0(void) {
-        
-      {
-        int fd = open("3", 0x82, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_137_1(void) {
-        
-      return unlink("2");
-      
-      }
-      
-    static void setup_138(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-    }
-    
       static int test_138_0(void) {
         
       {
-        int fd = open("2", 0x82, 0666);
+        int fd = open("6", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4931,22 +5121,31 @@ static int xerrno(int r) {
       
       static int test_138_1(void) {
         
-      return unlink("3");
+      return unlink("2");
       
       }
       
     static void setup_139(void) {
       
       {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
       
       link("__i6", "3");
       
-      link("__i6", "4");
+      link("__i5", "2");
+      
+      unlink("__i5");
       
       unlink("__i6");
       
@@ -4955,7 +5154,7 @@ static int xerrno(int r) {
       static int test_139_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("3", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4966,7 +5165,7 @@ static int xerrno(int r) {
       
       static int test_139_1(void) {
         
-      return unlink("3");
+      return unlink("2");
       
       }
       
@@ -4974,12 +5173,12 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        char c = 6;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i5", "3");
+      link("__i5", "2");
       
       unlink("__i5");
       
@@ -5005,9 +5204,145 @@ static int xerrno(int r) {
       
     static void setup_141(void) {
       
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "3");
+      
+      link("__i5", "2");
+      
+      link("__i7", "6");
+      
+      unlink("__i5");
+      
+      unlink("__i7");
+      
     }
     
       static int test_141_0(void) {
+        
+      {
+        int fd = open("6", 0x82, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_141_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_142(void) {
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_142_0(void) {
+        
+      {
+        int fd = open("3", 0x82, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_142_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_143(void) {
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_143_0(void) {
+        
+      {
+        int fd = open("2", 0x82, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_143_1(void) {
+        
+      return unlink("3");
+      
+      }
+      
+    static void setup_144(void) {
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      link("__i6", "4");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_144_0(void) {
         
       {
         int fd = open("2", 0x282, 0666);
@@ -5019,130 +5354,9 @@ static int xerrno(int r) {
       
       }
       
-      static int test_141_1(void) {
-        
-      return unlink("3");
-      
-      }
-      
-    static void setup_142(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i7");
-      
-    }
-    
-      static int test_142_0(void) {
-        
-      {
-        int fd = open("3", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_142_1(void) {
-        
-      return link("2", "3");
-      
-      }
-      
-    static void setup_143(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i7");
-      
-    }
-    
-      static int test_143_0(void) {
-        
-      {
-        int fd = open("2", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_143_1(void) {
-        
-      return link("3", "4");
-      
-      }
-      
-    static void setup_144(void) {
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i6", "3");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_144_0(void) {
-        
-      {
-        int fd = open("3", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
       static int test_144_1(void) {
         
-      return link("2", "3");
+      return unlink("3");
       
       }
       
@@ -5150,32 +5364,21 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
       
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "3");
-      
-      link("__i5", "2");
+      link("__i5", "3");
       
       unlink("__i5");
-      
-      unlink("__i7");
       
     }
     
       static int test_145_0(void) {
         
       {
-        int fd = open("3", 0x242, 0666);
+        int fd = open("2", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5186,40 +5389,18 @@ static int xerrno(int r) {
       
       static int test_145_1(void) {
         
-      return link("2", "3");
+      return unlink("3");
       
       }
       
     static void setup_146(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i7");
       
     }
     
       static int test_146_0(void) {
         
       {
-        int fd = open("2", 0x242, 0666);
+        int fd = open("2", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5230,29 +5411,40 @@ static int xerrno(int r) {
       
       static int test_146_1(void) {
         
-      return link("3", "4");
+      return unlink("3");
       
       }
       
     static void setup_147(void) {
       
       {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i6", "3");
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
       
-      unlink("__i6");
+      link("__i7", "3");
+      
+      link("__i4", "2");
+      
+      unlink("__i4");
+      
+      unlink("__i7");
       
     }
     
       static int test_147_0(void) {
         
       {
-        int fd = open("3", 0x242, 0666);
+        int fd = open("3", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5271,14 +5463,14 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
       {
         int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
@@ -5296,7 +5488,7 @@ static int xerrno(int r) {
       static int test_148_0(void) {
         
       {
-        int fd = open("3", 0x42, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5307,55 +5499,11 @@ static int xerrno(int r) {
       
       static int test_148_1(void) {
         
-      return link("2", "3");
-      
-      }
-      
-    static void setup_149(void) {
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i6", "3");
-      
-      link("__i7", "2");
-      
-      unlink("__i6");
-      
-      unlink("__i7");
-      
-    }
-    
-      static int test_149_0(void) {
-        
-      {
-        int fd = open("2", 0x42, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_149_1(void) {
-        
       return link("3", "4");
       
       }
       
-    static void setup_150(void) {
+    static void setup_149(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -5370,10 +5518,54 @@ static int xerrno(int r) {
       
     }
     
+      static int test_149_0(void) {
+        
+      {
+        int fd = open("3", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_149_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_150(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i7", "3");
+      
+      link("__i4", "2");
+      
+      unlink("__i4");
+      
+      unlink("__i7");
+      
+    }
+    
       static int test_150_0(void) {
         
       {
-        int fd = open("3", 0x42, 0666);
+        int fd = open("3", 0x242, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5391,347 +5583,6 @@ static int xerrno(int r) {
     static void setup_151(void) {
       
       {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i8", "3");
-      
-      link("__i6", "2");
-      
-      unlink("__i8");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_151_0(void) {
-        
-      {
-        int fd = open("1", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_151_1(void) {
-        
-      return link("2", "3");
-      
-      }
-      
-    static void setup_152(void) {
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i6", "2");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_152_0(void) {
-        
-      {
-        int fd = open("1", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_152_1(void) {
-        
-      return link("2", "3");
-      
-      }
-      
-    static void setup_153(void) {
-      
-    }
-    
-      static int test_153_0(void) {
-        
-      {
-        int fd = open("2", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_153_1(void) {
-        
-      return link("1", "2");
-      
-      }
-      
-    static void setup_154(void) {
-      
-      {
-        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "3");
-      
-      link("__i10", "4");
-      
-      unlink("__i10");
-      
-      unlink("__i7");
-      
-    }
-    
-      static int test_154_0(void) {
-        
-      {
-        int fd = open("2", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_154_1(void) {
-        
-      return link("3", "4");
-      
-      }
-      
-    static void setup_155(void) {
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "3");
-      
-      unlink("__i7");
-      
-    }
-    
-      static int test_155_0(void) {
-        
-      {
-        int fd = open("2", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_155_1(void) {
-        
-      return link("3", "4");
-      
-      }
-      
-    static void setup_156(void) {
-      
-    }
-    
-      static int test_156_0(void) {
-        
-      {
-        int fd = open("3", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_156_1(void) {
-        
-      return link("2", "3");
-      
-      }
-      
-    static void setup_157(void) {
-      
-      {
-        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i6", "3");
-      
-      link("__i10", "4");
-      
-      unlink("__i10");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_157_0(void) {
-        
-      {
-        int fd = open("2", 0xc2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_157_1(void) {
-        
-      return link("3", "4");
-      
-      }
-      
-    static void setup_158(void) {
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i6", "3");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_158_0(void) {
-        
-      {
-        int fd = open("2", 0xc2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_158_1(void) {
-        
-      return link("3", "4");
-      
-      }
-      
-    static void setup_159(void) {
-      
-    }
-    
-      static int test_159_0(void) {
-        
-      {
-        int fd = open("3", 0xc2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_159_1(void) {
-        
-      return link("2", "3");
-      
-      }
-      
-    static void setup_160(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i7");
-      
-    }
-    
-      static int test_160_0(void) {
-        
-      {
-        int fd = open("3", 0x282, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_160_1(void) {
-        
-      return link("2", "3");
-      
-      }
-      
-    static void setup_161(void) {
-      
-      {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 8;
         write(fd, &c, 1);
@@ -5755,10 +5606,362 @@ static int xerrno(int r) {
       
     }
     
+      static int test_151_0(void) {
+        
+      {
+        int fd = open("2", 0x242, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_151_1(void) {
+        
+      return link("3", "4");
+      
+      }
+      
+    static void setup_152(void) {
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_152_0(void) {
+        
+      {
+        int fd = open("3", 0x242, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_152_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_153(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i7", "3");
+      
+      link("__i4", "2");
+      
+      unlink("__i4");
+      
+      unlink("__i7");
+      
+    }
+    
+      static int test_153_0(void) {
+        
+      {
+        int fd = open("3", 0x42, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_153_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_154(void) {
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i7", "3");
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
+      
+      unlink("__i7");
+      
+    }
+    
+      static int test_154_0(void) {
+        
+      {
+        int fd = open("2", 0x42, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_154_1(void) {
+        
+      return link("3", "4");
+      
+      }
+      
+    static void setup_155(void) {
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_155_0(void) {
+        
+      {
+        int fd = open("3", 0x42, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_155_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_156(void) {
+      
+      {
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i8", "3");
+      
+      link("__i5", "2");
+      
+      unlink("__i8");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_156_0(void) {
+        
+      {
+        int fd = open("1", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_156_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_157(void) {
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_157_0(void) {
+        
+      {
+        int fd = open("1", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_157_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_158(void) {
+      
+    }
+    
+      static int test_158_0(void) {
+        
+      {
+        int fd = open("2", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_158_1(void) {
+        
+      return link("1", "2");
+      
+      }
+      
+    static void setup_159(void) {
+      
+      {
+        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i7", "3");
+      
+      link("__i10", "4");
+      
+      unlink("__i10");
+      
+      unlink("__i7");
+      
+    }
+    
+      static int test_159_0(void) {
+        
+      {
+        int fd = open("2", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_159_1(void) {
+        
+      return link("3", "4");
+      
+      }
+      
+    static void setup_160(void) {
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_160_0(void) {
+        
+      {
+        int fd = open("2", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_160_1(void) {
+        
+      return link("3", "4");
+      
+      }
+      
+    static void setup_161(void) {
+      
+    }
+    
       static int test_161_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("3", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5769,29 +5972,40 @@ static int xerrno(int r) {
       
       static int test_161_1(void) {
         
-      return link("3", "4");
+      return link("2", "3");
       
       }
       
     static void setup_162(void) {
       
       {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i6", "3");
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
+        write(fd, &c, 1);
+        close(fd);
+      }
       
-      unlink("__i6");
+      link("__i7", "3");
+      
+      link("__i10", "4");
+      
+      unlink("__i10");
+      
+      unlink("__i7");
       
     }
     
       static int test_162_0(void) {
         
       {
-        int fd = open("3", 0x282, 0666);
+        int fd = open("2", 0xc2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5802,103 +6016,15 @@ static int xerrno(int r) {
       
       static int test_162_1(void) {
         
-      return link("2", "3");
+      return link("3", "4");
       
       }
       
     static void setup_163(void) {
       
       {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i7");
-      
-    }
-    
-      static int test_163_0(void) {
-        
-      {
-        int fd = open("3", 0x82, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_163_1(void) {
-        
-      return link("2", "3");
-      
-      }
-      
-    static void setup_164(void) {
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i7");
-      
-    }
-    
-      static int test_164_0(void) {
-        
-      {
-        int fd = open("2", 0x82, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_164_1(void) {
-        
-      return link("3", "4");
-      
-      }
-      
-    static void setup_165(void) {
-      
-      {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
@@ -5909,10 +6035,76 @@ static int xerrno(int r) {
       
     }
     
+      static int test_163_0(void) {
+        
+      {
+        int fd = open("2", 0xc2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_163_1(void) {
+        
+      return link("3", "4");
+      
+      }
+      
+    static void setup_164(void) {
+      
+    }
+    
+      static int test_164_0(void) {
+        
+      {
+        int fd = open("3", 0xc2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_164_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_165(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i7", "3");
+      
+      link("__i4", "2");
+      
+      unlink("__i4");
+      
+      unlink("__i7");
+      
+    }
+    
       static int test_165_0(void) {
         
       {
-        int fd = open("3", 0x82, 0666);
+        int fd = open("3", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5930,7 +6122,7 @@ static int xerrno(int r) {
     static void setup_166(void) {
       
       {
-        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 8;
         write(fd, &c, 1);
         close(fd);
@@ -5945,9 +6137,9 @@ static int xerrno(int r) {
       
       link("__i7", "3");
       
-      link("__i9", "4");
+      link("__i5", "2");
       
-      unlink("__i9");
+      unlink("__i5");
       
       unlink("__i7");
       
@@ -5974,22 +6166,22 @@ static int xerrno(int r) {
     static void setup_167(void) {
       
       {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i7", "3");
+      link("__i6", "3");
       
-      unlink("__i7");
+      unlink("__i6");
       
     }
     
       static int test_167_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("3", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6000,18 +6192,40 @@ static int xerrno(int r) {
       
       static int test_167_1(void) {
         
-      return link("3", "4");
+      return link("2", "3");
       
       }
       
     static void setup_168(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i7", "3");
+      
+      link("__i4", "2");
+      
+      unlink("__i4");
+      
+      unlink("__i7");
       
     }
     
       static int test_168_0(void) {
         
       {
-        int fd = open("3", 0x282, 0666);
+        int fd = open("3", 0x82, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6027,52 +6241,6 @@ static int xerrno(int r) {
       }
       
     static void setup_169(void) {
-      
-      {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i8", "3");
-      
-      link("__i6", "2");
-      
-      link("__i6", "4");
-      
-      unlink("__i8");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_169_0(void) {
-        
-      {
-        int fd = open("2", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_169_1(void) {
-        
-      return rename("3", "2");
-      
-      }
-      
-    static void setup_170(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -6098,10 +6266,43 @@ static int xerrno(int r) {
       
     }
     
+      static int test_169_0(void) {
+        
+      {
+        int fd = open("2", 0x82, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_169_1(void) {
+        
+      return link("3", "4");
+      
+      }
+      
+    static void setup_170(void) {
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      unlink("__i6");
+      
+    }
+    
       static int test_170_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("3", 0x82, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6112,40 +6313,40 @@ static int xerrno(int r) {
       
       static int test_170_1(void) {
         
-      return rename("3", "2");
+      return link("2", "3");
       
       }
       
     static void setup_171(void) {
       
       {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
       {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i8", "3");
+      link("__i7", "3");
       
-      link("__i6", "2");
+      link("__i9", "4");
       
-      unlink("__i8");
+      unlink("__i9");
       
-      unlink("__i6");
+      unlink("__i7");
       
     }
     
       static int test_171_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("2", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6156,29 +6357,29 @@ static int xerrno(int r) {
       
       static int test_171_1(void) {
         
-      return rename("3", "4");
+      return link("3", "4");
       
       }
       
     static void setup_172(void) {
       
       {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i5", "2");
+      link("__i6", "3");
       
-      unlink("__i5");
+      unlink("__i6");
       
     }
     
       static int test_172_0(void) {
         
       {
-        int fd = open("2", 0x2c2, 0666);
+        int fd = open("2", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6189,22 +6390,44 @@ static int xerrno(int r) {
       
       static int test_172_1(void) {
         
-      return rename("3", "2");
+      return link("3", "4");
       
       }
       
     static void setup_173(void) {
       
+    }
+    
+      static int test_173_0(void) {
+        
+      {
+        int fd = open("3", 0x282, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_173_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_174(void) {
+      
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
+        char c = 7;
         write(fd, &c, 1);
         close(fd);
       }
@@ -6221,54 +6444,10 @@ static int xerrno(int r) {
       
     }
     
-      static int test_173_0(void) {
-        
-      {
-        int fd = open("2", 0x242, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_173_1(void) {
-        
-      return rename("3", "2");
-      
-      }
-      
-    static void setup_174(void) {
-      
-      {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i8", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i8");
-      
-      unlink("__i5");
-      
-    }
-    
       static int test_174_0(void) {
         
       {
-        int fd = open("2", 0x242, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6312,7 +6491,7 @@ static int xerrno(int r) {
       static int test_175_0(void) {
         
       {
-        int fd = open("2", 0x242, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6323,11 +6502,55 @@ static int xerrno(int r) {
       
       static int test_175_1(void) {
         
-      return rename("3", "4");
+      return rename("3", "2");
       
       }
       
     static void setup_176(void) {
+      
+      {
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i8", "3");
+      
+      link("__i6", "2");
+      
+      unlink("__i8");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_176_0(void) {
+        
+      {
+        int fd = open("2", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_176_1(void) {
+        
+      return rename("3", "4");
+      
+      }
+      
+    static void setup_177(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -6342,7 +6565,53 @@ static int xerrno(int r) {
       
     }
     
-      static int test_176_0(void) {
+      static int test_177_0(void) {
+        
+      {
+        int fd = open("2", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_177_1(void) {
+        
+      return rename("3", "2");
+      
+      }
+      
+    static void setup_178(void) {
+      
+      {
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i8", "3");
+      
+      link("__i6", "2");
+      
+      link("__i6", "4");
+      
+      unlink("__i8");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_178_0(void) {
         
       {
         int fd = open("2", 0x242, 0666);
@@ -6354,13 +6623,134 @@ static int xerrno(int r) {
       
       }
       
-      static int test_176_1(void) {
+      static int test_178_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_177(void) {
+    static void setup_179(void) {
+      
+      {
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i8", "3");
+      
+      link("__i5", "2");
+      
+      unlink("__i8");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_179_0(void) {
+        
+      {
+        int fd = open("2", 0x242, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_179_1(void) {
+        
+      return rename("3", "2");
+      
+      }
+      
+    static void setup_180(void) {
+      
+      {
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i8", "3");
+      
+      link("__i6", "2");
+      
+      unlink("__i8");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_180_0(void) {
+        
+      {
+        int fd = open("2", 0x242, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_180_1(void) {
+        
+      return rename("3", "4");
+      
+      }
+      
+    static void setup_181(void) {
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "2");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_181_0(void) {
+        
+      {
+        int fd = open("2", 0x242, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_181_1(void) {
+        
+      return rename("3", "2");
+      
+      }
+      
+    static void setup_182(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -6388,7 +6778,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_177_0(void) {
+      static int test_182_0(void) {
         
       {
         int fd = open("2", 0x42, 0666);
@@ -6400,39 +6790,39 @@ static int xerrno(int r) {
       
       }
       
-      static int test_177_1(void) {
+      static int test_182_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_178(void) {
+    static void setup_183(void) {
       
       {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
         write(fd, &c, 1);
         close(fd);
       }
       
       {
         int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        char c = 6;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i6", "3");
+      link("__i7", "3");
       
-      link("__i7", "2");
+      link("__i5", "2");
       
-      unlink("__i6");
+      unlink("__i5");
       
       unlink("__i7");
       
     }
     
-      static int test_178_0(void) {
+      static int test_183_0(void) {
         
       {
         int fd = open("2", 0x42, 0666);
@@ -6444,13 +6834,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_178_1(void) {
+      static int test_183_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_179(void) {
+    static void setup_184(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -6476,7 +6866,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_179_0(void) {
+      static int test_184_0(void) {
         
       {
         int fd = open("2", 0x42, 0666);
@@ -6488,28 +6878,28 @@ static int xerrno(int r) {
       
       }
       
-      static int test_179_1(void) {
+      static int test_184_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_180(void) {
+    static void setup_185(void) {
       
       {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i6", "2");
+      link("__i7", "2");
       
-      unlink("__i6");
+      unlink("__i7");
       
     }
     
-      static int test_180_0(void) {
+      static int test_185_0(void) {
         
       {
         int fd = open("2", 0x42, 0666);
@@ -6521,13 +6911,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_180_1(void) {
+      static int test_185_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_181(void) {
+    static void setup_186(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -6555,7 +6945,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_181_0(void) {
+      static int test_186_0(void) {
         
       {
         int fd = open("1", 0x2c2, 0666);
@@ -6567,13 +6957,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_181_1(void) {
+      static int test_186_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_182(void) {
+    static void setup_187(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -6588,7 +6978,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_182_0(void) {
+      static int test_187_0(void) {
         
       {
         int fd = open("1", 0x2c2, 0666);
@@ -6600,213 +6990,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_182_1(void) {
+      static int test_187_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_183(void) {
-      
-    }
-    
-      static int test_183_0(void) {
-        
-      {
-        int fd = open("2", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_183_1(void) {
-        
-      return rename("1", "2");
-      
-      }
-      
-    static void setup_184(void) {
-      
-      {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 10;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 10;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i11", "3");
-      
-      link("__i8", "5");
-      
-      link("__i8", "4");
-      
-      unlink("__i8");
-      
-      unlink("__i11");
-      
-    }
-    
-      static int test_184_0(void) {
-        
-      {
-        int fd = open("2", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_184_1(void) {
-        
-      return rename("3", "4");
-      
-      }
-      
-    static void setup_185(void) {
-      
-      {
-        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i10", "3");
-      
-      link("__i9", "4");
-      
-      unlink("__i9");
-      
-      unlink("__i10");
-      
-    }
-    
-      static int test_185_0(void) {
-        
-      {
-        int fd = open("2", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_185_1(void) {
-        
-      return rename("3", "4");
-      
-      }
-      
-    static void setup_186(void) {
-      
-      {
-        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i10", "9");
-      
-      link("__i6", "3");
-      
-      unlink("__i10");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_186_0(void) {
-        
-      {
-        int fd = open("2", 0x242, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_186_1(void) {
-        
-      return rename("3", "2");
-      
-      }
-      
-    static void setup_187(void) {
-      
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i6", "3");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_187_0(void) {
-        
-      {
-        int fd = open("2", 0x242, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_187_1(void) {
-        
-      return rename("3", "2");
-      
-      }
-      
     static void setup_188(void) {
-      
-      {
-        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i9", "3");
-      
-      unlink("__i9");
       
     }
     
@@ -6824,33 +7014,11 @@ static int xerrno(int r) {
       
       static int test_188_1(void) {
         
-      return rename("3", "4");
+      return rename("1", "2");
       
       }
       
     static void setup_189(void) {
-      
-    }
-    
-      static int test_189_0(void) {
-        
-      {
-        int fd = open("2", 0x2c2, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_189_1(void) {
-        
-      return rename("3", "2");
-      
-      }
-      
-    static void setup_190(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -6878,10 +7046,10 @@ static int xerrno(int r) {
       
     }
     
-      static int test_190_0(void) {
+      static int test_189_0(void) {
         
       {
-        int fd = open("2", 0xc2, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6890,13 +7058,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_190_1(void) {
+      static int test_189_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_191(void) {
+    static void setup_190(void) {
       
       {
         int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -6922,10 +7090,43 @@ static int xerrno(int r) {
       
     }
     
+      static int test_190_0(void) {
+        
+      {
+        int fd = open("2", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_190_1(void) {
+        
+      return rename("3", "4");
+      
+      }
+      
+    static void setup_191(void) {
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      unlink("__i6");
+      
+    }
+    
       static int test_191_0(void) {
         
       {
-        int fd = open("2", 0xc2, 0666);
+        int fd = open("2", 0x242, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6936,7 +7137,7 @@ static int xerrno(int r) {
       
       static int test_191_1(void) {
         
-      return rename("3", "4");
+      return rename("3", "2");
       
       }
       
@@ -6944,7 +7145,7 @@ static int xerrno(int r) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
+        char c = 0;
         write(fd, &c, 1);
         close(fd);
       }
@@ -6958,7 +7159,7 @@ static int xerrno(int r) {
       static int test_192_0(void) {
         
       {
-        int fd = open("2", 0x42, 0666);
+        int fd = open("2", 0x242, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6976,39 +7177,6 @@ static int xerrno(int r) {
     static void setup_193(void) {
       
       {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 7;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i6", "3");
-      
-      unlink("__i6");
-      
-    }
-    
-      static int test_193_0(void) {
-        
-      {
-        int fd = open("2", 0x42, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_193_1(void) {
-        
-      return rename("3", "2");
-      
-      }
-      
-    static void setup_194(void) {
-      
-      {
         int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 7;
         write(fd, &c, 1);
@@ -7021,10 +7189,32 @@ static int xerrno(int r) {
       
     }
     
+      static int test_193_0(void) {
+        
+      {
+        int fd = open("2", 0x2c2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_193_1(void) {
+        
+      return rename("3", "4");
+      
+      }
+      
+    static void setup_194(void) {
+      
+    }
+    
       static int test_194_0(void) {
         
       {
-        int fd = open("2", 0xc2, 0666);
+        int fd = open("2", 0x2c2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7035,11 +7225,35 @@ static int xerrno(int r) {
       
       static int test_194_1(void) {
         
-      return rename("3", "4");
+      return rename("3", "2");
       
       }
       
     static void setup_195(void) {
+      
+      {
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 10;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 10;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i11", "3");
+      
+      link("__i8", "5");
+      
+      link("__i8", "4");
+      
+      unlink("__i8");
+      
+      unlink("__i11");
       
     }
     
@@ -7057,33 +7271,31 @@ static int xerrno(int r) {
       
       static int test_195_1(void) {
         
-      return rename("3", "2");
+      return rename("3", "4");
       
       }
       
     static void setup_196(void) {
       
       {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
+        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
+        char c = 8;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i8", "3");
+      link("__i6", "3");
       
-      link("__i6", "2");
+      link("__i10", "4");
       
-      link("__i6", "4");
-      
-      unlink("__i8");
+      unlink("__i10");
       
       unlink("__i6");
       
@@ -7092,7 +7304,7 @@ static int xerrno(int r) {
       static int test_196_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("2", 0xc2, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7103,40 +7315,29 @@ static int xerrno(int r) {
       
       static int test_196_1(void) {
         
-      return rename("3", "2");
+      return rename("3", "4");
       
       }
       
     static void setup_197(void) {
       
       {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
         write(fd, &c, 1);
         close(fd);
       }
       
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
+      link("__i8", "3");
       
-      link("__i7", "3");
-      
-      link("__i5", "2");
-      
-      unlink("__i5");
-      
-      unlink("__i7");
+      unlink("__i8");
       
     }
     
       static int test_197_0(void) {
         
       {
-        int fd = open("2", 0x282, 0666);
+        int fd = open("2", 0x42, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7154,6 +7355,184 @@ static int xerrno(int r) {
     static void setup_198(void) {
       
       {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "3");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_198_0(void) {
+        
+      {
+        int fd = open("2", 0x42, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_198_1(void) {
+        
+      return rename("3", "2");
+      
+      }
+      
+    static void setup_199(void) {
+      
+      {
+        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 7;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i9", "3");
+      
+      unlink("__i9");
+      
+    }
+    
+      static int test_199_0(void) {
+        
+      {
+        int fd = open("2", 0xc2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_199_1(void) {
+        
+      return rename("3", "4");
+      
+      }
+      
+    static void setup_200(void) {
+      
+    }
+    
+      static int test_200_0(void) {
+        
+      {
+        int fd = open("2", 0xc2, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_200_1(void) {
+        
+      return rename("3", "2");
+      
+      }
+      
+    static void setup_201(void) {
+      
+      {
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i8", "3");
+      
+      link("__i6", "2");
+      
+      link("__i6", "4");
+      
+      unlink("__i8");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_201_0(void) {
+        
+      {
+        int fd = open("2", 0x282, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_201_1(void) {
+        
+      return rename("3", "2");
+      
+      }
+      
+    static void setup_202(void) {
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i7", "3");
+      
+      link("__i5", "2");
+      
+      unlink("__i5");
+      
+      unlink("__i7");
+      
+    }
+    
+      static int test_202_0(void) {
+        
+      {
+        int fd = open("2", 0x282, 0666);
+        if (fd < 0)
+          return xerrno(fd);
+        close(fd);
+        return 0;
+      }
+      
+      }
+      
+      static int test_202_1(void) {
+        
+      return rename("3", "2");
+      
+      }
+      
+    static void setup_203(void) {
+      
+      {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 7;
         write(fd, &c, 1);
@@ -7177,7 +7556,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_198_0(void) {
+      static int test_203_0(void) {
         
       {
         int fd = open("2", 0x282, 0666);
@@ -7189,13 +7568,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_198_1(void) {
+      static int test_203_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_199(void) {
+    static void setup_204(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -7210,7 +7589,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_199_0(void) {
+      static int test_204_0(void) {
         
       {
         int fd = open("2", 0x282, 0666);
@@ -7222,13 +7601,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_199_1(void) {
+      static int test_204_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_200(void) {
+    static void setup_205(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -7256,7 +7635,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_200_0(void) {
+      static int test_205_0(void) {
         
       {
         int fd = open("2", 0x82, 0666);
@@ -7268,13 +7647,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_200_1(void) {
+      static int test_205_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_201(void) {
+    static void setup_206(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -7300,7 +7679,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_201_0(void) {
+      static int test_206_0(void) {
         
       {
         int fd = open("2", 0x82, 0666);
@@ -7312,13 +7691,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_201_1(void) {
+      static int test_206_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_202(void) {
+    static void setup_207(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -7344,7 +7723,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_202_0(void) {
+      static int test_207_0(void) {
         
       {
         int fd = open("2", 0x82, 0666);
@@ -7356,13 +7735,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_202_1(void) {
+      static int test_207_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_203(void) {
+    static void setup_208(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -7377,7 +7756,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_203_0(void) {
+      static int test_208_0(void) {
         
       {
         int fd = open("2", 0x82, 0666);
@@ -7389,13 +7768,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_203_1(void) {
+      static int test_208_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_204(void) {
+    static void setup_209(void) {
       
       {
         int fd = open("__i11", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -7423,7 +7802,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_204_0(void) {
+      static int test_209_0(void) {
         
       {
         int fd = open("2", 0x282, 0666);
@@ -7435,39 +7814,39 @@ static int xerrno(int r) {
       
       }
       
-      static int test_204_1(void) {
+      static int test_209_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_205(void) {
-      
-      {
-        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
-        write(fd, &c, 1);
-        close(fd);
-      }
+    static void setup_210(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 8;
+        char c = 9;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i10", "3");
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 9;
+        write(fd, &c, 1);
+        close(fd);
+      }
       
-      link("__i6", "4");
+      link("__i6", "3");
       
-      unlink("__i10");
+      link("__i7", "4");
       
       unlink("__i6");
       
+      unlink("__i7");
+      
     }
     
-      static int test_205_0(void) {
+      static int test_210_0(void) {
         
       {
         int fd = open("2", 0x282, 0666);
@@ -7479,13 +7858,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_205_1(void) {
+      static int test_210_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_206(void) {
+    static void setup_211(void) {
       
       {
         int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -7500,171 +7879,21 @@ static int xerrno(int r) {
       
     }
     
-      static int test_206_0(void) {
-        
-      {
-        int fd = open("2", 0x282, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_206_1(void) {
-        
-      return rename("3", "4");
-      
-      }
-      
-    static void setup_207(void) {
-      
-    }
-    
-      static int test_207_0(void) {
-        
-      {
-        int fd = open("2", 0x282, 0666);
-        if (fd < 0)
-          return xerrno(fd);
-        close(fd);
-        return 0;
-      }
-      
-      }
-      
-      static int test_207_1(void) {
-        
-      return rename("2", "2");
-      
-      }
-      
-    static void setup_208(void) {
-      
-    }
-    
-      static int test_208_0(void) {
-        
-      {
-        int fd = open("1", O_RDONLY);
-        if (fd < 0)
-          return xerrno(fd);
-        char c;
-        ssize_t cc = read(fd, &c, 1);
-        close(fd);
-        return (cc > 0) ? c : INT_MIN;
-      }
-      
-      }
-      
-      static int test_208_1(void) {
-        
-      {
-        int fd = open("2", O_RDONLY);
-        if (fd < 0)
-          return xerrno(fd);
-        char c;
-        ssize_t cc = read(fd, &c, 1);
-        close(fd);
-        return (cc > 0) ? c : INT_MIN;
-      }
-      
-      }
-      
-    static void setup_209(void) {
-      
-    }
-    
-      static int test_209_0(void) {
-        
-      {
-        int fd = open("1", O_RDONLY);
-        if (fd < 0)
-          return xerrno(fd);
-        char c;
-        ssize_t cc = read(fd, &c, 1);
-        close(fd);
-        return (cc > 0) ? c : INT_MIN;
-      }
-      
-      }
-      
-      static int test_209_1(void) {
-        
-      {
-        int fd = open("2", O_RDONLY);
-        if (fd < 0)
-          return xerrno(fd);
-        char c;
-        ssize_t cc = read(fd, &c, 1);
-        close(fd);
-        return (cc > 0) ? c : INT_MIN;
-      }
-      
-      }
-      
-    static void setup_210(void) {
-      
-    }
-    
-      static int test_210_0(void) {
-        
-      {
-        int fd = open("1", O_RDONLY);
-        if (fd < 0)
-          return xerrno(fd);
-        char c;
-        ssize_t cc = read(fd, &c, 1);
-        close(fd);
-        return (cc > 0) ? c : INT_MIN;
-      }
-      
-      }
-      
-      static int test_210_1(void) {
-        
-      {
-        int fd = open("2", O_RDONLY);
-        if (fd < 0)
-          return xerrno(fd);
-        char c;
-        ssize_t cc = read(fd, &c, 1);
-        close(fd);
-        return (cc > 0) ? c : INT_MIN;
-      }
-      
-      }
-      
-    static void setup_211(void) {
-      
-    }
-    
       static int test_211_0(void) {
         
       {
-        int fd = open("1", O_RDONLY);
+        int fd = open("2", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
-        char c;
-        ssize_t cc = read(fd, &c, 1);
         close(fd);
-        return (cc > 0) ? c : INT_MIN;
+        return 0;
       }
       
       }
       
       static int test_211_1(void) {
         
-      {
-        int fd = open("2", O_WRONLY | O_TRUNC);
-        if (fd < 0)
-          return xerrno(fd);
-        char c = 0;
-        ssize_t cc = write(fd, &c, 1);
-        close(fd);
-        return cc;
-      }
+      return rename("3", "4");
       
       }
       
@@ -7675,32 +7904,70 @@ static int xerrno(int r) {
       static int test_212_0(void) {
         
       {
-        int fd = open("1", O_RDONLY);
+        int fd = open("2", 0x282, 0666);
         if (fd < 0)
           return xerrno(fd);
-        char c;
-        ssize_t cc = read(fd, &c, 1);
         close(fd);
-        return (cc > 0) ? c : INT_MIN;
+        return 0;
       }
       
       }
       
       static int test_212_1(void) {
         
-      {
-        int fd = open("2", O_WRONLY | O_TRUNC);
-        if (fd < 0)
-          return xerrno(fd);
-        char c = 0;
-        ssize_t cc = write(fd, &c, 1);
-        close(fd);
-        return cc;
-      }
+      return rename("2", "2");
       
       }
       
     static void setup_213(void) {
+      
+      {
+        int fd = open("__i3", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i3", "11");
+      
+      link("__i3", "10");
+      
+      link("__i3", "13");
+      
+      link("__i3", "12");
+      
+      link("__i3", "14");
+      
+      link("__i3", "1");
+      
+      link("__i3", "0");
+      
+      link("__i3", "3");
+      
+      link("__i4", "2");
+      
+      link("__i3", "5");
+      
+      link("__i3", "4");
+      
+      link("__i3", "7");
+      
+      link("__i3", "6");
+      
+      link("__i3", "9");
+      
+      link("__i3", "8");
+      
+      unlink("__i3");
+      
+      unlink("__i4");
       
     }
     
@@ -7721,13 +7988,13 @@ static int xerrno(int r) {
       static int test_213_1(void) {
         
       {
-        int fd = open("2", O_WRONLY | O_TRUNC);
+        int fd = open("2", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
-        char c = 0;
-        ssize_t cc = write(fd, &c, 1);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
         close(fd);
-        return cc;
+        return (cc > 0) ? c : INT_MIN;
       }
       
       }
@@ -7752,7 +8019,15 @@ static int xerrno(int r) {
       
       static int test_214_1(void) {
         
-      return unlink("2");
+      {
+        int fd = open("2", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
       
       }
       
@@ -7776,7 +8051,15 @@ static int xerrno(int r) {
       
       static int test_215_1(void) {
         
-      return unlink("2");
+      {
+        int fd = open("2", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
       
       }
       
@@ -7800,11 +8083,67 @@ static int xerrno(int r) {
       
       static int test_216_1(void) {
         
-      return unlink("2");
+      {
+        int fd = open("2", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
       
       }
       
     static void setup_217(void) {
+      
+      {
+        int fd = open("__i3", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 4;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 4;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i3", "11");
+      
+      link("__i3", "10");
+      
+      link("__i3", "13");
+      
+      link("__i3", "12");
+      
+      link("__i3", "14");
+      
+      link("__i3", "1");
+      
+      link("__i3", "0");
+      
+      link("__i3", "3");
+      
+      link("__i5", "2");
+      
+      link("__i3", "5");
+      
+      link("__i3", "4");
+      
+      link("__i3", "7");
+      
+      link("__i3", "6");
+      
+      link("__i3", "9");
+      
+      link("__i3", "8");
+      
+      unlink("__i3");
+      
+      unlink("__i5");
       
     }
     
@@ -7824,7 +8163,15 @@ static int xerrno(int r) {
       
       static int test_217_1(void) {
         
-      return unlink("2");
+      {
+        int fd = open("2", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 0;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
       
       }
       
@@ -7848,7 +8195,15 @@ static int xerrno(int r) {
       
       static int test_218_1(void) {
         
-      return link("2", "0");
+      {
+        int fd = open("2", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 0;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
       
       }
       
@@ -7872,7 +8227,15 @@ static int xerrno(int r) {
       
       static int test_219_1(void) {
         
-      return link("2", "3");
+      {
+        int fd = open("2", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 0;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
       
       }
       
@@ -7896,18 +8259,74 @@ static int xerrno(int r) {
       
       static int test_220_1(void) {
         
-      return link("2", "0");
+      {
+        int fd = open("2", O_WRONLY | O_TRUNC);
+        if (fd < 0)
+          return xerrno(fd);
+        char c = 0;
+        ssize_t cc = write(fd, &c, 1);
+        close(fd);
+        return cc;
+      }
       
       }
       
     static void setup_221(void) {
+      
+      {
+        int fd = open("__i3", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i3", "11");
+      
+      link("__i3", "10");
+      
+      link("__i3", "13");
+      
+      link("__i3", "12");
+      
+      link("__i3", "14");
+      
+      link("__i3", "1");
+      
+      link("__i3", "0");
+      
+      link("__i3", "3");
+      
+      link("__i3", "2");
+      
+      link("__i3", "5");
+      
+      link("__i5", "4");
+      
+      link("__i3", "7");
+      
+      link("__i3", "6");
+      
+      link("__i3", "9");
+      
+      link("__i3", "8");
+      
+      unlink("__i3");
+      
+      unlink("__i5");
       
     }
     
       static int test_221_0(void) {
         
       {
-        int fd = open("1", O_RDONLY);
+        int fd = open("4", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
         char c;
@@ -7920,18 +8339,66 @@ static int xerrno(int r) {
       
       static int test_221_1(void) {
         
-      return rename("2", "0");
+      return unlink("1");
       
       }
       
     static void setup_222(void) {
+      
+      {
+        int fd = open("__i3", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "11");
+      
+      link("__i4", "10");
+      
+      link("__i4", "13");
+      
+      link("__i4", "12");
+      
+      link("__i4", "14");
+      
+      link("__i3", "1");
+      
+      link("__i4", "0");
+      
+      link("__i4", "3");
+      
+      link("__i4", "2");
+      
+      link("__i4", "5");
+      
+      link("__i4", "4");
+      
+      link("__i4", "7");
+      
+      link("__i4", "6");
+      
+      link("__i4", "9");
+      
+      link("__i4", "8");
+      
+      unlink("__i3");
+      
+      unlink("__i4");
       
     }
     
       static int test_222_0(void) {
         
       {
-        int fd = open("1", O_RDONLY);
+        int fd = open("2", O_RDONLY);
         if (fd < 0)
           return xerrno(fd);
         char c;
@@ -7944,7 +8411,7 @@ static int xerrno(int r) {
       
       static int test_222_1(void) {
         
-      return rename("2", "3");
+      return unlink("1");
       
       }
       
@@ -7968,39 +8435,552 @@ static int xerrno(int r) {
       
       static int test_223_1(void) {
         
-      return rename("2", "0");
+      return unlink("2");
       
       }
       
     static void setup_224(void) {
-      
-      {
-        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 6;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i4", "1");
-      
-      link("__i5", "2");
-      
-      unlink("__i4");
-      
-      unlink("__i5");
       
     }
     
       static int test_224_0(void) {
         
       {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_224_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_225(void) {
+      
+    }
+    
+      static int test_225_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_225_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_226(void) {
+      
+    }
+    
+      static int test_226_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_226_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_227(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "11");
+      
+      link("__i6", "10");
+      
+      link("__i6", "13");
+      
+      link("__i6", "12");
+      
+      link("__i6", "14");
+      
+      link("__i4", "1");
+      
+      link("__i6", "0");
+      
+      link("__i6", "3");
+      
+      link("__i5", "2");
+      
+      link("__i6", "5");
+      
+      link("__i6", "4");
+      
+      link("__i6", "7");
+      
+      link("__i6", "6");
+      
+      link("__i6", "9");
+      
+      link("__i6", "8");
+      
+      unlink("__i4");
+      
+      unlink("__i5");
+      
+      unlink("__i6");
+      
+    }
+    
+      static int test_227_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_227_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_228(void) {
+      
+    }
+    
+      static int test_228_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_228_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_229(void) {
+      
+    }
+    
+      static int test_229_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_229_1(void) {
+        
+      return link("2", "0");
+      
+      }
+      
+    static void setup_230(void) {
+      
+    }
+    
+      static int test_230_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_230_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_231(void) {
+      
+    }
+    
+      static int test_231_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_231_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_232(void) {
+      
+    }
+    
+      static int test_232_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_232_1(void) {
+        
+      return link("2", "0");
+      
+      }
+      
+    static void setup_233(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i5", "11");
+      
+      link("__i5", "10");
+      
+      link("__i5", "13");
+      
+      link("__i5", "12");
+      
+      link("__i5", "14");
+      
+      link("__i4", "1");
+      
+      link("__i5", "0");
+      
+      link("__i5", "3");
+      
+      link("__i5", "2");
+      
+      link("__i5", "5");
+      
+      link("__i5", "4");
+      
+      link("__i5", "7");
+      
+      link("__i5", "6");
+      
+      link("__i5", "9");
+      
+      link("__i5", "8");
+      
+      unlink("__i4");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_233_0(void) {
+        
+      {
+        int fd = open("2", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_233_1(void) {
+        
+      return rename("1", "2");
+      
+      }
+      
+    static void setup_234(void) {
+      
+    }
+    
+      static int test_234_0(void) {
+        
+      {
+        int fd = open("2", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_234_1(void) {
+        
+      return rename("1", "2");
+      
+      }
+      
+    static void setup_235(void) {
+      
+    }
+    
+      static int test_235_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_235_1(void) {
+        
+      return rename("2", "3");
+      
+      }
+      
+    static void setup_236(void) {
+      
+    }
+    
+      static int test_236_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_236_1(void) {
+        
+      return rename("2", "0");
+      
+      }
+      
+    static void setup_237(void) {
+      
+    }
+    
+      static int test_237_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_237_1(void) {
+        
+      return rename("2", "3");
+      
+      }
+      
+    static void setup_238(void) {
+      
+    }
+    
+      static int test_238_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_238_1(void) {
+        
+      return rename("2", "3");
+      
+      }
+      
+    static void setup_239(void) {
+      
+    }
+    
+      static int test_239_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_239_1(void) {
+        
+      return rename("2", "3");
+      
+      }
+      
+    static void setup_240(void) {
+      
+    }
+    
+      static int test_240_0(void) {
+        
+      {
+        int fd = open("1", O_RDONLY);
+        if (fd < 0)
+          return xerrno(fd);
+        char c;
+        ssize_t cc = read(fd, &c, 1);
+        close(fd);
+        return (cc > 0) ? c : INT_MIN;
+      }
+      
+      }
+      
+      static int test_240_1(void) {
+        
+      return rename("2", "0");
+      
+      }
+      
+    static void setup_241(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 6;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "1");
+      
+      link("__i5", "2");
+      
+      unlink("__i4");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_241_0(void) {
+        
+      {
         int fd = open("1", O_WRONLY | O_TRUNC);
         if (fd < 0)
           return xerrno(fd);
@@ -8012,7 +8992,7 @@ static int xerrno(int r) {
       
       }
       
-      static int test_224_1(void) {
+      static int test_241_1(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8026,7 +9006,7 @@ static int xerrno(int r) {
       
       }
       
-    static void setup_225(void) {
+    static void setup_242(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8041,7 +9021,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_225_0(void) {
+      static int test_242_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8055,7 +9035,7 @@ static int xerrno(int r) {
       
       }
       
-      static int test_225_1(void) {
+      static int test_242_1(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8069,7 +9049,7 @@ static int xerrno(int r) {
       
       }
       
-    static void setup_226(void) {
+    static void setup_243(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8084,7 +9064,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_226_0(void) {
+      static int test_243_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8098,7 +9078,7 @@ static int xerrno(int r) {
       
       }
       
-      static int test_226_1(void) {
+      static int test_243_1(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8112,11 +9092,11 @@ static int xerrno(int r) {
       
       }
       
-    static void setup_227(void) {
+    static void setup_244(void) {
       
     }
     
-      static int test_227_0(void) {
+      static int test_244_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8130,7 +9110,7 @@ static int xerrno(int r) {
       
       }
       
-      static int test_227_1(void) {
+      static int test_244_1(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8144,7 +9124,7 @@ static int xerrno(int r) {
       
       }
       
-    static void setup_228(void) {
+    static void setup_245(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8172,7 +9152,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_228_0(void) {
+      static int test_245_0(void) {
         
       {
         int fd = open("5", O_WRONLY | O_TRUNC);
@@ -8186,13 +9166,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_228_1(void) {
+      static int test_245_1(void) {
         
       return unlink("1");
       
       }
       
-    static void setup_229(void) {
+    static void setup_246(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8218,7 +9198,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_229_0(void) {
+      static int test_246_0(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8232,13 +9212,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_229_1(void) {
+      static int test_246_1(void) {
         
       return unlink("1");
       
       }
       
-    static void setup_230(void) {
+    static void setup_247(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8253,7 +9233,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_230_0(void) {
+      static int test_247_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8267,13 +9247,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_230_1(void) {
+      static int test_247_1(void) {
         
       return unlink("2");
       
       }
       
-    static void setup_231(void) {
+    static void setup_248(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8290,7 +9270,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_231_0(void) {
+      static int test_248_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8304,13 +9284,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_231_1(void) {
+      static int test_248_1(void) {
         
       return unlink("2");
       
       }
       
-    static void setup_232(void) {
+    static void setup_249(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8325,7 +9305,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_232_0(void) {
+      static int test_249_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8339,17 +9319,17 @@ static int xerrno(int r) {
       
       }
       
-      static int test_232_1(void) {
+      static int test_249_1(void) {
         
       return unlink("2");
       
       }
       
-    static void setup_233(void) {
+    static void setup_250(void) {
       
     }
     
-      static int test_233_0(void) {
+      static int test_250_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8363,13 +9343,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_233_1(void) {
+      static int test_250_1(void) {
         
       return unlink("2");
       
       }
       
-    static void setup_234(void) {
+    static void setup_251(void) {
       
       {
         int fd = open("__i3", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8395,7 +9375,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_234_0(void) {
+      static int test_251_0(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8409,13 +9389,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_234_1(void) {
+      static int test_251_1(void) {
         
       return link("1", "2");
       
       }
       
-    static void setup_235(void) {
+    static void setup_252(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8441,7 +9421,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_235_0(void) {
+      static int test_252_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8455,13 +9435,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_235_1(void) {
+      static int test_252_1(void) {
         
       return link("2", "3");
       
       }
       
-    static void setup_236(void) {
+    static void setup_253(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8476,7 +9456,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_236_0(void) {
+      static int test_253_0(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8490,13 +9470,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_236_1(void) {
+      static int test_253_1(void) {
         
       return link("1", "2");
       
       }
       
-    static void setup_237(void) {
+    static void setup_254(void) {
       
       {
         int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8522,7 +9502,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_237_0(void) {
+      static int test_254_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8536,13 +9516,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_237_1(void) {
+      static int test_254_1(void) {
         
       return link("2", "3");
       
       }
       
-    static void setup_238(void) {
+    static void setup_255(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8557,7 +9537,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_238_0(void) {
+      static int test_255_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8571,17 +9551,17 @@ static int xerrno(int r) {
       
       }
       
-      static int test_238_1(void) {
+      static int test_255_1(void) {
         
       return link("2", "3");
       
       }
       
-    static void setup_239(void) {
+    static void setup_256(void) {
       
     }
     
-      static int test_239_0(void) {
+      static int test_256_0(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8595,13 +9575,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_239_1(void) {
+      static int test_256_1(void) {
         
       return link("1", "2");
       
       }
       
-    static void setup_240(void) {
+    static void setup_257(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8640,7 +9620,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_240_0(void) {
+      static int test_257_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8654,13 +9634,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_240_1(void) {
+      static int test_257_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_241(void) {
+    static void setup_258(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8686,7 +9666,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_241_0(void) {
+      static int test_258_0(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8700,13 +9680,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_241_1(void) {
+      static int test_258_1(void) {
         
       return rename("1", "2");
       
       }
       
-    static void setup_242(void) {
+    static void setup_259(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8732,7 +9712,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_242_0(void) {
+      static int test_259_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8746,13 +9726,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_242_1(void) {
+      static int test_259_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_243(void) {
+    static void setup_260(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8767,7 +9747,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_243_0(void) {
+      static int test_260_0(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8781,13 +9761,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_243_1(void) {
+      static int test_260_1(void) {
         
       return rename("1", "2");
       
       }
       
-    static void setup_244(void) {
+    static void setup_261(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8815,7 +9795,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_244_0(void) {
+      static int test_261_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8829,13 +9809,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_244_1(void) {
+      static int test_261_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_245(void) {
+    static void setup_262(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8861,7 +9841,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_245_0(void) {
+      static int test_262_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8875,13 +9855,13 @@ static int xerrno(int r) {
       
       }
       
-      static int test_245_1(void) {
+      static int test_262_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_246(void) {
+    static void setup_263(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -8896,7 +9876,7 @@ static int xerrno(int r) {
       
     }
     
-      static int test_246_0(void) {
+      static int test_263_0(void) {
         
       {
         int fd = open("1", O_WRONLY | O_TRUNC);
@@ -8910,17 +9890,17 @@ static int xerrno(int r) {
       
       }
       
-      static int test_246_1(void) {
+      static int test_263_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_247(void) {
+    static void setup_264(void) {
       
     }
     
-      static int test_247_0(void) {
+      static int test_264_0(void) {
         
       {
         int fd = open("2", O_WRONLY | O_TRUNC);
@@ -8934,173 +9914,575 @@ static int xerrno(int r) {
       
       }
       
-      static int test_247_1(void) {
+      static int test_264_1(void) {
         
       return rename("1", "2");
       
       }
       
-    static void setup_248(void) {
+    static void setup_265(void) {
+      
+      {
+        int fd = open("__i3", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i3", "11");
+      
+      link("__i3", "10");
+      
+      link("__i3", "13");
+      
+      link("__i3", "12");
+      
+      link("__i3", "14");
+      
+      link("__i3", "1");
+      
+      link("__i3", "0");
+      
+      link("__i3", "3");
+      
+      link("__i3", "2");
+      
+      link("__i6", "5");
+      
+      link("__i6", "4");
+      
+      link("__i3", "7");
+      
+      link("__i3", "6");
+      
+      link("__i3", "9");
+      
+      link("__i3", "8");
+      
+      unlink("__i3");
+      
+      unlink("__i6");
       
     }
     
-      static int test_248_0(void) {
+      static int test_265_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_248_1(void) {
-        
-      return unlink("3");
-      
-      }
-      
-    static void setup_249(void) {
-      
-    }
-    
-      static int test_249_0(void) {
-        
-      return unlink("1");
-      
-      }
-      
-      static int test_249_1(void) {
+      static int test_265_1(void) {
         
       return unlink("4");
       
       }
       
-    static void setup_250(void) {
+    static void setup_266(void) {
       
     }
     
-      static int test_250_0(void) {
+      static int test_266_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_250_1(void) {
+      static int test_266_1(void) {
+        
+      return unlink("3");
+      
+      }
+      
+    static void setup_267(void) {
+      
+      {
+        int fd = open("__i3", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i3", "11");
+      
+      link("__i3", "10");
+      
+      link("__i3", "13");
+      
+      link("__i3", "12");
+      
+      link("__i3", "14");
+      
+      link("__i3", "1");
+      
+      link("__i3", "0");
+      
+      link("__i3", "3");
+      
+      link("__i3", "2");
+      
+      link("__i3", "5");
+      
+      link("__i5", "4");
+      
+      link("__i3", "7");
+      
+      link("__i3", "6");
+      
+      link("__i3", "9");
+      
+      link("__i3", "8");
+      
+      unlink("__i3");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_267_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_267_1(void) {
+        
+      return unlink("4");
+      
+      }
+      
+    static void setup_268(void) {
+      
+    }
+    
+      static int test_268_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_268_1(void) {
+        
+      return unlink("4");
+      
+      }
+      
+    static void setup_269(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i4", "11");
+      
+      link("__i4", "10");
+      
+      link("__i4", "13");
+      
+      link("__i4", "12");
+      
+      link("__i4", "14");
+      
+      link("__i5", "1");
+      
+      link("__i4", "0");
+      
+      link("__i4", "3");
+      
+      link("__i4", "2");
+      
+      link("__i4", "5");
+      
+      link("__i4", "4");
+      
+      link("__i4", "7");
+      
+      link("__i4", "6");
+      
+      link("__i4", "9");
+      
+      link("__i4", "8");
+      
+      unlink("__i4");
+      
+      unlink("__i5");
+      
+    }
+    
+      static int test_269_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_269_1(void) {
         
       return unlink("2");
       
       }
       
-    static void setup_251(void) {
+    static void setup_270(void) {
       
     }
     
-      static int test_251_0(void) {
+      static int test_270_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_251_1(void) {
+      static int test_270_1(void) {
         
       return unlink("2");
       
       }
       
-    static void setup_252(void) {
+    static void setup_271(void) {
       
     }
     
-      static int test_252_0(void) {
+      static int test_271_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_252_1(void) {
+      static int test_271_1(void) {
         
       return unlink("2");
       
       }
       
-    static void setup_253(void) {
+    static void setup_272(void) {
       
     }
     
-      static int test_253_0(void) {
+      static int test_272_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_253_1(void) {
+      static int test_272_1(void) {
         
       return unlink("2");
       
       }
       
-    static void setup_254(void) {
+    static void setup_273(void) {
       
     }
     
-      static int test_254_0(void) {
+      static int test_273_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_254_1(void) {
+      static int test_273_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_274(void) {
+      
+    }
+    
+      static int test_274_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_274_1(void) {
+        
+      return unlink("2");
+      
+      }
+      
+    static void setup_275(void) {
+      
+      {
+        int fd = open("__i3", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i7", "11");
+      
+      link("__i7", "10");
+      
+      link("__i7", "13");
+      
+      link("__i7", "12");
+      
+      link("__i7", "14");
+      
+      link("__i3", "1");
+      
+      link("__i7", "0");
+      
+      link("__i7", "3");
+      
+      link("__i3", "2");
+      
+      link("__i7", "5");
+      
+      link("__i6", "4");
+      
+      link("__i7", "7");
+      
+      link("__i7", "6");
+      
+      link("__i7", "9");
+      
+      link("__i7", "8");
+      
+      unlink("__i3");
+      
+      unlink("__i6");
+      
+      unlink("__i7");
+      
+    }
+    
+      static int test_275_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_275_1(void) {
+        
+      return link("4", "5");
+      
+      }
+      
+    static void setup_276(void) {
+      
+    }
+    
+      static int test_276_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_276_1(void) {
+        
+      return link("4", "5");
+      
+      }
+      
+    static void setup_277(void) {
+      
+    }
+    
+      static int test_277_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_277_1(void) {
         
       return link("4", "0");
       
       }
       
-    static void setup_255(void) {
+    static void setup_278(void) {
+      
+      {
+        int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "11");
+      
+      link("__i6", "10");
+      
+      link("__i6", "13");
+      
+      link("__i6", "12");
+      
+      link("__i6", "14");
+      
+      link("__i4", "1");
+      
+      link("__i6", "0");
+      
+      link("__i6", "3");
+      
+      link("__i5", "2");
+      
+      link("__i6", "5");
+      
+      link("__i6", "4");
+      
+      link("__i6", "7");
+      
+      link("__i6", "6");
+      
+      link("__i6", "9");
+      
+      link("__i6", "8");
+      
+      unlink("__i4");
+      
+      unlink("__i5");
+      
+      unlink("__i6");
       
     }
     
-      static int test_255_0(void) {
+      static int test_278_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_255_1(void) {
-        
-      return link("2", "0");
-      
-      }
-      
-    static void setup_256(void) {
-      
-    }
-    
-      static int test_256_0(void) {
-        
-      return unlink("1");
-      
-      }
-      
-      static int test_256_1(void) {
+      static int test_278_1(void) {
         
       return link("2", "3");
       
       }
       
-    static void setup_257(void) {
+    static void setup_279(void) {
       
     }
     
-      static int test_257_0(void) {
+      static int test_279_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_257_1(void) {
+      static int test_279_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_280(void) {
+      
+    }
+    
+      static int test_280_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_280_1(void) {
         
       return link("2", "0");
       
       }
       
-    static void setup_258(void) {
+    static void setup_281(void) {
+      
+    }
+    
+      static int test_281_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_281_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_282(void) {
+      
+    }
+    
+      static int test_282_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_282_1(void) {
+        
+      return link("2", "3");
+      
+      }
+      
+    static void setup_283(void) {
+      
+    }
+    
+      static int test_283_0(void) {
+        
+      return unlink("1");
+      
+      }
+      
+      static int test_283_1(void) {
+        
+      return link("2", "0");
+      
+      }
+      
+    static void setup_284(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9141,19 +10523,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_258_0(void) {
+      static int test_284_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_258_1(void) {
+      static int test_284_1(void) {
         
       return rename("5", "6");
       
       }
       
-    static void setup_259(void) {
+    static void setup_285(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9181,19 +10563,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_259_0(void) {
+      static int test_285_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_259_1(void) {
+      static int test_285_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_260(void) {
+    static void setup_286(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9232,19 +10614,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_260_0(void) {
+      static int test_286_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_260_1(void) {
+      static int test_286_1(void) {
         
       return rename("5", "6");
       
       }
       
-    static void setup_261(void) {
+    static void setup_287(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9272,19 +10654,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_261_0(void) {
+      static int test_287_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_261_1(void) {
+      static int test_287_1(void) {
         
       return rename("5", "6");
       
       }
       
-    static void setup_262(void) {
+    static void setup_288(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9301,19 +10683,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_262_0(void) {
+      static int test_288_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_262_1(void) {
+      static int test_288_1(void) {
         
       return rename("5", "6");
       
       }
       
-    static void setup_263(void) {
+    static void setup_289(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9352,19 +10734,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_263_0(void) {
+      static int test_289_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_263_1(void) {
+      static int test_289_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_264(void) {
+    static void setup_290(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9401,19 +10783,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_264_0(void) {
+      static int test_290_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_264_1(void) {
+      static int test_290_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_265(void) {
+    static void setup_291(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9439,19 +10821,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_265_0(void) {
+      static int test_291_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_265_1(void) {
+      static int test_291_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_266(void) {
+    static void setup_292(void) {
       
       {
         int fd = open("__i4", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9466,19 +10848,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_266_0(void) {
+      static int test_292_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_266_1(void) {
+      static int test_292_1(void) {
         
       return rename("2", "5");
       
       }
       
-    static void setup_267(void) {
+    static void setup_293(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9506,19 +10888,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_267_0(void) {
+      static int test_293_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_267_1(void) {
+      static int test_293_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_268(void) {
+    static void setup_294(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9544,19 +10926,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_268_0(void) {
+      static int test_294_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_268_1(void) {
+      static int test_294_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_269(void) {
+    static void setup_295(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9571,35 +10953,35 @@ static int xerrno(int r) {
       
     }
     
-      static int test_269_0(void) {
+      static int test_295_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_269_1(void) {
+      static int test_295_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_270(void) {
+    static void setup_296(void) {
       
     }
     
-      static int test_270_0(void) {
+      static int test_296_0(void) {
         
       return unlink("1");
       
       }
       
-      static int test_270_1(void) {
+      static int test_296_1(void) {
         
       return rename("2", "4");
       
       }
       
-    static void setup_271(void) {
+    static void setup_297(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9647,19 +11029,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_271_0(void) {
+      static int test_297_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_271_1(void) {
+      static int test_297_1(void) {
         
       return link("3", "4");
       
       }
       
-    static void setup_272(void) {
+    static void setup_298(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9696,19 +11078,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_272_0(void) {
+      static int test_298_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_272_1(void) {
+      static int test_298_1(void) {
         
       return link("3", "4");
       
       }
       
-    static void setup_273(void) {
+    static void setup_299(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9734,19 +11116,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_273_0(void) {
+      static int test_299_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_273_1(void) {
+      static int test_299_1(void) {
         
       return link("3", "4");
       
       }
       
-    static void setup_274(void) {
+    static void setup_300(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9783,19 +11165,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_274_0(void) {
+      static int test_300_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_274_1(void) {
+      static int test_300_1(void) {
         
       return link("3", "4");
       
       }
       
-    static void setup_275(void) {
+    static void setup_301(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9821,19 +11203,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_275_0(void) {
+      static int test_301_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_275_1(void) {
+      static int test_301_1(void) {
         
       return link("3", "4");
       
       }
       
-    static void setup_276(void) {
+    static void setup_302(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9848,19 +11230,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_276_0(void) {
+      static int test_302_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_276_1(void) {
+      static int test_302_1(void) {
         
       return link("3", "4");
       
       }
       
-    static void setup_277(void) {
+    static void setup_303(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9886,19 +11268,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_277_0(void) {
+      static int test_303_0(void) {
         
       return link("1", "4");
       
       }
       
-      static int test_277_1(void) {
+      static int test_303_1(void) {
         
       return link("2", "3");
       
       }
       
-    static void setup_278(void) {
+    static void setup_304(void) {
       
       {
         int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9913,35 +11295,35 @@ static int xerrno(int r) {
       
     }
     
-      static int test_278_0(void) {
+      static int test_304_0(void) {
         
       return link("1", "4");
       
       }
       
-      static int test_278_1(void) {
+      static int test_304_1(void) {
         
       return link("2", "3");
       
       }
       
-    static void setup_279(void) {
+    static void setup_305(void) {
       
     }
     
-      static int test_279_0(void) {
+      static int test_305_0(void) {
         
       return link("1", "3");
       
       }
       
-      static int test_279_1(void) {
+      static int test_305_1(void) {
         
       return link("2", "4");
       
       }
       
-    static void setup_280(void) {
+    static void setup_306(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -9991,19 +11373,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_280_0(void) {
+      static int test_306_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_280_1(void) {
+      static int test_306_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_281(void) {
+    static void setup_307(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10029,19 +11411,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_281_0(void) {
+      static int test_307_0(void) {
         
       return link("2", "2");
       
       }
       
-      static int test_281_1(void) {
+      static int test_307_1(void) {
         
       return rename("1", "2");
       
       }
       
-    static void setup_282(void) {
+    static void setup_308(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10078,19 +11460,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_282_0(void) {
+      static int test_308_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_282_1(void) {
+      static int test_308_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_283(void) {
+    static void setup_309(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10116,19 +11498,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_283_0(void) {
+      static int test_309_0(void) {
         
       return link("3", "1");
       
       }
       
-      static int test_283_1(void) {
+      static int test_309_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_284(void) {
+    static void setup_310(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10138,39 +11520,50 @@ static int xerrno(int r) {
       }
       
       {
-        int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 0;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i8", "1");
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i10", "1");
       
       link("__i8", "9");
       
-      link("__i5", "3");
+      link("__i6", "3");
+      
+      link("__i8", "5");
       
       link("__i8", "4");
       
       unlink("__i8");
       
-      unlink("__i5");
+      unlink("__i10");
+      
+      unlink("__i6");
       
     }
     
-      static int test_284_0(void) {
+      static int test_310_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_284_1(void) {
+      static int test_310_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_285(void) {
+    static void setup_311(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10193,11 +11586,11 @@ static int xerrno(int r) {
         close(fd);
       }
       
-      link("__i8", "1");
+      link("__i7", "1");
       
-      link("__i7", "3");
+      link("__i6", "3");
       
-      link("__i6", "4");
+      link("__i8", "4");
       
       unlink("__i8");
       
@@ -10207,19 +11600,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_285_0(void) {
+      static int test_311_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_285_1(void) {
+      static int test_311_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_286(void) {
+    static void setup_312(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10245,19 +11638,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_286_0(void) {
+      static int test_312_0(void) {
         
       return link("1", "2");
       
       }
       
-      static int test_286_1(void) {
+      static int test_312_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_287(void) {
+    static void setup_313(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10272,19 +11665,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_287_0(void) {
+      static int test_313_0(void) {
         
       return link("3", "1");
       
       }
       
-      static int test_287_1(void) {
+      static int test_313_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_288(void) {
+    static void setup_314(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10312,19 +11705,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_288_0(void) {
+      static int test_314_0(void) {
         
       return link("1", "8");
       
       }
       
-      static int test_288_1(void) {
+      static int test_314_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_289(void) {
+    static void setup_315(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10340,9 +11733,9 @@ static int xerrno(int r) {
         close(fd);
       }
       
-      link("__i6", "3");
+      link("__i7", "3");
       
-      link("__i7", "2");
+      link("__i6", "2");
       
       unlink("__i6");
       
@@ -10350,19 +11743,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_289_0(void) {
+      static int test_315_0(void) {
         
       return link("1", "4");
       
       }
       
-      static int test_289_1(void) {
+      static int test_315_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_290(void) {
+    static void setup_316(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10377,42 +11770,35 @@ static int xerrno(int r) {
       
     }
     
-      static int test_290_0(void) {
+      static int test_316_0(void) {
         
       return link("1", "4");
       
       }
       
-      static int test_290_1(void) {
+      static int test_316_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_291(void) {
+    static void setup_317(void) {
       
     }
     
-      static int test_291_0(void) {
+      static int test_317_0(void) {
         
       return link("3", "2");
       
       }
       
-      static int test_291_1(void) {
+      static int test_317_1(void) {
         
       return rename("1", "3");
       
       }
       
-    static void setup_292(void) {
-      
-      {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
+    static void setup_318(void) {
       
       {
         int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10428,37 +11814,44 @@ static int xerrno(int r) {
         close(fd);
       }
       
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
       link("__i5", "1");
       
-      link("__i9", "3");
+      link("__i9", "8");
       
-      link("__i9", "2");
+      link("__i6", "3");
       
-      link("__i8", "7");
+      link("__i6", "2");
       
-      link("__i8", "6");
-      
-      unlink("__i8");
+      link("__i9", "7");
       
       unlink("__i9");
       
       unlink("__i5");
       
+      unlink("__i6");
+      
     }
     
-      static int test_292_0(void) {
+      static int test_318_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_292_1(void) {
+      static int test_318_1(void) {
         
-      return rename("3", "6");
+      return rename("3", "7");
       
       }
       
-    static void setup_293(void) {
+    static void setup_319(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10497,19 +11890,26 @@ static int xerrno(int r) {
       
     }
     
-      static int test_293_0(void) {
+      static int test_319_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_293_1(void) {
+      static int test_319_1(void) {
         
       return rename("5", "6");
       
       }
       
-    static void setup_294(void) {
+    static void setup_320(void) {
+      
+      {
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
       
       {
         int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10532,22 +11932,17 @@ static int xerrno(int r) {
         close(fd);
       }
       
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
+      link("__i10", "1");
       
-      link("__i5", "1");
+      link("__i5", "3");
       
-      link("__i10", "8");
-      
-      link("__i6", "3");
-      
-      link("__i6", "2");
+      link("__i5", "2");
       
       link("__i9", "7");
+      
+      link("__i8", "6");
+      
+      unlink("__i8");
       
       unlink("__i9");
       
@@ -10555,23 +11950,28 @@ static int xerrno(int r) {
       
       unlink("__i5");
       
-      unlink("__i6");
-      
     }
     
-      static int test_294_0(void) {
+      static int test_320_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_294_1(void) {
+      static int test_320_1(void) {
         
-      return rename("7", "8");
+      return rename("6", "7");
       
       }
       
-    static void setup_295(void) {
+    static void setup_321(void) {
+      
+      {
+        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
       
       {
         int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10587,42 +11987,35 @@ static int xerrno(int r) {
         close(fd);
       }
       
-      {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
+      link("__i9", "1");
       
-      link("__i5", "1");
+      link("__i5", "3");
       
-      link("__i6", "3");
+      link("__i5", "2");
       
-      link("__i6", "2");
+      link("__i8", "6");
       
-      link("__i9", "7");
+      unlink("__i8");
       
       unlink("__i9");
       
       unlink("__i5");
       
-      unlink("__i6");
-      
     }
     
-      static int test_295_0(void) {
+      static int test_321_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_295_1(void) {
+      static int test_321_1(void) {
         
-      return rename("7", "8");
+      return rename("6", "7");
       
       }
       
-    static void setup_296(void) {
+    static void setup_322(void) {
       
       {
         int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10650,19 +12043,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_296_0(void) {
+      static int test_322_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_296_1(void) {
+      static int test_322_1(void) {
         
       return rename("6", "7");
       
       }
       
-    static void setup_297(void) {
+    static void setup_323(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10672,7 +12065,7 @@ static int xerrno(int r) {
       }
       
       {
-        int fd = open("__i9", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i10", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 0;
         write(fd, &c, 1);
         close(fd);
@@ -10686,47 +12079,47 @@ static int xerrno(int r) {
       }
       
       {
-        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
         char c = 0;
         write(fd, &c, 1);
         close(fd);
       }
       
-      link("__i9", "10");
+      link("__i11", "1");
       
-      link("__i8", "1");
+      link("__i7", "3");
       
-      link("__i6", "3");
+      link("__i10", "2");
       
-      link("__i11", "2");
+      link("__i8", "5");
       
-      link("__i9", "5");
+      link("__i8", "4");
       
-      link("__i9", "4");
+      link("__i8", "9");
       
       unlink("__i8");
       
-      unlink("__i9");
+      unlink("__i10");
       
       unlink("__i11");
       
-      unlink("__i6");
+      unlink("__i7");
       
     }
     
-      static int test_297_0(void) {
+      static int test_323_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_297_1(void) {
+      static int test_323_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_298(void) {
+    static void setup_324(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10758,19 +12151,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_298_0(void) {
+      static int test_324_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_298_1(void) {
+      static int test_324_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_299(void) {
+    static void setup_325(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10818,19 +12211,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_299_0(void) {
+      static int test_325_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_299_1(void) {
+      static int test_325_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_300(void) {
+    static void setup_326(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10867,26 +12260,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_300_0(void) {
+      static int test_326_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_300_1(void) {
+      static int test_326_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_301(void) {
-      
-      {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
+    static void setup_327(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10895,29 +12281,36 @@ static int xerrno(int r) {
         close(fd);
       }
       
-      link("__i8", "1");
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
       
-      link("__i5", "2");
+      link("__i5", "1");
       
-      unlink("__i8");
+      link("__i6", "2");
       
       unlink("__i5");
       
+      unlink("__i6");
+      
     }
     
-      static int test_301_0(void) {
+      static int test_327_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_301_1(void) {
+      static int test_327_1(void) {
         
-      return rename("3", "6");
+      return rename("3", "7");
       
       }
       
-    static void setup_302(void) {
+    static void setup_328(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10956,19 +12349,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_302_0(void) {
+      static int test_328_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_302_1(void) {
+      static int test_328_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_303(void) {
+    static void setup_329(void) {
       
       {
         int fd = open("__i5", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -10985,19 +12378,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_303_0(void) {
+      static int test_329_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_303_1(void) {
+      static int test_329_1(void) {
         
       return rename("3", "2");
       
       }
       
-    static void setup_304(void) {
+    static void setup_330(void) {
       
       {
         int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -11020,11 +12413,11 @@ static int xerrno(int r) {
         close(fd);
       }
       
-      link("__i6", "1");
+      link("__i8", "1");
       
-      link("__i7", "3");
+      link("__i6", "3");
       
-      link("__i8", "4");
+      link("__i7", "4");
       
       unlink("__i8");
       
@@ -11034,19 +12427,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_304_0(void) {
+      static int test_330_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_304_1(void) {
+      static int test_330_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_305(void) {
+    static void setup_331(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -11062,9 +12455,9 @@ static int xerrno(int r) {
         close(fd);
       }
       
-      link("__i6", "1");
+      link("__i7", "1");
       
-      link("__i7", "3");
+      link("__i6", "3");
       
       unlink("__i6");
       
@@ -11072,19 +12465,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_305_0(void) {
+      static int test_331_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_305_1(void) {
+      static int test_331_1(void) {
         
       return rename("3", "4");
       
       }
       
-    static void setup_306(void) {
+    static void setup_332(void) {
       
       {
         int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -11099,26 +12492,19 @@ static int xerrno(int r) {
       
     }
     
-      static int test_306_0(void) {
+      static int test_332_0(void) {
         
       return rename("1", "2");
       
       }
       
-      static int test_306_1(void) {
+      static int test_332_1(void) {
         
       return rename("3", "5");
       
       }
       
-    static void setup_307(void) {
-      
-      {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
+    static void setup_333(void) {
       
       {
         int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
@@ -11127,106 +12513,113 @@ static int xerrno(int r) {
         close(fd);
       }
       
-      link("__i6", "3");
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
       
-      link("__i8", "2");
+      link("__i7", "3");
       
-      link("__i6", "4");
+      link("__i6", "2");
       
-      unlink("__i8");
+      link("__i7", "4");
+      
+      unlink("__i6");
+      
+      unlink("__i7");
+      
+    }
+    
+      static int test_333_0(void) {
+        
+      return rename("1", "8");
+      
+      }
+      
+      static int test_333_1(void) {
+        
+      return rename("2", "3");
+      
+      }
+      
+    static void setup_334(void) {
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      {
+        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i7", "3");
+      
+      link("__i6", "2");
+      
+      unlink("__i6");
+      
+      unlink("__i7");
+      
+    }
+    
+      static int test_334_0(void) {
+        
+      return rename("1", "4");
+      
+      }
+      
+      static int test_334_1(void) {
+        
+      return rename("2", "3");
+      
+      }
+      
+    static void setup_335(void) {
+      
+      {
+        int fd = open("__i6", O_CREAT | O_EXCL | O_RDWR, 0666);
+        char c = 0;
+        write(fd, &c, 1);
+        close(fd);
+      }
+      
+      link("__i6", "2");
       
       unlink("__i6");
       
     }
     
-      static int test_307_0(void) {
-        
-      return rename("1", "7");
-      
-      }
-      
-      static int test_307_1(void) {
-        
-      return rename("2", "3");
-      
-      }
-      
-    static void setup_308(void) {
-      
-      {
-        int fd = open("__i8", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i8", "3");
-      
-      link("__i7", "2");
-      
-      unlink("__i8");
-      
-      unlink("__i7");
-      
-    }
-    
-      static int test_308_0(void) {
+      static int test_335_0(void) {
         
       return rename("1", "4");
       
       }
       
-      static int test_308_1(void) {
+      static int test_335_1(void) {
         
       return rename("2", "3");
       
       }
       
-    static void setup_309(void) {
-      
-      {
-        int fd = open("__i7", O_CREAT | O_EXCL | O_RDWR, 0666);
-        char c = 0;
-        write(fd, &c, 1);
-        close(fd);
-      }
-      
-      link("__i7", "2");
-      
-      unlink("__i7");
+    static void setup_336(void) {
       
     }
     
-      static int test_309_0(void) {
-        
-      return rename("1", "4");
-      
-      }
-      
-      static int test_309_1(void) {
-        
-      return rename("2", "3");
-      
-      }
-      
-    static void setup_310(void) {
-      
-    }
-    
-      static int test_310_0(void) {
+      static int test_336_0(void) {
         
       return rename("5", "2");
       
       }
       
-      static int test_310_1(void) {
+      static int test_336_1(void) {
         
       return rename("1", "5");
       
@@ -11464,15 +12857,15 @@ static int xerrno(int r) {
     
     { &setup_97, &test_97_0, &test_97_1, "open", "read", &cleanup },
     
-    { &setup_98, &test_98_0, &test_98_1, "open", "write", &cleanup },
+    { &setup_98, &test_98_0, &test_98_1, "open", "read", &cleanup },
     
-    { &setup_99, &test_99_0, &test_99_1, "open", "write", &cleanup },
+    { &setup_99, &test_99_0, &test_99_1, "open", "read", &cleanup },
     
-    { &setup_100, &test_100_0, &test_100_1, "open", "write", &cleanup },
+    { &setup_100, &test_100_0, &test_100_1, "open", "read", &cleanup },
     
-    { &setup_101, &test_101_0, &test_101_1, "open", "write", &cleanup },
+    { &setup_101, &test_101_0, &test_101_1, "open", "read", &cleanup },
     
-    { &setup_102, &test_102_0, &test_102_1, "open", "write", &cleanup },
+    { &setup_102, &test_102_0, &test_102_1, "open", "read", &cleanup },
     
     { &setup_103, &test_103_0, &test_103_1, "open", "write", &cleanup },
     
@@ -11500,15 +12893,15 @@ static int xerrno(int r) {
     
     { &setup_115, &test_115_0, &test_115_1, "open", "write", &cleanup },
     
-    { &setup_116, &test_116_0, &test_116_1, "open", "unlink", &cleanup },
+    { &setup_116, &test_116_0, &test_116_1, "open", "write", &cleanup },
     
-    { &setup_117, &test_117_0, &test_117_1, "open", "unlink", &cleanup },
+    { &setup_117, &test_117_0, &test_117_1, "open", "write", &cleanup },
     
-    { &setup_118, &test_118_0, &test_118_1, "open", "unlink", &cleanup },
+    { &setup_118, &test_118_0, &test_118_1, "open", "write", &cleanup },
     
-    { &setup_119, &test_119_0, &test_119_1, "open", "unlink", &cleanup },
+    { &setup_119, &test_119_0, &test_119_1, "open", "write", &cleanup },
     
-    { &setup_120, &test_120_0, &test_120_1, "open", "unlink", &cleanup },
+    { &setup_120, &test_120_0, &test_120_1, "open", "write", &cleanup },
     
     { &setup_121, &test_121_0, &test_121_1, "open", "unlink", &cleanup },
     
@@ -11552,15 +12945,15 @@ static int xerrno(int r) {
     
     { &setup_141, &test_141_0, &test_141_1, "open", "unlink", &cleanup },
     
-    { &setup_142, &test_142_0, &test_142_1, "open", "link", &cleanup },
+    { &setup_142, &test_142_0, &test_142_1, "open", "unlink", &cleanup },
     
-    { &setup_143, &test_143_0, &test_143_1, "open", "link", &cleanup },
+    { &setup_143, &test_143_0, &test_143_1, "open", "unlink", &cleanup },
     
-    { &setup_144, &test_144_0, &test_144_1, "open", "link", &cleanup },
+    { &setup_144, &test_144_0, &test_144_1, "open", "unlink", &cleanup },
     
-    { &setup_145, &test_145_0, &test_145_1, "open", "link", &cleanup },
+    { &setup_145, &test_145_0, &test_145_1, "open", "unlink", &cleanup },
     
-    { &setup_146, &test_146_0, &test_146_1, "open", "link", &cleanup },
+    { &setup_146, &test_146_0, &test_146_1, "open", "unlink", &cleanup },
     
     { &setup_147, &test_147_0, &test_147_1, "open", "link", &cleanup },
     
@@ -11606,15 +12999,15 @@ static int xerrno(int r) {
     
     { &setup_168, &test_168_0, &test_168_1, "open", "link", &cleanup },
     
-    { &setup_169, &test_169_0, &test_169_1, "open", "rename", &cleanup },
+    { &setup_169, &test_169_0, &test_169_1, "open", "link", &cleanup },
     
-    { &setup_170, &test_170_0, &test_170_1, "open", "rename", &cleanup },
+    { &setup_170, &test_170_0, &test_170_1, "open", "link", &cleanup },
     
-    { &setup_171, &test_171_0, &test_171_1, "open", "rename", &cleanup },
+    { &setup_171, &test_171_0, &test_171_1, "open", "link", &cleanup },
     
-    { &setup_172, &test_172_0, &test_172_1, "open", "rename", &cleanup },
+    { &setup_172, &test_172_0, &test_172_1, "open", "link", &cleanup },
     
-    { &setup_173, &test_173_0, &test_173_1, "open", "rename", &cleanup },
+    { &setup_173, &test_173_0, &test_173_1, "open", "link", &cleanup },
     
     { &setup_174, &test_174_0, &test_174_1, "open", "rename", &cleanup },
     
@@ -11684,211 +13077,263 @@ static int xerrno(int r) {
     
     { &setup_207, &test_207_0, &test_207_1, "open", "rename", &cleanup },
     
-    { &setup_208, &test_208_0, &test_208_1, "read", "read", &cleanup },
+    { &setup_208, &test_208_0, &test_208_1, "open", "rename", &cleanup },
     
-    { &setup_209, &test_209_0, &test_209_1, "read", "read", &cleanup },
+    { &setup_209, &test_209_0, &test_209_1, "open", "rename", &cleanup },
     
-    { &setup_210, &test_210_0, &test_210_1, "read", "read", &cleanup },
+    { &setup_210, &test_210_0, &test_210_1, "open", "rename", &cleanup },
     
-    { &setup_211, &test_211_0, &test_211_1, "read", "write", &cleanup },
+    { &setup_211, &test_211_0, &test_211_1, "open", "rename", &cleanup },
     
-    { &setup_212, &test_212_0, &test_212_1, "read", "write", &cleanup },
+    { &setup_212, &test_212_0, &test_212_1, "open", "rename", &cleanup },
     
-    { &setup_213, &test_213_0, &test_213_1, "read", "write", &cleanup },
+    { &setup_213, &test_213_0, &test_213_1, "read", "read", &cleanup },
     
-    { &setup_214, &test_214_0, &test_214_1, "read", "unlink", &cleanup },
+    { &setup_214, &test_214_0, &test_214_1, "read", "read", &cleanup },
     
-    { &setup_215, &test_215_0, &test_215_1, "read", "unlink", &cleanup },
+    { &setup_215, &test_215_0, &test_215_1, "read", "read", &cleanup },
     
-    { &setup_216, &test_216_0, &test_216_1, "read", "unlink", &cleanup },
+    { &setup_216, &test_216_0, &test_216_1, "read", "read", &cleanup },
     
-    { &setup_217, &test_217_0, &test_217_1, "read", "unlink", &cleanup },
+    { &setup_217, &test_217_0, &test_217_1, "read", "write", &cleanup },
     
-    { &setup_218, &test_218_0, &test_218_1, "read", "link", &cleanup },
+    { &setup_218, &test_218_0, &test_218_1, "read", "write", &cleanup },
     
-    { &setup_219, &test_219_0, &test_219_1, "read", "link", &cleanup },
+    { &setup_219, &test_219_0, &test_219_1, "read", "write", &cleanup },
     
-    { &setup_220, &test_220_0, &test_220_1, "read", "link", &cleanup },
+    { &setup_220, &test_220_0, &test_220_1, "read", "write", &cleanup },
     
-    { &setup_221, &test_221_0, &test_221_1, "read", "rename", &cleanup },
+    { &setup_221, &test_221_0, &test_221_1, "read", "unlink", &cleanup },
     
-    { &setup_222, &test_222_0, &test_222_1, "read", "rename", &cleanup },
+    { &setup_222, &test_222_0, &test_222_1, "read", "unlink", &cleanup },
     
-    { &setup_223, &test_223_0, &test_223_1, "read", "rename", &cleanup },
+    { &setup_223, &test_223_0, &test_223_1, "read", "unlink", &cleanup },
     
-    { &setup_224, &test_224_0, &test_224_1, "write", "write", &cleanup },
+    { &setup_224, &test_224_0, &test_224_1, "read", "unlink", &cleanup },
     
-    { &setup_225, &test_225_0, &test_225_1, "write", "write", &cleanup },
+    { &setup_225, &test_225_0, &test_225_1, "read", "unlink", &cleanup },
     
-    { &setup_226, &test_226_0, &test_226_1, "write", "write", &cleanup },
+    { &setup_226, &test_226_0, &test_226_1, "read", "unlink", &cleanup },
     
-    { &setup_227, &test_227_0, &test_227_1, "write", "write", &cleanup },
+    { &setup_227, &test_227_0, &test_227_1, "read", "link", &cleanup },
     
-    { &setup_228, &test_228_0, &test_228_1, "write", "unlink", &cleanup },
+    { &setup_228, &test_228_0, &test_228_1, "read", "link", &cleanup },
     
-    { &setup_229, &test_229_0, &test_229_1, "write", "unlink", &cleanup },
+    { &setup_229, &test_229_0, &test_229_1, "read", "link", &cleanup },
     
-    { &setup_230, &test_230_0, &test_230_1, "write", "unlink", &cleanup },
+    { &setup_230, &test_230_0, &test_230_1, "read", "link", &cleanup },
     
-    { &setup_231, &test_231_0, &test_231_1, "write", "unlink", &cleanup },
+    { &setup_231, &test_231_0, &test_231_1, "read", "link", &cleanup },
     
-    { &setup_232, &test_232_0, &test_232_1, "write", "unlink", &cleanup },
+    { &setup_232, &test_232_0, &test_232_1, "read", "link", &cleanup },
     
-    { &setup_233, &test_233_0, &test_233_1, "write", "unlink", &cleanup },
+    { &setup_233, &test_233_0, &test_233_1, "read", "rename", &cleanup },
     
-    { &setup_234, &test_234_0, &test_234_1, "write", "link", &cleanup },
+    { &setup_234, &test_234_0, &test_234_1, "read", "rename", &cleanup },
     
-    { &setup_235, &test_235_0, &test_235_1, "write", "link", &cleanup },
+    { &setup_235, &test_235_0, &test_235_1, "read", "rename", &cleanup },
     
-    { &setup_236, &test_236_0, &test_236_1, "write", "link", &cleanup },
+    { &setup_236, &test_236_0, &test_236_1, "read", "rename", &cleanup },
     
-    { &setup_237, &test_237_0, &test_237_1, "write", "link", &cleanup },
+    { &setup_237, &test_237_0, &test_237_1, "read", "rename", &cleanup },
     
-    { &setup_238, &test_238_0, &test_238_1, "write", "link", &cleanup },
+    { &setup_238, &test_238_0, &test_238_1, "read", "rename", &cleanup },
     
-    { &setup_239, &test_239_0, &test_239_1, "write", "link", &cleanup },
+    { &setup_239, &test_239_0, &test_239_1, "read", "rename", &cleanup },
     
-    { &setup_240, &test_240_0, &test_240_1, "write", "rename", &cleanup },
+    { &setup_240, &test_240_0, &test_240_1, "read", "rename", &cleanup },
     
-    { &setup_241, &test_241_0, &test_241_1, "write", "rename", &cleanup },
+    { &setup_241, &test_241_0, &test_241_1, "write", "write", &cleanup },
     
-    { &setup_242, &test_242_0, &test_242_1, "write", "rename", &cleanup },
+    { &setup_242, &test_242_0, &test_242_1, "write", "write", &cleanup },
     
-    { &setup_243, &test_243_0, &test_243_1, "write", "rename", &cleanup },
+    { &setup_243, &test_243_0, &test_243_1, "write", "write", &cleanup },
     
-    { &setup_244, &test_244_0, &test_244_1, "write", "rename", &cleanup },
+    { &setup_244, &test_244_0, &test_244_1, "write", "write", &cleanup },
     
-    { &setup_245, &test_245_0, &test_245_1, "write", "rename", &cleanup },
+    { &setup_245, &test_245_0, &test_245_1, "write", "unlink", &cleanup },
     
-    { &setup_246, &test_246_0, &test_246_1, "write", "rename", &cleanup },
+    { &setup_246, &test_246_0, &test_246_1, "write", "unlink", &cleanup },
     
-    { &setup_247, &test_247_0, &test_247_1, "write", "rename", &cleanup },
+    { &setup_247, &test_247_0, &test_247_1, "write", "unlink", &cleanup },
     
-    { &setup_248, &test_248_0, &test_248_1, "unlink", "unlink", &cleanup },
+    { &setup_248, &test_248_0, &test_248_1, "write", "unlink", &cleanup },
     
-    { &setup_249, &test_249_0, &test_249_1, "unlink", "unlink", &cleanup },
+    { &setup_249, &test_249_0, &test_249_1, "write", "unlink", &cleanup },
     
-    { &setup_250, &test_250_0, &test_250_1, "unlink", "unlink", &cleanup },
+    { &setup_250, &test_250_0, &test_250_1, "write", "unlink", &cleanup },
     
-    { &setup_251, &test_251_0, &test_251_1, "unlink", "unlink", &cleanup },
+    { &setup_251, &test_251_0, &test_251_1, "write", "link", &cleanup },
     
-    { &setup_252, &test_252_0, &test_252_1, "unlink", "unlink", &cleanup },
+    { &setup_252, &test_252_0, &test_252_1, "write", "link", &cleanup },
     
-    { &setup_253, &test_253_0, &test_253_1, "unlink", "unlink", &cleanup },
+    { &setup_253, &test_253_0, &test_253_1, "write", "link", &cleanup },
     
-    { &setup_254, &test_254_0, &test_254_1, "unlink", "link", &cleanup },
+    { &setup_254, &test_254_0, &test_254_1, "write", "link", &cleanup },
     
-    { &setup_255, &test_255_0, &test_255_1, "unlink", "link", &cleanup },
+    { &setup_255, &test_255_0, &test_255_1, "write", "link", &cleanup },
     
-    { &setup_256, &test_256_0, &test_256_1, "unlink", "link", &cleanup },
+    { &setup_256, &test_256_0, &test_256_1, "write", "link", &cleanup },
     
-    { &setup_257, &test_257_0, &test_257_1, "unlink", "link", &cleanup },
+    { &setup_257, &test_257_0, &test_257_1, "write", "rename", &cleanup },
     
-    { &setup_258, &test_258_0, &test_258_1, "unlink", "rename", &cleanup },
+    { &setup_258, &test_258_0, &test_258_1, "write", "rename", &cleanup },
     
-    { &setup_259, &test_259_0, &test_259_1, "unlink", "rename", &cleanup },
+    { &setup_259, &test_259_0, &test_259_1, "write", "rename", &cleanup },
     
-    { &setup_260, &test_260_0, &test_260_1, "unlink", "rename", &cleanup },
+    { &setup_260, &test_260_0, &test_260_1, "write", "rename", &cleanup },
     
-    { &setup_261, &test_261_0, &test_261_1, "unlink", "rename", &cleanup },
+    { &setup_261, &test_261_0, &test_261_1, "write", "rename", &cleanup },
     
-    { &setup_262, &test_262_0, &test_262_1, "unlink", "rename", &cleanup },
+    { &setup_262, &test_262_0, &test_262_1, "write", "rename", &cleanup },
     
-    { &setup_263, &test_263_0, &test_263_1, "unlink", "rename", &cleanup },
+    { &setup_263, &test_263_0, &test_263_1, "write", "rename", &cleanup },
     
-    { &setup_264, &test_264_0, &test_264_1, "unlink", "rename", &cleanup },
+    { &setup_264, &test_264_0, &test_264_1, "write", "rename", &cleanup },
     
-    { &setup_265, &test_265_0, &test_265_1, "unlink", "rename", &cleanup },
+    { &setup_265, &test_265_0, &test_265_1, "unlink", "unlink", &cleanup },
     
-    { &setup_266, &test_266_0, &test_266_1, "unlink", "rename", &cleanup },
+    { &setup_266, &test_266_0, &test_266_1, "unlink", "unlink", &cleanup },
     
-    { &setup_267, &test_267_0, &test_267_1, "unlink", "rename", &cleanup },
+    { &setup_267, &test_267_0, &test_267_1, "unlink", "unlink", &cleanup },
     
-    { &setup_268, &test_268_0, &test_268_1, "unlink", "rename", &cleanup },
+    { &setup_268, &test_268_0, &test_268_1, "unlink", "unlink", &cleanup },
     
-    { &setup_269, &test_269_0, &test_269_1, "unlink", "rename", &cleanup },
+    { &setup_269, &test_269_0, &test_269_1, "unlink", "unlink", &cleanup },
     
-    { &setup_270, &test_270_0, &test_270_1, "unlink", "rename", &cleanup },
+    { &setup_270, &test_270_0, &test_270_1, "unlink", "unlink", &cleanup },
     
-    { &setup_271, &test_271_0, &test_271_1, "link", "link", &cleanup },
+    { &setup_271, &test_271_0, &test_271_1, "unlink", "unlink", &cleanup },
     
-    { &setup_272, &test_272_0, &test_272_1, "link", "link", &cleanup },
+    { &setup_272, &test_272_0, &test_272_1, "unlink", "unlink", &cleanup },
     
-    { &setup_273, &test_273_0, &test_273_1, "link", "link", &cleanup },
+    { &setup_273, &test_273_0, &test_273_1, "unlink", "unlink", &cleanup },
     
-    { &setup_274, &test_274_0, &test_274_1, "link", "link", &cleanup },
+    { &setup_274, &test_274_0, &test_274_1, "unlink", "unlink", &cleanup },
     
-    { &setup_275, &test_275_0, &test_275_1, "link", "link", &cleanup },
+    { &setup_275, &test_275_0, &test_275_1, "unlink", "link", &cleanup },
     
-    { &setup_276, &test_276_0, &test_276_1, "link", "link", &cleanup },
+    { &setup_276, &test_276_0, &test_276_1, "unlink", "link", &cleanup },
     
-    { &setup_277, &test_277_0, &test_277_1, "link", "link", &cleanup },
+    { &setup_277, &test_277_0, &test_277_1, "unlink", "link", &cleanup },
     
-    { &setup_278, &test_278_0, &test_278_1, "link", "link", &cleanup },
+    { &setup_278, &test_278_0, &test_278_1, "unlink", "link", &cleanup },
     
-    { &setup_279, &test_279_0, &test_279_1, "link", "link", &cleanup },
+    { &setup_279, &test_279_0, &test_279_1, "unlink", "link", &cleanup },
     
-    { &setup_280, &test_280_0, &test_280_1, "link", "rename", &cleanup },
+    { &setup_280, &test_280_0, &test_280_1, "unlink", "link", &cleanup },
     
-    { &setup_281, &test_281_0, &test_281_1, "link", "rename", &cleanup },
+    { &setup_281, &test_281_0, &test_281_1, "unlink", "link", &cleanup },
     
-    { &setup_282, &test_282_0, &test_282_1, "link", "rename", &cleanup },
+    { &setup_282, &test_282_0, &test_282_1, "unlink", "link", &cleanup },
     
-    { &setup_283, &test_283_0, &test_283_1, "link", "rename", &cleanup },
+    { &setup_283, &test_283_0, &test_283_1, "unlink", "link", &cleanup },
     
-    { &setup_284, &test_284_0, &test_284_1, "link", "rename", &cleanup },
+    { &setup_284, &test_284_0, &test_284_1, "unlink", "rename", &cleanup },
     
-    { &setup_285, &test_285_0, &test_285_1, "link", "rename", &cleanup },
+    { &setup_285, &test_285_0, &test_285_1, "unlink", "rename", &cleanup },
     
-    { &setup_286, &test_286_0, &test_286_1, "link", "rename", &cleanup },
+    { &setup_286, &test_286_0, &test_286_1, "unlink", "rename", &cleanup },
     
-    { &setup_287, &test_287_0, &test_287_1, "link", "rename", &cleanup },
+    { &setup_287, &test_287_0, &test_287_1, "unlink", "rename", &cleanup },
     
-    { &setup_288, &test_288_0, &test_288_1, "link", "rename", &cleanup },
+    { &setup_288, &test_288_0, &test_288_1, "unlink", "rename", &cleanup },
     
-    { &setup_289, &test_289_0, &test_289_1, "link", "rename", &cleanup },
+    { &setup_289, &test_289_0, &test_289_1, "unlink", "rename", &cleanup },
     
-    { &setup_290, &test_290_0, &test_290_1, "link", "rename", &cleanup },
+    { &setup_290, &test_290_0, &test_290_1, "unlink", "rename", &cleanup },
     
-    { &setup_291, &test_291_0, &test_291_1, "link", "rename", &cleanup },
+    { &setup_291, &test_291_0, &test_291_1, "unlink", "rename", &cleanup },
     
-    { &setup_292, &test_292_0, &test_292_1, "rename", "rename", &cleanup },
+    { &setup_292, &test_292_0, &test_292_1, "unlink", "rename", &cleanup },
     
-    { &setup_293, &test_293_0, &test_293_1, "rename", "rename", &cleanup },
+    { &setup_293, &test_293_0, &test_293_1, "unlink", "rename", &cleanup },
     
-    { &setup_294, &test_294_0, &test_294_1, "rename", "rename", &cleanup },
+    { &setup_294, &test_294_0, &test_294_1, "unlink", "rename", &cleanup },
     
-    { &setup_295, &test_295_0, &test_295_1, "rename", "rename", &cleanup },
+    { &setup_295, &test_295_0, &test_295_1, "unlink", "rename", &cleanup },
     
-    { &setup_296, &test_296_0, &test_296_1, "rename", "rename", &cleanup },
+    { &setup_296, &test_296_0, &test_296_1, "unlink", "rename", &cleanup },
     
-    { &setup_297, &test_297_0, &test_297_1, "rename", "rename", &cleanup },
+    { &setup_297, &test_297_0, &test_297_1, "link", "link", &cleanup },
     
-    { &setup_298, &test_298_0, &test_298_1, "rename", "rename", &cleanup },
+    { &setup_298, &test_298_0, &test_298_1, "link", "link", &cleanup },
     
-    { &setup_299, &test_299_0, &test_299_1, "rename", "rename", &cleanup },
+    { &setup_299, &test_299_0, &test_299_1, "link", "link", &cleanup },
     
-    { &setup_300, &test_300_0, &test_300_1, "rename", "rename", &cleanup },
+    { &setup_300, &test_300_0, &test_300_1, "link", "link", &cleanup },
     
-    { &setup_301, &test_301_0, &test_301_1, "rename", "rename", &cleanup },
+    { &setup_301, &test_301_0, &test_301_1, "link", "link", &cleanup },
     
-    { &setup_302, &test_302_0, &test_302_1, "rename", "rename", &cleanup },
+    { &setup_302, &test_302_0, &test_302_1, "link", "link", &cleanup },
     
-    { &setup_303, &test_303_0, &test_303_1, "rename", "rename", &cleanup },
+    { &setup_303, &test_303_0, &test_303_1, "link", "link", &cleanup },
     
-    { &setup_304, &test_304_0, &test_304_1, "rename", "rename", &cleanup },
+    { &setup_304, &test_304_0, &test_304_1, "link", "link", &cleanup },
     
-    { &setup_305, &test_305_0, &test_305_1, "rename", "rename", &cleanup },
+    { &setup_305, &test_305_0, &test_305_1, "link", "link", &cleanup },
     
-    { &setup_306, &test_306_0, &test_306_1, "rename", "rename", &cleanup },
+    { &setup_306, &test_306_0, &test_306_1, "link", "rename", &cleanup },
     
-    { &setup_307, &test_307_0, &test_307_1, "rename", "rename", &cleanup },
+    { &setup_307, &test_307_0, &test_307_1, "link", "rename", &cleanup },
     
-    { &setup_308, &test_308_0, &test_308_1, "rename", "rename", &cleanup },
+    { &setup_308, &test_308_0, &test_308_1, "link", "rename", &cleanup },
     
-    { &setup_309, &test_309_0, &test_309_1, "rename", "rename", &cleanup },
+    { &setup_309, &test_309_0, &test_309_1, "link", "rename", &cleanup },
     
-    { &setup_310, &test_310_0, &test_310_1, "rename", "rename", &cleanup },
+    { &setup_310, &test_310_0, &test_310_1, "link", "rename", &cleanup },
+    
+    { &setup_311, &test_311_0, &test_311_1, "link", "rename", &cleanup },
+    
+    { &setup_312, &test_312_0, &test_312_1, "link", "rename", &cleanup },
+    
+    { &setup_313, &test_313_0, &test_313_1, "link", "rename", &cleanup },
+    
+    { &setup_314, &test_314_0, &test_314_1, "link", "rename", &cleanup },
+    
+    { &setup_315, &test_315_0, &test_315_1, "link", "rename", &cleanup },
+    
+    { &setup_316, &test_316_0, &test_316_1, "link", "rename", &cleanup },
+    
+    { &setup_317, &test_317_0, &test_317_1, "link", "rename", &cleanup },
+    
+    { &setup_318, &test_318_0, &test_318_1, "rename", "rename", &cleanup },
+    
+    { &setup_319, &test_319_0, &test_319_1, "rename", "rename", &cleanup },
+    
+    { &setup_320, &test_320_0, &test_320_1, "rename", "rename", &cleanup },
+    
+    { &setup_321, &test_321_0, &test_321_1, "rename", "rename", &cleanup },
+    
+    { &setup_322, &test_322_0, &test_322_1, "rename", "rename", &cleanup },
+    
+    { &setup_323, &test_323_0, &test_323_1, "rename", "rename", &cleanup },
+    
+    { &setup_324, &test_324_0, &test_324_1, "rename", "rename", &cleanup },
+    
+    { &setup_325, &test_325_0, &test_325_1, "rename", "rename", &cleanup },
+    
+    { &setup_326, &test_326_0, &test_326_1, "rename", "rename", &cleanup },
+    
+    { &setup_327, &test_327_0, &test_327_1, "rename", "rename", &cleanup },
+    
+    { &setup_328, &test_328_0, &test_328_1, "rename", "rename", &cleanup },
+    
+    { &setup_329, &test_329_0, &test_329_1, "rename", "rename", &cleanup },
+    
+    { &setup_330, &test_330_0, &test_330_1, "rename", "rename", &cleanup },
+    
+    { &setup_331, &test_331_0, &test_331_1, "rename", "rename", &cleanup },
+    
+    { &setup_332, &test_332_0, &test_332_1, "rename", "rename", &cleanup },
+    
+    { &setup_333, &test_333_0, &test_333_1, "rename", "rename", &cleanup },
+    
+    { &setup_334, &test_334_0, &test_334_1, "rename", "rename", &cleanup },
+    
+    { &setup_335, &test_335_0, &test_335_1, "rename", "rename", &cleanup },
+    
+    { &setup_336, &test_336_0, &test_336_1, "rename", "rename", &cleanup },
     
     { 0, 0, 0 }
   };
