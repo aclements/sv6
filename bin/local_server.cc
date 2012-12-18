@@ -21,7 +21,7 @@
 int sock;
 
 int
-make_named_socket (const char *filename)
+make_named_socket(const char *filename)
 {
   struct sockaddr_un name;
   int sock;

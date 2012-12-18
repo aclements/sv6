@@ -41,6 +41,7 @@ struct stat;
 struct proc;
 struct vmap;
 struct pipe;
+struct localsock;
 struct work;
 struct irq;
 class print_stream;

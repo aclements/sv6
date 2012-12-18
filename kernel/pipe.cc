@@ -95,7 +95,6 @@ struct ordered : pipe {
   }
 };
 
-
 struct corepipe : balance_pool {
   u32 nread;
   u32 nwrite;
@@ -131,7 +130,7 @@ struct corepipe : balance_pool {
     }
 
     // if (n > 0) {
-    //   cprintf("move %d bytes to target\n", n);
+    //   cprintf("pipe: move %d bytes to target\n", n);
     // }
 
     lock.release();
@@ -269,22 +268,6 @@ pipealloc(struct file **f0, struct file **f1, int flag)
   if(*f1)
     (*f1)->dec();
   return -1;
-}
-
-struct pipe*
-pipesockalloc()
-{
-  return new ordered();
-}
-
-void
-pipesockclose(struct pipe *p)
-{
-  struct ordered *o = (struct ordered *) p;
-  o->writeopen = 0;   // force p->close() to return 1
-  if (p->close(0)) {
-    delete p;
-  }
 }
 
 void

@@ -20,7 +20,7 @@
 #define MESSAGE "Hello, local socket server?"
 
 int
-make_named_socket (const char *filename)
+make_named_socket(const char *filename)
 {
   struct sockaddr_un name;
   int sock;
@@ -43,7 +43,7 @@ make_named_socket (const char *filename)
 }
      
 int
-main (void)
+main(void)
 {
   extern int make_named_socket (const char *name);
   int sock;

@@ -29,6 +29,7 @@ struct file : public referenced, public rcu_freed {
 
   int socket;
   struct pipe *pipe;
+  struct localsock *localsock;
   struct inode *ip;
   u32 off;
 
@@ -72,8 +73,7 @@ struct inode : public referenced, public rcu_freed
   char lockname[16];
   std::atomic<dirns*> dir;
 
-  // for local socket
-  struct pipe *pipe;
+  struct localsock *localsock;
   char socketpath[PATH_MAX];
 
   short type;        // copy of disk inode
