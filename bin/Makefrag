@@ -49,6 +49,7 @@ UPROGS_BIN= \
         mv \
 	local_server \
 	local_client \
+	lsocketbench \
         fstest \
 
 ifeq ($(HAVE_LWIP),y)

@@ -76,6 +76,7 @@ thread(void* x)
     }
   }
 }
+
      
 int
 main (int argc, char *argv[])
