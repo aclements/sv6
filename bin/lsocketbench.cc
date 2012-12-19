@@ -3,9 +3,11 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#define die perror
+#include "user/util.h"
+#include "include/xsys.h"
 #define SERVER  "/tmp/serversocket"
 #define CLIENT  "/tmp/mysocket"
 #else
@@ -72,7 +74,7 @@ thread(void* x)
     // printf("message from %s\n", name.sun_path);
 
     if (strcmp(message, "Hello, local socket server?") != 0) {
-      printf("%d: message %s\n", id, message);
+      printf("%ld: message %s\n", id, message);
       die ("data is incorrect (server)");
     }
 
@@ -138,11 +140,11 @@ void server()
   printf("server running\n");
 
   for (int i = 0; i < nthread; i++)
-    pthread_create(&tid, nullptr, thread, (void*)(long)i);
+    xthread_create(&tid, nullptr, thread, (void*)(long)i);
 
   // XXX no termination at all.
   for (int i = 0; i < nthread; i++)
-    wait(-1);
+    xwait();
 }
      
 int
@@ -158,7 +160,7 @@ main (int argc, char *argv[])
   unlink (SERVER);
   sock = make_named_socket (SERVER);
      
-  int pid = fork(0);
+  int pid = xfork();
   if (pid < 0)
     die("fork failed %s", argv[0]);
 
@@ -166,16 +168,16 @@ main (int argc, char *argv[])
     server();
   } else {
     for (int i = 0; i < nclient; i++) {
-      pid = fork(0);
+      pid = xfork();
       if (pid < 0)
         die("fork failed %s", argv[0]);
       if (pid == 0) {
         client();
-        exit();
+        xexit();
       }
     }
     for (int i = 0; i < nclient; i++) {
-      wait(-1);
+      xwait();
     }
     printf("clients done\n");
 
