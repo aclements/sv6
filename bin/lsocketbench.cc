@@ -140,6 +140,7 @@ void server()
   for (int i = 0; i < nthread; i++)
     pthread_create(&tid, nullptr, thread, (void*)(long)i);
 
+  // XXX no termination at all.
   for (int i = 0; i < nthread; i++)
     wait(-1);
 }

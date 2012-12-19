@@ -83,8 +83,9 @@ struct coresocket : balance_pool {
 struct localsock : balance_pool_dir {
   atomic<coresocket*> pipes[NCPU];
   balancer b;
+  atomic<int> nreader;
 
-  localsock() : b(this) {
+  localsock() : b(this), nreader(0) {
     for (int i = 0; i < NCPU; i++)
       pipes[i] = 0;
   }
@@ -99,15 +100,27 @@ struct localsock : balance_pool_dir {
 
   NEW_DELETE_OPS(localsock);
 
+  coresocket* reader() {
+    for (int i = 0; i < NCPU; i++) {
+      if (pipes[i] != NULL)
+        return pipes[i];
+    }
+    return NULL;
+  }
+
   coresocket* mycoresocket(int id) {
+    // XXX not right; if we have a single reader that is rescheduled
+    // to another core, we get two readers ...
     for (;;) {
       coresocket* c = pipes[id];
       if (c)
         return c;
 
       c = new coresocket;
-      if (cmpxch(&pipes[id], (coresocket*) 0, c))
+      if (cmpxch(&pipes[id], (coresocket*) 0, c)) {
+        nreader++;
         return c;
+      }
       delete c;
     }
   }
@@ -126,9 +139,19 @@ struct localsock : balance_pool_dir {
         return -1;
 
       int id = mycpu()->id;
-      coresocket* cp = mycoresocket(id);
-      if (cp->len >= QUEUELEN)
-        balance();
+      coresocket *cp;
+      if (nreader > 1) {
+        // cprintf("%d: lb delivers message\n", myproc()->pid);
+        cp = mycoresocket(id);
+        if (cp->len >= QUEUELEN)
+          balance();
+      } else {
+        // cprintf("%d: deliver message directly\n", myproc()->pid);
+        cp = reader();
+      }
+
+      if (cp == NULL)
+        continue;
 
       scoped_acquire l(&cp->lock);
       if (cp->len < QUEUELEN) {
