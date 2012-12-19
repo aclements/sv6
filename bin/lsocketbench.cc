@@ -170,6 +170,7 @@ main (int argc, char *argv[])
         die("fork failed %s", argv[0]);
       if (pid == 0) {
         client();
+        exit();
       }
     }
     for (int i = 0; i < nclient; i++) {
