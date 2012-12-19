@@ -58,11 +58,17 @@
   X(uint64_t, refcache_dirtied_count)           \
   X(uint64_t, refcache_conflict_count)          \
 
+#define KSTATS_SOCKET(X)\
+  X(uint64_t, socket_load_balance) \
+  X(uint64_t, socket_local_read)   \
+
 #define KSTATS_ALL(X)                           \
   KSTATS_TLB(X)                                 \
   KSTATS_VM(X)                                  \
   KSTATS_KALLOC(X)                              \
   KSTATS_REFCACHE(X)                            \
+  KSTATS_SOCKET(X)                              \
+
 
 struct kstats
 {

@@ -1,7 +1,9 @@
+#include <fcntl.h>
+#include <unistd.h>
+
 #if defined(LINUX)
 #include <stdio.h>
 #include <errno.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/socket.h>
@@ -15,6 +17,9 @@
 #include "user.h"
 #include "unet.h"
 #include "pthread.h"
+#include "kstats.hh"
+#include "xsys.h"
+#include "sched.h"
 #define SERVER  "/serversocket"
 #define CLIENT  "/mysocket"
 #endif
@@ -28,6 +33,51 @@ int nthread;
 int nclient;
 int nmsg;
 int sock;  // socket on which server threads receive
+
+#if defined(XV6_USER) && defined(HW_ben)
+int get_cpu_order(int thread)
+{
+  const int cpu_order[] = {
+    // Socket 0
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    // Socket 1
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    // Socket 3
+    30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+    // Socket 2
+    20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+    // Socket 5
+    50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+    // Socket 4
+    40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+    // Socket 6
+    60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+    // Socket 7
+    70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+  };
+
+  return cpu_order[thread];
+}
+#else
+int get_cpu_order(int thread)
+{
+  return thread;
+}
+#endif
+
+static void
+read_kstats(kstats *out)
+{
+#ifdef XV6_USER
+  int fd = open("/dev/kstats", O_RDONLY);
+  if (fd < 0)
+    die("Couldn't open /dev/kstats");
+  int r = read(fd, out, sizeof *out);
+  if (r != sizeof *out)
+    die("Short read from /dev/kstats");
+  close(fd);
+#endif
+}
 
 int
 make_named_socket(const char *filename)
@@ -61,6 +111,11 @@ thread(void* x)
   struct sockaddr_un name;
   socklen_t size;
   int nbytes;
+
+  if (setaffinity(get_cpu_order(id)) < 0)
+    die("setaffinity err");
+
+  printf("server thread running on cpu %d\n", id);
 
   while (1)
   {
@@ -100,8 +155,6 @@ client()
   size_t size;
   int nbytes;
      
-  printf("client running\n");
-
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
 
   sock = make_named_socket (path);
@@ -137,10 +190,8 @@ void server()
 {
   pthread_t tid;
 
-  printf("server running\n");
-
   for (int i = 0; i < nthread; i++)
-    xthread_create(&tid, nullptr, thread, (void*)(long)i);
+    xthread_create(&tid, 0, thread, (void*)(long)i);
 
   // XXX no termination at all.
   for (int i = 0; i < nthread; i++)
@@ -167,11 +218,16 @@ main (int argc, char *argv[])
   if (pid == 0) {
     server();
   } else {
+    struct kstats kstats_before, kstats_after;
+    read_kstats(&kstats_before);
     for (int i = 0; i < nclient; i++) {
       pid = xfork();
       if (pid < 0)
         die("fork failed %s", argv[0]);
       if (pid == 0) {
+        printf("run client on cpu %d\n", i);
+        if (setaffinity(get_cpu_order(i)) < 0)
+          die("setaffinity err");
         client();
         xexit();
       }
@@ -179,6 +235,10 @@ main (int argc, char *argv[])
     for (int i = 0; i < nclient; i++) {
       xwait();
     }
+    read_kstats(&kstats_after);
+    struct kstats kstats = kstats_after - kstats_before;
+    printf("recv msg through lb %lu\n", kstats.socket_load_balance);
+    printf("recv msg locally %lu\n", kstats.socket_local_read);
     printf("clients done\n");
 
   }

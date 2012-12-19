@@ -17,6 +17,7 @@
 #include "unet.h"
 #include "lb.hh"
 #include "ilist.hh"
+#include "kstats.hh"
 
 #define QUEUELEN 10
 
@@ -71,9 +72,9 @@ struct coresocket : balance_pool {
       target->messages.push_back(&m);
     }
 
-    // if (n > 0) {
-    //   cprintf("socket: move %d msg(s) to target\n", n);
-    // }
+    if (n > 0) {
+      kstats::inc(&kstats::socket_load_balance);
+    }
 
     lock.release();
     target->lock.release();
@@ -171,6 +172,8 @@ struct localsock : balance_pool_dir {
       coresocket* cp = mycoresocket(id);
       if (cp->len <= 0)
         balance();
+      else
+        kstats::inc(&kstats::socket_local_read);
 
       scoped_acquire l(&cp->lock);
       if (cp->len > 0) {
