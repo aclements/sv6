@@ -43,7 +43,7 @@ make_named_socket(const char *filename)
 }
      
 int
-main(void)
+main(int argc, char *argv[])
 {
   extern int make_named_socket (const char *name);
   int sock;
@@ -51,26 +51,39 @@ main(void)
   struct sockaddr_un name;
   size_t size;
   int nbytes;
+  int nmsg;
+
+  if (argc < 2)
+    die("usage: %s nmessages", argv[0]);
+
+  nmsg = atoi(argv[1]);
      
   sock = make_named_socket (CLIENT);
      
   name.sun_family = AF_LOCAL;
   strcpy (name.sun_path, SERVER);
   size = strlen (name.sun_path) + sizeof (name.sun_family);
+
+  for (int i = 0; i < nmsg; i++) {
+    nbytes = sendto (sock, (void *) MESSAGE, strlen (MESSAGE) + 1, 0,
+                     (struct sockaddr *) & name, size);
+    if (nbytes < 0) {
+      die ("sendto (client)");
+    }
+
+    nbytes = recvfrom (sock, message, MAXMSG, 0, NULL, 0);
+    if (nbytes < 0) {
+      die ("recfrom (client)");
+    }
+
      
-  nbytes = sendto (sock, (void *) MESSAGE, strlen (MESSAGE) + 1, 0,
-                   (struct sockaddr *) & name, size);
-  if (nbytes < 0) {
-    die ("sendto (client)");
+    if (strcmp(message, "ni hao") != 0) {
+      printf("client: message %s\n", message);
+      die ("data is incorrect (client)");
+    }
+     
   }
-     
-  nbytes = recvfrom (sock, message, MAXMSG, 0, NULL, 0);
-  if (nbytes < 0) {
-    die ("recfrom (client)");
-  }
-     
-  printf ("Client: got response: %s\n", message);
-     
+
   unlink (CLIENT);
   close (sock);
 }

@@ -21,7 +21,7 @@
 #define QUEUELEN 10
 
 struct msghdr {
-  int len;
+  u32 len;
   struct sockaddr_un uaddr;
   char *data;
   islink<msghdr> link;
@@ -71,9 +71,9 @@ struct coresocket : balance_pool {
       target->messages.push_back(&m);
     }
 
-    if (n > 0) {
-      cprintf("socket: move %d msg(s) to target\n", n);
-    }
+    // if (n > 0) {
+    //   cprintf("socket: move %d msg(s) to target\n", n);
+    // }
 
     lock.release();
     target->lock.release();
@@ -82,15 +82,9 @@ struct coresocket : balance_pool {
 
 struct localsock : balance_pool_dir {
   atomic<coresocket*> pipes[NCPU];
-
-  // no locks since only one reader and one writer exist
-  // (the fd refcount takes care of the dup's)
-  int readopen;
-  int writeopen;
-
   balancer b;
 
-  localsock() : readopen(1), writeopen(1), b(this) {
+  localsock() : b(this) {
     for (int i = 0; i < NCPU; i++)
       pipes[i] = 0;
   }
@@ -128,7 +122,7 @@ struct localsock : balance_pool_dir {
 
   int write(msghdr *m) {
     for (;;) {
-      if (readopen == 0 || myproc()->killed)
+      if (myproc()->killed)
         return -1;
 
       int id = mycpu()->id;
@@ -138,7 +132,6 @@ struct localsock : balance_pool_dir {
 
       scoped_acquire l(&cp->lock);
       if (cp->len < QUEUELEN) {
-        cprintf("write: pipeid %d %p\n", id, cp);
         cp->messages.push_back(m);
         cp->len++;
         return 0;
@@ -148,7 +141,7 @@ struct localsock : balance_pool_dir {
 
   msghdr* read() {
     for (;;) {
-      if (writeopen == 0 || myproc()->killed)
+      if (myproc()->killed)
         return NULL;
 
       int id = mycpu()->id;
@@ -159,24 +152,10 @@ struct localsock : balance_pool_dir {
       scoped_acquire l(&cp->lock);
       if (cp->len > 0) {
         msghdr &m = cp->messages.front();
-        cprintf("read: pipeid %d %p %d\n", id, cp, m.len);
         cp->messages.pop_front();
         cp->len--;
         return &m;
       }
-    }
-  }
-
-  int close(int writeable) {
-    if (writeable) {
-      writeopen = 0;
-    } else {
-      readopen = 0;
-    }
-    if (readopen == 0 && writeopen == 0) {
-      return 1;
-    } else {
-      return 0;
     }
   }
 };
@@ -190,10 +169,7 @@ localsockalloc()
 void
 localsockclose(struct localsock *p)
 {
-  p->writeopen = 0;   // force p->close() to return 1
-  if (p->close(0)) {
-    delete p;
-  }
+  delete p;
 }
 
 void 
@@ -357,10 +333,7 @@ sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,
   if (!getsocket(sockfd, &f))
     return -1;
 
-  cprintf("sys_recvfrom: read localsock %ld\n", len);
-
   msghdr *m = f->localsock->read();
-  cprintf("sys_recvfrom: read msg of len %d\n", m->len);
   int s = sizeof(m->uaddr);
   if (src_addr != 0) {
     if (putmem(src_addr, &m->uaddr, sizeof(m->uaddr)) || 
@@ -372,8 +345,6 @@ sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,
 
   if (!userptr<char>(buf).store(m->data, m->len))
     goto done;
-
-  cprintf("sys_recvfrom: done %d\n", m->len);
 
   r = len;
 
@@ -422,10 +393,12 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   strncpy(m->data, b, len);
 
   int r = ip->localsock->write(m);
-  assert(r == 0);
-
-  cprintf("sys_sendto: sent %d\n", m->len);
-
+  if (r < 0) {
+    kfree(b);
+    delete m;
+    return -1;
+  }
   return len;
 }
 
+ 

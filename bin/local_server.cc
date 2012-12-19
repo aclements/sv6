@@ -60,8 +60,11 @@ thread(void* x)
     if (nbytes < 0) {
       die ("recfrom (server)");
     }
-     
-    printf ("%d: got message from %s: %s\n", id, name.sun_path, message);
+
+    if (strcmp(message, "Hello, local socket server?") != 0) {
+      printf("%d: message %s\n", id, message);
+      die ("data is incorrect (server)");
+    }
 
     strcpy(message, MESSAGE);
 
