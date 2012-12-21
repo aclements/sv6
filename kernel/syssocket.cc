@@ -164,12 +164,20 @@ struct localsock : balance_pool_dir {
   }
 
   msghdr* read() {
+    bool yielded = false;
     for (;;) {
       if (myproc()->killed)
         return NULL;
 
       int id = mycpu()->id;
       coresocket* cp = mycoresocket(id);
+      if (cp->len <= 0 && !yielded) {
+        // in case another proc is running on hopefully this processor,
+        // let's give them a chance to send a message
+        yield();   // hopefully only yields to processes on this core?
+        yielded = true;
+        continue;
+      }
       if (cp->len <= 0)
         balance();
       else

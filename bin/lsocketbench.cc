@@ -1,6 +1,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+// To build on Linux:
+//  g++ -O3 -DLINUX -std=c++0x -g -I ../ -pthread lsocketbench.cc -o lsocketbench
+
 #if defined(LINUX)
 #include <stdio.h>
 #include <errno.h>
@@ -65,6 +68,15 @@ int get_cpu_order(int thread)
 }
 #endif
 
+#ifndef XV6_USER
+struct kstats
+{
+  kstats operator-(const kstats &o) {
+    return kstats{};
+  }
+};
+#endif
+
 static void
 read_kstats(kstats *out)
 {
@@ -115,7 +127,7 @@ thread(void* x)
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
 
-  printf("server thread running on cpu %d\n", id);
+  printf("server thread running on cpu %d\n", (int) id);
 
   while (1)
   {
@@ -236,9 +248,11 @@ main (int argc, char *argv[])
       xwait();
     }
     read_kstats(&kstats_after);
+#ifdef XV6_USER
     struct kstats kstats = kstats_after - kstats_before;
     printf("recv msg through lb %lu\n", kstats.socket_load_balance);
     printf("recv msg locally %lu\n", kstats.socket_local_read);
+#endif
     printf("clients done\n");
 
   }
