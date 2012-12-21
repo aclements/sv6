@@ -27,6 +27,7 @@
 #define CLIENT  "/mysocket"
 #endif
 
+#define MAXCPU 100
 #define MAXMSG  512
 #define MAXPATH 100
 #define SMESSAGE "ni hao"
@@ -175,6 +176,7 @@ client()
   strcpy (name.sun_path, SERVER);
   size = strlen (name.sun_path) + sizeof (name.sun_family);
 
+  uint64_t t0 = rdtsc();
   for (int i = 0; i < nmsg; i++) {
     nbytes = sendto (sock, (void *) CMESSAGE, strlen (CMESSAGE) + 1, 0,
                      (struct sockaddr *) & name, size);
@@ -193,21 +195,21 @@ client()
     }
      
   }
-
+  uint64_t t1 = rdtsc();
+  printf("client %d ncycles %lu\n", getpid(), t1-t0);
   unlink (path);
   close (sock);
 }
 
 void server()
 {
-  pthread_t tid;
+  pthread_t tid[MAXCPU];
 
   for (int i = 0; i < nthread; i++)
-    xthread_create(&tid, 0, thread, (void*)(long)i);
+    xthread_create(&tid[i], 0, thread, (void*)(long)i);
 
-  // XXX no termination at all.
   for (int i = 0; i < nthread; i++)
-    xwait();
+    pthread_join(tid[i], NULL);
 }
      
 int
