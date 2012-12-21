@@ -25,7 +25,7 @@
 #include <iterator>
 
 // Use lb.hh
-#define LB  1
+#define LB  0
 // Print memory steal events
 #define PRINT_STEAL 0
 
@@ -711,8 +711,10 @@ initkalloc(u64 mbaddr)
   // subdivide these and spread out CPUs within a node (but still
   // prefer stealing from the same node before others).
 
+#if LB
   void *base = p2v(mem.base());
   size_t sz = mem.bytes();
+#endif
   for (auto &node : numa_nodes) {
     phys_map node_mem;
     // Intersect node memory region with physical memory map to get
@@ -729,11 +731,12 @@ initkalloc(u64 mbaddr)
     for (auto &reg : node_mem.get_regions()) {
       if (ALLOC_MEMSET)
         memset(p2v(reg.base), 1, reg.end - reg.base);
-#ifdef LB
+#if LB
       // Make an allocator for [base, base+sz) but only mark [reg.base,
       // reg.end-reg.base) as free.  This allows us to move phys memory from one
       // buddy to another during balance_move_to().
       auto buddy = buddy_allocator(base, sz, 0);
+      cprintf("base %lx reg = %lx\n", (u64) base, (u64) p2v(reg.base));
       buddy.free_init(p2v(reg.base), reg.end - reg.base);
 #else
       auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base, 1);
