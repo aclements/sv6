@@ -9,6 +9,8 @@
 
 using namespace std;
 
+#include "kernel.hh"
+
 buddy_allocator::buddy_allocator(void *base, size_t len, bool init)
 {
   uintptr_t end = (uintptr_t)base + len;
@@ -53,11 +55,14 @@ buddy_allocator::buddy_allocator(void *base, size_t len, bool init)
 void
 buddy_allocator::free_init(void *base, std::size_t len)
 {
-  uintptr_t b = ((uintptr_t)base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
+  uintptr_t nbase = (uintptr_t) base;
+  if (nbase < this->base)   // skip memory allocated for bitmap?
+    nbase = this->base;
+  uintptr_t b = ((uintptr_t)nbase + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
   uintptr_t l = ((uintptr_t)base + len) & ~(MAX_SIZE - 1);
-
-  for (uintptr_t block = b; block < l; block += MAX_SIZE)
+  for (uintptr_t block = b; block < l; block += MAX_SIZE) {
     this->free((void *) block, MAX_SIZE);
+  }
 }
 
 

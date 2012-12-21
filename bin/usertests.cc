@@ -1253,6 +1253,9 @@ forktest(void)
 void
 memtest(void)
 {
+
+  fprintf(1, "mem test\n");
+
 #define NMAP 1024
   static void *addr[1024];
   if (setaffinity(0) < 0)
@@ -1275,6 +1278,7 @@ memtest(void)
     if (r < 0)
       die("memtest: unmap failed");
   }
+  fprintf(1, "mem test OK\n");
 }
 
 void

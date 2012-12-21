@@ -25,7 +25,7 @@
 #include <iterator>
 
 // Use lb.hh
-#define LB  0
+#define LB  1
 // Print memory steal events
 #define PRINT_STEAL 0
 
@@ -713,7 +713,7 @@ initkalloc(u64 mbaddr)
 
 #if LB
   void *base = p2v(mem.base());
-  size_t sz = mem.bytes();
+  size_t sz = (size_t) p2v(mem.max()) - (size_t) base;
 #endif
   for (auto &node : numa_nodes) {
     phys_map node_mem;
@@ -736,7 +736,6 @@ initkalloc(u64 mbaddr)
       // reg.end-reg.base) as free.  This allows us to move phys memory from one
       // buddy to another during balance_move_to().
       auto buddy = buddy_allocator(base, sz, 0);
-      cprintf("base %lx reg = %lx\n", (u64) base, (u64) p2v(reg.base));
       buddy.free_init(p2v(reg.base), reg.end - reg.base);
 #else
       auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base, 1);
