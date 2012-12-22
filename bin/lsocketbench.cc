@@ -18,6 +18,7 @@
 #else
 #include "types.h"
 #include "user.h"
+#include "amd64.h"
 #include "unet.h"
 #include "pthread.h"
 #include "kstats.hh"
@@ -37,6 +38,7 @@ int nthread;
 int nclient;
 int nmsg;
 int sock;  // socket on which server threads receive
+int clientid;
 
 #if defined(XV6_USER) && defined(HW_ben)
 int get_cpu_order(int thread)
@@ -167,7 +169,7 @@ client()
   char path[MAXPATH];
   size_t size;
   int nbytes;
-     
+
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
 
   sock = make_named_socket (path);
@@ -193,10 +195,10 @@ client()
       printf("client: message %s\n", message);
       die ("data is incorrect (client)");
     }
-     
+
   }
   uint64_t t1 = rdtsc();
-  printf("client %d ncycles %lu\n", getpid(), t1-t0);
+  printf("client %d ncycles %lu for nmsg %d avg=%lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
   unlink (path);
   close (sock);
 }
@@ -235,6 +237,7 @@ main (int argc, char *argv[])
     struct kstats kstats_before, kstats_after;
     read_kstats(&kstats_before);
     for (int i = 0; i < nclient; i++) {
+      clientid = i;
       pid = xfork();
       if (pid < 0)
         die("fork failed %s", argv[0]);

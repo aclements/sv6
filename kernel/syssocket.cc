@@ -135,27 +135,40 @@ struct localsock : balance_pool_dir {
   }
 
   int write(msghdr *m) {
+    bool toyield = true;
     for (;;) {
       if (myproc()->killed)
         return -1;
 
       int id = mycpu()->id;
       coresocket *cp;
+#if 0
+      // if there is only reader, deliver message to reader
+      // perhaps useful if sender and receiver are not on the same core
       if (nreader > 1) {
-        // cprintf("%d: lb delivers message\n", myproc()->pid);
         cp = mycoresocket(id);
         if (cp->len >= QUEUELEN)
           balance();
       } else {
-        // cprintf("%d: deliver message directly\n", myproc()->pid);
         cp = reader();
       }
-
       if (cp == NULL)
         continue;
+#else
+      cp = mycoresocket(id);
+      if (cp->len >= QUEUELEN && toyield) {
+        yield();
+        toyield = false;
+        continue;
+      } 
+      
+      if (cp->len >= QUEUELEN)
+        balance();
+#endif
 
       scoped_acquire l(&cp->lock);
       if (cp->len < QUEUELEN) {
+        // cprintf("w %d(%d): coresocket %p\n", myproc()->pid, myproc()->cpuid, cp);
         cp->messages.push_back(m);
         cp->len++;
         return 0;
@@ -164,20 +177,23 @@ struct localsock : balance_pool_dir {
   }
 
   msghdr* read() {
-    bool yielded = false;
+    bool toyield = true;
     for (;;) {
       if (myproc()->killed)
         return NULL;
 
       int id = mycpu()->id;
       coresocket* cp = mycoresocket(id);
-      if (cp->len <= 0 && !yielded) {
+
+      if (cp->len <= 0 && toyield) {
         // in case another proc is running on hopefully this processor,
         // let's give them a chance to send a message
-        yield();   // hopefully only yields to processes on this core?
-        yielded = true;
+        // cprintf("yield %d (id %d)\n", myproc()->pid, id);
+        yield();   // yields to another process on this core, if there is one
+        toyield = false;
         continue;
       }
+
       if (cp->len <= 0)
         balance();
       else
@@ -185,11 +201,13 @@ struct localsock : balance_pool_dir {
 
       scoped_acquire l(&cp->lock);
       if (cp->len > 0) {
+        // cprintf("r %d(%d): coresocket %p\n", myproc()->pid, myproc()->cpuid, cp);
         msghdr &m = cp->messages.front();
         cp->messages.pop_front();
         cp->len--;
         return &m;
       }
+      toyield = true;   // iterate between yielding and balancing
     }
   }
 };
@@ -364,6 +382,7 @@ sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,
 {
   sref<file> f;
   int r = -1;
+
   if (!getsocket(sockfd, &f))
     return -1;
 
@@ -402,9 +421,11 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
 
   if (fetchmem(&uaddr, dest_addr, sizeof(sockaddr_un)) < 0) 
     return -1;
+
   ip = namei(myproc()->cwd, uaddr.sun_path);
   if (ip == 0)
     return -1;
+
   if (ip->type != T_SOCKET)
     return -1;
 
