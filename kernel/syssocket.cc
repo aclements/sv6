@@ -19,7 +19,8 @@
 #include "ilist.hh"
 #include "kstats.hh"
 
-#define QUEUELEN 10
+#define QUEUELEN 10   // Number of message per queue of a local socket
+#define LB 0          // Run with load balancer?
 
 struct msghdr {
   u32 len;
@@ -131,7 +132,9 @@ struct localsock : balance_pool_dir {
   }
 
   void balance() {
+#if LB
     b.balance();
+#endif
   }
 
   int write(msghdr *m) {
@@ -383,6 +386,9 @@ sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,
   sref<file> f;
   int r = -1;
 
+  kstats::timer timer_fill(&kstats::socket_local_recvfrom_cycles);
+  kstats::inc(&kstats::socket_local_recvfrom_cnt);
+
   if (!getsocket(sockfd, &f))
     return -1;
 
@@ -416,8 +422,14 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   sref<file> f;
   struct sockaddr_un uaddr;
 
+  { 
+    kstats::timer timer_fill(&kstats::socket_local_sendto_cycles);
+    kstats::inc(&kstats::socket_local_sendto_cnt);
+
   if (!getsocket(sockfd, &f))
     return -1;
+
+  }
 
   if (fetchmem(&uaddr, dest_addr, sizeof(sockaddr_un)) < 0) 
     return -1;

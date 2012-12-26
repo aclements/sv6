@@ -33,12 +33,14 @@
 #define MAXPATH 100
 #define SMESSAGE "ni hao"
 #define CMESSAGE "Hello, local socket server?"
+#define PROC 1
 
 int nthread;
 int nclient;
 int nmsg;
 int sock;  // socket on which server threads receive
-int clientid;
+long *clientid;
+u64 clienttimes[MAXCPU];
 
 #if defined(XV6_USER) && defined(HW_ben)
 int get_cpu_order(int thread)
@@ -130,8 +132,9 @@ thread(void* x)
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
 
-  printf("server thread running on cpu %d\n", (int) id);
+  // printf("server thread running on cpu %d\n", (int) id);
 
+  int n = 0;
   while (1)
   {
     size = sizeof (name);
@@ -156,12 +159,18 @@ thread(void* x)
     {
       die ("sendto (server)");
     }
+
+    n++;
+
+    if (n >= nmsg) {
+      xexit();
+    }
   }
 }
 
 
 void 
-client()
+client(int id)
 {
   int sock;
   char message[MAXMSG];
@@ -198,7 +207,8 @@ client()
 
   }
   uint64_t t1 = rdtsc();
-  printf("client %d ncycles %lu for nmsg %d avg=%lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
+  clienttimes[id] = (t1-t0)/nmsg;
+  // printf("client %d ncycles %lu for nmsg %d cycles/msg %lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
   unlink (path);
   close (sock);
 }
@@ -212,6 +222,54 @@ void server()
 
   for (int i = 0; i < nthread; i++)
     pthread_join(tid[i], NULL);
+
+  xexit();
+}
+
+static void*
+client_thread(void* x)
+{
+  long id = (long)x;
+  // printf("run client %d on cpu %d\n", getpid(), id);
+  if (setaffinity(get_cpu_order(id)) < 0)
+    die("setaffinity err");
+  client(id);
+  xexit();
+ 
+}
+
+void clients()
+{
+#if !PROC
+  pthread_t tid[MAXCPU];
+#endif
+
+  for (long i = 0; i < nclient; i++) {
+    clientid = (long *) i;
+#if PROC
+    int pid = xfork();
+    if (pid < 0)
+      die("fork failed clients");
+    if (pid == 0) {
+      client_thread(clientid);
+    }
+#else
+    xthread_create(&tid[i], 0, client_thread, (void*)(long)i);
+#endif
+  }
+  for (int i = 0; i < nclient; i++) {
+#if PROC
+    xwait();
+#else
+    pthread_join(tid[i], NULL);
+#endif
+  }
+  u64 sum = 0;
+  for (int i = 0; i < nclient; i++) {
+    sum += clienttimes[i];
+  }
+  printf("avg cycles/iter: %lu\n", sum / nclient);
+  // printf("clients done\n");
 }
      
 int
@@ -226,6 +284,9 @@ main (int argc, char *argv[])
 
   unlink (SERVER);
   sock = make_named_socket (SERVER);
+
+  struct kstats kstats_before, kstats_after;
+  read_kstats(&kstats_before);
      
   int pid = xfork();
   if (pid < 0)
@@ -234,32 +295,19 @@ main (int argc, char *argv[])
   if (pid == 0) {
     server();
   } else {
-    struct kstats kstats_before, kstats_after;
-    read_kstats(&kstats_before);
-    for (int i = 0; i < nclient; i++) {
-      clientid = i;
-      pid = xfork();
-      if (pid < 0)
-        die("fork failed %s", argv[0]);
-      if (pid == 0) {
-        printf("run client on cpu %d\n", i);
-        if (setaffinity(get_cpu_order(i)) < 0)
-          die("setaffinity err");
-        client();
-        xexit();
-      }
-    }
-    for (int i = 0; i < nclient; i++) {
-      xwait();
-    }
-    read_kstats(&kstats_after);
-#ifdef XV6_USER
-    struct kstats kstats = kstats_after - kstats_before;
-    printf("recv msg through lb %lu\n", kstats.socket_load_balance);
-    printf("recv msg locally %lu\n", kstats.socket_local_read);
-#endif
-    printf("clients done\n");
-
+    clients();
+    xwait();
   }
+
+#ifdef XV6_USER
+  read_kstats(&kstats_after);
+  struct kstats kstats = kstats_after - kstats_before;
+  printf("%d %lu # recv msg through lb\n", nclient, kstats.socket_load_balance);
+  printf("%d %lu # recv msg locally\n", nclient, kstats.socket_local_read);
+  printf("%d %f # cycles/sendto\n", nclient,
+         (double)kstats.socket_local_sendto_cycles / kstats.socket_local_sendto_cnt);
+  printf("%d %f #cycles/recvfrom\n", nclient,
+         (double)kstats.socket_local_recvfrom_cycles / kstats.socket_local_recvfrom_cnt);
+#endif
   return 0;
 }
