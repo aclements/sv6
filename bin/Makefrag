@@ -51,6 +51,7 @@ UPROGS_BIN= \
 	local_client \
 	lsocketbench \
         fstest \
+	base64 \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
