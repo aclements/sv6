@@ -232,8 +232,11 @@ initcpus_acpi(void)
       c = &cpus[0];
       found_bsp = true;
     } else {
-      if (ncpu == NCPU)
-        panic("initcpus_acpi: too many CPUs");
+      if (ncpu == NCPU) {
+        console.println("initcpus_acpi: Only ", NCPU,
+                        " CPUs enabled; please increase NCPU");
+        break;
+      }
       c = &cpus[ncpu++];
     }
     c->id = c - cpus;
@@ -287,8 +290,12 @@ initcpus_acpi(void)
       cpu_common: {
           auto cpu = apicid_to_cpu(apicid);
           auto node = ensure_node(proximity_domain);
-          if (!cpu)
-            panic("SRAT refers to unknown CPU APICID %d", apicid);
+          if (!cpu) {
+            // XXX This physical memory will go unused
+            console.println("Warning: SRAT refers to unknown CPU APICID ",
+                            apicid);
+            continue;
+          }
           if (cpu->node)
             panic("CPU %d is in multiple NUMA nodes", cpu->id);
           cpu->node = node;
