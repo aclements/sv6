@@ -186,7 +186,7 @@ xread(int fd, const void *buf, size_t n)
       die("read failed");
     if (r == 0)
       break;
-    pos += n;
+    pos += r;
   }
   return pos;
 }
