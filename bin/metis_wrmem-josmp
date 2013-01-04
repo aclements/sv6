@@ -8,4 +8,4 @@
 ./metis_wrmem -s 4000 -p 30
 ./metis_wrmem -s 4000 -p 20
 ./metis_wrmem -s 4000 -p 10
-./metis_wrmem -s 4000 -p 1
+# ./metis_wrmem -s 4000 -p 1

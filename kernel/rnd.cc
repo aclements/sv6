@@ -5,6 +5,7 @@
 
 struct state {
   u64 seed;
+ __padout__;
 };
 
 percpu<state,percpu_safety::internal> rstate;

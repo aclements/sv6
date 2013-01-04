@@ -16,8 +16,14 @@
 #include "major.h"
 #include "rnd.hh"
 
+// To get good performance on a single core on ben with 79 cores idling set
+// SINGLE to 1.  XXX To fix this we need adopt LB to avoid cores ganging up on
+// the same cores for stealing. We should also clean up wq.  And, make sure we
+// can profile the idle loop in this scenario.
+#define SINGLE 0  
+
 enum { sched_debug = 0 };
-enum { steal_nonexec = 1 };
+enum { steal_nonexec = 1 };    // XXX why is this exist?
 
 class schedule
 {
@@ -105,6 +111,10 @@ schedule::deq(void)
 proc*
 schedule::steal(bool nonexec)
 {
+#if SINGLE
+  return nullptr;
+#endif
+
   if (!cansteal_ || !tryacquire(&lock_))
     return nullptr;
 
