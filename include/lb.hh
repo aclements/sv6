@@ -42,7 +42,7 @@ class balance_pool {
 
     if (thisbal < otherbal) {
       otherpool->balance_move_to(this);
-    } else {
+    } else if (otherbal > thisbal) {
       balance_move_to(otherpool);
     }
   }
