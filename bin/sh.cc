@@ -101,7 +101,7 @@ runcmd(struct cmd *cmd)
 
   case PIPE:
     pcmd = (struct pipecmd*)cmd;
-    if(pipe(p, 0) < 0)
+    if(pipe(p) < 0)
       panic("pipe");
     if(fork1() == 0){
       close(1);

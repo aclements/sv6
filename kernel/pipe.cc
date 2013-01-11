@@ -10,8 +10,6 @@
 #include "cpu.hh"
 #include "ilist.hh"
 #include "uk/unistd.h"
-#include "rnd.hh"
-#include "lb.hh"
 
 #define PIPESIZE 512
 
@@ -95,149 +93,9 @@ struct ordered : pipe {
   }
 };
 
-struct corepipe : balance_pool {
-  u32 nread;
-  u32 nwrite;
-  char data[PIPESIZE];
-  struct spinlock lock;
-  corepipe() : balance_pool(PIPESIZE), nread(0), nwrite(0),
-               lock("corepipe", LOCKSTAT_PIPE) {}
-  ~corepipe() {}
-  NEW_DELETE_OPS(corepipe);
-
-  u64 balance_count() const {
-    return nwrite-nread;
-  }
-
-  void balance_move_to(balance_pool* other) {
-    corepipe* target = (corepipe*) other;
-
-    // XXX might be useful to enforce lock order, but it's alright
-    // because of try_acquire.
-
-    assert(this != target);
-    if (!lock.try_acquire())
-      return;
-    if (!target->lock.try_acquire()) {
-      lock.release();
-      return;
-    }
-
-    int n = 0;
-    while ((target->nwrite - target->nread) < (nwrite - nread)) {
-      n++;
-      target->data[target->nwrite++ % PIPESIZE] = data[nread++ % PIPESIZE];
-    }
-
-    // if (n > 0) {
-    //   cprintf("pipe: move %d bytes to target\n", n);
-    // }
-
-    lock.release();
-    target->lock.release();
-  }
-};
-
-struct unordered : pipe, balance_pool_dir {
-  atomic<corepipe*> pipes[NCPU];
-
-  // no locks since only one reader and one writer exist
-  // (the fd refcount takes care of the dup's)
-  int readopen;
-  int writeopen;
-
-  balancer b;
-
-  unordered() : readopen(1), writeopen(1), b(this) {
-    for (int i = 0; i < NCPU; i++)
-      pipes[i] = 0;
-  }
-
-  ~unordered() {
-    for (int i = 0; i < NCPU; i++) {
-      corepipe* c = pipes[i].load();
-      if (c)
-        delete c;
-    }
-  }
-
-  NEW_DELETE_OPS(unordered);
-
-  corepipe* mycorepipe(int id) {
-    for (;;) {
-      corepipe* c = pipes[id];
-      if (c)
-        return c;
-
-      c = new corepipe;
-      if (cmpxch(&pipes[id], (corepipe*) 0, c))
-        return c;
-      delete c;
-    }
-  }
-
-  balance_pool* balance_get(int id) const {
-    return pipes[id];
-  }
-
-  void balance() {
-    b.balance();
-  }
-
-  int write(const char *addr, int n) {
-    for (;;) {
-      if (readopen == 0 || myproc()->killed)
-        return -1;
-
-      int id = mycpu()->id;
-      corepipe* cp = mycorepipe(id);
-      if (cp->nwrite + n >= cp->nread + PIPESIZE)
-        balance();
-
-      scoped_acquire l(&cp->lock);
-      if (cp->nwrite + n < cp->nread + PIPESIZE) {
-        for (int i = 0; i < n; i++)
-          cp->data[cp->nwrite++ % PIPESIZE] = addr[i];
-        return n;
-      }
-    }
-  }
-
-  int read(char *addr, int n) {
-    for (;;) {
-      if (writeopen == 0 || myproc()->killed)
-        return -1;
-
-      int id = mycpu()->id;
-      corepipe* cp = mycorepipe(id);
-      if (cp->nread + n > cp->nwrite)
-        balance();
-
-      scoped_acquire l(&cp->lock);
-      if (cp->nread + n <= cp->nwrite) {
-        for (int i = 0; i < n; i++)
-          addr[i] = cp->data[cp->nread++ % PIPESIZE];
-        return n;
-      }
-    }
-  }
-
-  int close(int writeable) {
-    if (writeable) {
-      writeopen = 0;
-    } else {
-      readopen = 0;
-    }
-    if (readopen == 0 && writeopen == 0) {
-      return 1;
-    } else {
-      return 0;
-    }
-  }
-};
 
 int
-pipealloc(struct file **f0, struct file **f1, int flag)
+pipealloc(struct file **f0, struct file **f1)
 {
   struct pipe *p;
 
@@ -245,11 +103,7 @@ pipealloc(struct file **f0, struct file **f1, int flag)
   *f0 = *f1 = 0;
   if((*f0 = file::alloc()) == 0 || (*f1 = file::alloc()) == 0)
     goto bad;
-  if (flag & PIPE_UNORDED) {
-    p = new unordered();
-  } else {
-    p = new ordered();
-  }
+  p = new ordered();
   (*f0)->type = file::FD_PIPE;
   (*f0)->readable = 1;
   (*f0)->writable = 0;
@@ -273,7 +127,7 @@ pipealloc(struct file **f0, struct file **f1, int flag)
 void
 pipeclose(struct pipe *p, int writable)
 {
-  if (p->close(0))
+  if (p->close(writable))
     delete p;
 }
 

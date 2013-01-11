@@ -210,7 +210,7 @@ pipe1(void)
   int fds[2], pid;
   int seq, i, n, cc, total;
 
-  if(pipe(fds, 0) != 0){
+  if(pipe(fds) != 0){
     fprintf(1, "pipe() failed\n");
     exit();
   }
@@ -226,6 +226,7 @@ pipe1(void)
         exit();
       }
     }
+
     exit();
   } else if(pid > 0){
     close(fds[1]);
@@ -272,7 +273,7 @@ preempt(void)
     for(;;)
       ;
 
-  pipe(pfds, 0);
+  pipe(pfds);
   pid3 = fork(0);
   if(pid3 == 0){
     close(pfds[0]);
@@ -1396,7 +1397,7 @@ sbrktest(void)
   // if we run the system out of memory, does it clean up the last
   // failed allocation?
   sbrk(-(sbrk(0) - oldbrk));
-  if(pipe(fds, 0) != 0){
+  if(pipe(fds) != 0){
     fprintf(1, "pipe() failed\n");
     exit();
   }
@@ -1446,7 +1447,7 @@ validatetest(void)
   for(p = lo; p <= hi; p += 4096){
     if((pid = fork(0)) == 0){
       // try to crash the kernel by passing in a badly placed integer
-      if (pipe((int*)p, 0) == 0)
+      if (pipe((int*)p) == 0)
         fprintf(stdout, "validatetest failed (pipe succeeded)\n");
       exit();
     }
@@ -1780,7 +1781,7 @@ test_fault(char *p)
   int fds[2], pid;
   char buf = 0;
 
-  if (pipe(fds, 0) != 0)
+  if (pipe(fds) != 0)
     die("test_fault: pipe failed");
   if ((pid = fork(0)) < 0)
     die("test_fault: fork failed");

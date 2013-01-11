@@ -660,12 +660,12 @@ sys_exec(const char *upath, userptr<userptr<const char> > uargv)
 
 //SYSCALL
 int
-sys_pipe(userptr<int> fd, int flag)
+sys_pipe(userptr<int> fd)
 {
   struct file *rf, *wf;
   int fd_buf[2];
 
-  if(pipealloc(&rf, &wf, flag) < 0)
+  if(pipealloc(&rf, &wf) < 0)
     return -1;
   fd_buf[0] = fd_buf[1] = -1;
   if ((fd_buf[0] = fdalloc(rf)) < 0 || (fd_buf[1] = fdalloc(wf)) < 0 ||

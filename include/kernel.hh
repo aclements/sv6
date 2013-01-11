@@ -175,7 +175,7 @@ void            picenable(int);
 void            piceoi(void);
 
 // pipe.c
-int             pipealloc(struct file**, struct file**, int flag);
+int             pipealloc(struct file**, struct file**);
 void            pipeclose(struct pipe*, int);
 int             piperead(struct pipe*, char*, int);
 int             pipewrite(struct pipe*, const char*, int);
