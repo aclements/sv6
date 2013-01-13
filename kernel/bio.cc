@@ -14,8 +14,7 @@
 //     so do not keep them longer than necessary.
 // 
 // The implementation uses three state flags internally:
-// * B_BUSY: the block has been returned from bread
-//     and has not been passed back to brelse.  
+// * B_BUSY: the block is locked for writing.
 // * B_VALID: the buffer data has been initialized
 //     with the associated disk block contents.
 // * B_DIRTY: the buffer data has been modified
@@ -39,94 +38,67 @@ static xns<pair<u32, u64>, buf*, bio_hash> *bufns;
 
 enum { writeback = 0 };
 
-// Look through buffer cache for sector on device dev.
-// If not found, allocate fresh block.
-// In either case, return locked buffer.
-static struct buf*
-bget(u32 dev, u64 sector, int *writer)
+buf*
+buf::get(u32 dev, u64 sector)
 {
+  // Caller must hold gc_epoch for return buf* to be valid
+
   struct buf *b;
-  scoped_gc_epoch e;
 
- loop:
-  // Try for cached block.
-  // XXX ignore dev
+retry:
   b = bufns->lookup(make_pair(dev, sector));
-  if (b) {
-    if (b->dev != dev || b->sector != sector)
-      panic("block mismatch");
-    if (*writer || !(b->flags & B_VALID)) {
-      acquire(&b->lock);
-      if (b->flags & B_BUSY) {
-	b->cv.sleep(&b->lock);
-	release(&b->lock);
-	goto loop;
-      }
-
-      b->flags |= B_BUSY;
-      release(&b->lock);
-      *writer = 1;
-    }
-
-    // rcu_end_read() happens in brelse
+  if (b)
     return b;
-  }
 
-  // Allocate fresh block.
   b = new buf(dev, sector);
-  b->flags = B_BUSY;
-  *writer = 1;
+
+  // XXX(sbw) iderw requires B_BUSY
+  b->flags |= B_BUSY;
+  iderw(b);
+  b->flags &= ~B_BUSY;
+
   if (bufns->insert(make_pair(b->dev, b->sector), b) < 0) {
     gc_delayed(b);
-    goto loop;
+    goto retry;
   }
   return b;
 }
 
-// Return a B_BUSY buf with the contents of the indicated disk sector.
-struct buf*
-bread(u32 dev, u64 sector, int writer)
+buf*
+buf::write_get(u32 dev, u64 sector)
 {
-  struct buf *b;
-
-  int origwriter = writer;
-  b = bget(dev, sector, &writer);
-  if(!(b->flags & B_VALID))
-    iderw(b);
-  if (writer && !origwriter) {
-    // Lock to seriaize check-and-sleep in bget with clearing B_BUSY
-    acquire(&b->lock);
-    b->flags &= ~B_BUSY;
-    release(&b->lock);
-    b->cv.wake_all();
-  }
+  buf* b = buf::get(dev, sector);
+  b->write_lock();
   return b;
 }
 
-// Write b's contents to disk.  Must be locked.
 void
-bwrite(struct buf *b)
+buf::write_lock(void)
 {
-  if((b->flags & B_BUSY) == 0)
-    panic("bwrite");
-  b->flags |= B_DIRTY;
+  acquire(&lock);
+  while (flags & B_BUSY)
+    cv.sleep(&lock);
+  flags |= B_BUSY;
+  release(&lock);
+}
+
+void
+buf::write_release(void)
+{
+  assert(flags & B_BUSY);
+  acquire(&lock);
+  flags &= ~B_BUSY;
+  release(&lock);
+  cv.wake_all();
+}
+
+void
+buf::write(void)
+{
+  assert(flags & B_BUSY);
+  flags |= B_DIRTY;
   if (writeback)
-    iderw(b);
-}
-
-// Release the buffer b.
-void
-brelse(struct buf *b, int writer)
-{
-  if (writer) {
-    if((b->flags & B_BUSY) == 0)
-      panic("brelse");
-    // Lock to seriaize check-and-sleep in bget with clearing B_BUSY
-    acquire(&b->lock);
-    b->flags &= ~B_BUSY;
-    release(&b->lock);
-    b->cv.wake_all();
-  }
+    iderw(this);
 }
 
 void

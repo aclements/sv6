@@ -16,11 +16,17 @@ struct buf : public rcu_freed {
   struct spinlock lock;
   u8 data[512];
 
-  buf(u32 d, u64 s) : rcu_freed("buf"), dev(d), sector(s) {
+  buf(u32 d, u64 s) : rcu_freed("buf"), flags(0), dev(d), sector(s) {
     snprintf(lockname, sizeof(lockname), "cv:buf:%d", sector);
     lock = spinlock(lockname+3, LOCKSTAT_BIO);
     cv = condvar(lockname);
   }
+
+  static buf* get(u32 dev, u64 sector);
+  static buf* write_get(u32 dev, u64 sector);
+  void write_lock();
+  void write_release();
+  void write();
 
   virtual void do_gc() { delete this; }
   NEW_DELETE_OPS(buf)
