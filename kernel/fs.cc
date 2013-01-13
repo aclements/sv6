@@ -40,6 +40,7 @@
 #include "cpu.hh"
 #include "kmtrace.hh"
 #include "dirns.hh"
+#include "kstream.hh"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 static inode* the_root;
@@ -68,7 +69,26 @@ bzero(int dev, int bno)
   wb.wrelease();
 }
 
-// Blocks. 
+//
+// Blocks
+//
+class out_of_blocks : public std::exception
+{
+  virtual const char* what() const throw()
+  {
+    return "Out of blocks";
+  }
+};
+
+static void inline
+throw_out_of_blocks()
+{
+#if EXCEPTIONS
+  throw out_of_blocks();
+#else
+  panic("out of blocks");
+#endif
+}
 
 // Allocate a disk block.
 static u32
@@ -92,7 +112,10 @@ balloc(u32 dev)
     }
     bp.wrelease();
   }
-  panic("balloc: out of blocks");
+  
+  throw_out_of_blocks();
+  // Unreachable
+  return 0;
 }
 
 // Free a disk block.
@@ -721,7 +744,12 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
     n = ip->size - off;
 
   for(tot=0; tot<n; tot+=m, off+=m, dst+=m){
-    bp = buf::get(ip->dev, bmap(ip, off/BSIZE));
+    try {
+      bp = buf::get(ip->dev, bmap(ip, off/BSIZE));
+    } catch (out_of_blocks& e) {
+      // Read operations should never cause out-of-blocks conditions
+      panic("readi: out of blocks");
+    }
     m = min(n - tot, BSIZE - off%BSIZE);
     memmove(dst, bp->data + off%BSIZE, m);
   }
@@ -733,7 +761,7 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
 int
 writei(struct inode *ip, const char *src, u32 off, u32 n)
 {
-  u32 tot, m;
+  int tot, m;
   wbuf bp;
 
   if(ip->type == T_DEV){
@@ -748,18 +776,26 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
     n = MAXFILE*BSIZE - off;
 
   for(tot=0; tot<n; tot+=m, off+=m, src+=m){
-    bp = buf::wget(ip->dev, bmap(ip, off/BSIZE));
+    try {
+      bp = buf::wget(ip->dev, bmap(ip, off/BSIZE));
+    } catch (out_of_blocks& e) {
+      console.println("writei: out of blocks");
+      // If we haven't written anything, return an error
+      if (tot == 0)
+        tot = -1;
+      break;
+    }
     m = min(n - tot, BSIZE - off%BSIZE);
     memmove(bp.data + off%BSIZE, src, m);
     bp.w();
     bp.wrelease();
   }
 
-  if(n > 0 && off > ip->size){
+  if(tot > 0 && off > ip->size){
     ip->size = off;
     iupdate(ip);
   }
-  return n;
+  return tot;
 }
 
 //PAGEBREAK!
@@ -796,7 +832,13 @@ dir_init(struct inode *dp)
 
   auto dir = new dirns();
   for (u32 off = 0; off < dp->size; off += BSIZE) {
-    struct buf *bp = buf::get(dp->dev, bmap(dp, off / BSIZE));
+    struct buf* bp;
+    try {
+      bp = buf::get(dp->dev, bmap(dp, off / BSIZE));
+    } catch (out_of_blocks& e) {
+      // Read operations should never cause out-of-blocks conditions
+      panic("dir_init: out of blocks");
+    }
     for (struct dirent *de = (struct dirent *) bp->data;
 	 de < (struct dirent *) (bp->data + BSIZE);
 	 de++) {

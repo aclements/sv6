@@ -27,6 +27,9 @@
 #include "buf.hh"
 #include "cpputil.hh"
 #include "ns.hh"
+#include "kstream.hh"
+
+static console_stream debug(true);
 
 u64
 bio_hash(const pair<u32, u64> &p)
@@ -147,8 +150,10 @@ wbuf& wbuf::operator=(wbuf &&o) noexcept
 
 wbuf::~wbuf(void)
 {
-  if (!released_)
-    panic("wbuf not released");
+  if (!released_) {
+    debug.println("~wbuf(", this, "): releasing");
+    wrelease();
+  }
 }
 
 buf*
