@@ -41,21 +41,21 @@ iderw(struct buf *b)
 {
   u8 *p;
 
-  if(!(b->flags & B_BUSY))
+  if(!(b->flags_ & B_BUSY))
     panic("iderw: buf not busy");
-  if((b->flags & (B_VALID|B_DIRTY)) == B_VALID)
+  if((b->flags_ & (B_VALID|B_DIRTY)) == B_VALID)
     panic("iderw: nothing to do");
-  if(b->dev != 1)
+  if(b->dev_ != 1)
     panic("iderw: request not for disk 1");
-  if(b->sector >= disksize)
+  if(b->sector_ >= disksize)
     panic("iderw: sector out of range");
 
-  p = memdisk + b->sector*512;
+  p = memdisk + b->sector_*512;
   
-  if(b->flags & B_DIRTY){
-    b->flags &= ~B_DIRTY;
+  if(b->flags_ & B_DIRTY){
+    b->flags_ &= ~B_DIRTY;
     memmove(p, b->data, 512);
   } else
     memmove(b->data, p, 512);
-  b->flags |= B_VALID;
+  b->flags_ |= B_VALID;
 }

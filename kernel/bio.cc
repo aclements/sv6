@@ -53,11 +53,11 @@ retry:
   b = new buf(dev, sector);
 
   // XXX(sbw) iderw requires B_BUSY
-  b->flags |= B_BUSY;
+  b->flags_ |= B_BUSY;
   iderw(b);
-  b->flags &= ~B_BUSY;
+  b->flags_ &= ~B_BUSY;
 
-  if (bufns->insert(make_pair(b->dev, b->sector), b) < 0) {
+  if (bufns->insert(make_pair(b->dev_, b->sector_), b) < 0) {
     gc_delayed(b);
     goto retry;
   }
@@ -65,38 +65,38 @@ retry:
 }
 
 buf*
-buf::write_get(u32 dev, u64 sector)
+buf::wget(u32 dev, u64 sector)
 {
   buf* b = buf::get(dev, sector);
-  b->write_lock();
+  b->wlock();
   return b;
 }
 
 void
-buf::write_lock(void)
+buf::wlock(void)
 {
-  acquire(&lock);
-  while (flags & B_BUSY)
-    cv.sleep(&lock);
-  flags |= B_BUSY;
-  release(&lock);
+  acquire(&lock_);
+  while (flags_ & B_BUSY)
+    cv_.sleep(&lock_);
+  flags_ |= B_BUSY;
+  release(&lock_);
 }
 
 void
-buf::write_release(void)
+buf::wrelease(void)
 {
-  assert(flags & B_BUSY);
-  acquire(&lock);
-  flags &= ~B_BUSY;
-  release(&lock);
-  cv.wake_all();
+  assert(flags_ & B_BUSY);
+  acquire(&lock_);
+  flags_ &= ~B_BUSY;
+  release(&lock_);
+  cv_.wake_all();
 }
 
 void
-buf::write(void)
+buf::w(void)
 {
-  assert(flags & B_BUSY);
-  flags |= B_DIRTY;
+  assert(flags_ & B_BUSY);
+  flags_ |= B_DIRTY;
   if (writeback)
     iderw(this);
 }

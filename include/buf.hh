@@ -4,32 +4,34 @@
 
 using std::atomic;
 
-struct buf : public rcu_freed {
-  atomic<int> flags;
-  const u32 dev;
-  const u64 sector;
-  struct buf *prev; // LRU cache list
-  struct buf *next;
-  struct buf *qnext; // disk queue
-  char lockname[16];
-  struct condvar cv;
-  struct spinlock lock;
-  u8 data[512];
-
-  buf(u32 d, u64 s) : rcu_freed("buf"), flags(0), dev(d), sector(s) {
-    snprintf(lockname, sizeof(lockname), "cv:buf:%d", sector);
-    lock = spinlock(lockname+3, LOCKSTAT_BIO);
-    cv = condvar(lockname);
+struct buf : public rcu_freed
+{
+  buf(u32 d, u64 s) : rcu_freed("buf"), dev_(d), sector_(s), flags_(0) {
+    snprintf(lockname_, sizeof(lockname_), "cv:buf:%d", sector_);
+    lock_ = spinlock(lockname_+3, LOCKSTAT_BIO);
+    cv_ = condvar(lockname_);
   }
 
-  static buf* get(u32 dev, u64 sector);
-  static buf* write_get(u32 dev, u64 sector);
-  void write_lock();
-  void write_release();
-  void write();
+  static buf*     get(u32 dev, u64 sector);
+
+  // Functions related to writing
+  static buf*     wget(u32 dev, u64 sector);
+  void            wlock();
+  void            wrelease();
+  void            w();
+
+  const u32       dev_;
+  const u64       sector_;
+  atomic<int>     flags_;
+  u8              data[512];
 
   virtual void do_gc() { delete this; }
-  NEW_DELETE_OPS(buf)
+  NEW_DELETE_OPS(buf);
+ 
+private:
+  char            lockname_[16];
+  struct condvar  cv_;
+  struct spinlock lock_;
 };
 #define B_BUSY  0x1  // buffer is locked by some process
 #define B_VALID 0x2  // buffer has been read from disk

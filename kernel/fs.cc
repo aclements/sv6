@@ -62,10 +62,10 @@ bzero(int dev, int bno)
 {
   struct buf *bp;
   
-  bp = buf::write_get(dev, bno);
+  bp = buf::wget(dev, bno);
   memset(bp->data, 0, BSIZE);
-  bp->write();
-  bp->write_release();
+  bp->w();
+  bp->wrelease();
 }
 
 // Blocks. 
@@ -81,17 +81,17 @@ balloc(u32 dev)
   bp = 0;
   readsb(dev, &sb);
   for(b = 0; b < sb.size; b += BPB){
-    bp = buf::write_get(dev, BBLOCK(b, sb.ninodes));
+    bp = buf::wget(dev, BBLOCK(b, sb.ninodes));
     for(bi = 0; bi < BPB && bi < (sb.size - b); bi++){
       m = 1 << (bi % 8);
       if((bp->data[bi/8] & m) == 0){  // Is block free?
         bp->data[bi/8] |= m;  // Mark block in use on disk.
-        bp->write();
-        bp->write_release();
+        bp->w();
+        bp->wrelease();
         return b + bi;
       }
     }
-    bp->write_release();
+    bp->wrelease();
   }
   panic("balloc: out of blocks");
 }
@@ -108,14 +108,14 @@ bfree(int dev, u64 x)
   bzero(dev, b);
 
   readsb(dev, &sb);
-  bp = buf::write_get(dev, BBLOCK(b, sb.ninodes));
+  bp = buf::wget(dev, BBLOCK(b, sb.ninodes));
   bi = b % BPB;
   m = 1 << (bi % 8);
   if((bp->data[bi/8] & m) == 0)
     panic("freeing free block");
   bp->data[bi/8] &= ~m;  // Mark block free on disk.
-  bp->write();
-  bp->write_release();
+  bp->w();
+  bp->wrelease();
 }
 
 // Inodes.
@@ -228,7 +228,7 @@ iupdate(struct inode *ip)
   struct buf *bp;
   struct dinode *dip;
 
-  bp = buf::write_get(ip->dev, IBLOCK(ip->inum));
+  bp = buf::wget(ip->dev, IBLOCK(ip->inum));
   dip = (struct dinode*)bp->data + ip->inum%IPB;
   dip->type = ip->type;
   dip->major = ip->major;
@@ -237,15 +237,15 @@ iupdate(struct inode *ip)
   dip->size = ip->size;
   dip->gen = ip->gen;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
-  bp->write();
-  bp->write_release();
+  bp->w();
+  bp->wrelease();
 
   if (ip->addrs[NDIRECT] != 0) {
     assert(ip->iaddrs.load() != nullptr);
-    bp = buf::write_get(ip->dev, ip->addrs[NDIRECT]);
+    bp = buf::wget(ip->dev, ip->addrs[NDIRECT]);
     memmove(bp->data, (void*)ip->iaddrs.load(), IADDRSSZ);
-    bp->write();
-    bp->write_release();
+    bp->w();
+    bp->wrelease();
   }
 }
 
@@ -587,23 +587,23 @@ retry3:
     }
   }
 
-  bp = buf::write_get(ip->dev, ip->addrs[NDIRECT+1]);
+  bp = buf::wget(ip->dev, ip->addrs[NDIRECT+1]);
   ap = (u32*)bp->data;
   if (ap[bn / NINDIRECT] == 0) {
     ap[bn / NINDIRECT] = balloc(ip->dev);
-    bp->write();
+    bp->w();
   }
   addr = ap[bn / NINDIRECT];
-  bp->write_release();
+  bp->wrelease();
 
-  bp = buf::write_get(ip->dev, addr);
+  bp = buf::wget(ip->dev, addr);
   ap = (u32*)bp->data;
   if (ap[bn % NINDIRECT] == 0) {
     ap[bn % NINDIRECT] = balloc(ip->dev);
-    bp->write();
+    bp->w();
   }
   addr = ap[bn % NINDIRECT];
-  bp->write_release();
+  bp->wrelease();
 
   return addr;
 }
@@ -748,11 +748,11 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
     n = MAXFILE*BSIZE - off;
 
   for(tot=0; tot<n; tot+=m, off+=m, src+=m){
-    bp = buf::write_get(ip->dev, bmap(ip, off/BSIZE));
+    bp = buf::wget(ip->dev, bmap(ip, off/BSIZE));
     m = min(n - tot, BSIZE - off%BSIZE);
     memmove(bp->data + off%BSIZE, src, m);
-    bp->write();
-    bp->write_release();
+    bp->w();
+    bp->wrelease();
   }
 
   if(n > 0 && off > ip->size){
