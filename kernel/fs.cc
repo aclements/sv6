@@ -60,12 +60,12 @@ readsb(int dev, struct superblock *sb)
 static void
 bzero(int dev, int bno)
 {
-  struct buf *bp;
+  struct wbuf wb;
   
-  bp = buf::wget(dev, bno);
-  memset(bp->data, 0, BSIZE);
-  bp->w();
-  bp->wrelease();
+  wb = buf::wget(dev, bno);
+  memset(wb.data, 0, BSIZE);
+  wb.w();
+  wb.wrelease();
 }
 
 // Blocks. 
@@ -75,23 +75,22 @@ static u32
 balloc(u32 dev)
 {
   int b, bi, m;
-  struct buf *bp;
+  struct wbuf bp;
   struct superblock sb;
 
-  bp = 0;
   readsb(dev, &sb);
   for(b = 0; b < sb.size; b += BPB){
     bp = buf::wget(dev, BBLOCK(b, sb.ninodes));
     for(bi = 0; bi < BPB && bi < (sb.size - b); bi++){
       m = 1 << (bi % 8);
-      if((bp->data[bi/8] & m) == 0){  // Is block free?
-        bp->data[bi/8] |= m;  // Mark block in use on disk.
-        bp->w();
-        bp->wrelease();
+      if((bp.data[bi/8] & m) == 0){  // Is block free?
+        bp.data[bi/8] |= m;  // Mark block in use on disk.
+        bp.w();
+        bp.wrelease();
         return b + bi;
       }
     }
-    bp->wrelease();
+    bp.wrelease();
   }
   panic("balloc: out of blocks");
 }
@@ -100,7 +99,7 @@ balloc(u32 dev)
 static void
 bfree(int dev, u64 x)
 {
-  struct buf *bp;
+  struct wbuf bp;
   struct superblock sb;
   int bi, m;
   u32 b = x;
@@ -111,11 +110,11 @@ bfree(int dev, u64 x)
   bp = buf::wget(dev, BBLOCK(b, sb.ninodes));
   bi = b % BPB;
   m = 1 << (bi % 8);
-  if((bp->data[bi/8] & m) == 0)
+  if((bp.data[bi/8] & m) == 0)
     panic("freeing free block");
-  bp->data[bi/8] &= ~m;  // Mark block free on disk.
-  bp->w();
-  bp->wrelease();
+  bp.data[bi/8] &= ~m;  // Mark block free on disk.
+  bp.w();
+  bp.wrelease();
 }
 
 // Inodes.
@@ -225,11 +224,11 @@ ialloc(u32 dev, short type)
 void
 iupdate(struct inode *ip)
 {
-  struct buf *bp;
+  struct wbuf bp;
   struct dinode *dip;
 
   bp = buf::wget(ip->dev, IBLOCK(ip->inum));
-  dip = (struct dinode*)bp->data + ip->inum%IPB;
+  dip = (struct dinode*)bp.data + ip->inum%IPB;
   dip->type = ip->type;
   dip->major = ip->major;
   dip->minor = ip->minor;
@@ -237,15 +236,15 @@ iupdate(struct inode *ip)
   dip->size = ip->size;
   dip->gen = ip->gen;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
-  bp->w();
-  bp->wrelease();
+  bp.w();
+  bp.wrelease();
 
   if (ip->addrs[NDIRECT] != 0) {
     assert(ip->iaddrs.load() != nullptr);
     bp = buf::wget(ip->dev, ip->addrs[NDIRECT]);
-    memmove(bp->data, (void*)ip->iaddrs.load(), IADDRSSZ);
-    bp->w();
-    bp->wrelease();
+    memmove(bp.data, (void*)ip->iaddrs.load(), IADDRSSZ);
+    bp.w();
+    bp.wrelease();
   }
 }
 
@@ -521,7 +520,8 @@ iunlockput(struct inode *ip)
 static u32
 bmap(struct inode *ip, u32 bn)
 {
-  struct buf *bp;
+  buf *bp;
+  wbuf wb;
   u32* ap;
   u32 addr;
 
@@ -587,23 +587,23 @@ retry3:
     }
   }
 
-  bp = buf::wget(ip->dev, ip->addrs[NDIRECT+1]);
-  ap = (u32*)bp->data;
+  wb = buf::wget(ip->dev, ip->addrs[NDIRECT+1]);
+  ap = (u32*)wb.data;
   if (ap[bn / NINDIRECT] == 0) {
     ap[bn / NINDIRECT] = balloc(ip->dev);
-    bp->w();
+    wb.w();
   }
   addr = ap[bn / NINDIRECT];
-  bp->wrelease();
+  wb.wrelease();
 
-  bp = buf::wget(ip->dev, addr);
-  ap = (u32*)bp->data;
+  wb = buf::wget(ip->dev, addr);
+  ap = (u32*)wb.data;
   if (ap[bn % NINDIRECT] == 0) {
     ap[bn % NINDIRECT] = balloc(ip->dev);
-    bp->w();
+    wb.w();
   }
   addr = ap[bn % NINDIRECT];
-  bp->wrelease();
+  wb.wrelease();
 
   return addr;
 }
@@ -734,7 +734,7 @@ int
 writei(struct inode *ip, const char *src, u32 off, u32 n)
 {
   u32 tot, m;
-  struct buf *bp;
+  wbuf bp;
 
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].write)
@@ -750,9 +750,9 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
   for(tot=0; tot<n; tot+=m, off+=m, src+=m){
     bp = buf::wget(ip->dev, bmap(ip, off/BSIZE));
     m = min(n - tot, BSIZE - off%BSIZE);
-    memmove(bp->data + off%BSIZE, src, m);
-    bp->w();
-    bp->wrelease();
+    memmove(bp.data + off%BSIZE, src, m);
+    bp.w();
+    bp.wrelease();
   }
 
   if(n > 0 && off > ip->size){

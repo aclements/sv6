@@ -38,6 +38,10 @@ static xns<pair<u32, u64>, buf*, bio_hash> *bufns;
 
 enum { writeback = 0 };
 
+//
+// buf
+//
+
 buf*
 buf::get(u32 dev, u64 sector)
 {
@@ -64,15 +68,14 @@ retry:
   return b;
 }
 
-buf*
+wbuf
 buf::wget(u32 dev, u64 sector)
 {
   buf* b = buf::get(dev, sector);
-  b->wlock();
-  return b;
+  return b->wlock();
 }
 
-void
+wbuf
 buf::wlock(void)
 {
   acquire(&lock_);
@@ -80,6 +83,8 @@ buf::wlock(void)
     cv_.sleep(&lock_);
   flags_ |= B_BUSY;
   release(&lock_);
+
+  return wbuf(this);
 }
 
 void
@@ -99,6 +104,73 @@ buf::w(void)
   flags_ |= B_DIRTY;
   if (writeback)
     iderw(this);
+}
+
+//
+// wbuf
+//
+
+wbuf::wbuf(void)
+  : data(nullptr), buf_(nullptr), released_(true)
+{
+}
+
+wbuf::wbuf(buf* b)
+  : data(b->data_), buf_(b), released_(false)
+{
+}
+
+wbuf::wbuf(wbuf &&o) noexcept
+  : data(o.data), buf_(o.buf_), released_(o.released_)
+{
+  o.clear();
+}
+
+void
+wbuf::clear(void) noexcept
+{
+  buf_ = nullptr;
+  data = nullptr;
+  released_ = true;
+}
+
+wbuf& wbuf::operator=(wbuf &&o) noexcept
+{
+  assert(released_);
+  buf_ = o.buf_;
+  data = o.data;
+  released_ = o.released_;
+  o.clear();
+
+  return *this;
+}
+
+wbuf::~wbuf(void)
+{
+  if (!released_)
+    panic("wbuf not released");
+}
+
+buf*
+wbuf::operator->() const noexcept
+{
+  return buf_;
+}
+
+void
+wbuf::wrelease(void)
+{
+  if (!released_) {
+    buf_->wrelease();
+    released_ = true;
+  }
+}
+
+void
+wbuf::w(void)
+{
+  assert(!released_);
+  buf_->w();
 }
 
 void

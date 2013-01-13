@@ -56,6 +56,6 @@ iderw(struct buf *b)
     b->flags_ &= ~B_DIRTY;
     memmove(p, b->data, 512);
   } else
-    memmove(b->data, p, 512);
+    memmove(b->data_, p, 512);
   b->flags_ |= B_VALID;
 }
