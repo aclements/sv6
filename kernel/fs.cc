@@ -41,6 +41,7 @@
 #include "kmtrace.hh"
 #include "dirns.hh"
 #include "kstream.hh"
+#include "lb.hh"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 static inode* the_root;
@@ -199,21 +200,75 @@ initinode(void)
     cprintf("initinode: %lu inode blocks (%lu / core)\n",
             blocks, blocks/NCPU);
   }
-
 }
 
 template<size_t N>
-struct inode_cache
+struct inode_cache : public balance_pool
 {
   inode_cache()
-    : head_(0), length_(0), lock_("inode_cache", LOCKSTAT_FS)
+    : balance_pool(N), 
+      head_(0), length_(0), lock_("inode_cache", LOCKSTAT_FS)
   {
   }
   
-  int alloc()
+  int
+  alloc()
+  {
+    scoped_acquire _l(&lock_);
+    return alloc_nolock();
+  }
+
+  void
+  add(u32 inum)
+  {
+    scoped_acquire _l(&lock_);
+    add_nolock(inum);
+  }
+
+  virtual void
+  balance_move_to(balance_pool* other)
+  {
+    inode_cache* target = (inode_cache*) other;
+
+    if (target < this) {
+      target->lock_.acquire();
+      lock_.acquire();
+    } else {
+      lock_.acquire();
+      target->lock_.acquire();
+    }
+
+    u32 nmove = length_ / 2;
+    for (; nmove; nmove--) {
+      int inum = alloc_nolock();
+      if (inum < 0) {
+        console.println("inode_cache: unexpected failure");
+        break;
+      }
+      target->add_nolock(inum);
+    }
+
+    if (target < this) {
+      target->lock_.release();
+      lock_.release();
+    } else {
+      lock_.release();
+      target->lock_.release();
+    }
+  }
+
+  virtual u64
+  balance_count() const
+  {
+    return length_;
+  }
+
+private:
+
+  int
+  alloc_nolock()
   {
     int inum = -1;
-    scoped_acquire _l(&lock_);
     if (length_) {
       length_--;
       head_--;
@@ -222,13 +277,14 @@ struct inode_cache
     return inum;
   }
 
-  void add(u32 inum)
+  void
+  add_nolock(u32 inum)
   {
-    scoped_acquire _l(&lock_);
-    cache_[head_ % N] = inum;
-    head_++;
+    assert(inum != 0);
     if (length_ < N)
       length_++;
+    cache_[head_ % N] = inum;
+    head_++;
   }
 
   u32      cache_[N];
@@ -237,7 +293,43 @@ struct inode_cache
   spinlock lock_;
 };
 
-static percpu<inode_cache<512>, percpu_safety::internal> the_inode_cache;
+struct inode_cache_dir : public balance_pool_dir
+{
+  inode_cache_dir() : balancer_(this)
+  {
+  }
+
+  virtual balance_pool*
+  balance_get(int id) const
+  {
+    return &cache_[id];
+  }
+
+  void
+  add(u32 inum)
+  {
+    // XXX(sbw) if cache->length_ == N should we call 
+    // balancer_.balance()?
+    cache_->add(inum);
+  }
+
+  int
+  alloc()
+  {
+    int inum = cache_->alloc();
+    if (inum > 0)
+      return inum;
+    balancer_.balance();
+    return cache_->alloc();
+  }
+
+private:
+
+  percpu<inode_cache<512>, percpu_safety::internal> cache_;
+  balancer balancer_;
+};
+
+static inode_cache_dir the_inode_cache;
 
 static inode*
 try_ialloc(u32 inum, u32 dev, short type)
@@ -278,7 +370,7 @@ ialloc(u32 dev, short type)
   int inum;
 
   // Try the local cache first..
-  while ((inum = the_inode_cache->alloc()) > 0) {
+  while ((inum = the_inode_cache.alloc()) > 0) {
     ip = try_ialloc(inum, dev, type);
     if (ip)
       return ip;
@@ -515,7 +607,7 @@ inode::onzero(void) const
   iupdate(ip);
   
   ins->remove(make_pair(ip->dev, ip->inum), &ip);
-  the_inode_cache->add(ip->inum);
+  the_inode_cache.add(ip->inum);
   gc_delayed(ip);
   return;
 }
