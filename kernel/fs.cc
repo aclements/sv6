@@ -202,43 +202,100 @@ initinode(void)
 
 }
 
-//PAGEBREAK!
+template<size_t N>
+struct inode_cache
+{
+  inode_cache()
+    : head_(0), length_(0), lock_("inode_cache", LOCKSTAT_FS)
+  {
+  }
+  
+  int alloc()
+  {
+    int inum = -1;
+    scoped_acquire _l(&lock_);
+    if (length_) {
+      length_--;
+      head_--;
+      inum = cache_[head_ % N];
+    }
+    return inum;
+  }
+
+  void add(u32 inum)
+  {
+    scoped_acquire _l(&lock_);
+    cache_[head_ % N] = inum;
+    head_++;
+    if (length_ < N)
+      length_++;
+  }
+
+  u32      cache_[N];
+  u32      head_;
+  u32      length_;
+  spinlock lock_;
+};
+
+static percpu<inode_cache<512>, percpu_safety::internal> the_inode_cache;
+
+static inode*
+try_ialloc(u32 inum, u32 dev, short type)
+{
+  dinode *dip;
+  inode* ip;
+  buf *bp;
+
+  bp = buf::get(dev, IBLOCK(inum));
+  dip = (dinode*)bp->data + inum%IPB;
+  int seemsfree = (dip->type == 0);
+  if(seemsfree) {
+    // maybe this inode is free. look at it via the
+    // inode cache to make sure.
+    ip = iget(dev, inum);
+    assert(ip->valid());
+    ilock(ip, 1);
+    if(ip->type == 0) {
+      ip->type = type;
+      ip->gen += 1;
+      if(ip->nlink() || ip->size || ip->addrs[0])
+        panic("ialloc not zeroed");
+      iupdate(ip);
+      return ip;
+    }
+    iunlockput(ip);
+  }
+  return nullptr;
+}
+
 // Allocate a new inode with the given type on device dev.
 // Returns a locked inode.
 struct inode*
 ialloc(u32 dev, short type)
 {
-  struct buf *bp;
-  struct dinode *dip;
-  struct superblock sb;
+  superblock sb;
+  inode* ip;
+  int inum;
 
+  // Try the local cache first..
+  while ((inum = the_inode_cache->alloc()) > 0) {
+    ip = try_ialloc(inum, dev, type);
+    if (ip)
+      return ip;
+  }
+
+  // ..then search through every on-disk inode!
   readsb(dev, &sb);
   for (int k = myid()*IPB; k < sb.ninodes; k += (NCPU*IPB)) {
-    for(int inum = k; inum < k+IPB && inum < sb.ninodes; inum++){
+    for(inum = k; inum < k+IPB && inum < sb.ninodes; inum++) {
       if (inum == 0)
         continue;
-      bp = buf::get(dev, IBLOCK(inum));
-      dip = (struct dinode*)bp->data + inum%IPB;
-      int seemsfree = (dip->type == 0);
-      if(seemsfree){
-        // maybe this inode is free. look at it via the
-        // inode cache to make sure.
-        struct inode *ip = iget(dev, inum);
-        assert(ip->valid());
-        ilock(ip, 1);
-        if(ip->type == 0){
-          ip->type = type;
-          ip->gen += 1;
-          if(ip->nlink() || ip->size || ip->addrs[0])
-            panic("ialloc not zeroed");
-          iupdate(ip);
-          return ip;
-        }
-        iunlockput(ip);
-        //cprintf("ialloc oops %d\n", inum); // XXX harmless
-      }
+      ip = try_ialloc(inum, dev, type);
+      if (ip)
+        return ip;
     }
   }
+
   cprintf("ialloc: 0/%u inodes\n", sb.ninodes);
   return nullptr;
 }
@@ -458,6 +515,7 @@ inode::onzero(void) const
   iupdate(ip);
   
   ins->remove(make_pair(ip->dev, ip->inum), &ip);
+  the_inode_cache->add(ip->inum);
   gc_delayed(ip);
   return;
 }

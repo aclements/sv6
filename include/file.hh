@@ -53,11 +53,10 @@ protected:
 struct inode : public referenced, public rcu_freed
 {
   static inode* alloc(u32 dev, u32 inum);
-  virtual void do_gc() { delete this; }
-  void init();
 
-  void link();
-  void unlink();
+  void  init();
+  void  link();
+  void  unlink();
   short nlink();
   
   inode& operator=(const inode&) = delete;
@@ -82,6 +81,8 @@ struct inode : public referenced, public rcu_freed
   u32 size;
   std::atomic<u32> addrs[NDIRECT+2];
   std::atomic<volatile u32*> iaddrs;
+
+  virtual void do_gc() { delete this; }
 
 private:
   inode(u32 dev, u32 inum);
