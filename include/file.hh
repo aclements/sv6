@@ -63,8 +63,8 @@ struct inode : public referenced, public rcu_freed
   inode& operator=(const inode&) = delete;
   inode(const inode& x) = delete;
   
-  u32 dev;           // Device number
-  u32 inum;          // Inode number
+  const u32 dev;           // Device number
+  const u32 inum;          // Inode number
   u32 gen;           // Generation number
   int flags;         // I_BUSY, I_VALID
   std::atomic<int> readbusy;
@@ -84,7 +84,7 @@ struct inode : public referenced, public rcu_freed
   std::atomic<volatile u32*> iaddrs;
 
 private:
-  inode();
+  inode(u32 dev, u32 inum);
   ~inode();
   NEW_DELETE_OPS(inode)
 

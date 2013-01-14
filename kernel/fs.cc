@@ -278,8 +278,9 @@ iupdate(struct inode *ip)
 // But it has a ref count, so it won't be freed or reused.
 // Though unlocked, all fields will be present,
 // so looking a ip->inum and ip->gen are OK even w/o lock.
-inode::inode()
+inode::inode(u32 d, u32 i)
   : rcu_freed("inode"),
+    dev(d), inum(i),
     flags(0), readbusy(0)
 {
   dir.store(nullptr);
@@ -364,11 +365,9 @@ retry:
 inode*
 inode::alloc(u32 dev, u32 inum)
 {
-  inode* ip = new inode();
+  inode* ip = new inode(dev, inum);
   if (ip == nullptr)
     return nullptr;
-  ip->dev = dev;
-  ip->inum = inum;
   snprintf(ip->lockname, sizeof(ip->lockname), "cv:ino:%d", ip->inum);
   ip->lock = spinlock(ip->lockname+3, LOCKSTAT_FS);
   ip->cv = condvar(ip->lockname);
