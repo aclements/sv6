@@ -210,10 +210,7 @@ cmain(u64 mbmagic, u64 mbaddr)
 void
 halt(void)
 {
-  int i;
-  const char s[] = "Shutdown";
+  acpi_power_off();
 
-  for(i = 0; i < 8; i++)
-    outb(0x8900, s[i]);
   for (;;);
 }

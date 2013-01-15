@@ -737,3 +737,11 @@ acpi_pci_resolve_irq(struct pci_func *func)
     swarn.println("acpi: No interrupt routing found for PCI device ", *func);
   return irq;
 }
+
+void
+acpi_power_off(void)
+{
+  AcpiEnterSleepStatePrep(ACPI_STATE_S5);
+  AcpiDisableAllGpes();
+  AcpiEnterSleepState(ACPI_STATE_S5, 0);
+}

@@ -53,6 +53,7 @@ bool            acpi_pci_scan_roots(int (*scan)(struct pci_bus *bus));
 ACPI_HANDLE     acpi_pci_resolve_handle(struct pci_func *func);
 ACPI_HANDLE     acpi_pci_resolve_handle(struct pci_bus *bus);
 irq             acpi_pci_resolve_irq(struct pci_func *func);
+void            acpi_power_off(void);
 
 // acpidbg.c
 struct sacpi_handle
