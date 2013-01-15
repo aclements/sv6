@@ -2,7 +2,7 @@
 #define NCPU_PER_SOCKET (NCPU/NSOCKET)
 
 template<int N>
-class random_permutation {
+struct random_permutation {
  public:
   random_permutation() : i_(0) {
     assert(N <= 256);
@@ -23,6 +23,19 @@ class random_permutation {
  private:
   char x_[N];
   int i_;
+};
+
+// For wrapping into <percpu>, which maybe important to avoid false sharing
+struct persocket {
+  random_permutation<NCPU_PER_SOCKET-1> perm;
+};
+
+struct othersocket {
+  random_permutation<NCPU-NCPU_PER_SOCKET> perm;
+};
+
+struct mylock {
+  spinlock lx;
 };
 
 class balance_pool {
@@ -59,7 +72,7 @@ class balance_pool_dir {
 };
 
 class balancer {
- public:
+public:
   balancer(const balance_pool_dir* bd) : bd_(bd) {}
   ~balancer() {}
 
@@ -72,12 +85,12 @@ class balancer {
     u64 sock_first_core = (myid / NCPU_PER_SOCKET) * NCPU_PER_SOCKET;
     u64 sock_myoff = myid % NCPU_PER_SOCKET;
 
-    scoped_acquire l(&rplock_[myid]);
-    rpsock_[myid].reset();
+    scoped_acquire l(&(rplock_->lx));
+    rpsock_->perm.reset();
 
     for (int i = 0; i < NCPU_PER_SOCKET-1; i++) {
       int bal_id = sock_first_core +
-                   ((sock_myoff + 1 + rpsock_[myid].next()) % NCPU_PER_SOCKET);
+        ((sock_myoff + 1 + rpsock_->perm.next()) % NCPU_PER_SOCKET);
       balance_pool* otherpool = bd_->balance_get(bal_id);
       if (otherpool && (thispool != otherpool)) {
         thispool->balance_with(otherpool);
@@ -86,22 +99,38 @@ class balancer {
       }
     }
 
-    rpother_[myid].reset();
+    //u64 t0, t1;
+    //t0 = rdtsc();
+    rpother_->perm.reset();
     for (int i = 0; i < NCPU-NCPU_PER_SOCKET; i++) {
       int bal_id = (sock_first_core + NCPU_PER_SOCKET +
-                    rpother_[myid].next()) % NCPU;
+                 rpother_->perm.next()) % NCPU;
       balance_pool* otherpool = bd_->balance_get(bal_id);
       if (otherpool && (thispool != otherpool)) {
         thispool->balance_with(otherpool);
         if (thispool->balanced())
-          return;
+          break;
       }
     }
+#if 0
+  t1 = rdtsc();
+      ++*counter;
+      *tot = *tot + (t1-t0);
+    
+#define N1 100000
+    if ((*counter % N1 == 0) && mycpu()->id == 1) {
+      cprintf("%d: time %lu\n", mycpu()->id, *tot / N1);
+      *tot = 0;
+    }
+#endif
   }
 
- private:
+private:
+  percpu<u64> counter;
+  percpu<u64> tot;
+  
   const balance_pool_dir* bd_;
-  random_permutation<NCPU_PER_SOCKET-1> rpsock_[NCPU];
-  random_permutation<NCPU-NCPU_PER_SOCKET> rpother_[NCPU];
-  spinlock rplock_[NCPU];   // protects the per-core random permutation state
+  percpu<persocket,percpu_safety::internal> rpsock_;
+  percpu<othersocket,percpu_safety::internal> rpother_;
+  percpu<mylock,percpu_safety::internal> rplock_;   // protects the per-core random permutation state
 };

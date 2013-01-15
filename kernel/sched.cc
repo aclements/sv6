@@ -27,16 +27,14 @@ enum { sched_debug = 0 };
 enum { steal_nonexec = 1 };    // XXX why does this exist?
 // old scheme first stole process not in exec, and then ones in exec?
 
-struct sched_dir;
-sched_dir* sched_dir_;
-
 struct schedule : balance_pool {
 public:
   schedule(int id);
   ~schedule() {};
   NEW_DELETE_OPS(schedule);
   
-  int id_;
+  int id_;    // XXX false sharing on this var???
+
   void enq(proc* entry);
   proc* deq();
   void dump();
@@ -46,13 +44,13 @@ public:
 
   sched_stat stats_;
   u64 ncansteal_;
-  
 private:
   void sanity(void);
 
   struct spinlock lock_ __mpalign__;
   sched_link head_;
   volatile bool cansteal_ __mpalign__;
+  __padout__;
 };
 
 static bool cansteal(proc* p, bool nonexec);
@@ -74,8 +72,13 @@ schedule::schedule(int id)
 
 u64 
 schedule::balance_count() const {
+  // 1 if the number of processes that in runnable state and have
+  // run long enough that they could be stolen is bigger than 1?
   // XXX length of queue?
-  return ncansteal_ > 0 ? 1 : 0;
+  //
+  // XXX reading ncansteal could be expensive, but local core updates
+  // it and remote core reads it, experiencing a cache-line transfer
+  return cansteal_ > 0 ? 1 : 0;
 }
 
 void 
@@ -112,7 +115,7 @@ schedule::balance_move_to(balance_pool* other)
     victim->cpuid = mycpu()->id;
     target->enq(victim);
     release(&victim->lock);
-    cprintf("%d: stole %s from %d\n", mycpu()->id, victim->name, id_);
+    //cprintf("%d: stole %s from %d\n", mycpu()->id, victim->name, id_);
     ++stats_.steals;
     return;
   }
@@ -140,8 +143,9 @@ schedule::enq(proc* p)
   head_.prev->next = entry;
   head_.prev = entry;
   if (cansteal((proc*)entry, true))
-    if (ncansteal_++ == 0)
+    if (ncansteal_++ == 0) {
       cansteal_ = true;
+    }
   sanity();
   stats_.enqs++;
 }
@@ -201,8 +205,8 @@ schedule::sanity(void)
 struct sched_dir : balance_pool_dir {
 private:
   balancer b_;
+  percpu<schedule*> schedule_;
 public:
-  schedule* schedule_[NCPU];
   sched_dir() : b_(this) {
     for (int i = 0; i < NCPU; i++) {
       schedule_[i] = new schedule(i);
@@ -353,6 +357,8 @@ public:
 
 };
 
+sched_dir thesched_dir __mpalign__;
+
 static bool
 cansteal(proc* p, bool nonexec)
 {
@@ -374,38 +380,37 @@ post_swtch(void)
 void
 sched(void)
 {
-  sched_dir_->sched();
+  thesched_dir.sched();
 }
 
 void
 addrun(struct proc* p)
 {
-  sched_dir_->addrun(p);
+  thesched_dir.addrun(p);
 }
 
 static int
 statread(struct inode *inode, char *dst, u32 off, u32 n)
 {
-  return sched_dir_->statread(inode, dst, off, n);
+  return thesched_dir.statread(inode, dst, off, n);
 }
 
 void
 scheddump(void)
 {
-  sched_dir_->scheddump();
+  thesched_dir.scheddump();
 }
 
 int
 steal(void)
 {
-  sched_dir_->steal();
+  thesched_dir.steal();
   return 0;
 }
 
 void
 initsched(void)
 {
-  sched_dir_ = new sched_dir();
   devsw[MAJ_STAT].write = nullptr;
   devsw[MAJ_STAT].read = statread;
 }
