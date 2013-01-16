@@ -34,10 +34,6 @@ struct othersocket {
   random_permutation<NCPU-NCPU_PER_SOCKET> perm;
 };
 
-struct mylock {
-  spinlock lx;
-};
-
 template<class Pool>
 class balance_pool {
  public:
@@ -93,8 +89,6 @@ class balancer {
       }
     }
 
-    //u64 t0, t1;
-    //t0 = rdtsc();
     rpother_->perm.reset();
     for (int i = 0; i < NCPU-NCPU_PER_SOCKET; i++) {
       int bal_id = (sock_first_core + NCPU_PER_SOCKET +
@@ -106,25 +100,10 @@ class balancer {
           break;
       }
     }
-#if 0
-  t1 = rdtsc();
-      ++*counter;
-      *tot = *tot + (t1-t0);
-    
-#define N1 100000
-    if ((*counter % N1 == 0) && mycpu()->id == 1) {
-      cprintf("%d: time %lu\n", mycpu()->id, *tot / N1);
-      *tot = 0;
-    }
-#endif
   }
 
  private:
-  percpu<u64> counter;
-  percpu<u64> tot;
-
   const PoolDir* const bd_;
   percpu<persocket,percpu_safety::internal> rpsock_;
   percpu<othersocket,percpu_safety::internal> rpother_;
-  percpu<mylock,percpu_safety::internal> rplock_;   // protects the per-core random permutation state
 };
