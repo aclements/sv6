@@ -27,7 +27,7 @@ enum { sched_debug = 0 };
 enum { steal_nonexec = 1 };    // XXX why does this exist?
 // old scheme first stole process not in exec, and then ones in exec?
 
-struct schedule : balance_pool {
+struct schedule : public balance_pool<schedule> {
 public:
   schedule(int id);
   ~schedule() {};
@@ -39,7 +39,7 @@ public:
   proc* deq();
   void dump();
 
-  void balance_move_to(balance_pool *other);
+  void balance_move_to(schedule *other);
   u64 balance_count() const;
 
   sched_stat stats_;
@@ -82,9 +82,8 @@ schedule::balance_count() const {
 }
 
 void 
-schedule::balance_move_to(balance_pool* other)
+schedule::balance_move_to(schedule* target)
 {
-  schedule *target = (schedule*) other;
   proc *victim = nullptr;
 
   if (!cansteal_ || !tryacquire(&lock_))
@@ -202,9 +201,9 @@ schedule::sanity(void)
 #endif
 }
 
-struct sched_dir : balance_pool_dir {
+struct sched_dir {
 private:
-  balancer b_;
+  balancer<sched_dir, schedule> b_;
   percpu<schedule*> schedule_;
 public:
   sched_dir() : b_(this) {
@@ -215,7 +214,7 @@ public:
   ~sched_dir() {};
   NEW_DELETE_OPS(sched_dir);
 
-  balance_pool* balance_get(int id) const {
+  schedule* balance_get(int id) const {
     return schedule_[id];
   }
 

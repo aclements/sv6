@@ -38,60 +38,54 @@ struct mylock {
   spinlock lx;
 };
 
+template<class Pool>
 class balance_pool {
  public:
   balance_pool(u64 max) : balance_max_(max) {}
 
-  virtual u64 balance_count() const = 0;
-
-  virtual bool balanced() const {
-    u64 c = balance_count();
+  bool balanced() const {
+    Pool* thispool = (Pool*) this;
+    u64 c = thispool->balance_count();
     return c != 0 && c != balance_max_;
   }
 
-  virtual void balance_with(balance_pool* otherpool) {
-    u64 thisbal = balance_count();
+  void balance_with(Pool* otherpool) {
+    Pool* thispool = (Pool*) this;
+    u64 thisbal = thispool->balance_count();
     u64 otherbal = otherpool->balance_count();
 
     if (thisbal < otherbal) {
-      otherpool->balance_move_to(this);
+      otherpool->balance_move_to(thispool);
     } else if (otherbal > thisbal) {
-      balance_move_to(otherpool);
+      thispool->balance_move_to(otherpool);
     }
   }
-
-  virtual void balance_move_to(balance_pool* other) = 0;
 
  private:
   u64 balance_max_;
 };
 
-class balance_pool_dir {
- public:
-  virtual balance_pool* balance_get(int id) const = 0;
-};
-
+template<class PoolDir, class Pool>
 class balancer {
-public:
-  balancer(const balance_pool_dir* bd) : bd_(bd) {}
+ public:
+  balancer(const PoolDir* bd) : bd_(bd) {}
   ~balancer() {}
 
   void balance() {
     int myid = mycpu()->id;
-    balance_pool* thispool = bd_->balance_get(myid);
+    Pool* thispool = bd_->balance_get(myid);
     if (!thispool)
       return;
 
     u64 sock_first_core = (myid / NCPU_PER_SOCKET) * NCPU_PER_SOCKET;
     u64 sock_myoff = myid % NCPU_PER_SOCKET;
 
-    scoped_acquire l(&(rplock_->lx));
     rpsock_->perm.reset();
 
     for (int i = 0; i < NCPU_PER_SOCKET-1; i++) {
       int bal_id = sock_first_core +
         ((sock_myoff + 1 + rpsock_->perm.next()) % NCPU_PER_SOCKET);
-      balance_pool* otherpool = bd_->balance_get(bal_id);
+      Pool* otherpool = bd_->balance_get(bal_id);
       if (otherpool && (thispool != otherpool)) {
         thispool->balance_with(otherpool);
         if (thispool->balanced())
@@ -105,7 +99,7 @@ public:
     for (int i = 0; i < NCPU-NCPU_PER_SOCKET; i++) {
       int bal_id = (sock_first_core + NCPU_PER_SOCKET +
                  rpother_->perm.next()) % NCPU;
-      balance_pool* otherpool = bd_->balance_get(bal_id);
+      Pool* otherpool = bd_->balance_get(bal_id);
       if (otherpool && (thispool != otherpool)) {
         thispool->balance_with(otherpool);
         if (thispool->balanced())
@@ -125,11 +119,11 @@ public:
 #endif
   }
 
-private:
+ private:
   percpu<u64> counter;
   percpu<u64> tot;
-  
-  const balance_pool_dir* bd_;
+
+  const PoolDir* const bd_;
   percpu<persocket,percpu_safety::internal> rpsock_;
   percpu<othersocket,percpu_safety::internal> rpother_;
   percpu<mylock,percpu_safety::internal> rplock_;   // protects the per-core random permutation state

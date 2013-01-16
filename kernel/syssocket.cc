@@ -35,7 +35,7 @@ struct msghdr {
   NEW_DELETE_OPS(msghdr);
 };
 
-struct coresocket : balance_pool {
+struct coresocket : public balance_pool<coresocket> {
   int len;
   struct spinlock lock;
   msghdr::list_t messages;
@@ -49,9 +49,7 @@ struct coresocket : balance_pool {
     return len;
   }
 
-  void balance_move_to(balance_pool* other) {
-    coresocket* target = (coresocket*) other;
-
+  void balance_move_to(coresocket* target) {
     // XXX might be useful to enforce lock order, but it's alright
     // because of try_acquire.
 
@@ -82,9 +80,9 @@ struct coresocket : balance_pool {
   }
 };
 
-struct localsock : balance_pool_dir {
+struct localsock {
   atomic<coresocket*> pipes[NCPU];
-  balancer b;
+  balancer<localsock, coresocket> b;
   atomic<int> nreader;
 
   localsock() : b(this), nreader(0) {
@@ -127,7 +125,7 @@ struct localsock : balance_pool_dir {
     }
   }
 
-  balance_pool* balance_get(int id) const {
+  coresocket* balance_get(int id) const {
     return pipes[id];
   }
 

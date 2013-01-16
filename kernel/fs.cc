@@ -203,10 +203,13 @@ initinode(void)
 }
 
 template<size_t N>
-struct inode_cache : public balance_pool
+struct inode_cache;
+
+template<size_t N>
+struct inode_cache : public balance_pool<inode_cache<N>>
 {
   inode_cache()
-    : balance_pool(N), 
+    : balance_pool<inode_cache<N>> (N), 
       head_(0), length_(0), lock_("inode_cache", LOCKSTAT_FS)
   {
   }
@@ -225,11 +228,9 @@ struct inode_cache : public balance_pool
     add_nolock(inum);
   }
 
-  virtual void
-  balance_move_to(balance_pool* other)
+  void
+  balance_move_to(inode_cache<N>* target)
   {
-    inode_cache* target = (inode_cache*) other;
-
     if (target < this) {
       target->lock_.acquire();
       lock_.acquire();
@@ -257,7 +258,7 @@ struct inode_cache : public balance_pool
     }
   }
 
-  virtual u64
+  u64
   balance_count() const
   {
     return length_;
@@ -293,13 +294,13 @@ private:
   spinlock lock_;
 };
 
-struct inode_cache_dir : public balance_pool_dir
+struct inode_cache_dir
 {
   inode_cache_dir() : balancer_(this)
   {
   }
 
-  virtual balance_pool*
+  inode_cache<512>*
   balance_get(int id) const
   {
     return &cache_[id];
@@ -326,7 +327,7 @@ struct inode_cache_dir : public balance_pool_dir
 private:
 
   percpu<inode_cache<512>, percpu_safety::internal> cache_;
-  balancer balancer_;
+  balancer<inode_cache_dir, inode_cache<512>> balancer_;
 };
 
 static inode_cache_dir the_inode_cache;
