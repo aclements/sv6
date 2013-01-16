@@ -304,6 +304,10 @@ e1000attach(struct pci_func *pcif)
   if (e1000init)
     return 0;
 
+  // On dual-ported devices, PCI functions 0 and 1 are ports 0 and 1.
+  if (pcif->func != E1000_PORT)
+    return 0;
+
   pci_func_enable(pcif);
   
   e1000.membase = pcif->reg_base[0];
@@ -331,11 +335,10 @@ e1000attach(struct pci_func *pcif)
   if (r < 0)
     return 0;
 
-#ifdef HW_josmp
-  // Set the least significant bit on the dual-ported device so DHCP
-  // gives us josmp.csail.mit.edu/18.26.4.96
-  e1000.hwaddr[5] |= 0x01;
-#endif
+  if (E1000_PORT)
+    // [E1000 12.3.1] The EEPROM is shared, so we read port 0's MAC
+    // address.  Port 1's is the same with the LSB inverted.
+    e1000.hwaddr[5] ^= 1;
 
   if (VERBOSE)
       cprintf("%x:%x:%x:%x:%x:%x\n",

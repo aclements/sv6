@@ -54,6 +54,7 @@
 #define NSOCKET       4
 #define MTRACE        0
 #define PERFSIZE      (1<<20ull)
+#define E1000_PORT    1   // use second E1000 port
 #elif defined(HW_ud0)
 #define NCPU          4   // maximum number of CPUs
 #define NSOCKET       2
@@ -100,4 +101,8 @@
 
 #ifndef DEBUG
 #define DEBUG 1
+#endif
+#ifndef E1000_PORT
+// Use E1000 port 0 by default
+#define E1000_PORT 0
 #endif
