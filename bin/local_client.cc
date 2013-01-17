@@ -66,7 +66,7 @@ main(int argc, char *argv[])
 
   for (int i = 0; i < nmsg; i++) {
     nbytes = sendto (sock, (void *) MESSAGE, strlen (MESSAGE) + 1, 0,
-                     (struct sockaddr *) & name, size);
+                     (struct sockaddr *) & name, size, 1);
     if (nbytes < 0) {
       die ("sendto (client)");
     }
