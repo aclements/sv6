@@ -133,10 +133,10 @@ pci_conf_write(u32 seg, u32 bus, u32 dev, u32 func, u32 offset,
     outb(pci_conf1_data_ioport, val + (offset & 3));
     return;
   case 16:
-    outl(pci_conf1_data_ioport, val + (offset & 2));
+    outw(pci_conf1_data_ioport, val + (offset & 2));
     return;
   case 32:
-    outw(pci_conf1_data_ioport, val);
+    outl(pci_conf1_data_ioport, val);
     return;
   }
   panic("pci_conf_write: bad width %d", width);
