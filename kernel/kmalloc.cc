@@ -46,9 +46,11 @@ morecore(int c, int b)
   if (ALLOC_MEMSET)
     memset(p, 3, PGSIZE);
 
+  u8 rnd = rdtsc() % 11;
+
   int sz = 1 << b;
   assert(sz >= sizeof(header));
-  for(char *q = p; q + sz <= p + PGSIZE; q += sz){
+  for(char *q = p + CACHELINE * rnd; q + sz <= p + PGSIZE; q += sz){
     struct header *h = (struct header *) q;
     for (;;) {
       auto headptr = freelists[c].buckets[b].load();

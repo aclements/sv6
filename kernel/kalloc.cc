@@ -47,7 +47,7 @@ struct locked_buddy
 
 static static_vector<locked_buddy, MAX_BUDDIES> buddies;
 
-struct mempool : balance_pool {
+struct mempool : public balance_pool<mempool> {
   int buddy_;      // the buddy allocator this pool; it can contain any phys mem
   uintptr_t base_; // base this pool's local memory
   uintptr_t lim_;  // first address beyond this pool's local memory
@@ -66,12 +66,11 @@ struct mempool : balance_pool {
     return stats.free;
   };
 
-  void balance_move_to(balance_pool *other) {
+  void balance_move_to(mempool *target) {
     u64 avail = balance_count();
     // steal no more than max:
     size_t size = (buddy_allocator::MAX_SIZE > avail/2) ? 
       avail / 2 : buddy_allocator::MAX_SIZE;
-    mempool* target = (mempool*) other;
     auto lb = &buddies[buddy_];
     auto l = lb->lock.guard();
     // XXX we should steal memory that is close to us. lb helps with this
@@ -149,15 +148,15 @@ static_vector<numa_node, MAX_NUMA_NODES> numa_nodes;
 static int kinited __mpalign__;
 static char *pgalloc();
 
-struct memory : balance_pool_dir {
-  balancer b_;
+struct memory {
+  balancer<memory, mempool> b_;
 
   memory() : b_(this) {};
   ~memory() {};
 
   NEW_DELETE_OPS(memory);
 
-  balance_pool* balance_get(int id) const {
+  mempool* balance_get(int id) const {
     auto mempool = cpu_mem[id].mempool;
     return &(mempools[mempool]);
   }
