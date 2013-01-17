@@ -130,10 +130,10 @@ pci_conf_write(u32 seg, u32 bus, u32 dev, u32 func, u32 offset,
   pci_conf1_set_addr(seg, bus, dev, func, offset);
   switch (width) {
   case 8:
-    outb(pci_conf1_data_ioport, val + (offset & 3));
+    outb(pci_conf1_data_ioport + (offset & 3), val);
     return;
   case 16:
-    outw(pci_conf1_data_ioport, val + (offset & 2));
+    outw(pci_conf1_data_ioport + (offset & 2), val);
     return;
   case 32:
     outl(pci_conf1_data_ioport, val);
