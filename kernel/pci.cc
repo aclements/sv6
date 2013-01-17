@@ -5,6 +5,7 @@
 #include "pcireg.hh"
 #include "traps.h"
 #include "kstream.hh"
+#include "cpu.hh"
 
 static console_stream verbose(true);
 
@@ -215,9 +216,10 @@ pci_msi_enable(struct pci_func *f, u8 irqnum)
   // (The Message Address Register format is mandated by the x86
   // architecture.  See 9.11.1 in the Vol. 3 of the Intel architecture
   // manual.)
+  uint64_t dest = cpus[0].hwid.num;
   pci_conf_write(f, f->msi_capreg + 4*1,
                  (0x0fee << 20) |   // magic constant for northbridge
-                 (0 << 12) |        // destination ID
+                 (dest << 12) |     // destination ID
                  (1 << 3) |         // redirection hint
                  (0 << 2));         // destination mode
   pci_conf_write(f, f->msi_capreg + 4*2, 0);
