@@ -10,7 +10,6 @@
 static console_stream verbose(true);
 
 extern int e1000attach(struct pci_func *pcif);
-extern int e1000eattach(struct pci_func *pcif);
 
 // Flag to do "lspci" at bootup
 static int pci_show_devs = 0;
@@ -45,8 +44,10 @@ struct pci_driver pci_attach_vendor[] = {
   // tom's e1000 82541GI copper
   { 0x8086, 0x1076, &e1000attach },
   // Both of ud0's e1000e (82573E, 82573L)
-  { 0x8086, 0x108c, &e1000eattach },
-  { 0x8086, 0x109A, &e1000eattach },
+  { 0x8086, 0x108c, &e1000attach },
+  { 0x8086, 0x109A, &e1000attach },
+  // tom and ben's 82572EI
+  { 0x8086, 0x107d, &e1000attach },
   { 0, 0, 0 },
 };
 

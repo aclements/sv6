@@ -6,6 +6,7 @@
 #include "spinlock.h"
 #include "apic.hh"
 #include "e1000reg.hh"
+#include "kstream.hh"
 
 #define TX_RING_SIZE 64
 #define RX_RING_SIZE 64
@@ -13,10 +14,12 @@
 irq e1000irq;
 int e1000init;
 
+struct e1000_model;
+
 static struct e1000 {
   u32 membase;
   u32 iobase;
-  u16 pcidevid;
+  const struct e1000_model *model;
   
   volatile u32 txclean;
   volatile u32 txinuse;
@@ -48,11 +51,62 @@ static const struct eerd eerd_default = {
   start_bit:  0x00000001,
 };
 
-static const struct eerd eerd_82541xx = {
+// 82541xx, 82571xx, 82572xx, all PCI-E
+static const struct eerd eerd_large = {
   data_shift: 16,
   addr_shift: 2,
   done_bit:   0x00000002,
   start_bit:  0x00000001
+};
+
+enum {
+  MODEL_FLAG_DUAL_PORT = 1 << 0,
+  MODEL_FLAG_PCIE = 1 << 1,
+};
+
+static struct e1000_model
+{
+  const char *name;
+  int devid;
+  const struct eerd *eerd;
+  int flags;
+} e1000_models[] = {
+  {
+    // QEMU's E1000 model
+    "82540EM (desktop)", 0x100e,
+    &eerd_default,
+  }, {
+    // josmp
+    "82546GB (copper; dual port)", 0x1079,
+    &eerd_default,
+    MODEL_FLAG_DUAL_PORT,
+  },
+  // This is disabled on tom because it interferes with the IPMI
+  // interface.  We don't need it because tom also has an E1000e
+  // (below).
+#ifndef HW_tom
+  {
+    // tom
+    "82541PI (copper)", 0x1076,
+    &eerd_large,
+  },
+#endif
+  {
+    // ud0
+    "82573E (copper)", 0x108c,
+    &eerd_large,
+    MODEL_FLAG_PCIE,
+  }, {
+    // Also ud0
+    "82573L", 0x100a,
+    &eerd_large,
+    MODEL_FLAG_PCIE,
+  }, {
+    // tom and ben
+    "82572EI (copper)", 0x107d,
+    &eerd_large,
+    MODEL_FLAG_PCIE,
+  },
 };
 
 static inline u32
@@ -288,54 +342,51 @@ void e1000reset(void)
 }
 
 int
-e1000eattach(struct pci_func *pcif)
-{
-  panic("e1000eattach");
-  return 0;
-}
-
-int
 e1000attach(struct pci_func *pcif)
 {
-  const eerd* eerd;
   int r;
   int i;
 
   if (e1000init)
     return 0;
 
+  int devid = PCI_PRODUCT(pcif->dev_id);
+  e1000.model = nullptr;
+  for (auto &m : e1000_models) {
+    if (devid == m.devid) {
+      e1000.model = &m;
+      break;
+    }
+  }
+  if (!e1000.model)
+    panic("e1000attach: unrecognized devid %x", devid);
+  console.println("e1000: Found ", e1000.model->name);
+
+  if (e1000.model->flags & MODEL_FLAG_PCIE) {
+    console.println("e1000: PCI-E not implemented");
+    return 0;
+  }
+
   // On dual-ported devices, PCI functions 0 and 1 are ports 0 and 1.
-  if (pcif->func != E1000_PORT)
+  if ((e1000.model->flags & MODEL_FLAG_DUAL_PORT) && pcif->func != E1000_PORT)
     return 0;
 
   pci_func_enable(pcif);
-  
+
   e1000.membase = pcif->reg_base[0];
   e1000.iobase = pcif->reg_base[2];
-  e1000.pcidevid = PCI_PRODUCT(pcif->dev_id);
+
   e1000irq = extpic->map_pci_irq(pcif);
   e1000irq.enable();
 
   e1000reset();
 
-  switch(e1000.pcidevid) {
-  case 0x100e:
-  case 0x1079:
-    eerd = &eerd_default;
-    break;
-  case 0x1076:
-    eerd = &eerd_82541xx;
-    break;
-  default:
-    panic("e1000attach: %x", e1000.pcidevid);
-  }
-
   // Get the MAC address
-  r = eeprom_read(eerd, (u16*)e1000.hwaddr, EEPROM_OFF_MACADDR, 3);
+  r = eeprom_read(e1000.model->eerd, (u16*)e1000.hwaddr, EEPROM_OFF_MACADDR, 3);
   if (r < 0)
     return 0;
 
-  if (E1000_PORT)
+  if ((e1000.model->flags & MODEL_FLAG_DUAL_PORT) && E1000_PORT)
     // [E1000 12.3.1] The EEPROM is shared, so we read port 0's MAC
     // address.  Port 1's is the same with the LSB inverted.
     e1000.hwaddr[5] ^= 1;
