@@ -36,11 +36,14 @@
 #define DIE "QUIT"
 #define CLIENTPROC 1
 #define NOFDSHARE 1
-#define AFFINITY 0
+#define AFFINITY 1
+
 
 int nthread;
 int nclient;
 int nmsg;
+int trace = 0;
+int filter;
 int sock;  // socket on which server threads receive
 long *clientid;
 long *serverid;
@@ -136,7 +139,7 @@ int check(int fd)
 }
 
 static int
-filter(char *message, int n) 
+ok(char *message, int n) 
 {
   int fd[2];
   int r = 1;
@@ -151,17 +154,17 @@ filter(char *message, int n)
   if (pid == 0) {
     close(fd[1]);
     check(fd[0]);   // XXX exec()
-    exit(0);
+    xexit();
   } else {
     close(fd[0]);
     if (write(fd[1], message, n) < 0) {
       die("write filter failed");
     }
     close(fd[1]);
-    wait(&r);
+    xwait();
     close(fd[1]);
   }
-  return r != 0;
+  return r;
 }
 
 static void
@@ -187,6 +190,7 @@ thread(void* x)
   int n = 0;
   while (1)
   {
+    if (trace) printf("server %d: wait\n", (int) id);
 
     size = sizeof (name);
     nbytes = recvfrom (sock, message, MAXMSG, 0,
@@ -205,11 +209,13 @@ thread(void* x)
       die ("data is incorrect (server)");
     }
 
-    if (!filter(message, nbytes)) {
+    if (filter && ok(message, nbytes)) {
       deliver(message, nbytes);
     }
     
     strcpy(message, SMESSAGE);
+
+    if (trace) printf("server %d: respond\n", (int) id);
 
     nbytes = sendto(sock, message, strlen(SMESSAGE)+1, 0,
                      (struct sockaddr *) & name, size, 0);
@@ -245,21 +251,28 @@ client(int id)
   uint64_t t0 = rdtsc();
   for (int i = 0; i < nmsg; i++) {
 
+    if (trace) printf("%d: client send\n", i);
+
     nbytes = sendto(sock, (void *) CMESSAGE, strlen (CMESSAGE) + 1, 0,
                      (struct sockaddr *) & name, size, 1);
     if (nbytes < 0) {
       die ("sendto (client) failed");
     }
 
+    if (trace) printf("%d: client wait\n", i);
+
     nbytes = recvfrom (sock, message, MAXMSG, 0, NULL, 0);
     if (nbytes < 0) {
       die ("recfrom (client) failed");
     }
 
+
     if (strcmp(message, SMESSAGE) != 0) {
       printf("client: message %s\n", message);
       die ("data is incorrect (client)");
     }
+
+    if (trace) printf("%d: done\n", i);
 
   }
   uint64_t t1 = rdtsc();
@@ -350,12 +363,13 @@ void clients()
 int
 main (int argc, char *argv[])
 {
-  if (argc < 4)
-    die("usage: %s n-server-threads n-client-procs nmsg", argv[0]);
+  if (argc < 5)
+    die("usage: %s n-server-threads n-client-procs nmsg filter", argv[0]);
 
   nthread = atoi(argv[1]);
   nclient = atoi(argv[2]);
   nmsg = atoi(argv[3]);
+  filter = atoi(argv[4]);
 
   unlink (SERVER);
   sock = make_named_socket (SERVER);
