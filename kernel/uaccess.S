@@ -83,9 +83,3 @@ zpage:
         loop    1b
         sfence
         ret
-
-.globl zrun_nc
-.align 8
-zrun_nc:
-        jmp zpage
-        

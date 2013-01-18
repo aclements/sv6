@@ -8,7 +8,6 @@
 #include "mtrace.h"
 
 extern "C" void zpage(void*);
-extern "C" void zrun_nc(void*);
 
 static const bool prezero = true;
 
@@ -39,7 +38,7 @@ struct zwork : public work {
       auto *r = (struct free_page*)kalloc("zpage");
       if (r == nullptr)
         break;
-      zrun_nc(r);
+      zpage(r);
       scoped_cli cli;
       z_->pages.push_front(r);
       ++z_->nPages;
