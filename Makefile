@@ -122,7 +122,7 @@ QEMUOPTS = -smp $(QEMUSMP) -m 512 -serial mon:stdio -nographic \
 qemu: $(KERN)
 	$(QEMU) $(QEMUOPTS) -kernel $(KERN)
 gdb: $(KERN)
-	$(QEMU) $(QEMUOPTS) -kernel $(KERN) -S -s
+	$(QEMU) $(QEMUOPTS) -kernel $(KERN) -s
 
 ##
 ## mtrace
@@ -137,7 +137,7 @@ MTRACEOPTS = -rtc clock=vm -mtrace-enable -mtrace-file mtrace.out \
 	     -mtrace-quantum 100
 mtrace.out: mscan.kern mscan.syms 
 	$(Q)rm -f mtrace.out
-	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel mscan.kern
+	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel mscan.kern -s
 .PHONY: mtrace.out
 
 mscan.out: $(QEMUSRC)/mtrace-tools/mscan mtrace.out

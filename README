@@ -25,17 +25,23 @@
 
 * qemu+gdb
 
+  qemu and gdb do not properly handle mode-switching between 32- and
+  64-bit code: once gdb connects in 32-bit mode, it will not switch to
+  64-bit mode.  Thus, debugging 64-bit code requires attaching gdb after
+  qemu is already executing 64-bit code.  Do not use -S, since that will
+  attach in 16-/32-bit mode.
+
   # In a terminal..
   $ make gdb
 
   # ..In a different terminal
-  $ gdb o.qemu/kernel
-  (gdb) target remote :1234
-  (gdb) show arch
-  The target architecture is set automatically (currently i386:x86-64)
-  (gdb) set arch i386:x86-64:intel
-  (gdb) show arch
-  The target architecture is assumed to be i386:x86-64:intel
+  $ echo add-auto-load-safe-path $(pwd) >> ~/.gdbinit
+  $ gdb
+  ...
+  The target architecture is assumed to be i386:x86-64
+  0xffffffffc011b5fc in ?? ()
+  Breakpoint 1 at 0xffffffffc010b9c0: file kernel/console.cc, line 240.
+  Breakpoint 2 at 0xffffffffc010b970: file kernel/console.cc, line 224.
   (gdb) c
 
 * Mac cross compiler gcc-4.6.2
