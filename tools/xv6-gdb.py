@@ -1,4 +1,5 @@
 import gdb
+import gdb.printing
 
 class StaticVectorPrinter(object):
     """Pretty-printer for static_vectors."""
