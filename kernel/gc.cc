@@ -382,7 +382,7 @@ gc_end_epoch(void)
   assert (c != -1);
   assert (c >= 0 && c < ncpu);
   struct gc_state *gs = &gc_states[c];  
-
+  
   scoped_acquire x(&gs->lock_);
   
   gc_states[c].dequeue(myproc()->gc);
@@ -399,6 +399,7 @@ gc_end_epoch(void)
 void
 gc_wakeup(void)
 {
+  cprintf("%d: wakeup gcc thread\n", mycpu()->id);
   for (int i = 0; i < NCPU; i++) {
     gc_states[i].cv.wake_all();
   }

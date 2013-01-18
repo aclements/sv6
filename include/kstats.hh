@@ -62,7 +62,9 @@
   X(uint64_t, socket_load_balance) \
   X(uint64_t, socket_local_read)   \
   X(uint64_t, socket_local_sendto_cycles)   \
+  X(uint64_t, socket_local_client_sendto_cycles)   \
   X(uint64_t, socket_local_sendto_cnt)   \
+  X(uint64_t, socket_local_client_sendto_cnt)   \
   X(uint64_t, socket_local_recvfrom_cycles)   \
   X(uint64_t, socket_local_recvfrom_cnt)   \
 

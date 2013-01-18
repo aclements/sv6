@@ -31,16 +31,23 @@
 #define MAXCPU 100
 #define MAXMSG  512
 #define MAXPATH 100
-#define SMESSAGE "ni hao"
-#define CMESSAGE "Hello, local socket server?"
-#define PROC 1
+#define SMESSAGE "OK"
+#define CMESSAGE "MAIL from: kaashoek@mit.edu\nRCPT TO: xxx@mit.edu\nDATA\nDATASTRING Hello\nENDDATA\n"
+#define DIE "QUIT"
+#define CLIENTPROC 1
+#define NOFDSHARE 1
+#define AFFINITY 1
+
 
 int nthread;
 int nclient;
 int nmsg;
+int trace = 0;
+int filter;
 int sock;  // socket on which server threads receive
 long *clientid;
-u64 clienttimes[MAXCPU];
+long *serverid;
+uint64_t clienttimes[MAXCPU];
 
 #if defined(XV6_USER) && defined(HW_ben)
 int get_cpu_order(int thread)
@@ -119,8 +126,53 @@ make_named_socket(const char *filename)
   return sock;
 }
 
+static 
+int check(int fd)
+{
+  char buf[1024];
 
-static void*
+  while (read(fd, buf, 1024) > 0) {
+    if (strcmp(buf, "SPAM"))
+      return 1;
+  }
+  return 0;
+}
+
+static int
+ok(char *message, int n) 
+{
+  int fd[2];
+  int r = 1;
+
+  if (pipe(fd) < 0) {
+    die ("pipe failed");
+  }
+
+  int pid = xfork();
+  if (pid < 0)
+    die("fork filter failed");
+  if (pid == 0) {
+    close(fd[1]);
+    check(fd[0]);   // XXX exec()
+    xexit();
+  } else {
+    close(fd[0]);
+    if (write(fd[1], message, n) < 0) {
+      die("write filter failed");
+    }
+    close(fd[1]);
+    xwait();
+    close(fd[1]);
+  }
+  return r;
+}
+
+static void
+deliver(char *message, int n)
+{
+}
+
+void *
 thread(void* x)
 {
   long id = (long)x;
@@ -129,14 +181,17 @@ thread(void* x)
   socklen_t size;
   int nbytes;
 
+#if AFFINITY
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
-
-  // printf("server thread running on cpu %d\n", (int) id);
+#endif
+  printf("server thread %d(%d) running\n", getpid(), (int) id);
 
   int n = 0;
   while (1)
   {
+    if (trace) printf("server %d: wait\n", (int) id);
+
     size = sizeof (name);
     nbytes = recvfrom (sock, message, MAXMSG, 0,
                        (struct sockaddr *) & name, &size);
@@ -144,17 +199,26 @@ thread(void* x)
       die ("recfrom (server)");
     }
 
-    // printf("message from %s\n", name.sun_path);
+    if (strcmp(message, DIE) == 0) {
+      printf("server %ld done\n", id);
+      pthread_exit(0);
+    }
 
-    if (strcmp(message, "Hello, local socket server?") != 0) {
-      printf("%ld: message %s\n", id, message);
+    if (strcmp(message, CMESSAGE) != 0) {
+      printf("%ld: received (%d) message %s(%ld)\n", id, nbytes, message, strlen(CMESSAGE));
       die ("data is incorrect (server)");
     }
 
+    if (filter && ok(message, nbytes)) {
+      deliver(message, nbytes);
+    }
+    
     strcpy(message, SMESSAGE);
 
-    nbytes = sendto (sock, message, strlen(SMESSAGE)+1, 0,
-                     (struct sockaddr *) & name, size);
+    if (trace) printf("server %d: respond\n", (int) id);
+
+    nbytes = sendto(sock, message, strlen(SMESSAGE)+1, 0,
+                     (struct sockaddr *) & name, size, 0);
     if (nbytes < 0)
     {
       die ("sendto (server)");
@@ -162,9 +226,6 @@ thread(void* x)
 
     n++;
 
-    if (n >= nmsg) {
-      xexit();
-    }
   }
 }
 
@@ -189,27 +250,43 @@ client(int id)
 
   uint64_t t0 = rdtsc();
   for (int i = 0; i < nmsg; i++) {
-    nbytes = sendto (sock, (void *) CMESSAGE, strlen (CMESSAGE) + 1, 0,
-                     (struct sockaddr *) & name, size);
+
+    if (trace) printf("%d: client send\n", i);
+
+    nbytes = sendto(sock, (void *) CMESSAGE, strlen (CMESSAGE) + 1, 0,
+                     (struct sockaddr *) & name, size, 1);
     if (nbytes < 0) {
       die ("sendto (client) failed");
     }
+
+    if (trace) printf("%d: client wait\n", i);
 
     nbytes = recvfrom (sock, message, MAXMSG, 0, NULL, 0);
     if (nbytes < 0) {
       die ("recfrom (client) failed");
     }
 
-    if (strcmp(message, "ni hao") != 0) {
+
+    if (strcmp(message, SMESSAGE) != 0) {
       printf("client: message %s\n", message);
       die ("data is incorrect (client)");
     }
 
+    if (trace) printf("%d: done\n", i);
+
   }
   uint64_t t1 = rdtsc();
   clienttimes[id] = (t1-t0)/nmsg;
-  // printf("client %d ncycles %lu for nmsg %d cycles/msg %lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
+  printf("client %d ncycles %lu for nmsg %d cycles/msg %lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
+
+  nbytes = sendto(sock, (void *) DIE, strlen (DIE) + 1, 0,
+                  (struct sockaddr *) & name, size, 1);
+  if (nbytes < 0) {
+    die ("sendto (client) failed");
+  }
+
   unlink (path);
+
   close (sock);
 }
 
@@ -217,8 +294,14 @@ void server()
 {
   pthread_t tid[MAXCPU];
 
-  for (int i = 0; i < nthread; i++)
+  for (int i = 0; i < nthread; i++) {
+#if !defined(LINUX) && NOFDSHARE
+    pthread_createflags(&tid[i], 0, thread, (void*)(long)i, 0);
+#else
+    printf("create thread %d\n", i);
     xthread_create(&tid[i], 0, thread, (void*)(long)i);
+#endif
+  }
 
   for (int i = 0; i < nthread; i++)
     pthread_join(tid[i], NULL);
@@ -226,13 +309,16 @@ void server()
   xexit();
 }
 
+
 static void*
 client_thread(void* x)
 {
   long id = (long)x;
+#if AFFINITY
   // printf("run client %d on cpu %d\n", getpid(), id);
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
+#endif
   client(id);
   xexit();
  
@@ -240,47 +326,50 @@ client_thread(void* x)
 
 void clients()
 {
-#if !PROC
+#if !CLIENTPROC
   pthread_t tid[MAXCPU];
 #endif
 
   for (long i = 0; i < nclient; i++) {
     clientid = (long *) i;
-#if PROC
+#if CLIENTPROC
     int pid = xfork();
     if (pid < 0)
       die("fork failed clients");
     if (pid == 0) {
+      printf("fork client proc %ld\n", i);
       client_thread(clientid);
     }
 #else
     xthread_create(&tid[i], 0, client_thread, (void*)(long)i);
 #endif
   }
+
   for (int i = 0; i < nclient; i++) {
-#if PROC
+#if CLIENTPROC
     xwait();
 #else
     pthread_join(tid[i], NULL);
 #endif
   }
-  u64 sum = 0;
+  uint64_t sum = 0;
   for (int i = 0; i < nclient; i++) {
     sum += clienttimes[i];
   }
   printf("avg cycles/iter: %lu\n", sum / nclient);
-  // printf("clients done\n");
+
 }
      
 int
 main (int argc, char *argv[])
 {
-  if (argc < 4)
-    die("usage: %s n-server-threads n-client-procs nmsg", argv[0]);
+  if (argc < 5)
+    die("usage: %s n-server-threads n-client-procs nmsg filter", argv[0]);
 
   nthread = atoi(argv[1]);
   nclient = atoi(argv[2]);
   nmsg = atoi(argv[3]);
+  filter = atoi(argv[4]);
 
   unlink (SERVER);
   sock = make_named_socket (SERVER);
@@ -304,8 +393,11 @@ main (int argc, char *argv[])
   struct kstats kstats = kstats_after - kstats_before;
   printf("%d %lu # recv msg through lb\n", nclient, kstats.socket_load_balance);
   printf("%d %lu # recv msg locally\n", nclient, kstats.socket_local_read);
-  printf("%d %f # cycles/sendto\n", nclient,
+  printf("%d %f # cycles/server sendto\n", nclient,
          (double)kstats.socket_local_sendto_cycles / kstats.socket_local_sendto_cnt);
+  printf("%d %f # cycles/client sendto\n", nclient,
+         (double)kstats.socket_local_client_sendto_cycles / 
+         kstats.socket_local_client_sendto_cnt);
   printf("%d %f #cycles/recvfrom\n", nclient,
          (double)kstats.socket_local_recvfrom_cycles / kstats.socket_local_recvfrom_cnt);
 #endif

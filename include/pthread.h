@@ -24,6 +24,8 @@ BEGIN_DECLS
 
 int       pthread_create(pthread_t* tid, const pthread_attr_t* attr,
                          void* (*start)(void*), void* arg);
+int       pthread_createflags(pthread_t* tid, const pthread_attr_t* attr,
+                         void* (*start)(void*), void* arg, int fdshare);
 pthread_t pthread_self(void);
 
 int       pthread_key_create(pthread_key_t* key, void (*destructor)(void*));
