@@ -70,6 +70,7 @@ FSEXTRA += \
 	bin/linkbench-tom \
 	bin/mapbench-ben \
 	bin/metis_wrmem-josmp \
+	bin/lsocket \
 	bin/countbench-ben \
 
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIBA)

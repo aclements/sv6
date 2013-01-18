@@ -31,11 +31,12 @@
 #define MAXCPU 100
 #define MAXMSG  512
 #define MAXPATH 100
-#define SMESSAGE "ni hao"
-#define CMESSAGE "Hello, local socket server?"
+#define SMESSAGE "OK"
+#define CMESSAGE "MAIL from: kaashoek@mit.edu\nRCPT TO: xxx@mit.edu\nDATA\nDATASTRING Hello\nENDDATA\n"
+#define DIE "QUIT"
 #define CLIENTPROC 1
-//#define SERVERPROC 1
 #define NOFDSHARE 1
+#define AFFINITY 0
 
 int nthread;
 int nclient;
@@ -43,7 +44,7 @@ int nmsg;
 int sock;  // socket on which server threads receive
 long *clientid;
 long *serverid;
-u64 clienttimes[MAXCPU];
+uint64_t clienttimes[MAXCPU];
 
 #if defined(XV6_USER) && defined(HW_ben)
 int get_cpu_order(int thread)
@@ -122,8 +123,53 @@ make_named_socket(const char *filename)
   return sock;
 }
 
+static 
+int check(int fd)
+{
+  char buf[1024];
 
-static void*
+  while (read(fd, buf, 1024) > 0) {
+    if (strcmp(buf, "SPAM"))
+      return 1;
+  }
+  return 0;
+}
+
+static int
+filter(char *message, int n) 
+{
+  int fd[2];
+  int r = 1;
+
+  if (pipe(fd) < 0) {
+    die ("pipe failed");
+  }
+
+  int pid = xfork();
+  if (pid < 0)
+    die("fork filter failed");
+  if (pid == 0) {
+    close(fd[1]);
+    check(fd[0]);   // XXX exec()
+    exit(0);
+  } else {
+    close(fd[0]);
+    if (write(fd[1], message, n) < 0) {
+      die("write filter failed");
+    }
+    close(fd[1]);
+    wait(&r);
+    close(fd[1]);
+  }
+  return r != 0;
+}
+
+static void
+deliver(char *message, int n)
+{
+}
+
+void *
 thread(void* x)
 {
   long id = (long)x;
@@ -132,14 +178,16 @@ thread(void* x)
   socklen_t size;
   int nbytes;
 
+#if AFFINITY
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
-
-  printf("server thread %d running on cpu %d\n", getpid(), (int) id);
+#endif
+  printf("server thread %d(%d) running\n", getpid(), (int) id);
 
   int n = 0;
   while (1)
   {
+
     size = sizeof (name);
     nbytes = recvfrom (sock, message, MAXMSG, 0,
                        (struct sockaddr *) & name, &size);
@@ -147,13 +195,20 @@ thread(void* x)
       die ("recfrom (server)");
     }
 
-    // printf("message from %s\n", name.sun_path);
+    if (strcmp(message, DIE) == 0) {
+      printf("server %ld done\n", id);
+      pthread_exit(0);
+    }
 
-    if (strcmp(message, "Hello, local socket server?") != 0) {
-      printf("%ld: message %s\n", id, message);
+    if (strcmp(message, CMESSAGE) != 0) {
+      printf("%ld: received (%d) message %s(%ld)\n", id, nbytes, message, strlen(CMESSAGE));
       die ("data is incorrect (server)");
     }
 
+    if (!filter(message, nbytes)) {
+      deliver(message, nbytes);
+    }
+    
     strcpy(message, SMESSAGE);
 
     nbytes = sendto(sock, message, strlen(SMESSAGE)+1, 0,
@@ -165,9 +220,6 @@ thread(void* x)
 
     n++;
 
-    if (n >= nmsg) {
-      xexit();
-    }
   }
 }
 
@@ -192,6 +244,7 @@ client(int id)
 
   uint64_t t0 = rdtsc();
   for (int i = 0; i < nmsg; i++) {
+
     nbytes = sendto(sock, (void *) CMESSAGE, strlen (CMESSAGE) + 1, 0,
                      (struct sockaddr *) & name, size, 1);
     if (nbytes < 0) {
@@ -203,7 +256,7 @@ client(int id)
       die ("recfrom (client) failed");
     }
 
-    if (strcmp(message, "ni hao") != 0) {
+    if (strcmp(message, SMESSAGE) != 0) {
       printf("client: message %s\n", message);
       die ("data is incorrect (client)");
     }
@@ -211,38 +264,28 @@ client(int id)
   }
   uint64_t t1 = rdtsc();
   clienttimes[id] = (t1-t0)/nmsg;
-  // printf("client %d ncycles %lu for nmsg %d cycles/msg %lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
+  printf("client %d ncycles %lu for nmsg %d cycles/msg %lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
+
+  nbytes = sendto(sock, (void *) DIE, strlen (DIE) + 1, 0,
+                  (struct sockaddr *) & name, size, 1);
+  if (nbytes < 0) {
+    die ("sendto (client) failed");
+  }
+
   unlink (path);
+
   close (sock);
 }
 
-#if SERVERPROC
-void server() {
-  for (long i = 0; i < nthread; i++) {
-    serverid = (long *) i;    
-    int pid = xfork();
-    if (pid < 0)
-      die("fork failed server");
-    if (pid == 0) {
-      printf("fork server proc %d\n", i);
-      thread(serverid);
-    }
-  }
-
-  for (int i = 0; i < nthread; i++)
-    xwait();
-
-  xexit();
-}
-#else
 void server()
 {
   pthread_t tid[MAXCPU];
 
   for (int i = 0; i < nthread; i++) {
-#if NOFDSHARE
+#if !defined(LINUX) && NOFDSHARE
     pthread_createflags(&tid[i], 0, thread, (void*)(long)i, 0);
 #else
+    printf("create thread %d\n", i);
     xthread_create(&tid[i], 0, thread, (void*)(long)i);
 #endif
   }
@@ -252,15 +295,17 @@ void server()
 
   xexit();
 }
-#endif
+
 
 static void*
 client_thread(void* x)
 {
   long id = (long)x;
-  printf("run client %d on cpu %d\n", getpid(), id);
+#if AFFINITY
+  // printf("run client %d on cpu %d\n", getpid(), id);
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
+#endif
   client(id);
   xexit();
  
@@ -279,7 +324,7 @@ void clients()
     if (pid < 0)
       die("fork failed clients");
     if (pid == 0) {
-      printf("fork client proc %d\n", i);
+      printf("fork client proc %ld\n", i);
       client_thread(clientid);
     }
 #else
@@ -294,12 +339,12 @@ void clients()
     pthread_join(tid[i], NULL);
 #endif
   }
-  u64 sum = 0;
+  uint64_t sum = 0;
   for (int i = 0; i < nclient; i++) {
     sum += clienttimes[i];
   }
   printf("avg cycles/iter: %lu\n", sum / nclient);
-  // printf("clients done\n");
+
 }
      
 int
