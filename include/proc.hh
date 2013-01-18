@@ -34,8 +34,8 @@ struct context {
 // Per-process, per-stack meta data for mtrace
 #if MTRACE
 #define MTRACE_NSTACKS 16
-#define MTRACE_TAGSHIFT 28
-#if NCPU > 16
+#define MTRACE_TAGSHIFT 24
+#if NCPU > 256
 #error Oops -- decrease MTRACE_TAGSHIFT
 #endif
 struct mtrace_stacks {
