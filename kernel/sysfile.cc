@@ -61,11 +61,12 @@ sys_read(int fd, userptr<void> p, size_t n)
   // XXX(Austin) Too bad
   if (n > PGSIZE)
     n = PGSIZE;
-  if ((n = f->read(b, n)) < 0)
+  ssize_t res = f->read(b, n);
+  if (res < 0)
     return -1;
-  if (!userptr<char>(p).store(b, n))
+  if (!userptr<char>(p).store(b, res))
     return -1;
-  return n;
+  return res;
 }
 
 //SYSCALL
