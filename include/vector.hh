@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <initializer_list>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -23,6 +24,21 @@ public:
   typedef std::size_t difference_type;
 
   constexpr static_vector() : data_{}, size_(0) { }
+
+  template<class InputIterator>
+  static_vector(InputIterator first, InputIterator last)
+    : size_(0)
+  {
+    for (; first != last; ++first)
+      push_back(*first);
+  }
+
+  static_vector(std::initializer_list<T> elts)
+    : size_(0)
+  {
+    for (auto it = elts.begin(), last = elts.end(); it != last; ++it)
+      push_back(*it);
+  }
 
   ~static_vector()
   {
