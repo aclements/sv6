@@ -341,7 +341,7 @@ void e1000reset(void)
   ewr(WMREG_IMS, ICR_TXDW | ICR_RXO | ICR_RXT0);
 }
 
-int
+static int
 e1000attach(struct pci_func *pcif)
 {
   int r;
@@ -410,4 +410,11 @@ e1000attach(struct pci_func *pcif)
 
   e1000init = 1;
   return 1;
+}
+
+void
+inite1000(void)
+{
+  for (auto &m : e1000_models)
+    pci_register_driver(0x8086, m.devid, e1000attach);
 }

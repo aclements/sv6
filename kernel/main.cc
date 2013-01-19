@@ -31,6 +31,7 @@ void initinode(void);
 void initdisk(void);
 void inituser(void);
 void initsamp(void);
+void inite1000(void);
 void initpci(void);
 void initnet(void);
 void initsched(void);
@@ -188,6 +189,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initsamp();
   initlockstat();
   initacpi();              // Requires initacpitables, initkalloc?
+  inite1000();             // Before initpci
   initpci();               // Suggests initacpi
   initnet();
   initdev();               // Misc /dev nodes

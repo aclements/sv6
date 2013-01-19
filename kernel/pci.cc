@@ -10,8 +10,6 @@
 
 static console_stream verbose(true);
 
-extern int e1000attach(struct pci_func *pcif);
-
 static bool pci_scanned;
 
 // Flag to do "lspci" at bootup
@@ -38,21 +36,7 @@ static static_vector<struct pci_driver, 1> pci_attach_class =
 };
 
 // pci_attach_vendor matches the vendor ID and device ID of a PCI device
-static static_vector<struct pci_driver, 64> pci_attach_vendor =
-{
-  // [E1000 5.2] 
-  // QEMU emulates an e1000 82540EM
-  { 0x8086, 0x100e, &e1000attach },
-  // josmp's dual ported e1000 82546GB copper
-  { 0x8086, 0x1079, &e1000attach },
-  // tom's e1000 82541GI copper
-  { 0x8086, 0x1076, &e1000attach },
-  // Both of ud0's e1000e (82573E, 82573L)
-  { 0x8086, 0x108c, &e1000attach },
-  { 0x8086, 0x109A, &e1000attach },
-  // tom and ben's 82572EI
-  { 0x8086, 0x107d, &e1000attach },
-};
+static static_vector<struct pci_driver, 64> pci_attach_vendor;
 
 static const char *pci_class[] =
 {
