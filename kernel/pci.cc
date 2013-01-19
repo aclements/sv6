@@ -12,6 +12,8 @@ static console_stream verbose(true);
 
 extern int e1000attach(struct pci_func *pcif);
 
+static bool pci_scanned;
+
 // Flag to do "lspci" at bootup
 static int pci_show_devs = 0;
 static int pci_show_addrs = 0;
@@ -369,6 +371,15 @@ pci_func_enable(struct pci_func *f)
 }
 
 void
+pci_register_driver(u32 vendor_id, u32 dev_id,
+                    int (*attachfn)(struct pci_func *pcif))
+{
+  if (pci_scanned)
+    panic("pci_register_driver called after initpci");
+  pci_attach_vendor.push_back(pci_driver{vendor_id, dev_id, attachfn});
+}
+
+void
 initpci(void)
 {
   if (!acpi_pci_scan_roots(pci_scan_bus)) {
@@ -377,5 +388,6 @@ initpci(void)
     memset(&root_bus, 0, sizeof(root_bus));
 
     pci_scan_bus(&root_bus);
+    pci_scanned = true;
   }
 }

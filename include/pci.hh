@@ -27,7 +27,9 @@ struct pci_bus {
   void *acpi_handle;
 };
 
-int  pci_init(void);
+void pci_register_driver(u32 vendor_id, u32 dev_id,
+                         int (*attachfn)(struct pci_func *pcif));
+
 void pci_func_enable(struct pci_func *f);
 void pci_msi_enable(struct pci_func *f, u8 irqnum);
 
