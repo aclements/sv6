@@ -6,6 +6,7 @@
 #include "traps.h"
 #include "kstream.hh"
 #include "cpu.hh"
+#include "vector.hh"
 
 static console_stream verbose(true);
 
@@ -29,13 +30,14 @@ struct pci_driver {
 static int pci_bridge_attach(struct pci_func *pcif);
 
 // pci_attach_class matches the class and subclass of a PCI device
-struct pci_driver pci_attach_class[] = {
+static static_vector<struct pci_driver, 1> pci_attach_class =
+{
   { PCI_CLASS_BRIDGE, PCI_SUBCLASS_BRIDGE_PCI, &pci_bridge_attach },
-  { 0, 0, 0 },
 };
 
 // pci_attach_vendor matches the vendor ID and device ID of a PCI device
-struct pci_driver pci_attach_vendor[] = {
+static static_vector<struct pci_driver, 64> pci_attach_vendor =
+{
   // [E1000 5.2] 
   // QEMU emulates an e1000 82540EM
   { 0x8086, 0x100e, &e1000attach },
@@ -48,7 +50,6 @@ struct pci_driver pci_attach_vendor[] = {
   { 0x8086, 0x109A, &e1000attach },
   // tom and ben's 82572EI
   { 0x8086, 0x107d, &e1000attach },
-  { 0, 0, 0 },
 };
 
 static const char *pci_class[] =
@@ -149,21 +150,20 @@ pci_conf_write(struct pci_func *f, u32 off, u32 v)
   pci_conf_write(0, f->bus->busno, f->dev, f->func, off, v, 32);
 }
 
+template<class InputIterator>
 static int __attribute__((warn_unused_result))
-pci_attach_match(u32 key1, u32 key2,
-		 struct pci_driver *list, struct pci_func *pcif)
+pci_attach_match(u32 key1, u32 key2, InputIterator first, InputIterator last,
+		 struct pci_func *pcif)
 {
-  u32 i;
-  
-  for (i = 0; list[i].attachfn; i++) {
-    if (list[i].key1 == key1 && list[i].key2 == key2) {
-      int r = list[i].attachfn(pcif);
+  for (; first != last; ++first) {
+    if (first->key1 == key1 && first->key2 == key2) {
+      int r = first->attachfn(pcif);
       if (r > 0)
         return r;
       if (r < 0)
         cprintf("pci_attach_match: attaching "
                 "%x.%x (%p): %d\n",
-                key1, key2, list[i].attachfn, r);
+                key1, key2, first->attachfn, r);
     }
   }
   return 0;
@@ -175,10 +175,10 @@ pci_attach(struct pci_func *f)
   return
     pci_attach_match(PCI_CLASS(f->dev_class),
                      PCI_SUBCLASS(f->dev_class),
-                     &pci_attach_class[0], f) ||
+                     pci_attach_class.begin(), pci_attach_class.end(), f) ||
     pci_attach_match(PCI_VENDOR(f->dev_id),
                      PCI_PRODUCT(f->dev_id),
-                     &pci_attach_vendor[0], f);
+                     pci_attach_vendor.begin(), pci_attach_vendor.end(), f);
 }
 
 static void
