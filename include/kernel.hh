@@ -89,9 +89,7 @@ void            printtrap(struct trapframe *, bool lock = true);
 void            printtrace(u64 rbp);
 
 // e1000.c
-extern struct irq e1000irq;
 extern int e1000init;
-void            e1000intr(void);
 int             e1000tx(void *buf, u32 len);
 void            e1000hwaddr(u8 *hwaddr);
 

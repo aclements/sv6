@@ -209,13 +209,6 @@ trap(struct trapframe *tf)
     break;
   }
   default:
-    if (tf->trapno == e1000irq.vector) {
-      e1000intr();
-      lapiceoi();
-      piceoi();
-      break;
-    }
-
     if (tf->trapno >= T_IRQ0 && irq_info[tf->trapno - T_IRQ0].handlers) {
       for (auto h = irq_info[tf->trapno - T_IRQ0].handlers; h; h = h->next)
         h->handle_irq();

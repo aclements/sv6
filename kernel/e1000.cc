@@ -12,7 +12,6 @@
 #define TX_RING_SIZE 64
 #define RX_RING_SIZE 64
 
-irq e1000irq;
 int e1000init;
 
 struct e1000_model;
@@ -262,7 +261,7 @@ cleanrx(void)
   release(&e1000.lk);
 }
 
-void
+static void
 e1000intr(void)
 {
   u32 icr = erd(WMREG_ICR);
@@ -377,7 +376,8 @@ e1000attach(struct pci_func *pcif)
   e1000.membase = pcif->reg_base[0];
   e1000.iobase = pcif->reg_base[2];
 
-  e1000irq = extpic->map_pci_irq(pcif);
+  irq e1000irq = extpic->map_pci_irq(pcif);
+  e1000irq.register_callback(e1000intr);
   e1000irq.enable();
 
   e1000reset();
