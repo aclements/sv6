@@ -26,6 +26,11 @@ static char fpu_initial_state[FXSAVE_BYTES];
 // boot.S
 extern u64 trapentry[];
 
+static struct irq_info
+{
+  irq_handler *handlers;
+} irq_info[256 - T_IRQ0];
+
 u64
 sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 {
@@ -211,6 +216,14 @@ trap(struct trapframe *tf)
       break;
     }
 
+    if (tf->trapno >= T_IRQ0 && irq_info[tf->trapno - T_IRQ0].handlers) {
+      for (auto h = irq_info[tf->trapno - T_IRQ0].handlers; h; h = h->next)
+        h->handle_irq();
+      lapiceoi();
+      piceoi();
+      return;
+    }
+
     if (tf->trapno == T_PGFLT && do_pagefault(tf) == 0)
       return;
       
@@ -353,4 +366,13 @@ getcallerpcs(void *v, uptr pcs[], int n)
   }
   for(; i < n; i++)
     pcs[i] = 0;
+}
+
+void
+irq::register_handler(irq_handler *handler)
+{
+  assert(valid());
+  assert(vector == gsi + T_IRQ0);
+  handler->next = irq_info[gsi].handlers;
+  irq_info[gsi].handlers = handler;
 }

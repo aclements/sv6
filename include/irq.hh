@@ -2,6 +2,27 @@
 
 #include "apic.hh"
 
+class irq_handler
+{
+public:
+  irq_handler *next;
+
+  virtual void handle_irq() = 0;
+};
+
+template<class CB>
+class irq_handler_cb : public irq_handler
+{
+  CB cb_;
+public:
+  constexpr irq_handler_cb(CB cb) : cb_(cb) { }
+  void handle_irq()
+  {
+    cb_();
+  }
+  NEW_DELETE_OPS(irq_handler_cb);
+};
+
 struct irq
 {
   int vector;                   // CPU interrupt vector
@@ -45,5 +66,15 @@ public:
   void eoi()
   {
     extpic->eoi_irq(*this);
+  }
+
+  // Register a handler for this IRQ.  Multiple handlers may be
+  // registered for the same IRQ.
+  void register_handler(irq_handler *handler);
+
+  template<class CB>
+  void register_callback(CB cb)
+  {
+    register_handler(new irq_handler_cb<CB>(cb));
   }
 };
