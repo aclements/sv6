@@ -6,6 +6,7 @@
 #include "traps.h"
 #include "kernel.hh"
 #include "apic.hh"
+#include "irq.hh"
 #include "cpu.hh"
 #include "pci.hh"
 #include "kstream.hh"

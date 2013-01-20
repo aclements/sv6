@@ -5,6 +5,7 @@
 #include "pcireg.hh"
 #include "spinlock.h"
 #include "apic.hh"
+#include "irq.hh"
 #include "e1000reg.hh"
 #include "kstream.hh"
 

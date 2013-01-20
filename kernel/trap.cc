@@ -12,6 +12,7 @@
 #include "bits.hh"
 #include "kalloc.hh"
 #include "apic.hh"
+#include "irq.hh"
 #include "kstream.hh"
 #include "hwvm.hh"
 #include "refcache.hh"

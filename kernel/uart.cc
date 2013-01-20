@@ -6,6 +6,7 @@
 #include "amd64.h"
 #include "traps.h"
 #include "apic.hh"
+#include "irq.hh"
 
 #define COM2    0x2f8
 #define COM1    0x3f8

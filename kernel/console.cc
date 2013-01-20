@@ -20,6 +20,7 @@
 #include "wq.hh"
 #include "major.h"
 #include "apic.hh"
+#include "irq.hh"
 #include "kstream.hh"
 
 #define BACKSPACE 0x100

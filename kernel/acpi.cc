@@ -4,6 +4,7 @@
 #include "bits.hh"
 #include "cpu.hh"
 #include "apic.hh"
+#include "irq.hh"
 #include "pci.hh"
 #include "kstream.hh"
 #include "numa.hh"
