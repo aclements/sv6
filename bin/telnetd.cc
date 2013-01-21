@@ -3,6 +3,31 @@
 #include "unet.h"
 
 int
+dfork(void)
+{
+  // First fork
+  int pid = fork(0);
+  if (pid < 0) {
+    fprintf(2, "telnetd fork 1: %d\n", pid);
+    return pid;
+  } else if (pid > 0) {
+    // Wait for intermediate process
+    wait(-1);
+    return pid;
+  }
+
+  // Second fork
+  pid = fork(0);
+  if (pid == 0) {
+    // Second child does the real work
+    return 0;
+  } else if (pid < 0) {
+    fprintf(2, "telnetd fork 2: %d\n", pid);
+  }
+  exit();
+}
+
+int
 main(void)
 {
   int s;
@@ -29,7 +54,6 @@ main(void)
   for (;;) {
     socklen_t socklen;
     int ss;
-    int pid;
 
     socklen = sizeof(sin);
     ss = accept(s, (struct sockaddr *)&sin, &socklen);
@@ -39,13 +63,7 @@ main(void)
     }
     fprintf(1, "telnetd: connection %s\n", ipaddr(&sin));
 
-    pid = fork(0);
-    if (pid < 0) {
-      fprintf(2, "telnetd fork: %d\n", pid);
-      close(ss);
-      continue;
-    }
-    if (pid == 0) {
+    if (dfork() == 0) {
       static const char *argv[] = { "/login", 0 };
       close(0);
       close(1);
@@ -57,7 +75,5 @@ main(void)
       exit();
     }
     close(ss);
-    wait(-1);
-    fprintf(1, "telnetd: connection closed\n");
   }
 }
