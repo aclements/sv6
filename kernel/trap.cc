@@ -29,6 +29,8 @@ extern u64 trapentry[];
 static struct irq_info
 {
   irq_handler *handlers;
+  // True if this IRQ has been allocated to a device
+  bool in_use;
 } irq_info[256 - T_IRQ0];
 
 u64
@@ -275,6 +277,16 @@ inittrap(void)
   fninit();
   ldmxcsr(0x1f80);              // Mask all SSE exceptions
   fxsave(&fpu_initial_state);
+
+  // Conservatively reserve all legacy IRQs.  This might cause us to
+  // not be able to configure a device.
+  for (int i = 0; i < 16; ++i)
+    irq_info[i].in_use = true;
+  // Also reserve the spurious vector
+  irq_info[IRQ_SPURIOUS].in_use = true;
+  // And reserve interrupt 255 (Intel SDM Vol. 3 suggests this can't
+  // be used for MSI).
+  irq_info[255 - T_IRQ0].in_use = true;
 }
 
 void
@@ -359,6 +371,38 @@ getcallerpcs(void *v, uptr pcs[], int n)
   }
   for(; i < n; i++)
     pcs[i] = 0;
+}
+
+bool
+irq::reserve(const int *accept_gsi, size_t num_accept)
+{
+  assert(!valid());
+  int gsi = -1;
+  if (accept_gsi) {
+    for (size_t i = 0; i < num_accept; ++i) {
+      if (!irq_info[accept_gsi[i]].in_use) {
+        gsi = accept_gsi[i];
+        break;
+      }
+    }
+  } else {
+    // Find a free GSI.  Start from the top because system-assigned
+    // GSI's tend to be low.
+    for (int try_gsi = sizeof(irq_info) / sizeof(irq_info[0]) - 1; try_gsi >= 0;
+         --try_gsi) {
+      if (!irq_info[try_gsi].in_use) {
+        gsi = try_gsi;
+        break;
+      }
+    }
+  }
+  if (gsi == -1)
+    // XXX Level-triggered, active-low interrupts can share an IRQ line
+    return false;
+  irq_info[gsi].in_use = true;
+  this->gsi = gsi;
+  vector = T_IRQ0 + gsi;
+  return true;
 }
 
 void

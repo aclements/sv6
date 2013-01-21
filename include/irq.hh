@@ -51,6 +51,12 @@ public:
     return irq{-1, -1, true, true};
   }
 
+  // Reserve an IRQ.  this must be invalid, but with active_low and
+  // level_triggered set appropriately.  If accept_gsi is non-null, it
+  // must point to an array of num_accept acceptable GSI/IRQ numbers.
+  // If accept_gsi is null, any free GSI/IRQ is acceptable.
+  bool reserve(const int *accept_gsi, size_t num_accept);
+
   bool valid() const
   {
     return gsi != -1;

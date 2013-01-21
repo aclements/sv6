@@ -19,8 +19,6 @@ extern "C" {
 static console_stream verbose(true);
 static console_stream verbose2(true);
 
-static bool pnp_irq_used[256];
-
 // ACPI table with a generic subtable layout.  This provides a
 // convenient iterator for traversing the subtables.
 template<typename Hdr>
@@ -420,13 +418,6 @@ initacpi(void)
   if (ACPI_FAILURE(r) && (r != AE_NOT_FOUND))
     panic("acpi: Error evaluating _PIC: %s", AcpiFormatException(r));
 
-  // Conservatively reserve all legacy IRQs.  This might cause us to
-  // not be able to configure a device.
-  for (int i = 0; i < 16; ++i)
-    pnp_irq_used[i] = true;
-  // Also reserve the spurious vector
-  pnp_irq_used[IRQ_SPURIOUS] = true;
-
   have_acpi = true;
 }
 
@@ -527,29 +518,20 @@ acpi_pci_resolve_handle(struct pci_bus *bus)
   return bus->acpi_handle;
 }
 
-static bool
-acpi_try_allocate_irq(int irq)
-{
-  if (pnp_irq_used[irq])
-    return false;
-  // XXX PCI interrupts can be shared (and apparently have to be on
-  // tom because they're oversubscribed to the links).
-  pnp_irq_used[irq] = true;
-  return true;
-}
-
 static irq
-acpi_resource_to_irq(const ACPI_RESOURCE &res)
+acpi_resource_to_irq(const ACPI_RESOURCE &res, bool crs = true)
 {
   irq out;
   switch (res.Type) {
   case ACPI_RESOURCE_TYPE_IRQ:
-    out.gsi = res.Data.Irq.Interrupts[0];
+    if (crs)
+      out.gsi = res.Data.Irq.Interrupts[0];
     out.active_low = (res.Data.Irq.Polarity == ACPI_ACTIVE_LOW);
     out.level_triggered = (res.Data.Irq.Triggering == ACPI_LEVEL_SENSITIVE);
     return out;
   case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
-    out.gsi = res.Data.ExtendedIrq.Interrupts[0];
+    if (crs)
+      out.gsi = res.Data.ExtendedIrq.Interrupts[0];
     out.active_low = (res.Data.ExtendedIrq.Polarity == ACPI_ACTIVE_LOW);
     out.level_triggered = (res.Data.ExtendedIrq.Triggering ==
                            ACPI_LEVEL_SENSITIVE);
@@ -620,46 +602,52 @@ crs_done:
     panic("acpi: AcpiGetPossibleResources failed: %s", AcpiFormatException(r));
   verbose2.print("_PRS\n", shexdump(prsbuf.Pointer, prsbuf.Length, 0));
   acpi_deleter prsbufd(prsbuf.Pointer);
-  int setirq = 0;
+  struct irq setirq;
+  int accept_gsi[256], num_accept;
   for (auto &res : acpi_array<ACPI_RESOURCE>(prsbuf)) {
     verbose2.println(res);
     switch (res.Type) {
     case ACPI_RESOURCE_TYPE_IRQ:
-      for (int i = 0; i < res.Data.Irq.InterruptCount && !setirq; ++i)
-        if (acpi_try_allocate_irq(res.Data.Irq.Interrupts[i]))
-          setirq = res.Data.Irq.Interrupts[i];
+      num_accept = std::min((int)res.Data.Irq.InterruptCount, 255);
+      for (int i = 0; i < num_accept; ++i)
+        accept_gsi[i] = res.Data.Irq.Interrupts[i];
       break;
     case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
-      for (int i = 0; i < res.Data.ExtendedIrq.InterruptCount && !setirq; ++i)
-        if (acpi_try_allocate_irq(res.Data.ExtendedIrq.Interrupts[i]))
-          setirq = res.Data.ExtendedIrq.Interrupts[i];
+      num_accept = std::min((int)res.Data.ExtendedIrq.InterruptCount, 255);
+      for (int i = 0; i < num_accept; ++i)
+        accept_gsi[i] = res.Data.ExtendedIrq.Interrupts[i];
       break;
     case ACPI_RESOURCE_TYPE_END_TAG:
       // Resource data is terminated with an end tag
       goto prs_done;
+    default:
+      continue;
     }
-    if (setirq)
+    setirq = acpi_resource_to_irq(res, false);
+    if (setirq.reserve(accept_gsi, num_accept))
       break;
   }
 prs_done:
-  if (!setirq) {
-    swarn.println("acpi: IRQ sharing not implemented");
+  if (!setirq.valid()) {
+    // XXX Could be because we don't implement IRQ sharing, or because
+    // there were no IRQ resources
+    swarn.println("acpi: Failed to allocate IRQ resources");
     return irq();
   }
 
   // Assign the chosen IRQ
   switch (irqres->Type) {
   case ACPI_RESOURCE_TYPE_IRQ:
-    irqres->Data.Irq.Interrupts[0] = setirq;
+    irqres->Data.Irq.Interrupts[0] = setirq.gsi;
     break;
   case ACPI_RESOURCE_TYPE_EXTENDED_IRQ:
-    irqres->Data.ExtendedIrq.Interrupts[0] = setirq;
+    irqres->Data.ExtendedIrq.Interrupts[0] = setirq.gsi;
     break;
   }
-  verbose.println("acpi: Assigning IRQ ", setirq, " to ", name);
+  verbose.println("acpi: Assigning IRQ ", setirq.gsi, " to ", name);
   if ((ACPI_FAILURE(r = AcpiSetCurrentResources(link, &crsbuf))))
     panic("acpi: AcpiSetCurrentResources failed: %s", AcpiFormatException(r));
-  return acpi_resource_to_irq(*irqres);
+  return setirq;
 }
 
 // Resolve the pin of device on bus to an IRQ.  Pin should be an
