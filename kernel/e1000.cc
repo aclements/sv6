@@ -13,6 +13,8 @@
 #define TX_RING_SIZE 64
 #define RX_RING_SIZE 64
 
+static console_stream verbose(false);
+
 struct e1000_model;
 
 class e1000 : public netdev, irq_handler
@@ -50,6 +52,14 @@ class e1000 : public netdev, irq_handler
   void cleanrx();
 
   void reset();
+public:                         // Meh, e1000_models points to these
+  void reset_phy_pci();
+  void reset_phy_82571_82572();
+  void reset_phy_82573();
+private:
+  void init_link();
+  void init_rx();
+  void init_tx();
 
 protected:
   void handle_irq();
@@ -101,17 +111,18 @@ static struct e1000_model
 {
   const char *name;
   int devid;
+  void (e1000::*reset_phy)();
   const struct eerd *eerd;
   int flags;
 } e1000_models[] = {
   {
     // QEMU's E1000 model
     "82540EM (desktop)", 0x100e,
-    &eerd_default,
+    &e1000::reset_phy_pci, &eerd_default,
   }, {
     // josmp
     "82546GB (copper; dual port)", 0x1079,
-    &eerd_default,
+    &e1000::reset_phy_pci, &eerd_default,
     MODEL_FLAG_DUAL_PORT,
   },
   // This is disabled on tom because it interferes with the IPMI
@@ -121,23 +132,23 @@ static struct e1000_model
   {
     // tom
     "82541PI (copper)", 0x1076,
-    &eerd_large,
+    &e1000::reset_phy_pci, &eerd_large,
   },
 #endif
   {
     // ud0
     "82573E (copper)", 0x108c,
-    &eerd_large,
+    &e1000::reset_phy_82573, &eerd_large,
     MODEL_FLAG_PCIE,
   }, {
     // Also ud0
     "82573L", 0x100a,
-    &eerd_large,
+    &e1000::reset_phy_82573, &eerd_large,
     MODEL_FLAG_PCIE,
   }, {
     // tom and ben
     "82572EI (copper)", 0x107d,
-    &eerd_large,
+    &e1000::reset_phy_82571_82572, &eerd_large,
     MODEL_FLAG_PCIE,
   },
 };
@@ -317,61 +328,6 @@ e1000::get_hwaddr(uint8_t *hwaddr)
   memmove(hwaddr, hwaddr_, sizeof(hwaddr_));
 }
 
-void
-e1000::reset()
-{
-  u32 ctrl;
-  paddr tpa;
-  paddr rpa;
-
-  ctrl = erd(WMREG_CTRL);  
-  // [E1000 13.4.1] Assert PHY_RESET then delay as much as 10 msecs
-  // before clearing PHY_RESET.
-  ewr(WMREG_CTRL, ctrl|CTRL_PHY_RESET);
-  microdelay(10000);
-  ewr(WMREG_CTRL, ctrl);
-
-  // [E1000 13.4.1] Delay 1 usec after reset
-  ewr(WMREG_CTRL, ctrl|CTRL_RST);
-  microdelay(1);
-
-  // [E1000 13.4.41] Transmit Interrupt Delay Value of 1 usec.
-  // A value of 0 is not allowed.  Enabled on a per-TX decriptor basis.
-  ewr(WMREG_TIDV, 1);
-  // [E1000 13.4.44] Delay TX interrupts a max of 1 usec.
-  ewr(WMREG_TADV, 1);
-  for (int i = 0; i < TX_RING_SIZE; i++)
-    txd_[i].wtx_fields.wtxu_status = WTX_ST_DD;
-  // [E1000 14.5] Transmit Initialization
-  tpa = v2p(txd_);
-  ewr(WMREG_TDBAH, tpa >> 32);
-  ewr(WMREG_TDBAL, tpa & 0xffffffff);
-  ewr(WMREG_TDLEN, sizeof(txd_));
-  ewr(WMREG_TDH, 0);
-  ewr(WMREG_TDT, 0);
-  ewr(WMREG_TCTL, TCTL_EN|TCTL_PSP|TCTL_CT(0x10)|TCTL_COLD(0x40));
-  ewr(WMREG_TIPG, TIPG_IPGT(10)|TIPG_IPGR1(8)|TIPG_IPGR2(6));
-
-  for (int i = 0; i < RX_RING_SIZE>>1; i++) {
-    void *buf = netalloc();
-    rxd_[i].wrx_addr = v2p(buf);
-  }
-  rpa = v2p(rxd_);
-  ewr(WMREG_RDBAH, rpa >> 32);
-  ewr(WMREG_RDBAL, rpa & 0xffffffff);
-  ewr(WMREG_RDLEN, sizeof(rxd_));
-  ewr(WMREG_RDH, 0);
-  ewr(WMREG_RDT, RX_RING_SIZE>>1);
-  ewr(WMREG_RDTR, 0);
-  ewr(WMREG_RADV, 0);
-  ewr(WMREG_RCTL,
-      RCTL_EN | RCTL_RDMTS_1_2 | RCTL_DPF | RCTL_BAM | RCTL_2k);
-
-  // [E1000 13.4.20]
-  ewr(WMREG_IMC, ~0);
-  ewr(WMREG_IMS, ICR_TXDW | ICR_RXO | ICR_RXT0);
-}
-
 int
 e1000::attach(struct pci_func *pcif)
 {
@@ -389,11 +345,6 @@ e1000::attach(struct pci_func *pcif)
   if (!model)
     panic("e1000attach: unrecognized devid %x", devid);
   console.println("e1000: Found ", model->name);
-
-  if (model->flags & MODEL_FLAG_PCIE) {
-    console.println("e1000: PCI-E not implemented");
-    return 0;
-  }
 
   // On dual-ported devices, PCI functions 0 and 1 are ports 0 and 1.
   if ((model->flags & MODEL_FLAG_DUAL_PORT) && pcif->func != E1000_PORT)
@@ -416,26 +367,159 @@ e1000::e1000(const struct e1000_model *model, struct pci_func *pcif)
   : model_(model), membase_(pcif->reg_base[0]), iobase_(pcif->reg_base[2]),
     lk_("e1000", true), valid_(false)
 {
-  irq e1000irq = extpic->map_pci_irq(pcif);
-  e1000irq.register_handler(this);
-  e1000irq.enable();
+  verbose.println("e1000: Initializing");
 
+  // [E1000e 14.3]
   reset();
+  (this->*(model->reset_phy))();
+  init_link();
+  init_rx();
+  init_tx();
+
+  irq e1000irq;
+  if (model_->flags & MODEL_FLAG_PCIE) {
+    // Non-PCIe models advertise MSI support, but it doesn't seem to
+    // work.  Probably our bug, but Linux doesn't enable it either.
+    e1000irq = pci_map_msi_irq(pcif);
+  }
+  if (!e1000irq.valid()) {
+    // XXX Annoying that the device needs to know about the extpic.
+    // Better if it just knew about PCI and PCI knew to do this.
+    e1000irq = extpic->map_pci_irq(pcif);
+    // XXX Annoying that the device needs to know to only enable if it
+    // came from the extpic.
+    e1000irq.enable();
+  }
+  e1000irq.register_handler(this);
+
+  // Enable interrupts
+  verbose.println("e1000: Enable interrupts");
+  ewr(WMREG_IMC, ~0);
+  erd(WMREG_STATUS);
+  ewr(WMREG_IMS, ICR_TXDW | ICR_RXO | ICR_RXT0);
+  erd(WMREG_STATUS);
+
+  valid_ = true;
+}
+
+void
+e1000::reset()
+{
+  verbose.println("e1000: Global reset");
+
+  // [E1000e 14.4] Disable interrupts
+  ewr(WMREG_IMC, ~0);
+
+  // [E1000e 14.5] Global reset
+  u32 ctrl = erd(WMREG_CTRL);
+  ewr(WMREG_CTRL, ctrl|CTRL_RST);
+  // [E1000 13.4.1, E1000e 13.3.1] Delay 1 usec after reset
+  microdelay(1);
+
+  // [E1000e 14.4] Disable interrupts (again)
+  ewr(WMREG_IMC, ~0);
+}
+
+void
+e1000::reset_phy_pci()
+{
+  verbose.println("e1000: PHY reset");
+  // [E1000 13.4.1] Assert PHY_RESET then delay as much as 10 msecs
+  // before clearing PHY_RESET.
+  u32 ctrl = erd(WMREG_CTRL);
+  ewr(WMREG_CTRL, ctrl|CTRL_PHY_RESET);
+  microdelay(10000);
+  ewr(WMREG_CTRL, ctrl);
+}
+
+void
+e1000::reset_phy_82571_82572()
+{
+  // [E1000e 14.9] Reset PHY
+  verbose.println("e1000: Wait for PHY");
+  while (erd(WMREG_MANC) & MANC_BLK_PHY_RST)
+    /* spin */;
+
+  verbose.println("e1000: Obtain software/firmware semaphore");
+  do {
+    ewr(WMREG_SWSM, SWSM_SWESMBI);
+  } while (!(erd(WMREG_SWSM) & SWSM_SWESMBI));
+
+  verbose.println("e1000: PHY reset");
+  u32 ctrl = erd(WMREG_CTRL);
+  ewr(WMREG_CTRL, ctrl|CTRL_PHY_RESET);
+  microdelay(100);
+  ewr(WMREG_CTRL, ctrl);
+
+  verbose.println("e1000: Release software/firmware semaphore");
+  ewr(WMREG_SWSM, 0);
+
+  verbose.println("e1000: Wait for CFG_DONE");
+  while (!(erd(WMREG_EEMNGCTL) & EEMNGCTL_CFG_DONE))
+    /* spin */;
+  microdelay(1000);
+
+  // XXX Clear SWSM.SMBI?
+  verbose.println("e1000: PHY reset complete");
+}
+
+void
+e1000::reset_phy_82573()
+{
+  // [E1000e 14.9] Reset PHY
+  panic("e1000: 82573x PHY reset not implemented");
+}
+
+void
+e1000::init_link()
+{
+  // [E1000 14.5.5, E1000e 14.8.2] MAC/PHY link setup
+  u32 ctrl = erd(WMREG_CTRL);
+  ctrl &= ~(CTRL_FRCSPD | CTRL_FRCFDX);
+  ctrl |= CTRL_SLU;
+  // XXX Modify CTRL_RFCE, CTRL_TFCE?
+  ewr(WMREG_CTRL, ctrl);
+
+  console.println("e1000: Waiting for link to come up");
+  for (int i = 0; i < 50; i++) {
+    u32 status = erd(WMREG_STATUS);
+    u32 speed = status & STATUS_SPEED_MASK;
+    if (status & STATUS_LU) {
+      console.println("e1000: Link up at ",
+                      speed == STATUS_SPEED_10 ? "10" :
+                      speed == STATUS_SPEED_100 ? "100" : "1000",
+                      " Mb/s",
+                      status & STATUS_FD ? " full-duplex" : " half-duplex");
+      return;
+    }
+    microdelay(100000);
+  }
+  console.println("e1000: Link did not come up");
+}
+
+void
+e1000::init_rx()
+{
+  // [E1000 14.4, E1000e 14.6] Initialize receive
+  verbose.println("e1000: Initialize receive");
 
   // Get the MAC address
   int r = eeprom_read((u16*)hwaddr_, EEPROM_OFF_MACADDR, 3);
-  if (r < 0)
+  if (r < 0) {
+    console.println("e1000: Error reading MAC address");
     return;
+  }
 
   if ((model_->flags & MODEL_FLAG_DUAL_PORT) && E1000_PORT)
     // [E1000 12.3.1] The EEPROM is shared, so we read port 0's MAC
     // address.  Port 1's is the same with the LSB inverted.
     hwaddr_[5] ^= 1;
 
-  if (VERBOSE)
-      cprintf("%x:%x:%x:%x:%x:%x\n",
-              hwaddr_[0], hwaddr_[1], hwaddr_[2],
-              hwaddr_[3], hwaddr_[4], hwaddr_[5]);
+  auto h2 = [](uint8_t x) { return sfmt(x).base(16).width(2).pad(); };
+  verbose.println("e1000: MAC address is ",
+                  h2(hwaddr_[0]), ':', h2(hwaddr_[1]), ':',
+                  h2(hwaddr_[2]), ':', h2(hwaddr_[3]), ':',
+                  h2(hwaddr_[4]), ':', h2(hwaddr_[5]));
 
   u32 ralow = ((u32) hwaddr_[0]) | ((u32) hwaddr_[1] << 8) |
       ((u32) hwaddr_[2] << 16) | ((u32) hwaddr_[3] << 24);
@@ -445,11 +529,53 @@ e1000::e1000(const struct e1000_model *model, struct pci_func *pcif)
   erd(WMREG_STATUS);
   ewr(WMREG_RAL_HI(WMREG_CORDOVA_RAL_BASE, 0), rahigh|RAL_AV);
   erd(WMREG_STATUS);
+  for (int i = 1; i < WM_RAL_TABSIZE; ++i)
+    ewr(WMREG_RAL_HI(WMREG_CORDOVA_RAL_BASE, i), 0);
 
   for (int i = 0; i < WMREG_MTA; i+=4)
     ewr(WMREG_CORDOVA_MTA+i, 0);
 
-  valid_ = true;
+  for (int i = 0; i < RX_RING_SIZE>>1; i++) {
+    void *buf = netalloc();
+    rxd_[i].wrx_addr = v2p(buf);
+  }
+  paddr rpa = v2p(rxd_);
+  ewr(WMREG_RDBAH, rpa >> 32);
+  ewr(WMREG_RDBAL, rpa & 0xffffffff);
+  ewr(WMREG_RDLEN, sizeof(rxd_));
+  ewr(WMREG_RDH, 0);
+  ewr(WMREG_RDT, RX_RING_SIZE>>1);
+  ewr(WMREG_RDTR, 0);
+  ewr(WMREG_RADV, 0);
+  ewr(WMREG_RCTL,
+      RCTL_EN | RCTL_RDMTS_1_2 | RCTL_DPF | RCTL_BAM | RCTL_2k);
+}
+
+void
+e1000::init_tx()
+{
+  // [E1000 14.5, E1000e 14.7] Initialize transmit
+  verbose.println("e1000: Initialize transmit");
+
+  // [E1000 13.4.41, E1000e 13.3.66] Transmit Interrupt Delay Value of
+  // 1 usec.  A value of 0 is not allowed.  Enabled on a per-TX
+  // decriptor basis.
+  ewr(WMREG_TIDV, 1);
+  // [E1000 13.4.44, E1000e 13.3.68] Delay TX interrupts a max of 1 usec.
+  ewr(WMREG_TADV, 1);
+  for (int i = 0; i < TX_RING_SIZE; i++)
+    txd_[i].wtx_fields.wtxu_status = WTX_ST_DD;
+
+  paddr tpa = v2p(txd_);
+  ewr(WMREG_TDBAH, tpa >> 32);
+  ewr(WMREG_TDBAL, tpa & 0xffffffff);
+  ewr(WMREG_TDLEN, sizeof(txd_));
+  ewr(WMREG_TDH, 0);
+  ewr(WMREG_TDT, 0);
+  // XXX COLD should be 0x200 for half-duplex
+  ewr(WMREG_TCTL, TCTL_EN|TCTL_PSP|TCTL_CT(0x0f)|TCTL_COLD(0x3f));
+  // XXX Where did these numbers come from?
+  ewr(WMREG_TIPG, TIPG_IPGT(10)|TIPG_IPGR1(8)|TIPG_IPGR2(6));
 }
 
 void

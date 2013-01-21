@@ -200,9 +200,11 @@ struct livengood_tcpip_ctxdesc {
 #define	STATUS_TXOFF	(1U << 4)	/* Tx paused */
 #define	STATUS_TBIMODE	(1U << 5)	/* fiber mode (Livengood) */
 #define	STATUS_SPEED(x)	((x) << 6)	/* speed indication */
+#define	STATUS_SPEED_MASK 3 << 6
 #define	STATUS_SPEED_10	  STATUS_SPEED(0)
 #define	STATUS_SPEED_100  STATUS_SPEED(1)
 #define	STATUS_SPEED_1000 STATUS_SPEED(2)
+#define	STATUS_SPEED_1000x STATUS_SPEED(3)
 #define	STATUS_ASDV(x)	((x) << 8)	/* auto speed det. val. (Livengood) */
 #define	STATUS_MTXCKOK	(1U << 10)	/* MTXD clock running */
 #define	STATUS_PCI66	(1U << 11)	/* 66MHz bus (Livengood) */
@@ -574,10 +576,17 @@ struct livengood_tcpip_ctxdesc {
 #define	WMREG_XOFFTXC	0x4054	/* XOFF Tx Count - R/clr */
 #define	WMREG_FCRUC	0x4058	/* Flow Control Rx Unsupported Count - R/clr */
 
-#define WMREG_MANC	0x5820	/* Management control */
+#define WMREG_EEMNGCTL  0x1010  /* MNG EEPROM control (E1000e) */
+#define EEMNGCTL_CFG_DONE (1 << 18) /* MNG configuration done */
+
+#define WMREG_MANC	0x5820	/* Management control (E1000e) */
 #define MANC_ARP_REQ	0x00002000	/* ARP request filtering */
 #define MANC_ARP_RES	0x00008000	/* ARP response filtering */
+#define MANC_BLK_PHY_RST 0x00040000     /* Block PHY reset and power state changes */
 #define MANC_MNG2HOST	0x00200000	/* Management packets to host */
+
+#define WMREG_SWSM      0x5b50  /* Software semaphoe (E1000e) */
+#define SWSM_SWESMBI    (1 << 1)
 
 #define WMREG_MANC2H	0x5860	/* Management control to host */
 #define MANC2H_PORT_623	0x0020
