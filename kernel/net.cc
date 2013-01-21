@@ -8,6 +8,7 @@
 #include "file.hh"
 #include "net.hh"
 #include "major.h"
+#include "netdev.hh"
 
 #ifdef LWIP
 extern "C" {
@@ -24,6 +25,8 @@ err_t if_init(struct netif *netif);
 void if_input(struct netif *netif, void *buf, u16 len);
 #endif
 
+netdev *the_netdev;
+
 void
 netfree(void *va)
 {
@@ -39,17 +42,17 @@ netalloc(void)
 int
 nettx(void *va, u16 len)
 {
-  if (e1000init == 0)
+  if (!the_netdev)
     return -1;
-  return e1000tx(va, len);
+  return the_netdev->transmit(va, len);
 }
 
 void
 nethwaddr(u8 *hwaddr)
 {
-  if (e1000init == 0)
+  if (!the_netdev)
     return;
-  e1000hwaddr(hwaddr);
+  the_netdev->get_hwaddr(hwaddr);
 }
 
 #ifdef LWIP

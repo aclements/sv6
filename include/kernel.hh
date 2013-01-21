@@ -88,11 +88,6 @@ void            snprintf(char *buf, u32 n, const char *fmt, ...);
 void            printtrap(struct trapframe *, bool lock = true);
 void            printtrace(u64 rbp);
 
-// e1000.c
-extern int e1000init;
-int             e1000tx(void *buf, u32 len);
-void            e1000hwaddr(u8 *hwaddr);
-
 // exec.c
 int             exec(const char*, const char* const*, void* ascope);
 
