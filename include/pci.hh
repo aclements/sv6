@@ -1,4 +1,8 @@
 // PCI subsystem interface
+#pragma once
+
+#include "irq.hh"
+
 enum { pci_res_bus, pci_res_mem, pci_res_io, pci_res_max };
 
 struct pci_bus;
@@ -31,7 +35,7 @@ void pci_register_driver(u32 vendor_id, u32 dev_id,
                          int (*attachfn)(struct pci_func *pcif));
 
 void pci_func_enable(struct pci_func *f);
-void pci_msi_enable(struct pci_func *f, u8 irqnum);
+irq pci_map_msi_irq(struct pci_func *f);
 
 u32 pci_conf_read(u32 seg, u32 bus, u32 dev, u32 func, u32 offset, int width);
 void pci_conf_write(u32 seg, u32 bus, u32 dev, u32 func, u32 offset,

@@ -51,6 +51,13 @@ public:
     return irq{-1, -1, true, true};
   }
 
+  static constexpr struct irq default_msi()
+  {
+    // XXX(austin) What does edge triggering even mean for MSI's?
+    // This is just following Linux's msi_compose_msg.
+    return irq{-1, -1, false, false};
+  }
+
   // Reserve an IRQ.  this must be invalid, but with active_low and
   // level_triggered set appropriately.  If accept_gsi is non-null, it
   // must point to an array of num_accept acceptable GSI/IRQ numbers.

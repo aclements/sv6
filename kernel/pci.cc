@@ -184,18 +184,27 @@ pci_scan_caplist(struct pci_func* f)
   }
 }
 
-void
-pci_msi_enable(struct pci_func *f, u8 irqnum)
+irq
+pci_map_msi_irq(struct pci_func *f)
 {
   // PCI System Architecture, Fourth Edition
 
-  assert(f->msi_capreg != 0);
+  if (!f->msi_capreg)
+    return irq();
+
+  // Allocate an IRQ
+  irq res = irq::default_msi();
+  if (!res.reserve(nullptr, 0))
+    return irq();
+
+  verbose.println("pci: Routing ", *f, " to MSI IRQ ", res.gsi);
+
   u32 cap_entry = pci_conf_read(f, f->msi_capreg);  
 
   if (!(cap_entry & PCI_MSI_MCR_64BIT))
-    panic("pci_msi_enable only handles 64-bit address capable devices");
+    panic("pci_map_msi_irq only handles 64-bit address capable devices");
   if (PCI_MSI_MCR_MMC(cap_entry) != 0)
-    panic("pci_msi_enable only handles 1 requested message");
+    panic("pci_map_msi_irq only handles 1 requested message");
 
   // [PCI SA pg 253]
   // Step 4. Assign a dword-aligned memory address to the device's
@@ -224,11 +233,13 @@ pci_msi_enable(struct pci_func *f, u8 irqnum)
                  (0 << 15) |        // trigger mode (edge)
                  //(0 << 14) |      // level for trigger mode (don't care)
                  (0 << 8) |         // delivery mode (fixed)
-                 (irqnum+T_IRQ0));  // vector
+                 res.vector);       // vector
 
   // Step 8. Set the MSI enable bit in the device's Message
   // control register.
   pci_conf_write(f, f->msi_capreg, cap_entry | (1 << 16));
+
+  return res;
 }
 
 static int
