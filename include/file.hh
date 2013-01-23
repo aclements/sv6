@@ -4,7 +4,7 @@
 #include "ns.hh"
 #include "gc.hh"
 #include "atomic.hh"
-#include "ref.hh"
+#include "refcache.hh"
 #include "condvar.h"
 #include "semaphore.h"
 
@@ -12,7 +12,7 @@ class dirns;
 
 u64 namehash(const strbuf<DIRSIZ>&);
 
-struct file : public referenced, public rcu_freed {
+struct file : public refcache::referenced, public rcu_freed {
   static file* alloc();
   file*        dup();
   int          stat(struct stat*);

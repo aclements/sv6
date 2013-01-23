@@ -75,6 +75,16 @@ public:
     return true;
   }
 
+  // init_nonzero(p) can be called only if it is guaranteed that
+  // there is an existing reference to p.
+  bool init_nonzero(T* p) {
+    if (ptr_)
+      return false;
+    p->inc();
+    ptr_ = p;
+    return true;
+  }
+
   bool operator==(const sref<T>& pr) const { return ptr_ == pr.ptr_; }
   bool operator!=(const sref<T>& pr) const { return ptr_ != pr.ptr_; }
   bool operator==(T* p) const { return ptr_ == p; }

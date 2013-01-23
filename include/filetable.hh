@@ -25,7 +25,7 @@ public:
 
     scoped_gc_epoch gc;
     file* f = ofile_[fd];
-    if (!f || !sf->init(f))
+    if (!f || !sf->init_nonzero(f))
       return false;
     return true;
   }
