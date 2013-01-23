@@ -13,6 +13,12 @@
 // Output stream types should be implemented as subclasses of
 // print_stream.
 
+// XXX(Austin) The only thing I dislike about this API is that
+// formatters aren't higher-order.  Usually this is fine, but
+// sometimes I want to construct a formatter like zero-padded
+// two-digit-wide hex and use it several times.  This could be
+// accomplished by making formatters functor objects.
+
 #include <initializer_list>
 #include <utility>
 
