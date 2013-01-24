@@ -56,6 +56,7 @@ codex_magic(unsigned long ax, unsigned long bx,
             unsigned long cx, unsigned long dx,
             unsigned long si, unsigned long di)
 {
+#if CODEX
   // 0x0F 0x04 is an un-used x86 opcode, according to
   // http://ref.x86asm.net/geek64.html
   __asm __volatile(".byte 0x0F\n"
@@ -64,6 +65,9 @@ codex_magic(unsigned long ax, unsigned long bx,
       : "a" (ax), "b" (bx),
         "c" (cx), "d" (dx),
         "S" (si), "D" (di));
+#else
+  // no-op
+#endif
 }
 
 enum class codex_call_type {
@@ -134,6 +138,17 @@ codex_magic_action_run_write(T *addr, T writeval)
     (unsigned long) addr,
     (unsigned long) writeval,
     0, 0);
+}
+
+// XXX: don't want to include "types.h" here
+inline void
+codex_magic_action_run_thread_create(unsigned long id)
+{
+  codex_magic(
+    (unsigned long) codex_call_type::ACTION_RUN,
+    (unsigned long) action_type::THREAD_CREATE,
+    (unsigned long) id,
+    0, 0, 0);
 }
 
 #define __CODEX_IMPL_FETCH_AND_OP(ptr, value, op) \

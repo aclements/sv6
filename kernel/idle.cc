@@ -90,9 +90,8 @@ idleloop(void)
   // Enabling mtrace calls in scheduler generates many mtrace_call_entrys.
   // mtrace_call_set(1, cpu->id);
   mtstart(idleloop, myproc());
-
-  int x = 0;
-  __codex_sync_fetch_and_add(&x, 10);
+  if (myid() != 0)
+    codex_magic_action_run_thread_create(myid());
 
   // The scheduler ensures that each idle loop always runs on the same CPU
   struct idle *myidle = idlem.get_unchecked();
