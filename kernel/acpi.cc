@@ -21,7 +21,7 @@ static console_stream verbose2(true);
 
 // ACPI table with a generic subtable layout.  This provides a
 // convenient iterator for traversing the subtables.
-template<typename Hdr>
+template<typename Hdr, typename Subhdr = ACPI_SUBTABLE_HEADER>
 class acpi_table
 {
   Hdr *header_;
@@ -47,19 +47,19 @@ public:
   public:
     constexpr iterator(void *pos) : pos_(pos) { }
 
-    ACPI_SUBTABLE_HEADER &operator*() const
+    Subhdr &operator*() const
     {
-      return *(ACPI_SUBTABLE_HEADER*)pos_;
+      return *(Subhdr*)pos_;
     }
 
-    ACPI_SUBTABLE_HEADER *operator->() const
+    Subhdr *operator->() const
     {
-      return (ACPI_SUBTABLE_HEADER*)pos_;
+      return (Subhdr*)pos_;
     }
 
     iterator &operator++()
     {
-      pos_ = (char*)pos_ + ((ACPI_SUBTABLE_HEADER*)pos_)->Length;
+      pos_ = (char*)pos_ + ((Subhdr*)pos_)->Length;
       return *this;
     }
 
@@ -156,11 +156,13 @@ public:
 static bool have_tables, have_acpi;
 static acpi_table<ACPI_TABLE_MADT> madt;
 static acpi_table<ACPI_TABLE_SRAT> srat;
+static acpi_table<ACPI_TABLE_DMAR, ACPI_DMAR_HEADER> dmar;
 
 void
 initacpitables(void)
 {
   ACPI_STATUS r;
+  ACPI_TABLE_HEADER *hdr;
 
   // ACPICA's table manager can be initialized independently of the
   // rest of ACPICA precisely so we can use these tables during early
@@ -171,20 +173,25 @@ initacpitables(void)
   have_tables = true;
 
   // Get the MADT
-  ACPI_TABLE_HEADER *madtp;
-  r = AcpiGetTable((char*)ACPI_SIG_MADT, 0, &madtp);
+  r = AcpiGetTable((char*)ACPI_SIG_MADT, 0, &hdr);
   if (ACPI_FAILURE(r) && r != AE_NOT_FOUND)
     panic("acpi: AcpiGetTable failed: %s", AcpiFormatException(r));
   if (r == AE_OK)
-    madt = acpi_table<ACPI_TABLE_MADT>(madtp);
+    madt = acpi_table<ACPI_TABLE_MADT>(hdr);
 
   // Get the SRAT
-  ACPI_TABLE_HEADER *sratp;
-  r = AcpiGetTable((char*)ACPI_SIG_SRAT, 0, &sratp);
+  r = AcpiGetTable((char*)ACPI_SIG_SRAT, 0, &hdr);
   if (ACPI_FAILURE(r) && r != AE_NOT_FOUND)
     panic("acpi: AcpiGetTable failed: %s", AcpiFormatException(r));
   if (r == AE_OK)
-    srat = acpi_table<ACPI_TABLE_SRAT>(sratp);
+    srat = acpi_table<ACPI_TABLE_SRAT>(hdr);
+
+  // Get the DMAR (DMA remapping reporting table)
+  r = AcpiGetTable((char*)ACPI_SIG_DMAR, 0, &hdr);
+  if (ACPI_FAILURE(r) && r != AE_NOT_FOUND)
+    panic("acpi: AcpiGetTable failed: %s", AcpiFormatException(r));
+  if (r == AE_OK)
+    dmar = acpi_table<ACPI_TABLE_DMAR, ACPI_DMAR_HEADER>(hdr);
 }
 
 static struct cpu*
