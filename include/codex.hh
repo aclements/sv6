@@ -343,37 +343,48 @@ __codex_sync_val_compare_and_swap(volatile T *ptr, T oldval, T newval)
 inline void
 __codex_sync_synchronize()
 {
-  // XXX: do something
+  // XXX: do something for codex
+  __sync_synchronize();
 }
 
 template <typename T> inline T
 __codex_sync_lock_test_and_set(T *ptr, T value)
 {
-  // XXX: support
-  assert(false);
-  return T();
+  auto before = *ptr;
+  // use GCC builtin, because the semantics are implementation defined
+  auto ret = __sync_lock_test_and_set(ptr, value);
+  codex_magic_action_run_rw(ptr, before, ret);
+  return ret;
 }
 
 template <typename T> inline T
 __codex_sync_lock_test_and_set(volatile T *ptr, T value)
 {
-  // XXX: support
-  assert(false);
-  return T();
+  auto before = *ptr;
+  // use GCC builtin, because the semantics are implementation defined
+  auto ret = __sync_lock_test_and_set(ptr, value);
+  codex_magic_action_run_rw(ptr, before, ret);
+  return ret;
 }
 
 template <typename T> inline void
 __codex_sync_lock_release(T *ptr)
 {
-  // XXX: support
-  assert(false);
+  auto before = *ptr;
+  // use GCC builtin, because the semantics are implementation defined
+  __sync_lock_release(ptr);
+  auto after = *ptr;
+  codex_magic_action_run_rw(ptr, before, after);
 }
 
 template <typename T> inline void
 __codex_sync_lock_release(volatile T *ptr)
 {
-  // XXX: support
-  assert(false);
+  auto before = *ptr;
+  // use GCC builtin, because the semantics are implementation defined
+  __sync_lock_release(ptr);
+  auto after = *ptr;
+  codex_magic_action_run_rw(ptr, before, after);
 }
 
 #undef __CODEX_IMPL_FETCH_AND_OP
