@@ -70,7 +70,7 @@ enum class codex_call_type {
   ACTION_RUN = 0,
 };
 
-enum class action_type : uint8_t
+enum class action_type
 {
   R = 0x1,
   W = 0x2,
@@ -106,6 +106,12 @@ codex_magic_action_run_rw(T *addr, T oldval, T newval)
     (unsigned long) oldval,
     (unsigned long) newval,
     0);
+}
+
+template <typename T> inline void
+codex_magic_action_run_rw(volatile T *addr, T oldval, T newval)
+{
+  codex_magic_action_run_rw((T *) addr, oldval, newval);
 }
 
 template <typename T> inline void

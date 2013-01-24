@@ -67,7 +67,7 @@ namespace __atomic2
       // Redundant synchronize if built-in for lock is a full barrier.
       if (__m != memory_order_acquire && __m != memory_order_acq_rel)
 	__SYNC_SYNCHRONIZE();
-      return __SYNC_LOCK_TEST_AND_SET(&_M_i, 1);
+      return __SYNC_LOCK_TEST_AND_SET(&_M_i, true);
     }
 
     bool
@@ -76,7 +76,7 @@ namespace __atomic2
       // Redundant synchronize if built-in for lock is a full barrier.
       if (__m != memory_order_acquire && __m != memory_order_acq_rel)
 	__SYNC_SYNCHRONIZE();
-      return __SYNC_LOCK_TEST_AND_SET(&_M_i, 1);
+      return __SYNC_LOCK_TEST_AND_SET(&_M_i, true);
     }
 
     void
@@ -184,19 +184,19 @@ namespace __atomic2
 
       __int_type
       operator++()
-      { return __SYNC_ADD_AND_FETCH(&_M_i, 1); }
+      { return __SYNC_ADD_AND_FETCH(&_M_i, __int_type(1)); }
 
       __int_type
       operator++() volatile
-      { return __SYNC_ADD_AND_FETCH(&_M_i, 1); }
+      { return __SYNC_ADD_AND_FETCH(&_M_i, __int_type(1)); }
 
       __int_type
       operator--()
-      { return __SYNC_SUB_AND_FETCH(&_M_i, 1); }
+      { return __SYNC_SUB_AND_FETCH(&_M_i, __int_type(1)); }
 
       __int_type
       operator--() volatile
-      { return __SYNC_SUB_AND_FETCH(&_M_i, 1); }
+      { return __SYNC_SUB_AND_FETCH(&_M_i, __int_type(1)); }
 
       __int_type
       operator+=(__int_type __i)
