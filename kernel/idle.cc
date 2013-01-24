@@ -9,6 +9,7 @@
 #include "wq.hh"
 #include "kmtrace.hh"
 #include "bits.hh"
+#include "codex.hh"
 
 struct idle {
   struct proc *cur;
@@ -90,6 +91,9 @@ idleloop(void)
   // mtrace_call_set(1, cpu->id);
   mtstart(idleloop, myproc());
 
+  int x = 0;
+  __codex_sync_fetch_and_add(&x, 10);
+
   // The scheduler ensures that each idle loop always runs on the same CPU
   struct idle *myidle = idlem.get_unchecked();
 
@@ -112,7 +116,7 @@ idleloop(void)
           p = proc::alloc();
           if (p == nullptr)
             break;
-          snprintf(p->name, sizeof(p->name), "idle_%u", mycpu()->id);          
+          snprintf(p->name, sizeof(p->name), "idle_%u", mycpu()->id);
           p->cpuid = mycpu()->id;
           p->cpu_pin = 1;
           p->context->rip = (u64)idleheir;
