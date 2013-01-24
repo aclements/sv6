@@ -8,6 +8,7 @@
 #include "pci.hh"
 #include "kstream.hh"
 #include "numa.hh"
+#include "iommu.hh"
 
 #include <algorithm>
 #include <iterator>
@@ -357,6 +358,29 @@ decode_mps_inti_flags(uint8_t bus, uint32_t intiflags, irq *out)
   out->level_triggered = (trigger == ACPI_MADT_TRIGGER_LEVEL);
   if (bus != 0 && trigger == ACPI_MADT_TRIGGER_CONFORMS)
     panic("decode_mps_inti_flags: Unknown bus %d", bus);
+}
+
+bool
+acpi_setup_iommu(abstract_iommu *iommu)
+{
+  if (!dmar.get())
+    return false;
+
+  verbose.println("acpi: Initializing IOMMUs");
+
+  bool haveiommu = false;
+  for (auto &sub : dmar) {
+    if (sub.Type == ACPI_DMAR_TYPE_HARDWARE_UNIT) {
+      // [IOMMU1.3 8.3]
+      auto &base = *(ACPI_DMAR_HARDWARE_UNIT*)&sub;
+      // We program all of the IOMMUs the same, so we don't worry
+      // about their device scopes.
+      iommu->register_base(base.Address);
+      haveiommu = true;
+    }
+  }
+
+  return haveiommu;
 }
 
 bool

@@ -67,6 +67,7 @@ OBJS = \
 	ipi.o \
 	kconfig.o \
 	dev.o \
+	iommu.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
