@@ -197,7 +197,7 @@ pci_map_msi_irq(struct pci_func *f)
   if (!res.reserve(nullptr, 0))
     return irq();
 
-  verbose.println("pci: Routing ", *f, " to MSI IRQ ", res.gsi);
+  verbose.println("pci: Routing ", *f, " to MSI ", res);
 
   u32 cap_entry = pci_conf_read(f, f->msi_capreg);  
 

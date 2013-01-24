@@ -644,7 +644,7 @@ prs_done:
     irqres->Data.ExtendedIrq.Interrupts[0] = setirq.gsi;
     break;
   }
-  verbose.println("acpi: Assigning IRQ ", setirq.gsi, " to ", name);
+  verbose.println("acpi: Assigning ", setirq, " to ", name);
   if ((ACPI_FAILURE(r = AcpiSetCurrentResources(link, &crsbuf))))
     panic("acpi: AcpiSetCurrentResources failed: %s", AcpiFormatException(r));
   return setirq;

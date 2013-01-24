@@ -179,9 +179,9 @@ ioapic_82093::enable_irq(const struct irq &irq, bool enable)
   uint64_t dest = cpus[0].hwid.num;
 
   if (enable)
-    verbose.println("ioapic: Routing IRQ ", irq.gsi, " to APICID ", dest);
+    verbose.println("ioapic: Routing ", irq, " to APICID ", dest);
   else
-    verbose.println("ioapic: Masking IRQ ", irq.gsi);
+    verbose.println("ioapic: Masking ", irq);
 
   // [IOAPIC 3.2.4] Fixed delivery mode, physical destination mode,
   // routed to APIC ID dest.
