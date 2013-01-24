@@ -60,7 +60,7 @@ LWIP_SRCFILES += \
 	net/if.c
 LWIP_OBJFILES := $(patsubst %.c, $(O)/%.o, $(LWIP_SRCFILES))
 
-$(O)/net/%.o: CXXFLAGS+=-mcmodel=large
+$(O)/net/%.o: CXXFLAGS+=-mcmodel=large -DXV6_KERNEL
 $(O)/lwip/src/%.o: CFLAGS+=-mcmodel=large $(LWIP_CFLAGS) $(LWIP_INCLUDES)
 
 $(O)/liblwip.a: $(LWIP_OBJFILES)
