@@ -152,191 +152,181 @@ codex_magic_action_run_thread_create(unsigned long id)
 }
 
 #define __CODEX_IMPL_FETCH_AND_OP(ptr, value, op) \
-  auto ret = *ptr; \
-  *ptr = ret op value; \
-  codex_magic_action_run_rw(ptr, ret, value); \
+  auto before = *ptr; \
+  auto ret = __sync_fetch_and_ ## op(ptr, value); \
+  auto after = *ptr; \
+  codex_magic_action_run_rw(ptr, before, after); \
   return ret;
 
 template <typename T> inline T
 __codex_sync_fetch_and_add(T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, +);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, add);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_sub(T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, -);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, sub);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_or(T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, |);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, or);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_and(T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, &);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, and);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_xor(T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, ^);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, xor);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_nand(T *ptr, T value)
 {
-  auto ret = *ptr;
-  *ptr = ~ret & value;
-  codex_magic_action_run_rw(ptr, ret, value);
-  return ret;
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, nand);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_add(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, +);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, add);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_sub(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, -);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, sub);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_or(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, |);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, or);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_and(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, &);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, and);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_xor(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_FETCH_AND_OP(ptr, value, ^);
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, xor);
 }
 
 template <typename T> inline T
 __codex_sync_fetch_and_nand(volatile T *ptr, T value)
 {
-  auto ret = *ptr;
-  *ptr = ~ret & value;
-  codex_magic_action_run_rw(ptr, ret, value);
-  return ret;
+  __CODEX_IMPL_FETCH_AND_OP(ptr, value, nand);
 }
 
 #define __CODEX_IMPL_OP_AND_FETCH(ptr, value, op) \
-  auto oldval = *ptr; \
-  *ptr op ## = value; \
-  codex_magic_action_run_rw(ptr, oldval, value); \
-  return *ptr;
+  auto before = *ptr; \
+  auto ret = __sync_ ## op ## _and_fetch(ptr, value); \
+  auto after = *ptr; \
+  codex_magic_action_run_rw(ptr, before, after); \
+  return ret;
 
 template <typename T> inline T
 __codex_sync_add_and_fetch(T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, +);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, add);
 }
 
 template <typename T> inline T
 __codex_sync_sub_and_fetch(T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, -);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, sub);
 }
 
 template <typename T> inline T
 __codex_sync_or_and_fetch(T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, |);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, or);
 }
 
 template <typename T> inline T
 __codex_sync_and_and_fetch(T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, &);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, and);
 }
 
 template <typename T> inline T
 __codex_sync_xor_and_fetch(T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, ^);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, xor);
 }
 
 template <typename T> inline T
 __codex_sync_nand_and_fetch(T *ptr, T value)
 {
-  auto oldval = *ptr;
-  *ptr = ~*ptr & value;
-  codex_magic_action_run_rw(ptr, oldval, value);
-  return *ptr;
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, nand);
 }
 
 template <typename T> inline T
 __codex_sync_add_and_fetch(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, +);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, add);
 }
 
 template <typename T> inline T
 __codex_sync_sub_and_fetch(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, -);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, sub);
 }
 
 template <typename T> inline T
 __codex_sync_or_and_fetch(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, |);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, or);
 }
 
 template <typename T> inline T
 __codex_sync_and_and_fetch(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, &);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, and);
 }
 
 template <typename T> inline T
 __codex_sync_xor_and_fetch(volatile T *ptr, T value)
 {
-  __CODEX_IMPL_OP_AND_FETCH(ptr, value, ^);
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, xor);
 }
 
 template <typename T> inline T
 __codex_sync_nand_and_fetch(volatile T *ptr, T value)
 {
-  auto oldval = *ptr;
-  *ptr = ~*ptr & value;
-  codex_magic_action_run_rw(ptr, oldval, value);
-  return *ptr;
+  __CODEX_IMPL_OP_AND_FETCH(ptr, value, nand);
 }
 
 template <typename T> inline bool
 __codex_sync_bool_compare_and_swap(T *ptr, T oldval, T newval)
 {
-  if (*ptr != oldval)
-    return false;
-  *ptr = newval;
-  codex_magic_action_run_rw(ptr, oldval, newval);
-  return true;
+  auto before = *ptr;
+  auto ret = __sync_bool_compare_and_swap(ptr, oldval, newval);
+  auto after = *ptr;
+  codex_magic_action_run_rw(ptr, before, after);
+  return ret;
 }
 
 template <typename T> inline bool
 __codex_sync_bool_compare_and_swap(volatile T *ptr, T oldval, T newval)
 {
-  if (*ptr != oldval)
-    return false;
-  *ptr = newval;
-  codex_magic_action_run_rw(ptr, oldval, newval);
-  return true;
+  auto before = *ptr;
+  auto ret = __sync_bool_compare_and_swap(ptr, oldval, newval);
+  auto after = *ptr;
+  codex_magic_action_run_rw(ptr, before, after);
+  return ret;
 }
 
 template <typename T> inline T
@@ -366,7 +356,6 @@ template <typename T> inline T
 __codex_sync_lock_test_and_set(T *ptr, T value)
 {
   auto before = *ptr;
-  // use GCC builtin, because the semantics are implementation defined
   auto ret = __sync_lock_test_and_set(ptr, value);
   codex_magic_action_run_rw(ptr, before, ret);
   return ret;
@@ -376,7 +365,6 @@ template <typename T> inline T
 __codex_sync_lock_test_and_set(volatile T *ptr, T value)
 {
   auto before = *ptr;
-  // use GCC builtin, because the semantics are implementation defined
   auto ret = __sync_lock_test_and_set(ptr, value);
   codex_magic_action_run_rw(ptr, before, ret);
   return ret;
@@ -386,7 +374,6 @@ template <typename T> inline void
 __codex_sync_lock_release(T *ptr)
 {
   auto before = *ptr;
-  // use GCC builtin, because the semantics are implementation defined
   __sync_lock_release(ptr);
   auto after = *ptr;
   codex_magic_action_run_rw(ptr, before, after);
@@ -396,7 +383,6 @@ template <typename T> inline void
 __codex_sync_lock_release(volatile T *ptr)
 {
   auto before = *ptr;
-  // use GCC builtin, because the semantics are implementation defined
   __sync_lock_release(ptr);
   auto after = *ptr;
   codex_magic_action_run_rw(ptr, before, after);

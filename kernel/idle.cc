@@ -10,6 +10,7 @@
 #include "kmtrace.hh"
 #include "bits.hh"
 #include "codex.hh"
+#include "benchcodex.hh"
 
 struct idle {
   struct proc *cur;
@@ -89,9 +90,26 @@ idleloop(void)
 
   // Enabling mtrace calls in scheduler generates many mtrace_call_entrys.
   // mtrace_call_set(1, cpu->id);
+  cprintf("idleloop(): myid()=%d\n", myid());
   mtstart(idleloop, myproc());
-  if (myid() != 0)
+
+  int x = 0;
+  __codex_sync_fetch_and_add(&x, 1);
+  assert(x == 1);
+
+  std::atomic<int> yy(0);
+  yy++;
+  assert(yy.load() == 1);
+
+  // XXX: hacky bench for now- figure out how to test more later
+#if CODEX
+  if (myid() != 0) {
     codex_magic_action_run_thread_create(myid());
+    benchcodex::ap();
+  } else {
+    benchcodex::main();
+  }
+#endif
 
   // The scheduler ensures that each idle loop always runs on the same CPU
   struct idle *myidle = idlem.get_unchecked();
