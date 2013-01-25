@@ -35,7 +35,7 @@
 #include "queue.h"
 #include "proc.hh"
 #include "fs.h"
-#include "buf.hh"
+#include "bufcache.hh"
 #include "file.hh"
 #include "cpu.hh"
 #include "kmtrace.hh"
@@ -52,22 +52,23 @@ static inode* the_root;
 static void
 readsb(int dev, struct superblock *sb)
 {
-  struct buf *bp;
-  
-  bp = buf::get(dev, 1);
-  memmove(sb, bp->data, sizeof(*sb));
+  buf* bp = buf::get(dev, 1);
+
+retry:
+  auto rs = bp->seq_.read_begin();
+  memmove(sb, bp->data_, sizeof(*sb));
+  if (rs.need_retry())
+    goto retry;
 }
 
 // Zero a block.
 static void
 bzero(int dev, int bno)
 {
-  struct wbuf wb;
-  
-  wb = buf::wget(dev, bno);
-  memset(wb.data, 0, BSIZE);
-  wb.w();
-  wb.wrelease();
+  buf* bp = buf::get(dev, bno);
+
+  buf_scoped_writelock wl(bp);
+  memset(bp->data_, 0, BSIZE);
 }
 
 //
@@ -95,23 +96,20 @@ throw_out_of_blocks()
 static u32
 balloc(u32 dev)
 {
-  int b, bi, m;
-  struct wbuf bp;
-  struct superblock sb;
-
+  superblock sb;
   readsb(dev, &sb);
-  for(b = 0; b < sb.size; b += BPB){
-    bp = buf::wget(dev, BBLOCK(b, sb.ninodes));
-    for(bi = 0; bi < BPB && bi < (sb.size - b); bi++){
-      m = 1 << (bi % 8);
-      if((bp.data[bi/8] & m) == 0){  // Is block free?
-        bp.data[bi/8] |= m;  // Mark block in use on disk.
-        bp.w();
-        bp.wrelease();
+
+  for(int b = 0; b < sb.size; b += BPB){
+    buf* bp = buf::get(dev, BBLOCK(b, sb.ninodes));
+    buf_scoped_writelock wl(bp);
+
+    for(int bi = 0; bi < BPB && bi < (sb.size - b); bi++){
+      int m = 1 << (bi % 8);
+      if((bp->data_[bi/8] & m) == 0){  // Is block free?
+        bp->data_[bi/8] |= m;  // Mark block in use on disk.
         return b + bi;
       }
     }
-    bp.wrelease();
   }
   
   throw_out_of_blocks();
@@ -123,22 +121,21 @@ balloc(u32 dev)
 static void
 bfree(int dev, u64 x)
 {
-  struct wbuf bp;
-  struct superblock sb;
-  int bi, m;
   u32 b = x;
-
   bzero(dev, b);
 
+  struct superblock sb;
   readsb(dev, &sb);
-  bp = buf::wget(dev, BBLOCK(b, sb.ninodes));
-  bi = b % BPB;
-  m = 1 << (bi % 8);
-  if((bp.data[bi/8] & m) == 0)
+
+  buf* bp = buf::get(dev, BBLOCK(b, sb.ninodes));
+  lock_guard<sleeplock> l(&bp->write_lock_);
+  auto ws = bp->seq_.write_begin();
+
+  int bi = b % BPB;
+  int m = 1 << (bi % 8);
+  if((bp->data_[bi/8] & m) == 0)
     panic("freeing free block");
-  bp.data[bi/8] &= ~m;  // Mark block free on disk.
-  bp.w();
-  bp.wrelease();
+  bp->data_[bi/8] &= ~m;  // Mark block free on disk.
 }
 
 // Inodes.
@@ -185,6 +182,8 @@ static nstbl<pair<u32, u32>, inode*, ino_hash> *ins;
 void
 initinode(void)
 {
+  scoped_gc_epoch e;
+
   ins = new nstbl<pair<u32, u32>, inode*, ino_hash>();
   the_root = inode::alloc(ROOTDEV, ROOTINO);
   if (!ins->insert(make_pair(the_root->dev, the_root->inum), the_root))
@@ -335,17 +334,16 @@ static inode_cache_dir the_inode_cache;
 static inode*
 try_ialloc(u32 inum, u32 dev, short type)
 {
-  dinode *dip;
-  inode* ip;
-  buf *bp;
+  // XXX this whole function seems a bit suspect..
+  scoped_gc_epoch e;
+  buf *bp = buf::get(dev, IBLOCK(inum));
 
-  bp = buf::get(dev, IBLOCK(inum));
-  dip = (dinode*)bp->data + inum%IPB;
+  dinode* dip = (dinode*)bp->data_ + inum%IPB;
   int seemsfree = (dip->type == 0);
   if(seemsfree) {
     // maybe this inode is free. look at it via the
     // inode cache to make sure.
-    ip = iget(dev, inum);
+    inode* ip = iget(dev, inum);
     assert(ip->valid());
     ilock(ip, 1);
     if(ip->type == 0) {
@@ -366,6 +364,10 @@ try_ialloc(u32 inum, u32 dev, short type)
 struct inode*
 ialloc(u32 dev, short type)
 {
+  // XXX should be replaced with lb?
+
+  scoped_gc_epoch e;
+
   superblock sb;
   inode* ip;
   int inum;
@@ -377,7 +379,7 @@ ialloc(u32 dev, short type)
       return ip;
   }
 
-  // ..then search through every on-disk inode!
+  // search through this core's inodes
   readsb(dev, &sb);
   for (int k = myid()*IPB; k < sb.ninodes; k += (NCPU*IPB)) {
     for(inum = k; inum < k+IPB && inum < sb.ninodes; inum++) {
@@ -389,6 +391,15 @@ ialloc(u32 dev, short type)
     }
   }
 
+  // search through all inodes
+  for (int inum = 0; inum < sb.ninodes; inum++) {
+    if (inum == 0)
+      continue;
+    ip = try_ialloc(inum, dev, type);
+    if (ip)
+      return ip;
+  }
+
   cprintf("ialloc: 0/%u inodes\n", sb.ninodes);
   return nullptr;
 }
@@ -397,27 +408,28 @@ ialloc(u32 dev, short type)
 void
 iupdate(struct inode *ip)
 {
-  struct wbuf bp;
-  struct dinode *dip;
+  scoped_gc_epoch e;
 
-  bp = buf::wget(ip->dev, IBLOCK(ip->inum));
-  dip = (struct dinode*)bp.data + ip->inum%IPB;
-  dip->type = ip->type;
-  dip->major = ip->major;
-  dip->minor = ip->minor;
-  dip->nlink = ip->nlink();
-  dip->size = ip->size;
-  dip->gen = ip->gen;
-  memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
-  bp.w();
-  bp.wrelease();
+  {
+    buf* bp = buf::get(ip->dev, IBLOCK(ip->inum));
+    buf_scoped_writelock wl(bp);
+
+    dinode *dip = (struct dinode*)bp->data_ + ip->inum%IPB;
+    dip->type = ip->type;
+    dip->major = ip->major;
+    dip->minor = ip->minor;
+    dip->nlink = ip->nlink();
+    dip->size = ip->size;
+    dip->gen = ip->gen;
+    memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
+  }
 
   if (ip->addrs[NDIRECT] != 0) {
     assert(ip->iaddrs.load() != nullptr);
-    bp = buf::wget(ip->dev, ip->addrs[NDIRECT]);
-    memmove(bp.data, (void*)ip->iaddrs.load(), IADDRSSZ);
-    bp.w();
-    bp.wrelease();
+    buf* bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
+    buf_scoped_writelock wl(bp);
+
+    memmove(bp->data_, (void*)ip->iaddrs.load(), IADDRSSZ);
   }
 }
 
@@ -528,17 +540,24 @@ inode::alloc(u32 dev, u32 inum)
 void
 inode::init(void)
 {
-  struct buf *bp = buf::get(dev, IBLOCK(inum));
-  struct dinode *dip = (struct dinode*)bp->data + inum%IPB;
+  scoped_gc_epoch e;
+  buf *bp = buf::get(dev, IBLOCK(inum));
+  dinode *dip = (struct dinode*)bp->data_ + inum%IPB;
+
+retry:
+  auto rs = bp->seq_.read_begin();
   type = dip->type;
   major = dip->major;
   minor = dip->minor;
   nlink_ = dip->nlink;
-  if (nlink_ > 0)
-    idup(this);
   size = dip->size;
   gen = dip->gen;
   memmove(addrs, dip->addrs, sizeof(addrs));
+  if (rs.need_retry())
+    goto retry;
+
+  if (nlink_ > 0)
+    idup(this);
   flags |= I_VALID;
 }
 
@@ -693,8 +712,8 @@ iunlockput(struct inode *ip)
 static u32
 bmap(struct inode *ip, u32 bn)
 {
-  buf *bp;
-  wbuf wb;
+  scoped_gc_epoch e;
+
   u32* ap;
   u32 addr;
 
@@ -723,8 +742,12 @@ bmap(struct inode *ip, u32 bn)
       }
 
       volatile u32* iaddrs = (u32*)kmalloc(IADDRSSZ, "iaddrs");
-      bp = buf::get(ip->dev, addr);
-      memmove((void*)iaddrs, bp->data, IADDRSSZ);
+      buf* bp = buf::get(ip->dev, addr);
+    retry1a:
+      auto rs = bp->seq_.read_begin();
+      memmove((void*)iaddrs, bp->data_, IADDRSSZ);
+      if (rs.need_retry())
+        goto retry1a;
       if (!cmpxch(&ip->iaddrs, (volatile u32*)nullptr, iaddrs)) {
         bfree(ip->dev, addr);
         kmfree((void*)iaddrs, IADDRSSZ);
@@ -760,23 +783,33 @@ retry3:
     }
   }
 
-  wb = buf::wget(ip->dev, ip->addrs[NDIRECT+1]);
-  ap = (u32*)wb.data;
+  buf* wb = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
+  ap = (u32*)wb->data_;
+retry3a:
+  auto rs = wb->seq_.read_begin();
   if (ap[bn / NINDIRECT] == 0) {
-    ap[bn / NINDIRECT] = balloc(ip->dev);
-    wb.w();
+    buf_scoped_writelock wl(wb);
+    if (ap[bn / NINDIRECT] == 0)
+      ap[bn / NINDIRECT] = balloc(ip->dev);
+    goto retry3a;
   }
   addr = ap[bn / NINDIRECT];
-  wb.wrelease();
+  if (rs.need_retry())
+    goto retry3a;
 
-  wb = buf::wget(ip->dev, addr);
-  ap = (u32*)wb.data;
+  wb = buf::get(ip->dev, addr);
+  ap = (u32*)wb->data_;
+retry3b:
+  auto rs2 = wb->seq_.read_begin();
   if (ap[bn % NINDIRECT] == 0) {
-    ap[bn % NINDIRECT] = balloc(ip->dev);
-    wb.w();
+    buf_scoped_writelock wl(wb);
+    if (ap[bn % NINDIRECT] == 0)
+      ap[bn % NINDIRECT] = balloc(ip->dev);
+    goto retry3b;
   }
   addr = ap[bn % NINDIRECT];
-  wb.wrelease();
+  if (rs2.need_retry())
+    goto retry3b;
 
   return addr;
 }
@@ -792,6 +825,7 @@ class diskblock : public rcu_freed {
  public:
   diskblock(int dev, u64 block) : rcu_freed("diskblock"), _dev(dev), _block(block) {}
   virtual void do_gc() {
+    scoped_gc_epoch e;
     bfree(_dev, _block);
     delete this;
   }
@@ -802,6 +836,11 @@ class diskblock : public rcu_freed {
 void
 itrunc(struct inode *ip)
 {
+  scoped_gc_epoch e;
+
+  // XXX how to serialize itrunc w.r.t. concurrent itrunc or expansion?
+  // Could lock disk blocks (buf's), or could lock the inode?
+
   for(int i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
       diskblock *db = new diskblock(ip->dev, ip->addrs[i]);
@@ -811,8 +850,8 @@ itrunc(struct inode *ip)
   }
   
   if(ip->addrs[NDIRECT]){
-    struct buf* bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
-    u32* a = (u32*)bp->data;
+    buf* bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
+    u32* a = (u32*)bp->data_;
     for(int i = 0; i < NINDIRECT; i++){
       if(a[i]) {
         diskblock *db = new diskblock(ip->dev, a[i]);
@@ -826,14 +865,14 @@ itrunc(struct inode *ip)
   }
 
   if(ip->addrs[NDIRECT+1]){
-    struct buf* bp1 = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
-    u32* a1 = (u32*)bp1->data;
+    buf* bp1 = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
+    u32* a1 = (u32*)bp1->data_;
     for(int i = 0; i < NINDIRECT; i++){
       if(!a1[i])
         continue;
 
-      struct buf* bp2 = buf::get(ip->dev, a1[i]);
-      u32* a2 = (u32*)bp2->data;
+      buf* bp2 = buf::get(ip->dev, a1[i]);
+      u32* a2 = (u32*)bp2->data_;
       for(int j = 0; j < NINDIRECT; j++){
         if(!a2[j])
           continue;
@@ -879,8 +918,10 @@ stati(struct inode *ip, struct stat *st)
 int
 readi(struct inode *ip, char *dst, u32 off, u32 n)
 {
+  scoped_gc_epoch e;
+
   u32 tot, m;
-  struct buf *bp;
+  buf *bp;
 
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
@@ -901,7 +942,11 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
       panic("readi: out of blocks");
     }
     m = min(n - tot, BSIZE - off%BSIZE);
-    memmove(dst, bp->data + off%BSIZE, m);
+  retry:
+    auto rs = bp->seq_.read_begin();
+    memmove(dst, bp->data_ + off%BSIZE, m);
+    if (rs.need_retry())
+      goto retry;
   }
   return n;
 }
@@ -911,8 +956,10 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
 int
 writei(struct inode *ip, const char *src, u32 off, u32 n)
 {
+  scoped_gc_epoch e;
+
   int tot, m;
-  wbuf bp;
+  buf* bp;
 
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].write)
@@ -927,7 +974,7 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
 
   for(tot=0; tot<n; tot+=m, off+=m, src+=m){
     try {
-      bp = buf::wget(ip->dev, bmap(ip, off/BSIZE));
+      bp = buf::get(ip->dev, bmap(ip, off/BSIZE));
     } catch (out_of_blocks& e) {
       console.println("writei: out of blocks");
       // If we haven't written anything, return an error
@@ -936,9 +983,8 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
       break;
     }
     m = min(n - tot, BSIZE - off%BSIZE);
-    memmove(bp.data + off%BSIZE, src, m);
-    bp.w();
-    bp.wrelease();
+    buf_scoped_writelock wl(bp);
+    memmove(bp->data_ + off%BSIZE, src, m);
   }
 
   if(tot > 0 && off > ip->size){
@@ -975,6 +1021,8 @@ namehash(const strbuf<DIRSIZ> &n)
 void
 dir_init(struct inode *dp)
 {
+  scoped_gc_epoch e;
+
   if (dp->dir)
     return;
   if (dp->type != T_DIR)
@@ -989,13 +1037,20 @@ dir_init(struct inode *dp)
       // Read operations should never cause out-of-blocks conditions
       panic("dir_init: out of blocks");
     }
-    for (struct dirent *de = (struct dirent *) bp->data;
-	 de < (struct dirent *) (bp->data + BSIZE);
+    for (struct dirent *de = (struct dirent *) bp->data_;
+	 de < (struct dirent *) (bp->data_ + BSIZE);
 	 de++) {
-      if (de->inum == 0)
+    retry:
+      auto rs = bp->seq_.read_begin();
+      u16 inum = de->inum;
+      auto name = strbuf<DIRSIZ>(de->name);
+      if (rs.need_retry())
+        goto retry;
+
+      if (inum == 0)
 	continue;
 
-      dir->insert(strbuf<DIRSIZ>(de->name), de->inum);
+      dir->insert(name, inum);
     }
   }
 

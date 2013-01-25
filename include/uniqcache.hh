@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sleeplock.hh"
+#include "ns.hh"
 
 namespace uniqstate {
   enum {
@@ -55,6 +56,7 @@ private:
 
 public:
   uniqcache() : hashtable_(false) {}
+  NEW_DELETE_OPS(uniqcache);
 
   // Must be called from within an RCU read section,
   // to ensure the returned Item is not evicted.

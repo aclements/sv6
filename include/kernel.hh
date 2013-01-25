@@ -130,7 +130,8 @@ void            inithz(void);
 // ide.c
 void            ideinit(void);
 void            ideintr(void);
-void            iderw(struct buf*);
+void            ideread(struct buf*);
+void            idewrite(struct buf*);
 
 // idle.cc
 struct proc *   idleproc(void);

@@ -26,7 +26,6 @@ void initkalloc(u64 mbaddr);
 void initz(void);
 void initrcu(void);
 void initproc(void);
-void initbio(void);
 void initinode(void);
 void initdisk(void);
 void inituser(void);
@@ -186,7 +185,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   initdistref();   // distref collector thread
   initrefcache();  // Requires initsched
   initdisk();      // disk
-  initbio();       // buffer cache
   initinode();     // inode cache
   initconsole();
   initfutex();
