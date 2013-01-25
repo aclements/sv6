@@ -140,4 +140,10 @@ public:
     std::atomic_thread_fence(std::memory_order_acquire);
     return writer(this, val + 1);
   }
+
+  T count() const
+  {
+    // XXX what memory order should we use here?
+    return seq_.load();
+  }
 };
