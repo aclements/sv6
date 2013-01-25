@@ -3,9 +3,7 @@
 // XXX: do a better job of sharing the common defines
 // between the xv6 codebase and the qemu codebase
 
-#include <assert.h>
-
-#if CODEX
+#if CODEX && !defined(XV6_USER)
 
 #define __SYNC_FETCH_AND_ADD __codex_sync_fetch_and_add
 #define __SYNC_FETCH_AND_SUB __codex_sync_fetch_and_sub
@@ -24,6 +22,9 @@
 #define __SYNC_SYNCHRONIZE __codex_sync_synchronize
 #define __SYNC_LOCK_TEST_AND_SET __codex_sync_lock_test_and_set
 #define __SYNC_LOCK_RELEASE __codex_sync_lock_release
+
+#define __STORE_VALUE __codex_store_value
+#define __LOAD_VALUE  __codex_load_value
 
 #else
 
@@ -45,7 +46,43 @@
 #define __SYNC_LOCK_TEST_AND_SET __sync_lock_test_and_set
 #define __SYNC_LOCK_RELEASE __sync_lock_release
 
+#define __STORE_VALUE __store_value
+#define __LOAD_VALUE  __load_value
+
+template <typename T> inline void
+__store_value(T *ptr, T value)
+{
+  *ptr = value;
+}
+
+template <typename T> inline void
+__store_value(volatile T *ptr, T value)
+{
+  *ptr = value;
+}
+
+template <typename T> inline T
+__load_value(const T *ptr)
+{
+  return *ptr;
+}
+
+template <typename T> inline T
+__load_value(volatile const T *ptr)
+{
+  return *ptr;
+}
+
 #endif
+
+#if !defined(XV6_USER)
+
+#include <assert.h>
+
+class codex {
+public:
+  static bool g_codex_trace_start;
+};
 
 /**
  * modelled after mtrace:
@@ -57,21 +94,24 @@ codex_magic(unsigned long ax, unsigned long bx,
             unsigned long si, unsigned long di)
 {
 #if CODEX
-  // 0x0F 0x04 is an un-used x86 opcode, according to
-  // http://ref.x86asm.net/geek64.html
-  __asm __volatile(".byte 0x0F\n"
-                   ".byte 0x04\n"
-      :
-      : "a" (ax), "b" (bx),
-        "c" (cx), "d" (dx),
-        "S" (si), "D" (di));
+  if (codex::g_codex_trace_start) {
+    // 0x0F 0x04 is an un-used x86 opcode, according to
+    // http://ref.x86asm.net/geek64.html
+    __asm __volatile(".byte 0x0F\n"
+                     ".byte 0x04\n"
+        :
+        : "a" (ax), "b" (bx),
+          "c" (cx), "d" (dx),
+          "S" (si), "D" (di));
+  }
 #else
   // no-op
 #endif
 }
 
 enum class codex_call_type {
-  ACTION_RUN = 0,
+  TRACE_START = 0,
+  ACTION_RUN,
 };
 
 enum class action_type
@@ -92,6 +132,16 @@ enum class action_type
   LOG = 0x40,
   ANNO_STATE = 0x50,
 };
+
+static inline void
+codex_trace_start(void)
+{
+  assert(!codex::g_codex_trace_start);
+  codex::g_codex_trace_start = true; // must come before codex_magic()
+  codex_magic(
+    (unsigned long) codex_call_type::TRACE_START,
+    0, 0, 0, 0, 0);
+}
 
 // GCC __sync_* definitions from:
 // http://gcc.gnu.org/onlinedocs/gcc-4.1.1/gcc/Atomic-Builtins.html
@@ -119,7 +169,7 @@ codex_magic_action_run_rw(volatile T *addr, T oldval, T newval)
 }
 
 template <typename T> inline void
-codex_magic_action_run_read(T *addr, T readval)
+codex_magic_action_run_read(const T *addr, T readval)
 {
   codex_magic(
     (unsigned long) codex_call_type::ACTION_RUN,
@@ -127,6 +177,12 @@ codex_magic_action_run_read(T *addr, T readval)
     (unsigned long) addr,
     (unsigned long) readval,
     0, 0);
+}
+
+template <typename T> inline void
+codex_magic_action_run_read(const volatile T *addr, T readval)
+{
+  codex_magic_action_run_read((const T *) addr, readval);
 }
 
 template <typename T> inline void
@@ -140,6 +196,12 @@ codex_magic_action_run_write(T *addr, T writeval)
     0, 0);
 }
 
+template <typename T> inline void
+codex_magic_action_run_write(volatile T *addr, T writeval)
+{
+  codex_magic_action_run_write((T *) addr, writeval);
+}
+
 // XXX: don't want to include "types.h" here
 inline void
 codex_magic_action_run_thread_create(unsigned long id)
@@ -149,6 +211,36 @@ codex_magic_action_run_thread_create(unsigned long id)
     (unsigned long) action_type::THREAD_CREATE,
     (unsigned long) id,
     0, 0, 0);
+}
+
+template <typename T> inline void
+__codex_store_value(T *ptr, T value)
+{
+  *ptr = value;
+  codex_magic_action_run_write(ptr, value);
+}
+
+template <typename T> inline void
+__codex_store_value(volatile T *ptr, T value)
+{
+  *ptr = value;
+  codex_magic_action_run_write(ptr, value);
+}
+
+template <typename T> inline T
+__codex_load_value(const T *ptr)
+{
+  auto ret = *ptr;
+  codex_magic_action_run_read(ptr, ret);
+  return ret;
+}
+
+template <typename T> inline T
+__codex_load_value(volatile const T *ptr)
+{
+  auto ret = *ptr;
+  codex_magic_action_run_read(ptr, ret);
+  return ret;
 }
 
 #define __CODEX_IMPL_FETCH_AND_OP(ptr, value, op) \
@@ -390,3 +482,5 @@ __codex_sync_lock_release(volatile T *ptr)
 
 #undef __CODEX_IMPL_FETCH_AND_OP
 #undef __CODEX_IMPL_OP_AND_FETCH
+
+#endif /* !defined(XV6_USER) */

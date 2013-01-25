@@ -3,11 +3,16 @@
 #include "benchcodex.hh"
 #include "cpu.hh"
 
+static volatile bool _start = false;
+
 void
 benchcodex::ap(void)
 {
   //for (int i = 0; i < 100; i++)
   //  cprintf("benchcodex::ap() = %d\n", _ctr++);
+
+  while (!_start)
+    ;
 
   for (;;)
     _ctr++;
@@ -16,8 +21,15 @@ benchcodex::ap(void)
 void
 benchcodex::main(void)
 {
-  cprintf("value=%d\n", _ctr.load());
   cprintf("benchcodex::main() called\n");
+  _start = true;
+  barrier();
+  int i = 0;
+  while (_ctr.load() < 10000) {
+    if ((++i % 10000) == 0)
+      cprintf("value=%d\n", _ctr.load());
+  }
+  cprintf("value=%d\n", _ctr.load());
   halt();
   panic("halt returned");
 }

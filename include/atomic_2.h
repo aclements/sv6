@@ -34,7 +34,6 @@
 #pragma GCC system_header
 
 // XXX: hack
-#include "../param.h"
 #include "codex.hh"
 
 namespace std _GLIBCXX_VISIBILITY(default)
@@ -249,65 +248,65 @@ namespace __atomic2
       void
       store(__int_type __i, memory_order __m = memory_order_seq_cst)
       {
-	__glibcxx_assert(__m != memory_order_acquire);
-	__glibcxx_assert(__m != memory_order_acq_rel);
-	__glibcxx_assert(__m != memory_order_consume);
+        __glibcxx_assert(__m != memory_order_acquire);
+        __glibcxx_assert(__m != memory_order_acq_rel);
+        __glibcxx_assert(__m != memory_order_consume);
 
-	if (__m == memory_order_relaxed)
-	  _M_i = __i;
-	else
-	  {
-	    // write_mem_barrier();
-	    _M_i = __i;
-	    if (__m == memory_order_seq_cst)
-	      __SYNC_SYNCHRONIZE();
-	  }
+        if (__m == memory_order_relaxed)
+          __STORE_VALUE(&_M_i, __i);
+        else
+        {
+          // write_mem_barrier();
+          __STORE_VALUE(&_M_i, __i);
+          if (__m == memory_order_seq_cst)
+            __SYNC_SYNCHRONIZE();
+        }
       }
 
       void
       store(__int_type __i, memory_order __m = memory_order_seq_cst) volatile
       {
-	__glibcxx_assert(__m != memory_order_acquire);
-	__glibcxx_assert(__m != memory_order_acq_rel);
-	__glibcxx_assert(__m != memory_order_consume);
+        __glibcxx_assert(__m != memory_order_acquire);
+        __glibcxx_assert(__m != memory_order_acq_rel);
+        __glibcxx_assert(__m != memory_order_consume);
 
-	if (__m == memory_order_relaxed)
-	  _M_i = __i;
-	else
-	  {
-	    // write_mem_barrier();
-	    _M_i = __i;
-	    if (__m == memory_order_seq_cst)
-	      __SYNC_SYNCHRONIZE();
-	  }
+        if (__m == memory_order_relaxed)
+          __STORE_VALUE(&_M_i, __i);
+        else
+        {
+          // write_mem_barrier();
+          __STORE_VALUE(&_M_i, __i);
+          if (__m == memory_order_seq_cst)
+            __SYNC_SYNCHRONIZE();
+        }
       }
 
       __int_type
       load(memory_order __m = memory_order_seq_cst) const
       {
-	__glibcxx_assert(__m != memory_order_release);
-	__glibcxx_assert(__m != memory_order_acq_rel);
+        __glibcxx_assert(__m != memory_order_release);
+        __glibcxx_assert(__m != memory_order_acq_rel);
 
-	// __SYNC_SYNCHRONIZE();
+        // __SYNC_SYNCHRONIZE();
         __barrier();
-	__int_type __ret = _M_i;
-	// __SYNC_SYNCHRONIZE();
+        __int_type __ret = __LOAD_VALUE(&_M_i);
+        // __SYNC_SYNCHRONIZE();
         __barrier();
-	return __ret;
+        return __ret;
       }
 
       __int_type
       load(memory_order __m = memory_order_seq_cst) const volatile
       {
-	__glibcxx_assert(__m != memory_order_release);
-	__glibcxx_assert(__m != memory_order_acq_rel);
+        __glibcxx_assert(__m != memory_order_release);
+        __glibcxx_assert(__m != memory_order_acq_rel);
 
-	// __SYNC_SYNCHRONIZE();
+        // __SYNC_SYNCHRONIZE();
         __barrier();
-	__int_type __ret = _M_i;
-	// __SYNC_SYNCHRONIZE();
+        __int_type __ret = __LOAD_VALUE(&_M_i);
+        // __SYNC_SYNCHRONIZE();
         __barrier();
-	return __ret;
+        return __ret;
       }
 
       __int_type
@@ -544,66 +543,66 @@ namespace __atomic2
       void
       store(__pointer_type __p, memory_order __m = memory_order_seq_cst)
       {
-	__glibcxx_assert(__m != memory_order_acquire);
-	__glibcxx_assert(__m != memory_order_acq_rel);
-	__glibcxx_assert(__m != memory_order_consume);
+        __glibcxx_assert(__m != memory_order_acquire);
+        __glibcxx_assert(__m != memory_order_acq_rel);
+        __glibcxx_assert(__m != memory_order_consume);
 
-	if (__m == memory_order_relaxed)
-	  _M_p = __p;
-	else
-	  {
-	    // write_mem_barrier();
-	    _M_p = __p;
-	    if (__m == memory_order_seq_cst)
-	      __SYNC_SYNCHRONIZE();
-	  }
+        if (__m == memory_order_relaxed)
+          __STORE_VALUE(&_M_p, __p);
+        else
+        {
+          // write_mem_barrier();
+          __STORE_VALUE(&_M_p, __p);
+          if (__m == memory_order_seq_cst)
+            __SYNC_SYNCHRONIZE();
+        }
       }
 
       void
       store(__pointer_type __p,
 	    memory_order __m = memory_order_seq_cst) volatile
       {
-	__glibcxx_assert(__m != memory_order_acquire);
-	__glibcxx_assert(__m != memory_order_acq_rel);
-	__glibcxx_assert(__m != memory_order_consume);
+        __glibcxx_assert(__m != memory_order_acquire);
+        __glibcxx_assert(__m != memory_order_acq_rel);
+        __glibcxx_assert(__m != memory_order_consume);
 
-	if (__m == memory_order_relaxed)
-	  _M_p = __p;
-	else
-	  {
-	    // write_mem_barrier();
-	    _M_p = __p;
-	    if (__m == memory_order_seq_cst)
-	      __SYNC_SYNCHRONIZE();
-	  }
+        if (__m == memory_order_relaxed)
+          __STORE_VALUE(&_M_p, __p);
+        else
+        {
+          // write_mem_barrier();
+          __STORE_VALUE(&_M_p, __p);
+          if (__m == memory_order_seq_cst)
+            __SYNC_SYNCHRONIZE();
+        }
       }
 
       __pointer_type
       load(memory_order __m = memory_order_seq_cst) const
       {
-	__glibcxx_assert(__m != memory_order_release);
-	__glibcxx_assert(__m != memory_order_acq_rel);
+        __glibcxx_assert(__m != memory_order_release);
+        __glibcxx_assert(__m != memory_order_acq_rel);
 
-	// __SYNC_SYNCHRONIZE();
+        // __SYNC_SYNCHRONIZE();
         __barrier();
-	__pointer_type __ret = _M_p;
-	// __SYNC_SYNCHRONIZE();
+        __pointer_type __ret = __LOAD_VALUE(&_M_p);
+        // __SYNC_SYNCHRONIZE();
         __barrier();
-	return __ret;
+        return __ret;
       }
 
       __pointer_type
       load(memory_order __m = memory_order_seq_cst) const volatile
       {
-	__glibcxx_assert(__m != memory_order_release);
-	__glibcxx_assert(__m != memory_order_acq_rel);
+        __glibcxx_assert(__m != memory_order_release);
+        __glibcxx_assert(__m != memory_order_acq_rel);
 
-	// __SYNC_SYNCHRONIZE();
+        // __SYNC_SYNCHRONIZE();
         __barrier();
-	__pointer_type __ret = _M_p;
-	// __SYNC_SYNCHRONIZE();
+        __pointer_type __ret = __LOAD_VALUE(&_M_p);
+        // __SYNC_SYNCHRONIZE();
         __barrier();
-	return __ret;
+        return __ret;
       }
 
       __pointer_type

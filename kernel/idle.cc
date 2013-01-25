@@ -107,6 +107,8 @@ idleloop(void)
     codex_magic_action_run_thread_create(myid());
     benchcodex::ap();
   } else {
+    cprintf("calling codex_trace_start()\n");
+    codex_trace_start();
     benchcodex::main();
   }
 #endif
