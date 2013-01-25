@@ -273,7 +273,7 @@ sys_rename(userptr_str old_name, userptr_str new_name)
       return -1;
     }
   } else {
-    if (dpnew->dir.load()->insert(strbuf<DIRSIZ>(newname), ipold->inum) < 0) {
+    if (!dpnew->dir.load()->insert(strbuf<DIRSIZ>(newname), ipold->inum)) {
       iput(dpnew, haverefnew);
       iput(ipold);
       iput(dpold, haverefold);

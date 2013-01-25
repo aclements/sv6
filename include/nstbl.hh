@@ -40,7 +40,7 @@ public:
     return false;
   }
 
-  int insert(const K& key, const V& val) {
+  bool insert(const K& key, const V& val) {
     ins* ns;
     u32 i;
 

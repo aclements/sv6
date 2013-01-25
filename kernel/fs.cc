@@ -187,7 +187,7 @@ initinode(void)
 {
   ins = new nstbl<pair<u32, u32>, inode*, ino_hash>();
   the_root = inode::alloc(ROOTDEV, ROOTINO);
-  if (ins->insert(make_pair(the_root->dev, the_root->inum), the_root) < 0)
+  if (!ins->insert(make_pair(the_root->dev, the_root->inum), the_root))
     panic("initinode: insert the_root failed");
   the_root->init();
 
@@ -482,7 +482,7 @@ __iget(u32 dev, u32 inum, bool* haveref)
   ip->flags = I_BUSYR | I_BUSYW;
   ip->readbusy = 1;
 
-  if (ins->insert(make_pair(ip->dev, ip->inum), ip) < 0) {
+  if (!ins->insert(make_pair(ip->dev, ip->inum), ip)) {
     // We haven't touched anything on disk, so we can
     // gc_delayed, instead of ip->onzero() (via ip->dec())
     gc_delayed(ip);
@@ -1063,7 +1063,10 @@ dirlink(struct inode *dp, const char *name, u32 inum)
   dir_init(dp);
 
   //cprintf("dirlink: %x (%d): %s -> %d\n", dp, dp->inum, name, inum);
-  return dp->dir.load()->insert(strbuf<DIRSIZ>(name), inum);
+  if (!dp->dir.load()->insert(strbuf<DIRSIZ>(name), inum))
+    return -1;
+
+  return 0;
 }
 
 // Paths

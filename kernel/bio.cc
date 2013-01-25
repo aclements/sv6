@@ -64,7 +64,7 @@ retry:
   iderw(b);
   b->flags_ &= ~B_BUSY;
 
-  if (bufns->insert(make_pair(b->dev_, b->sector_), b) < 0) {
+  if (!bufns->insert(make_pair(b->dev_, b->sector_), b)) {
     gc_delayed(b);
     goto retry;
   }
