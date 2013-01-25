@@ -2,7 +2,7 @@
 #include "kernel.hh"
 #include "spinlock.h"
 #include "condvar.h"
-#include "bufcache.hh"
+#include "buf.hh"
 #include "cpputil.hh"
 #include "ns.hh"
 #include "kstream.hh"

@@ -35,7 +35,7 @@
 #include "queue.h"
 #include "proc.hh"
 #include "fs.h"
-#include "bufcache.hh"
+#include "buf.hh"
 #include "file.hh"
 #include "cpu.hh"
 #include "kmtrace.hh"
