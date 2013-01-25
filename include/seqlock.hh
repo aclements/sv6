@@ -43,6 +43,11 @@ public:
       std::atomic_thread_fence(std::memory_order_release);
       return sc_->seq_.load(std::memory_order_relaxed) != init_;
     }
+
+    T count() const
+    {
+      return init_;
+    }
   };
 
   /**
