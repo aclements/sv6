@@ -78,9 +78,11 @@ __load_value(volatile const T *ptr)
 #if !defined(XV6_USER)
 
 #include <assert.h>
+#include <stdint.h>
 
 class codex {
 public:
+  static unsigned int current_tid(void);
   static bool g_codex_trace_start;
 };
 
@@ -89,12 +91,13 @@ public:
  * https://github.com/stephentu/qemu-tsx/blob/tsx/mtrace-magic.h
  */
 static inline void
-codex_magic(unsigned long ax, unsigned long bx,
-            unsigned long cx, unsigned long dx,
-            unsigned long si, unsigned long di)
+codex_magic(bool always_report,
+            uint64_t ax, uint64_t bx,
+            uint64_t cx, uint64_t dx,
+            uint64_t si, uint64_t di)
 {
 #if CODEX
-  if (codex::g_codex_trace_start) {
+  if (always_report || codex::g_codex_trace_start) {
     // 0x0F 0x04 is an un-used x86 opcode, according to
     // http://ref.x86asm.net/geek64.html
     __asm __volatile(".byte 0x0F\n"
@@ -133,14 +136,18 @@ enum class action_type
   ANNO_STATE = 0x50,
 };
 
+typedef uint16_t tid_t;
+
 static inline void
 codex_trace_start(void)
 {
   assert(!codex::g_codex_trace_start);
   codex::g_codex_trace_start = true; // must come before codex_magic()
   codex_magic(
-    (unsigned long) codex_call_type::TRACE_START,
-    0, 0, 0, 0, 0);
+    true,
+    (uint64_t) codex_call_type::TRACE_START,
+    (uint64_t) codex::current_tid(),
+    0, 0, 0, 0);
 }
 
 // GCC __sync_* definitions from:
@@ -154,12 +161,13 @@ template <typename T> inline void
 codex_magic_action_run_rw(T *addr, T oldval, T newval)
 {
   codex_magic(
-    (unsigned long) codex_call_type::ACTION_RUN,
-    (unsigned long) action_type::RW,
-    (unsigned long) addr,
-    (unsigned long) oldval,
-    (unsigned long) newval,
-    0);
+    false,
+    (uint64_t) codex_call_type::ACTION_RUN,
+    (uint64_t) codex::current_tid(),
+    (uint64_t) action_type::RW,
+    (uint64_t) addr,
+    (uint64_t) oldval,
+    (uint64_t) newval);
 }
 
 template <typename T> inline void
@@ -172,11 +180,13 @@ template <typename T> inline void
 codex_magic_action_run_read(const T *addr, T readval)
 {
   codex_magic(
-    (unsigned long) codex_call_type::ACTION_RUN,
-    (unsigned long) action_type::R,
-    (unsigned long) addr,
-    (unsigned long) readval,
-    0, 0);
+    false,
+    (uint64_t) codex_call_type::ACTION_RUN,
+    (uint64_t) codex::current_tid(),
+    (uint64_t) action_type::R,
+    (uint64_t) addr,
+    (uint64_t) readval,
+    0);
 }
 
 template <typename T> inline void
@@ -189,11 +199,13 @@ template <typename T> inline void
 codex_magic_action_run_write(T *addr, T writeval)
 {
   codex_magic(
-    (unsigned long) codex_call_type::ACTION_RUN,
-    (unsigned long) action_type::W,
-    (unsigned long) addr,
-    (unsigned long) writeval,
-    0, 0);
+    false,
+    (uint64_t) codex_call_type::ACTION_RUN,
+    (uint64_t) codex::current_tid(),
+    (uint64_t) action_type::W,
+    (uint64_t) addr,
+    (uint64_t) writeval,
+    0);
 }
 
 template <typename T> inline void
@@ -202,15 +214,16 @@ codex_magic_action_run_write(volatile T *addr, T writeval)
   codex_magic_action_run_write((T *) addr, writeval);
 }
 
-// XXX: don't want to include "types.h" here
 inline void
-codex_magic_action_run_thread_create(unsigned long id)
+codex_magic_action_run_thread_create(tid_t tid)
 {
   codex_magic(
-    (unsigned long) codex_call_type::ACTION_RUN,
-    (unsigned long) action_type::THREAD_CREATE,
-    (unsigned long) id,
-    0, 0, 0);
+    true,
+    (uint64_t) codex_call_type::ACTION_RUN,
+    (uint64_t) codex::current_tid(),
+    (uint64_t) action_type::THREAD_CREATE,
+    (uint64_t) tid,
+    0, 0);
 }
 
 template <typename T> inline void

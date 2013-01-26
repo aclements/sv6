@@ -104,7 +104,6 @@ idleloop(void)
   // XXX: hacky bench for now- figure out how to test more later
 #if CODEX
   if (myid() != 0) {
-    codex_magic_action_run_thread_create(myid());
     benchcodex::ap();
   } else {
     cprintf("calling codex_trace_start()\n");

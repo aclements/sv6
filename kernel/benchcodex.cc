@@ -3,7 +3,9 @@
 #include "benchcodex.hh"
 #include "cpu.hh"
 
-static volatile bool _start = false;
+#include <atomic>
+
+static volatile std::atomic<bool> _start(false);
 
 void
 benchcodex::ap(void)
@@ -22,7 +24,7 @@ void
 benchcodex::main(void)
 {
   cprintf("benchcodex::main() called\n");
-  _start = true;
+  _start.store(true);
   barrier();
   int i = 0;
   while (_ctr.load() < 10000) {

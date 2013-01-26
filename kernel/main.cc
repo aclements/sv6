@@ -9,6 +9,7 @@
 #include "condvar.h"
 #include "proc.hh"
 #include "apic.hh"
+#include "codex.hh"
 
 void initpic(void);
 void initextpic(void);
@@ -91,7 +92,7 @@ static void
 rstrreset(void)
 {
   volatile u16 *wrv;
-  
+
   // Paranoid: set warm reset code and vector back to defaults
   outb(IO_RTC, 0xF);
   outb(IO_RTC+1, 0);
@@ -130,6 +131,8 @@ bootothers(void)
     *(u64*)(code-12) = (u64)stack + KSTACKSIZE;
     // bootother.S sets this to 0x0a55face early on
     *(u32*)(code-64) = 0;
+
+    codex_magic_action_run_thread_create(c->id);
 
     bstate = 0;
     bcpuid = c->id;
