@@ -10,3 +10,4 @@ codex::current_tid(void)
 }
 
 bool codex::g_codex_trace_start = false;
+unsigned int codex::g_atomic_section = 0;

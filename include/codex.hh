@@ -83,7 +83,15 @@ __load_value(volatile const T *ptr)
 class codex {
 public:
   static unsigned int current_tid(void);
+  static inline bool
+  in_atomic_section(void)
+  {
+    return g_atomic_section;
+  }
+
+// XXX: make private
   static bool g_codex_trace_start;
+  static unsigned int g_atomic_section;
 };
 
 /**
@@ -117,6 +125,8 @@ enum class codex_call_type {
   ACTION_RUN,
 };
 
+// copied from gen/protocol.h
+
 enum class action_type
 {
   R = 0x1,
@@ -136,7 +146,24 @@ enum class action_type
   ANNO_STATE = 0x50,
 };
 
+enum action_flags
+{
+  ACTION_FLAG_REPLAY = 0x1,
+  ACTION_FLAG_ATOMIC = 0x2,
+  ACTION_FLAG_AVOID_RESCHED_THD = 0x4,
+};
+
 typedef uint16_t tid_t;
+
+static inline uint64_t
+codex_encode_action_with_flags(enum action_type type)
+{
+  // action type in lower 32-bits, flags in upper 32-bits
+  unsigned long flags = 0;
+  if (codex::in_atomic_section())
+    flags |= ACTION_FLAG_ATOMIC;
+  return (flags << 32) | (unsigned long) type;
+}
 
 static inline void
 codex_trace_start(void)
@@ -164,7 +191,7 @@ codex_magic_action_run_rw(T *addr, T oldval, T newval)
     false,
     (uint64_t) codex_call_type::ACTION_RUN,
     (uint64_t) codex::current_tid(),
-    (uint64_t) action_type::RW,
+    codex_encode_action_with_flags(action_type::RW),
     (uint64_t) addr,
     (uint64_t) oldval,
     (uint64_t) newval);
@@ -183,7 +210,7 @@ codex_magic_action_run_read(const T *addr, T readval)
     false,
     (uint64_t) codex_call_type::ACTION_RUN,
     (uint64_t) codex::current_tid(),
-    (uint64_t) action_type::R,
+    codex_encode_action_with_flags(action_type::R),
     (uint64_t) addr,
     (uint64_t) readval,
     0);
@@ -202,7 +229,7 @@ codex_magic_action_run_write(T *addr, T writeval)
     false,
     (uint64_t) codex_call_type::ACTION_RUN,
     (uint64_t) codex::current_tid(),
-    (uint64_t) action_type::W,
+    codex_encode_action_with_flags(action_type::W),
     (uint64_t) addr,
     (uint64_t) writeval,
     0);
@@ -221,7 +248,7 @@ codex_magic_action_run_thread_create(tid_t tid)
     true,
     (uint64_t) codex_call_type::ACTION_RUN,
     (uint64_t) codex::current_tid(),
-    (uint64_t) action_type::THREAD_CREATE,
+    codex_encode_action_with_flags(action_type::THREAD_CREATE),
     (uint64_t) tid,
     0, 0);
 }
