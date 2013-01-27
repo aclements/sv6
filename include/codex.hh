@@ -3,6 +3,8 @@
 // XXX: do a better job of sharing the common defines
 // between the xv6 codebase and the qemu codebase
 
+#define ALWAYS_INLINE __attribute__((always_inline))
+
 #if CODEX && !defined(XV6_USER)
 
 #define __SYNC_FETCH_AND_ADD __codex_sync_fetch_and_add
@@ -49,25 +51,25 @@
 #define __STORE_VALUE __store_value
 #define __LOAD_VALUE  __load_value
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 __store_value(T *ptr, T value)
 {
   *ptr = value;
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 __store_value(volatile T *ptr, T value)
 {
   *ptr = value;
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __load_value(const T *ptr)
 {
   return *ptr;
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __load_value(volatile const T *ptr)
 {
   return *ptr;
@@ -83,7 +85,7 @@ __load_value(volatile const T *ptr)
 class codex {
 public:
   static unsigned int current_tid(void);
-  static inline bool
+  static inline ALWAYS_INLINE bool
   in_atomic_section(void)
   {
     return g_atomic_section;
@@ -98,14 +100,13 @@ public:
  * modelled after mtrace:
  * https://github.com/stephentu/qemu-tsx/blob/tsx/mtrace-magic.h
  */
-static inline void
-codex_magic(bool always_report,
-            uint64_t ax, uint64_t bx,
+static inline ALWAYS_INLINE void
+codex_magic(uint64_t ax, uint64_t bx,
             uint64_t cx, uint64_t dx,
             uint64_t si, uint64_t di)
 {
 #if CODEX
-  if (always_report || codex::g_codex_trace_start) {
+  if (codex::g_codex_trace_start) {
     // 0x0F 0x04 is an un-used x86 opcode, according to
     // http://ref.x86asm.net/geek64.html
     __asm __volatile(".byte 0x0F\n"
@@ -155,7 +156,7 @@ enum action_flags
 
 typedef uint16_t tid_t;
 
-static inline uint64_t
+static inline ALWAYS_INLINE uint64_t
 codex_encode_action_with_flags(enum action_type type)
 {
   // action type in lower 32-bits, flags in upper 32-bits
@@ -165,13 +166,12 @@ codex_encode_action_with_flags(enum action_type type)
   return (flags << 32) | (unsigned long) type;
 }
 
-static inline void
+static inline ALWAYS_INLINE void
 codex_trace_start(void)
 {
   assert(!codex::g_codex_trace_start);
   codex::g_codex_trace_start = true; // must come before codex_magic()
   codex_magic(
-    true,
     (uint64_t) codex_call_type::TRACE_START,
     (uint64_t) codex::current_tid(),
     0, 0, 0, 0);
@@ -184,90 +184,90 @@ codex_trace_start(void)
 //
 // the __codex_sync variants should not be called unles CODEX is true
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 codex_magic_action_run_rw(T *addr, T oldval, T newval)
 {
-  codex_magic(
-    false,
-    (uint64_t) codex_call_type::ACTION_RUN,
-    (uint64_t) codex::current_tid(),
-    codex_encode_action_with_flags(action_type::RW),
-    (uint64_t) addr,
-    (uint64_t) oldval,
-    (uint64_t) newval);
+  if (codex::g_codex_trace_start)
+    codex_magic(
+      (uint64_t) codex_call_type::ACTION_RUN,
+      (uint64_t) codex::current_tid(),
+      codex_encode_action_with_flags(action_type::RW),
+      (uint64_t) addr,
+      (uint64_t) oldval,
+      (uint64_t) newval);
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 codex_magic_action_run_rw(volatile T *addr, T oldval, T newval)
 {
   codex_magic_action_run_rw((T *) addr, oldval, newval);
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 codex_magic_action_run_read(const T *addr, T readval)
 {
-  codex_magic(
-    false,
-    (uint64_t) codex_call_type::ACTION_RUN,
-    (uint64_t) codex::current_tid(),
-    codex_encode_action_with_flags(action_type::R),
-    (uint64_t) addr,
-    (uint64_t) readval,
-    0);
+  if (codex::g_codex_trace_start)
+    codex_magic(
+      (uint64_t) codex_call_type::ACTION_RUN,
+      (uint64_t) codex::current_tid(),
+      codex_encode_action_with_flags(action_type::R),
+      (uint64_t) addr,
+      (uint64_t) readval,
+      0);
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 codex_magic_action_run_read(const volatile T *addr, T readval)
 {
   codex_magic_action_run_read((const T *) addr, readval);
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 codex_magic_action_run_write(T *addr, T writeval)
 {
-  codex_magic(
-    false,
-    (uint64_t) codex_call_type::ACTION_RUN,
-    (uint64_t) codex::current_tid(),
-    codex_encode_action_with_flags(action_type::W),
-    (uint64_t) addr,
-    (uint64_t) writeval,
-    0);
+  if (codex::g_codex_trace_start)
+    codex_magic(
+      (uint64_t) codex_call_type::ACTION_RUN,
+      (uint64_t) codex::current_tid(),
+      codex_encode_action_with_flags(action_type::W),
+      (uint64_t) addr,
+      (uint64_t) writeval,
+      0);
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 codex_magic_action_run_write(volatile T *addr, T writeval)
 {
   codex_magic_action_run_write((T *) addr, writeval);
 }
 
-inline void
+inline ALWAYS_INLINE void
 codex_magic_action_run_thread_create(tid_t tid)
 {
-  codex_magic(
-    true,
-    (uint64_t) codex_call_type::ACTION_RUN,
-    (uint64_t) codex::current_tid(),
-    codex_encode_action_with_flags(action_type::THREAD_CREATE),
-    (uint64_t) tid,
-    0, 0);
+  if (codex::g_codex_trace_start)
+    codex_magic(
+      (uint64_t) codex_call_type::ACTION_RUN,
+      (uint64_t) codex::current_tid(),
+      codex_encode_action_with_flags(action_type::THREAD_CREATE),
+      (uint64_t) tid,
+      0, 0);
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 __codex_store_value(T *ptr, T value)
 {
   *ptr = value;
   codex_magic_action_run_write(ptr, value);
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 __codex_store_value(volatile T *ptr, T value)
 {
   *ptr = value;
   codex_magic_action_run_write(ptr, value);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_load_value(const T *ptr)
 {
   auto ret = *ptr;
@@ -275,7 +275,7 @@ __codex_load_value(const T *ptr)
   return ret;
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_load_value(volatile const T *ptr)
 {
   auto ret = *ptr;
@@ -290,73 +290,73 @@ __codex_load_value(volatile const T *ptr)
   codex_magic_action_run_rw(ptr, before, after); \
   return ret;
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_add(T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, add);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_sub(T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, sub);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_or(T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, or);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_and(T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, and);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_xor(T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, xor);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_nand(T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, nand);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_add(volatile T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, add);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_sub(volatile T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, sub);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_or(volatile T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, or);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_and(volatile T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, and);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_xor(volatile T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, xor);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_fetch_and_nand(volatile T *ptr, T value)
 {
   __CODEX_IMPL_FETCH_AND_OP(ptr, value, nand);
@@ -369,79 +369,79 @@ __codex_sync_fetch_and_nand(volatile T *ptr, T value)
   codex_magic_action_run_rw(ptr, before, after); \
   return ret;
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_add_and_fetch(T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, add);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_sub_and_fetch(T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, sub);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_or_and_fetch(T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, or);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_and_and_fetch(T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, and);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_xor_and_fetch(T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, xor);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_nand_and_fetch(T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, nand);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_add_and_fetch(volatile T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, add);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_sub_and_fetch(volatile T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, sub);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_or_and_fetch(volatile T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, or);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_and_and_fetch(volatile T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, and);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_xor_and_fetch(volatile T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, xor);
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_nand_and_fetch(volatile T *ptr, T value)
 {
   __CODEX_IMPL_OP_AND_FETCH(ptr, value, nand);
 }
 
-template <typename T> inline bool
+template <typename T> inline ALWAYS_INLINE bool
 __codex_sync_bool_compare_and_swap(T *ptr, T oldval, T newval)
 {
   auto before = *ptr;
@@ -451,7 +451,7 @@ __codex_sync_bool_compare_and_swap(T *ptr, T oldval, T newval)
   return ret;
 }
 
-template <typename T> inline bool
+template <typename T> inline ALWAYS_INLINE bool
 __codex_sync_bool_compare_and_swap(volatile T *ptr, T oldval, T newval)
 {
   auto before = *ptr;
@@ -461,7 +461,7 @@ __codex_sync_bool_compare_and_swap(volatile T *ptr, T oldval, T newval)
   return ret;
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_val_compare_and_swap(T *ptr, T oldval, T newval)
 {
   auto ret = *ptr;
@@ -469,7 +469,7 @@ __codex_sync_val_compare_and_swap(T *ptr, T oldval, T newval)
   return ret;
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_val_compare_and_swap(volatile T *ptr, T oldval, T newval)
 {
   auto ret = *ptr;
@@ -477,14 +477,14 @@ __codex_sync_val_compare_and_swap(volatile T *ptr, T oldval, T newval)
   return ret;
 }
 
-inline void
+inline ALWAYS_INLINE void
 __codex_sync_synchronize()
 {
   // XXX: do something for codex
   __sync_synchronize();
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_lock_test_and_set(T *ptr, T value)
 {
   auto before = *ptr;
@@ -493,7 +493,7 @@ __codex_sync_lock_test_and_set(T *ptr, T value)
   return ret;
 }
 
-template <typename T> inline T
+template <typename T> inline ALWAYS_INLINE T
 __codex_sync_lock_test_and_set(volatile T *ptr, T value)
 {
   auto before = *ptr;
@@ -502,7 +502,7 @@ __codex_sync_lock_test_and_set(volatile T *ptr, T value)
   return ret;
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 __codex_sync_lock_release(T *ptr)
 {
   auto before = *ptr;
@@ -511,7 +511,7 @@ __codex_sync_lock_release(T *ptr)
   codex_magic_action_run_rw(ptr, before, after);
 }
 
-template <typename T> inline void
+template <typename T> inline ALWAYS_INLINE void
 __codex_sync_lock_release(volatile T *ptr)
 {
   auto before = *ptr;
