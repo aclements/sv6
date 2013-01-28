@@ -1,6 +1,12 @@
 #include "codex.hh"
 #include "cpu.hh"
 
+void
+initcodex(void)
+{
+  codex_trace_start();
+}
+
 unsigned int
 codex::current_tid(void)
 {

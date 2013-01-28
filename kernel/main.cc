@@ -11,6 +11,8 @@
 #include "apic.hh"
 #include "codex.hh"
 
+#include <atomic>
+
 void initpic(void);
 void initextpic(void);
 void inituart(void);
@@ -21,6 +23,7 @@ void initpg(void);
 void cleanuppg(void);
 void inittls(struct cpu *);
 void initnmi(void);
+void initcodex(void);
 void inittrap(void);
 void initseg(struct cpu *);
 void initkalloc(u64 mbaddr);
@@ -54,7 +57,7 @@ void idleloop(void);
 
 #define IO_RTC  0x70
 
-static volatile int bstate;
+static std::atomic<int> bstate;
 static cpuid_t bcpuid;
 
 void
@@ -69,7 +72,7 @@ mpboot(void)
   initidle();
   initnmi();
   initwd();                     // Requires initnmi
-  bstate = 1;
+  bstate.store(1);
   idleloop();
 }
 
@@ -132,13 +135,12 @@ bootothers(void)
     // bootother.S sets this to 0x0a55face early on
     *(u32*)(code-64) = 0;
 
-    codex_magic_action_run_thread_create(c->id);
-
-    bstate = 0;
+    bstate.store(0);
     bcpuid = c->id;
     lapic->start_ap(c, v2p(code));
+    codex_magic_action_run_thread_create(c->id);
     // Wait for cpu to finish mpmain()
-    while(bstate == 0)
+    while(bstate.load() == 0)
       ;
     rstrreset();
   }
@@ -202,6 +204,7 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   inituser();      // first user process
   initnmi();
+  initcodex();
   bootothers();    // start other processors
   cleanuppg();             // Requires bootothers
   initcpprt();

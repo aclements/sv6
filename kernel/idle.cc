@@ -106,8 +106,6 @@ idleloop(void)
   if (myid() != 0) {
     benchcodex::ap();
   } else {
-    cprintf("calling codex_trace_start()\n");
-    codex_trace_start();
     benchcodex::main();
   }
 #endif
