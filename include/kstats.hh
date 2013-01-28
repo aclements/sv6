@@ -55,6 +55,8 @@
   X(uint64_t, refcache_item_freed_count)        \
   X(uint64_t, refcache_item_requeued_count)     \
   X(uint64_t, refcache_item_disowned_count)     \
+  X(uint64_t, refcache_item_revive_failed_count) \
+  X(uint64_t, refcache_item_revived_count)      \
   X(uint64_t, refcache_dirtied_count)           \
   X(uint64_t, refcache_conflict_count)          \
 

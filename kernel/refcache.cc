@@ -143,7 +143,9 @@ refcache::cache::review()
       } else {
         // It was zero for the whole round.  Free it.
         verbose.println("refcache: CPU ", myid(), " freeing obj ", &*obj);
-        obj->review_epoch_ = 0;
+        // Mark the object dead so inc_revive knows it can't touch it,
+        // since it's now inevitable that onzero will be called.
+        obj->review_epoch_ = ~0ull;
         l.release();
         obj->onzero();
         ++nfreed;
