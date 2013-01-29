@@ -7,6 +7,7 @@
 #include "refcache.hh"
 #include "condvar.h"
 #include "semaphore.h"
+#include "seqlock.hh"
 
 class dirns;
 
@@ -68,6 +69,7 @@ struct inode : public referenced, public rcu_freed
   std::atomic<bool> busy;
   std::atomic<bool> valid;
   std::atomic<int> readbusy;
+  seqcount<u64> seq;
   struct condvar cv;
   struct spinlock lock;
   char lockname[16];

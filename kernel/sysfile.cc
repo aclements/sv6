@@ -440,6 +440,7 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
   struct inode *ip;
   struct inode *cwd;
   int rwmode = omode & (O_RDONLY|O_WRONLY|O_RDWR);
+  bool iplocked = false;
 
   if (dirfd == AT_FDCWD) {
     cwd = myproc()->cwd;
@@ -459,6 +460,7 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
   mt_ascope ascope("%s(%d,%s,%d)", __func__, dirfd, path_copy, omode);
   mtreadavar("inode:%x.%x", cwd->dev, cwd->inum);
 
+ retry:
   if(omode & O_CREAT){
     if((ip = create(cwd, path_copy, T_FILE, 0, 0, omode & O_EXCL)) == 0)
       return -1;
@@ -477,8 +479,8 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     // XXX necessary because the mtwriteavar() to the same abstract variable
     // does not propagate to our scope, since create() has its own inner scope.
     mtwriteavar("inode:%x.%x", ip->dev, ip->inum);
+    iplocked = true;
   } else {
- retry:
     if((ip = namei(cwd, path_copy)) == 0){
       if(omode & O_WAIT){
         char dummy[DIRSIZ];
@@ -497,31 +499,53 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
       }
       return -1;
     }
-    ilock(ip, 0);
-    if(ip->type == 0) {
-      iunlockput(ip);
-      goto retry;
-    }
-    if(ip->type == T_DIR) {
-      if (rwmode != O_RDONLY){
-	iunlockput(ip);
-	return -1;
-      }
-
-      dir_flush(ip);
-    }
+    iplocked = false;
   }
 
-  if(omode & O_TRUNC)
+  auto itype = ip->type;
+  if (itype == 0) {
+    if (iplocked)
+      iunlock(ip);
+    iput(ip);
+    goto retry;
+  }
+
+  if (itype == T_DIR) {
+    if (rwmode != O_RDONLY) {
+      if (iplocked)
+        iunlock(ip);
+      iput(ip);
+      return -1;
+    }
+
+    if (!iplocked) {
+      ilock(ip, 1);
+      iplocked = true;
+    }
+
+    dir_flush(ip);
+  }
+
+  if (omode & O_TRUNC) {
+    if (!iplocked) {
+      ilock(ip, 1);
+      iplocked = true;
+    }
+
     itrunc(ip);
+  }
 
   if((f = file::alloc()) == 0 || (fd = fdalloc(f)) < 0){
     if(f)
       f->dec();
-    iunlockput(ip);
+    if (iplocked)
+      iunlock(ip);
+    iput(ip);
     return -1;
   }
-  iunlock(ip);
+
+  if (iplocked)
+    iunlock(ip);
   mtwriteavar("fd:%x.%x", myproc()->pid, fd);
 
   f->type = file::FD_INODE;

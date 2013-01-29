@@ -353,14 +353,12 @@ consoleread(struct inode *ip, char *dst, u32 off, u32 n)
   int target;
   int c;
 
-  iunlock(ip);
   target = n;
   acquire(&input.lock);
   while(n > 0){
     while(input.r == input.w){
       if(myproc()->killed){
         release(&input.lock);
-        ilock(ip, 1);
         return -1;
       }
       input.cv.sleep(&input.lock);
@@ -380,7 +378,6 @@ consoleread(struct inode *ip, char *dst, u32 off, u32 n)
       break;
   }
   release(&input.lock);
-  ilock(ip, 1);
 
   return target - n;
 }

@@ -67,19 +67,20 @@ file::stat(struct stat *st)
 int
 file::read(char *addr, int n)
 {
-  int r;
-
   if(readable == 0)
     return -1;
   if(type == file::FD_PIPE)
     return piperead(pipe, addr, n);
   if(type == file::FD_INODE){
-    ilock(ip, 0);
-    if(ip->type == 0)
+  retry:
+    auto rs = ip->seq.read_begin();
+    if(ip->type == 0 && !rs.need_retry())
       panic("fileread");
-    if((r = readi(ip, addr, off, n)) > 0)
+    int r = readi(ip, addr, off, n);
+    if (rs.need_retry())
+      goto retry;
+    if (r > 0)
       off += r;
-    iunlock(ip);
     return r;
   }
   if(type == file::FD_SOCKET) {
