@@ -119,12 +119,22 @@ ioapic_82093::register_base(int irq_base, paddr address)
   // [IOAPIC 3.2.2]
   auto ioapic = (volatile struct ioapic_mmio*)p2v(address);
   ioapics[nioapics] = ioapic;
-  int maxintr = (ioapic->read(REG_VER) >> 16) & 0xFF;
+  u32 verreg = ioapic->read(REG_VER);
+  int version = verreg & 0xFF;
+  int maxintr = (verreg >> 16) & 0xFF;
+
+  // Some ACPI tables (*cough* josmp) report IOAPICs that don't exist,
+  // so we sanity check it.
+  if (version < 0x10 || maxintr > 239) {
+    swarn.println("ioapic: Ignoring nonsensical IOAPIC at ", shex(address));
+    return;
+  }
 
   ioapic_base[nioapics] = irq_base;
   ioapic_lim[nioapics] = irq_base + maxintr + 1;
 
-  verbose.println("ioapic: IOAPIC for IRQs ", irq_base, "..",
+  verbose.println("ioapic: IOAPIC version ", shex(version),
+                  " for IRQs ", irq_base, "..",
                   irq_base + maxintr, " at ", shex(address));
 
   // Mark all interrupts edge-triggered, active high, disabled,
