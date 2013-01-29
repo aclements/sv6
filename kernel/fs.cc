@@ -344,7 +344,6 @@ try_ialloc(u32 inum, u32 dev, short type)
     // maybe this inode is free. look at it via the
     // inode cache to make sure.
     inode* ip = iget(dev, inum);
-    assert(ip->valid());
     ilock(ip, 1);
     if(ip->type == 0) {
       ip->type = type;
@@ -648,7 +647,7 @@ idup(struct inode *ip)
 void
 ilock(struct inode *ip, int writer)
 {
-  if(ip == 0 || !ip->valid())
+  if(ip == 0)
     panic("ilock");
 
   acquire(&ip->lock);
