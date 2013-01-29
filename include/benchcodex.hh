@@ -13,6 +13,8 @@ public:
 class benchcodex {
 public:
 
+  static void init(void);
+
   // run by the AP processors
   static void ap(testcase *t);
 

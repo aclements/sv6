@@ -1,10 +1,12 @@
 #include "codex.hh"
+#include "benchcodex.hh"
 #include "cpu.hh"
 
 void
 initcodex(void)
 {
   codex_trace_start();
+  benchcodex::init();
 }
 
 unsigned int

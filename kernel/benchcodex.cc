@@ -40,6 +40,9 @@ private:
 static std::atomic<bool> _start(false);
 static count_down_latch *_latch;
 
+
+// test case stuff
+
 class racy_counter : public testcase {
 public:
   racy_counter() : ctr(0) {}
@@ -61,15 +64,142 @@ public:
     assert(v == (ncpu * 5));
   }
 
+  NEW_DELETE_OPS(racy_counter);
+
 private:
   std::atomic<unsigned int> ctr;
 };
 
+// taken from frost/codex/c++/incorrect-programs/buggy-cset.cc
+template <typename T>
+class concurrent_set {
+
+  struct cell {
+    cell(const T& val, cell* next)
+      : _val(val), _next(next) {}
+    T _val;
+    std::atomic<cell*> _next;
+
+    NEW_DELETE_OPS(cell);
+  };
+
+  std::atomic<cell*> _head;
+
+public:
+  concurrent_set() : _head(NULL) {}
+
+  // true if inserted, false otherwise
+  bool
+  insert(const T &val)
+  {
+    while (true) {
+      cell* pprev = _head.load();
+      if (!pprev || pprev->_val >= val) {
+        if (pprev && pprev->_val == val) {
+          // found
+          return false;
+        }
+        // special case- need to modify head pointer
+        cell* newCell = new cell(val, pprev);
+
+        //if (_head.compare_exchange_strong(pprev, newCell)) {
+        // introduce race condition here
+        _head.store(newCell);
+
+        // success
+        return true;
+      } else {
+        cell* pcur = pprev->_next.load();
+        while (pcur && pcur->_val < val) {
+          pprev = pcur;
+          pcur = pcur->_next.load();
+        }
+        if (pcur && pcur->_val == val) {
+          // found
+          return false;
+        }
+
+        // newCell belongs between pprev and pcur
+        assert(pprev && pprev->_val < val);
+        assert(!pcur || pcur->_val > val);
+
+        cell* newCell = new cell(val, pcur);
+        if (pprev->_next.compare_exchange_strong(pcur, newCell)) {
+          // success
+          return true;
+        } else {
+          // failed, try again
+          delete newCell;
+        }
+      }
+    }
+    assert(false);
+    return false;
+  }
+
+  bool
+  contains(const T &val) const
+  {
+    cell *pcur = _head.load();
+    while (pcur && pcur->_val < val) {
+      pcur = pcur->_next.load();
+    }
+    return pcur && pcur->_val == val;
+  }
+
+  size_t
+  size() const
+  {
+    size_t ret = 0;
+    cell *pcur = _head.load();
+    while (pcur) {
+      ret++;
+      pcur = pcur->_next.load();
+    }
+    return ret;
+  }
+
+};
+
+class cset_test : public testcase {
+public:
+
+  static const size_t ElemsPerWorker = 1;
+
+  virtual void
+  do_work(void)
+  {
+    for (size_t i = (myid() * ElemsPerWorker);
+         i < ((myid() + 1) * ElemsPerWorker);
+         i++) {
+      assert(s.insert(i));
+      assert(s.contains(i));
+    }
+  }
+
+  virtual void
+  validate_work(void)
+  {
+  }
+
+  NEW_DELETE_OPS(cset_test);
+
+private:
+  concurrent_set<int> s;
+};
+
+static testcase *_testcase;
+
+void
+benchcodex::init(void)
+{
+  _testcase = new cset_test;
+}
+
 testcase *
 benchcodex::singleton_testcase(void)
 {
-  static racy_counter ctr;
-  return &ctr;
+  return _testcase;
 }
 
 void
