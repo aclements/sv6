@@ -442,7 +442,7 @@ iupdate(struct inode *ip)
 inode::inode(u32 d, u32 i)
   : rcu_freed("inode"),
     dev(d), inum(i),
-    flags(0), readbusy(0)
+    busy(false), valid(false), readbusy(0)
 {
   dir.store(nullptr);
   iaddrs.store(nullptr);
@@ -474,9 +474,9 @@ iget(u32 dev, u32 inum)
   // Try for cached inode.
   ip = ins->lookup(make_pair(dev, inum));
   if (ip) {
-    if (!(ip->flags & I_VALID)) {
+    if (!ip->valid) {
       acquire(&ip->lock);
-      while((ip->flags & I_VALID) == 0)
+      while(!ip->valid)
         ip->cv.sleep(&ip->lock);
       release(&ip->lock);
     }
@@ -491,7 +491,7 @@ iget(u32 dev, u32 inum)
     panic("iget: should throw_bad_alloc()");
   
   // Lock the inode
-  ip->flags = I_BUSYR | I_BUSYW;
+  ip->busy = true;
   ip->readbusy = 1;
 
   if (!ins->insert(make_pair(ip->dev, ip->inum), ip)) {
@@ -540,7 +540,7 @@ retry:
 
   if (nlink_ > 0)
     idup(this);
-  flags |= I_VALID;
+  valid = true;
 }
 
 void
@@ -580,20 +580,14 @@ inode::onzero(void) const
     panic("iput [%p]: nlink %u\n", ip, ip->nlink());
 
   // inode is no longer used: truncate and free inode.
-  if(ip->flags & (I_BUSYR | I_BUSYW)) {
+  if(ip->busy || ip->readbusy) {
     // race with iget
     panic("iput busy");
   }
-  if(ip->flags & I_FREE) {
-    // race with evict
-    panic("iput free");
-  }
-  if((ip->flags & I_VALID) == 0)
+  if(!ip->valid)
     panic("iput not valid");
   
-  ip->flags |= I_FREE;
-
-  ip->flags |= (I_BUSYR | I_BUSYW);
+  ip->busy = true;
   ip->readbusy++;
 
   // XXX: use gc_delayed() to truncate the inode later.
@@ -634,13 +628,18 @@ ilock(struct inode *ip, int writer)
     panic("ilock");
 
   acquire(&ip->lock);
-  while(ip->flags & (I_BUSYW | (writer ? I_BUSYR : 0)))
-    ip->cv.sleep(&ip->lock);
-  ip->flags |= I_BUSYR | (writer ? I_BUSYW : 0);
+  if (writer) {
+    while(ip->busy || ip->readbusy)
+      ip->cv.sleep(&ip->lock);
+    ip->busy = true;
+  } else {
+    while(ip->busy)
+      ip->cv.sleep(&ip->lock);
+  }
   ip->readbusy++;
   release(&ip->lock);
 
-  if((ip->flags & I_VALID) == 0)
+  if(!ip->valid)
     panic("ilock");
 }
 
@@ -648,12 +647,14 @@ ilock(struct inode *ip, int writer)
 void
 iunlock(struct inode *ip)
 {
-  if(ip == 0 || !(ip->flags & (I_BUSYR | I_BUSYW)))
+  if(ip == 0)
+    panic("iunlock");
+  if(!ip->readbusy && !ip->busy)
     panic("iunlock");
 
   acquire(&ip->lock);
-  int lastreader = (--ip->readbusy);
-  ip->flags &= ~(I_BUSYW | ((lastreader==0) ? I_BUSYR : 0));
+  --ip->readbusy;
+  ip->busy = false;
   ip->cv.wake_all();
   release(&ip->lock);
 }

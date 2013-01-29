@@ -62,10 +62,11 @@ struct inode : public referenced, public rcu_freed
   inode& operator=(const inode&) = delete;
   inode(const inode& x) = delete;
   
-  const u32 dev;           // Device number
-  const u32 inum;          // Inode number
+  const u32 dev;     // Device number
+  const u32 inum;    // Inode number
   u32 gen;           // Generation number
-  int flags;         // I_BUSY, I_VALID
+  std::atomic<bool> busy;
+  std::atomic<bool> valid;
   std::atomic<int> readbusy;
   struct condvar cv;
   struct spinlock lock;
@@ -94,11 +95,6 @@ private:
 protected:
   virtual void onzero() const;
 };
-
-#define I_BUSYR 0x1
-#define I_BUSYW 0x2
-#define I_VALID 0x4
-#define I_FREE 0x8
 
 
 // device implementations
