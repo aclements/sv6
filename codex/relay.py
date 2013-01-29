@@ -7,7 +7,7 @@ import sys
 
 QEMU=os.path.expanduser('~/qemu-bin/bin/qemu-system-x86_64')
 XV6_KERNEL=os.path.expanduser('~/xv6/o.qemu/kernel.elf')
-QEMU_ARGS="-smp 8 -m 512 -serial mon:stdio -nographic -numa node -numa node -net user -net nic,model=e1000 -redir tcp:2323::23 -redir tcp:8080::80" + " -kernel " + XV6_KERNEL
+QEMU_ARGS="-smp 2 -m 512 -serial mon:stdio -nographic -numa node -numa node -net user -net nic,model=e1000 -redir tcp:2323::23 -redir tcp:8080::80" + " -kernel " + XV6_KERNEL
 
 UPSTREAM_SOCK='/tmp/codexd.sock'
 DOWNSTREAM_SOCK='/tmp/codexd-relay.sock'
