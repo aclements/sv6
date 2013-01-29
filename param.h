@@ -47,7 +47,7 @@
 #define NCPU          8   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        0
-#define CODEX         1
+#define CODEX         0
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_josmp)
 #define DEBUG         0
