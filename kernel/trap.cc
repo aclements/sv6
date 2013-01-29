@@ -105,6 +105,9 @@ trap(struct trapframe *tf)
     // we acquire only during NMI.
     if (sampintr(tf))
       return;
+    // No lapiceoi because only fixed delivery mode interrupts need to
+    // be EOI'd (and fixed mode interrupts can't be programmed to
+    // produce an NMI vector).
     panic("NMI");
   }
 

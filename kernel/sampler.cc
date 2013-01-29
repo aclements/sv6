@@ -163,7 +163,6 @@ sampintr(struct trapframe *tf)
 
   // Linux unmasks LAPIC.PC after every interrupt (perf_event.c)
   lapic->mask_pc(false);
-  // Only level-triggered interrupts require an lapiceoi.
 
   cnt = rdpmc(0);
   if ((cnt & (1ULL << (pmu.cntval_bits - 1))) == 0) {
