@@ -1,73 +1,80 @@
-#include "gc.hh"
-#include "atomic.hh"
-#include "cpputil.hh"
+#pragma once
 
-using std::atomic;
+#include "uniqcache.hh"
+#include "seqlock.hh"
+#include "fs.h"
 
-struct buf;
-
-struct wbuf
-{
-  friend class buf;
-
-  wbuf(const wbuf &o) = delete;
-  wbuf& operator=(const wbuf &o) = delete;
-  wbuf(wbuf &&o) noexcept;
-  wbuf& operator=(wbuf &&o) noexcept;
-
-  wbuf();
-  ~wbuf();
-  buf* operator->() const noexcept;
-
-  u8*  data;
-  void wrelease();
-  void w();
+class buf : public uniqitem<pair<u32, u64>, buf> {
+public:
+  char data_[BSIZE];
+  seqcount<u64> seq_;
 
 private:
-  void clear() noexcept;
-  wbuf(buf* b);
+  std::atomic<u64> wbseq_;
+  sleeplock writeback_lock_;
 
-  buf* buf_;
-  bool released_;
-};
+public:
+  // Methods needed by uniqcache
+  buf(const key_t& k, uniqcache<buf>* c)
+    : uniqitem(k, c), wbseq_(0) {}
+  NEW_DELETE_OPS(buf);
 
-struct buf : public rcu_freed
-{
-  friend class wbuf;
-  friend void iderw(struct buf *b);
-
-  buf(u32 d, u64 s) : rcu_freed("buf"), dev_(d), sector_(s),
-                      data(data_), flags_(0)
-  {
-    snprintf(lockname_, sizeof(lockname_), "cv:buf:%d", sector_);
-    lock_ = spinlock(lockname_+3, LOCKSTAT_BIO);
-    cv_ = condvar(lockname_);
+  static u64 keyhash(const key_t& k) {
+    return k.first ^ k.second;
   }
 
-  static buf*     get(u32 dev, u64 sector);
+  void load();
+  bool dirty();
 
-  // Functions related to writing
-  static wbuf     wget(u32 dev, u64 sector);
-  wbuf            wlock();
+  // Additional methods not invoked by uniqcache
+  void writeback();
+  static buf* get(u32 dev, u64 sector);
 
-  const u32       dev_;
-  const u64       sector_;
-  const u8*       data;
-  
-  virtual void do_gc() { delete this; }
-  NEW_DELETE_OPS(buf);
- 
-private:
-  void            wrelease();
-  void            w();
+  u32 dev() { return key_.first; }
+  u64 sector() { return key_.second; }
 
-  char            lockname_[16];
-  struct condvar  cv_;
-  struct spinlock lock_;
-  atomic<int>     flags_;
-  u8              data_[512];
+  // To read: use seq_.read_begin() / .need_retry()
+  // To write: acquire write_lock_ and use seq_.write_begin()
 };
 
-#define B_BUSY  0x1  // buffer is locked by some process
-#define B_VALID 0x2  // buffer has been read from disk
-#define B_DIRTY 0x4  // buffer needs to be written to disk
+class buf_scoped_writelock {
+public:
+  buf_scoped_writelock(buf* b) : l(&b->write_lock_),
+                                 ws(b->seq_.write_begin()) {}
+
+private:
+  lock_guard<sleeplock> l;
+  seqcount<u64>::writer ws;
+};
+
+inline void
+buf::load()
+{
+  ideread(this);
+}
+
+inline bool
+buf::dirty()
+{
+  return wbseq_ != seq_.count();
+}
+
+inline void
+buf::writeback()
+{
+  char copy[BSIZE];
+
+  lock_guard<sleeplock> x(&writeback_lock_);
+
+retry:
+  auto r = seq_.read_begin();
+  memcpy(copy, data_, BSIZE);
+  if (r.need_retry())
+    goto retry;
+
+  wbseq_ = r.count();
+
+  // write copy[] to disk; don't need to wait for write to finish,
+  // as long as write order to disk has been established.
+  idewrite(this);
+}

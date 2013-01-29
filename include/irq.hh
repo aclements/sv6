@@ -91,3 +91,5 @@ public:
     register_handler(new irq_handler_cb<CB>(cb));
   }
 };
+
+void to_stream(class print_stream *s, const struct irq &irq);

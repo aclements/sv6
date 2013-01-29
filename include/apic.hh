@@ -39,6 +39,12 @@ public:
 
   // Start an AP
   virtual void start_ap(struct cpu *c, u32 addr) = 0;
+
+  // Return true if is an x2APIC (and thus supports 32-bit APIC IDs)
+  virtual bool is_x2apic()
+  {
+    return false;
+  }
 };
 
 struct pci_func;

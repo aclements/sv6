@@ -307,7 +307,7 @@ proc::alloc(void)
   p->mtrace_stacks.curr = -1;
 #endif
 
-  if (xnspid->insert(p->pid, p) < 0)
+  if (!xnspid->insert(p->pid, p))
     panic("allocproc: ns_insert");
 
   // Allocate kernel stack if possible.

@@ -247,7 +247,7 @@ getsocket(int fd, sref<file> *f)
   if (!getfile(fd, f))
     return false;
   if ((*f)->type != file::FD_SOCKET) {
-    f->init(nullptr);
+    f->reset();
     return false;
   }
   // cprintf("%d: fd %d ref %p\n", myproc()->pid, fd, (void *) f->get());

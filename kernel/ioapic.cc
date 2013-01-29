@@ -10,6 +10,7 @@
 #include "cpu.hh"
 #include "pci.hh"
 #include "kstream.hh"
+#include "iommu.hh"
 
 static console_stream verbose(true);
 
@@ -26,6 +27,7 @@ static console_stream verbose(true);
 #define INT_LEVEL      0x00008000  // Level-triggered (vs edge-)
 #define INT_ACTIVELOW  0x00002000  // Active low (vs high)
 #define INT_LOGICAL    0x00000800  // Destination is CPU id (vs APIC ID)
+#define INT_REMAPPABLE (1ull<<48)  // IOMMU remappable
 
 #define MAX_IOAPICS    8
 
@@ -176,22 +178,33 @@ ioapic_82093::enable_irq(const struct irq &irq, bool enable)
     panic("ioapic: Cannot enable IRQ %d, no IOAPIC for that IRQ", irq.gsi);
 
   // Route interrupts to CPU 0
-  uint64_t dest = cpus[0].hwid.num;
+  struct cpu *dest = &cpus[0];
+
+  // If we're using an IOMMU, allocate an interrupt redirection entry
+  uint64_t iommu_index = 0;
+  if (iommu)
+    iommu_index = iommu->allocate_int(irq, dest);
 
   if (enable)
-    verbose.println("ioapic: Routing IRQ ", irq.gsi, " to APICID ", dest);
+    verbose.println("ioapic: Routing ", irq, " to APICID ", dest->hwid.num);
   else
-    verbose.println("ioapic: Masking IRQ ", irq.gsi);
+    verbose.println("ioapic: Masking ", irq);
 
   // [IOAPIC 3.2.4] Fixed delivery mode, physical destination mode,
   // routed to APIC ID dest.
-  uint64_t reg = irq.vector | (dest << 56);
+  uint64_t reg = irq.vector;
   if (irq.active_low)
     reg |= INT_ACTIVELOW;
   if (irq.level_triggered)
     reg |= INT_LEVEL;
   if (!enable)
     reg |= INT_DISABLED;
+  if (!iommu)
+    reg |= ((uint64_t)dest->hwid.num << 56);
+  else
+    reg |= INT_REMAPPABLE |
+      ((iommu_index & 0x7fff) << 49) | ((iommu_index >> 15) << 11);
+
   ioapic->write(REG_TABLE+2*pin, reg & 0xFFFFFFFF);
   ioapic->write(REG_TABLE+2*pin+1, (reg >> 32) & 0xFFFFFFFF);
 }

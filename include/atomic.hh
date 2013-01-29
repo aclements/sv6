@@ -4,3 +4,12 @@
 
 #include "atomic_std.h"
 #include "atomic_util.hh"
+
+inline void
+std::atomic_thread_fence(std::memory_order order)
+{
+  // Conservatively put in an mfence regardless of requested order.
+  // We should probably do better, esp. since this is called with
+  // std::memory_order_release from seqlock.hh.
+  __sync_synchronize();
+}

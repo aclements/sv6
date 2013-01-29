@@ -7,6 +7,7 @@
 #include "kstream.hh"
 #include "cpu.hh"
 #include "vector.hh"
+#include "iommu.hh"
 
 static console_stream verbose(true);
 
@@ -197,7 +198,7 @@ pci_map_msi_irq(struct pci_func *f)
   if (!res.reserve(nullptr, 0))
     return irq();
 
-  verbose.println("pci: Routing ", *f, " to MSI IRQ ", res.gsi);
+  verbose.println("pci: Routing ", *f, " to MSI ", res);
 
   u32 cap_entry = pci_conf_read(f, f->msi_capreg);  
 
@@ -206,20 +207,37 @@ pci_map_msi_irq(struct pci_func *f)
   if (PCI_MSI_MCR_MMC(cap_entry) != 0)
     panic("pci_map_msi_irq only handles 1 requested message");
 
+  // If we're using an IOMMU, allocate an interrupt redirection entry
+  uint64_t iommu_index = 0;
+  if (iommu)
+    iommu_index = iommu->allocate_int(res, &cpus[0]);
+
   // [PCI SA pg 253]
   // Step 4. Assign a dword-aligned memory address to the device's
   // Message Address Register.
   // (The Message Address Register format is mandated by the x86
   // architecture.  See 9.11.1 in the Vol. 3 of the Intel architecture
   // manual.)
-  uint64_t dest = cpus[0].hwid.num;
-  pci_conf_write(f, f->msi_capreg + 4*1,
-                 (0x0fee << 20) |   // magic constant for northbridge
-                 (dest << 12) |     // destination ID
-                 (1 << 3) |         // redirection hint
-                 (0 << 2));         // destination mode
-  pci_conf_write(f, f->msi_capreg + 4*2, 0);
-  
+  if (!iommu) {
+    // Non-remapped ("compatibility format") interrupts
+    uint64_t dest = cpus[0].hwid.num;
+    pci_conf_write(f, f->msi_capreg + 4*1,
+                   (0x0fee << 20) |   // magic constant for northbridge
+                   (dest << 12) |     // destination ID
+                   (1 << 3) |         // redirection hint
+                   (0 << 2));         // destination mode
+    pci_conf_write(f, f->msi_capreg + 4*2, 0);
+  } else {
+    // IOMMU remapped interrupts
+    pci_conf_write(f, f->msi_capreg + 4*1,
+                   (0x0fee << 20) |   // magic constant for northbridge
+                   ((iommu_index & 0x7fff) << 5) |
+                   ((iommu_index >> 15) << 2) |
+                   (1 << 4) |          // VT-d interrupt
+                   (1 << 3));          // Subhandle valid
+    pci_conf_write(f, f->msi_capreg + 4*2, 0);
+  }
+
   // Step 5 and 6. Allocate messages for the device.  Since we
   // support only one message and that is the default value in
   // the message control register, we do nothing.
@@ -229,11 +247,15 @@ pci_map_msi_irq(struct pci_func *f)
   // (The Message Data Register format is mandated by the x86
   // architecture.  See 9.11.2 in the Vol. 3 of the Intel architecture
   // manual.
-  pci_conf_write(f, f->msi_capreg + 4*3,
-                 (0 << 15) |        // trigger mode (edge)
-                 //(0 << 14) |      // level for trigger mode (don't care)
-                 (0 << 8) |         // delivery mode (fixed)
-                 res.vector);       // vector
+  if (!iommu) {
+    pci_conf_write(f, f->msi_capreg + 4*3,
+                   (0 << 15) |        // trigger mode (edge)
+                   //(0 << 14) |      // level for trigger mode (don't care)
+                   (0 << 8) |         // delivery mode (fixed)
+                   res.vector);       // vector
+  } else {
+    pci_conf_write(f, f->msi_capreg + 4*3, 0);
+  }
 
   // Step 8. Set the MSI enable bit in the device's Message
   // control register.

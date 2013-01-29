@@ -81,10 +81,10 @@ class xns : public rcu_freed {
     return HF(key) % NHASH;
   }
 
-  int insert(const K &key, const V &val) {
+  bool insert(const K &key, const V &val) {
     auto e = new xelem<K, V>(key, val);
     if (!e)
-      return -1;
+      return false;
 
     u64 i = h(key);
     scoped_gc_epoch gc;
@@ -95,7 +95,7 @@ class xns : public rcu_freed {
         for (auto x = root; x; x = x->next) {
           if (x->key == key) {
             gc_delayed(e);
-            return -1;
+            return false;
           }
         }
       }
@@ -111,7 +111,7 @@ class xns : public rcu_freed {
         e->percore_pprev = &percore[c];
         percore[c] = e;
         release(&percore_lock[c]);
-        return 0;
+        return true;
       }
     }
   }

@@ -28,7 +28,6 @@ void initkalloc(u64 mbaddr);
 void initz(void);
 void initrcu(void);
 void initproc(void);
-void initbio(void);
 void initinode(void);
 void initdisk(void);
 void inituser(void);
@@ -48,6 +47,7 @@ void initrefcache(void);
 void initacpitables(void);
 void initcpus(void);
 void initlapic(void);
+void initiommu(void);
 void initacpi(void);
 void initwd(void);
 void initdev(void);
@@ -160,8 +160,11 @@ cmain(u64 mbmagic, u64 mbaddr)
   initcpus();              // Requires initlapic, suggests initacpitables
 
   initpic();       // interrupt controller
+  initiommu();             // Requires initlapic
   initextpic();            // Requires initpic
-  inituartcons();          // Requires initiopic
+  // Interrupt routing is now configured
+
+  inituartcons();          // Requires interrupt routing
   initcga();
 
   // Some global constructors require mycpu()->id (via myid()) which
@@ -185,7 +188,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   initdistref();   // distref collector thread
   initrefcache();  // Requires initsched
   initdisk();      // disk
-  initbio();       // buffer cache
   initinode();     // inode cache
   initconsole();
   initfutex();

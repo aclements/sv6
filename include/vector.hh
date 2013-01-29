@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#include <new>
 
 /// A statically allocated vector of at most N T's.
 template<class T, std::size_t N>

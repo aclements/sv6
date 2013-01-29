@@ -69,6 +69,7 @@ OBJS = \
 	dev.o \
 	codex.o \
 	benchcodex.o \
+	iommu.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 

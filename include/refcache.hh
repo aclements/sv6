@@ -21,8 +21,9 @@
 // true reference count of an object is thus the sum of its global
 // count and any local deltas for that object found in the per-core
 // caches.  The value of the true count is generally unknown, but we
-// assume that once it drops to zero, it will remain zero.  We depend
-// on this stability to detect a zero true count after some delay.
+// (generally) assume that once it drops to zero, it will remain zero.
+// Because of this stability, we can detect a zero true count after
+// some delay.
 //
 // To detect a zero true reference count, refcache divides time into
 // periodic *epochs* during which each core flushes all of the
@@ -74,6 +75,17 @@
 // refcache will queue the object to be examined again after another
 // epoch.
 //
+// We can take advantage of this dirtying mechanism to support weak
+// references (such as caches) with best-effort revival of objects
+// with zero reference counts.  For such objects, when a reviewer
+// commits to deleting the object, it marks it as dead, removes all
+// weak references to it, and then RCU-frees it.  When a caller
+// follows a weak reference to an object, it will attempt to revive
+// the object if it is on some core's review list by ensuring that it
+// is not yet dead and marking it as dirty.  If it is dead, the caller
+// must retry until the weak reference it followed has been cleaned
+// up.
+//
 // The pseudocode for refcache is given below.  Each core maintains a
 // hash table storing its reference delta cache and a "review" queue
 // that tracks objects whose global reference counts reached zero.  A
@@ -103,6 +115,7 @@
 //             object.dirty <- false
 //             add (object, epoch) to the review queue
 //           else:
+//             object.dead <- true
 //             free object
 //
 // For epoch management, our current implementation uses a simple
@@ -156,7 +169,7 @@ namespace refcache {
 
     // If this object is on a review list, the epoch in which this
     // object can be reviewed.  0 if this object is not on a review
-    // list.
+    // list, ~0ull if this object is dead and cannot be revived.
     uint64_t review_epoch_;
 
     // True if this object's refcount was non-zero and then zero again
@@ -176,8 +189,28 @@ namespace refcache {
     referenced &operator=(const referenced &o) = delete;
     referenced &operator=(referenced &&o) = delete;
 
+    // Increment this object's reference count.  The caller must
+    // ensure that the reference count is non-zero (for example, true
+    // counts of the number of references to an object ensure this
+    // because there's no way to reach an object with a zero reference
+    // count).
     void inc();
+
+    // Decrement this object's reference count.
     void dec();
+
+    // Increment this object's reference count when it might be zero,
+    // for example if the caller followed a weak reference to this
+    // object.  If the object is already dead (meaning its onzero
+    // method has been called or will be called shortly), this will
+    // fail and return false, indicating that the caller must retry
+    // finding the object.  Revivable objects must override onzero to
+    // 1) quickly remove any weak references to this object (since
+    // callers will retry until the weak reference is invalidated) and
+    // 2) ensure this object's memory remains valid until it is
+    // impossible for any other threads to call inc_revive on it (for
+    // example, using RCU).
+    bool inc_revive();
 
   protected:
     // We could eliminate these virtual methods and the vtable
@@ -303,5 +336,45 @@ namespace refcache {
     pushcli();
     --mycache->get_way(this)->delta;
     popcli();
+  }
+
+  inline bool
+  referenced::inc_revive()
+  {
+    scoped_cli cli();
+    // Fast-path: We only need to attempt revival if the object is on
+    // a review list or dead, both of which mean review_epoch_ is
+    // nonzero.  It's okay if the object goes on a review list between
+    // when we do this check and when we increment the local count;
+    // the CLI prevents a refcache epoch boundary, so our local
+    // increment will get flushed normally and dirty the global count
+    // before the reviewer can review this object.
+    uint64_t re = review_epoch_;
+    if (re) {
+      if (re == ~0ull) {
+        // The object is dead.
+        kstats::inc(&kstats::refcache_item_revive_failed_count);
+        return false;
+      }
+      // This object is on a core's review list, which means someone
+      // thinks it may be zero.  Try to revive it.
+      scoped_acquire l(&lock_);
+      // Things might have changed while we were acquiring the lock,
+      // so check for a dead object again.
+      re = review_epoch_;
+      if (re == ~0ull) {
+        kstats::inc(&kstats::refcache_item_revive_failed_count);
+        return false;
+      }
+      // The refcache hasn't officially declared this object dead yet,
+      // so we can revive it by marking it dirty if it isn't already
+      // dirty, thus preventing the reviewer from collecting it.
+      if (re && !dirty_ && refcount_ == 0) {
+        kstats::inc(&kstats::refcache_item_revived_count);
+        dirty_ = true;
+      }
+    }
+    // Increment the local count like usual
+    ++mycache->get_way(this)->delta;
   }
 }

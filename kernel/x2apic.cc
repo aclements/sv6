@@ -53,6 +53,7 @@ public:
   void send_ipi(struct cpu *c, int ino);
   void mask_pc(bool mask);
   void start_ap(struct cpu *c, u32 addr);
+  bool is_x2apic();
 private:
   void clearintr();
 };
@@ -152,6 +153,12 @@ x2apic_lapic::id()
 {
   u64 id = readmsr(ID);
   return HWID((u32)id);
+}
+
+bool
+x2apic_lapic::is_x2apic()
+{
+  return true;
 }
 
 void

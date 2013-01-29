@@ -413,3 +413,17 @@ irq::register_handler(irq_handler *handler)
   handler->next = irq_info[gsi].handlers;
   irq_info[gsi].handlers = handler;
 }
+
+void
+to_stream(class print_stream *s, const struct irq &irq)
+{
+  if (irq.valid()) {
+    s->print("IRQ ", irq.gsi);
+    if (irq.level_triggered)
+      s->print(irq.active_low ? " (level low)" : " (level high)");
+    else
+      s->print(irq.active_low ? " (falling edge)" : " (rising edge)");
+  } else {
+    s->print("invalid IRQ");
+  }
+}

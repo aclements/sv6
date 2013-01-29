@@ -43,6 +43,11 @@ public:
       std::atomic_thread_fence(std::memory_order_release);
       return sc_->seq_.load(std::memory_order_relaxed) != init_;
     }
+
+    T count() const
+    {
+      return init_;
+    }
   };
 
   /**
@@ -134,5 +139,11 @@ public:
     seq_.store(val + 1, std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_acquire);
     return writer(this, val + 1);
+  }
+
+  T count() const
+  {
+    // XXX what memory order should we use here?
+    return seq_.load();
   }
 };

@@ -186,7 +186,7 @@ futexwait(futexkey_t key, u64 val, u64 timer)
         cprintf("futexwait futexaddr::alloc failed\n");
         return -1;
       }
-      if (nsfutex->insert(key, fa) < 0) {
+      if (!nsfutex->insert(key, fa)) {
         fa->dec();
         goto again;
       }
@@ -211,7 +211,7 @@ futexwait(futexkey_t key, u64 val, u64 timer)
   if (futexkey_val(fa->key_) != val)
     return -EWOULDBLOCK;
 
-  if (fa->nspid_->insert(myproc()->pid, myproc()) < 0)
+  if (!fa->nspid_->insert(myproc()->pid, myproc()))
     return -1;
 
   if (futexkey_val(fa->key_) != val) {

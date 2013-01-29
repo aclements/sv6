@@ -52,22 +52,23 @@ static inode* the_root;
 static void
 readsb(int dev, struct superblock *sb)
 {
-  struct buf *bp;
-  
-  bp = buf::get(dev, 1);
-  memmove(sb, bp->data, sizeof(*sb));
+  buf* bp = buf::get(dev, 1);
+
+retry:
+  auto rs = bp->seq_.read_begin();
+  memmove(sb, bp->data_, sizeof(*sb));
+  if (rs.need_retry())
+    goto retry;
 }
 
 // Zero a block.
 static void
 bzero(int dev, int bno)
 {
-  struct wbuf wb;
-  
-  wb = buf::wget(dev, bno);
-  memset(wb.data, 0, BSIZE);
-  wb.w();
-  wb.wrelease();
+  buf* bp = buf::get(dev, bno);
+
+  buf_scoped_writelock wl(bp);
+  memset(bp->data_, 0, BSIZE);
 }
 
 //
@@ -95,23 +96,20 @@ throw_out_of_blocks()
 static u32
 balloc(u32 dev)
 {
-  int b, bi, m;
-  struct wbuf bp;
-  struct superblock sb;
-
+  superblock sb;
   readsb(dev, &sb);
-  for(b = 0; b < sb.size; b += BPB){
-    bp = buf::wget(dev, BBLOCK(b, sb.ninodes));
-    for(bi = 0; bi < BPB && bi < (sb.size - b); bi++){
-      m = 1 << (bi % 8);
-      if((bp.data[bi/8] & m) == 0){  // Is block free?
-        bp.data[bi/8] |= m;  // Mark block in use on disk.
-        bp.w();
-        bp.wrelease();
+
+  for(int b = 0; b < sb.size; b += BPB){
+    buf* bp = buf::get(dev, BBLOCK(b, sb.ninodes));
+    buf_scoped_writelock wl(bp);
+
+    for(int bi = 0; bi < BPB && bi < (sb.size - b); bi++){
+      int m = 1 << (bi % 8);
+      if((bp->data_[bi/8] & m) == 0){  // Is block free?
+        bp->data_[bi/8] |= m;  // Mark block in use on disk.
         return b + bi;
       }
     }
-    bp.wrelease();
   }
   
   throw_out_of_blocks();
@@ -123,22 +121,21 @@ balloc(u32 dev)
 static void
 bfree(int dev, u64 x)
 {
-  struct wbuf bp;
-  struct superblock sb;
-  int bi, m;
   u32 b = x;
-
   bzero(dev, b);
 
+  struct superblock sb;
   readsb(dev, &sb);
-  bp = buf::wget(dev, BBLOCK(b, sb.ninodes));
-  bi = b % BPB;
-  m = 1 << (bi % 8);
-  if((bp.data[bi/8] & m) == 0)
+
+  buf* bp = buf::get(dev, BBLOCK(b, sb.ninodes));
+  lock_guard<sleeplock> l(&bp->write_lock_);
+  auto ws = bp->seq_.write_begin();
+
+  int bi = b % BPB;
+  int m = 1 << (bi % 8);
+  if((bp->data_[bi/8] & m) == 0)
     panic("freeing free block");
-  bp.data[bi/8] &= ~m;  // Mark block free on disk.
-  bp.w();
-  bp.wrelease();
+  bp->data_[bi/8] &= ~m;  // Mark block free on disk.
 }
 
 // Inodes.
@@ -185,9 +182,11 @@ static nstbl<pair<u32, u32>, inode*, ino_hash> *ins;
 void
 initinode(void)
 {
+  scoped_gc_epoch e;
+
   ins = new nstbl<pair<u32, u32>, inode*, ino_hash>();
   the_root = inode::alloc(ROOTDEV, ROOTINO);
-  if (ins->insert(make_pair(the_root->dev, the_root->inum), the_root) < 0)
+  if (!ins->insert(make_pair(the_root->dev, the_root->inum), the_root))
     panic("initinode: insert the_root failed");
   the_root->init();
 
@@ -335,18 +334,16 @@ static inode_cache_dir the_inode_cache;
 static inode*
 try_ialloc(u32 inum, u32 dev, short type)
 {
-  dinode *dip;
-  inode* ip;
-  buf *bp;
+  // XXX this whole function seems a bit suspect..
+  scoped_gc_epoch e;
+  buf *bp = buf::get(dev, IBLOCK(inum));
 
-  bp = buf::get(dev, IBLOCK(inum));
-  dip = (dinode*)bp->data + inum%IPB;
+  dinode* dip = (dinode*)bp->data_ + inum%IPB;
   int seemsfree = (dip->type == 0);
   if(seemsfree) {
     // maybe this inode is free. look at it via the
     // inode cache to make sure.
-    ip = iget(dev, inum);
-    assert(ip->valid());
+    inode* ip = iget(dev, inum);
     ilock(ip, 1);
     if(ip->type == 0) {
       ip->type = type;
@@ -366,6 +363,10 @@ try_ialloc(u32 inum, u32 dev, short type)
 struct inode*
 ialloc(u32 dev, short type)
 {
+  // XXX should be replaced with lb?
+
+  scoped_gc_epoch e;
+
   superblock sb;
   inode* ip;
   int inum;
@@ -377,7 +378,7 @@ ialloc(u32 dev, short type)
       return ip;
   }
 
-  // ..then search through every on-disk inode!
+  // search through this core's inodes
   readsb(dev, &sb);
   for (int k = myid()*IPB; k < sb.ninodes; k += (NCPU*IPB)) {
     for(inum = k; inum < k+IPB && inum < sb.ninodes; inum++) {
@@ -389,6 +390,15 @@ ialloc(u32 dev, short type)
     }
   }
 
+  // search through all inodes
+  for (int inum = 0; inum < sb.ninodes; inum++) {
+    if (inum == 0)
+      continue;
+    ip = try_ialloc(inum, dev, type);
+    if (ip)
+      return ip;
+  }
+
   cprintf("ialloc: 0/%u inodes\n", sb.ninodes);
   return nullptr;
 }
@@ -397,27 +407,28 @@ ialloc(u32 dev, short type)
 void
 iupdate(struct inode *ip)
 {
-  struct wbuf bp;
-  struct dinode *dip;
+  scoped_gc_epoch e;
 
-  bp = buf::wget(ip->dev, IBLOCK(ip->inum));
-  dip = (struct dinode*)bp.data + ip->inum%IPB;
-  dip->type = ip->type;
-  dip->major = ip->major;
-  dip->minor = ip->minor;
-  dip->nlink = ip->nlink();
-  dip->size = ip->size;
-  dip->gen = ip->gen;
-  memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
-  bp.w();
-  bp.wrelease();
+  {
+    buf* bp = buf::get(ip->dev, IBLOCK(ip->inum));
+    buf_scoped_writelock wl(bp);
+
+    dinode *dip = (struct dinode*)bp->data_ + ip->inum%IPB;
+    dip->type = ip->type;
+    dip->major = ip->major;
+    dip->minor = ip->minor;
+    dip->nlink = ip->nlink();
+    dip->size = ip->size;
+    dip->gen = ip->gen;
+    memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
+  }
 
   if (ip->addrs[NDIRECT] != 0) {
     assert(ip->iaddrs.load() != nullptr);
-    bp = buf::wget(ip->dev, ip->addrs[NDIRECT]);
-    memmove(bp.data, (void*)ip->iaddrs.load(), IADDRSSZ);
-    bp.w();
-    bp.wrelease();
+    buf* bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
+    buf_scoped_writelock wl(bp);
+
+    memmove(bp->data_, (void*)ip->iaddrs.load(), IADDRSSZ);
   }
 }
 
@@ -452,8 +463,8 @@ inode::~inode()
   }
 }
 
-static inode*
-__iget(u32 dev, u32 inum, bool* haveref)
+inode*
+iget(u32 dev, u32 inum)
 {
   inode* ip;
 
@@ -469,20 +480,21 @@ __iget(u32 dev, u32 inum, bool* haveref)
         ip->cv.sleep(&ip->lock);
       release(&ip->lock);
     }
-    *haveref = false;
+    if (!ip->tryinc())
+      goto retry;
     return ip;
   }
   
   // Allocate fresh inode cache slot.
   ip = inode::alloc(dev, inum);
   if (ip == nullptr)
-    panic("igetnoref: should throw_bad_alloc()");
+    panic("iget: should throw_bad_alloc()");
   
   // Lock the inode
   ip->flags = I_BUSYR | I_BUSYW;
   ip->readbusy = 1;
 
-  if (ins->insert(make_pair(ip->dev, ip->inum), ip) < 0) {
+  if (!ins->insert(make_pair(ip->dev, ip->inum), ip)) {
     // We haven't touched anything on disk, so we can
     // gc_delayed, instead of ip->onzero() (via ip->dec())
     gc_delayed(ip);
@@ -491,24 +503,6 @@ __iget(u32 dev, u32 inum, bool* haveref)
   ip->init();
 
   iunlock(ip);
-  *haveref = true;
-  return ip;
-}
-
-inode*
-iget(u32 dev, u32 inum)
-{
-  bool haveref;
-  inode* ip;
-
-retry:
-  {
-    scoped_gc_epoch e;
-    ip = __iget(dev, inum, &haveref);
-    if (!haveref)
-      if (!ip->tryinc())
-        goto retry;
-  }
   return ip;
 }
 
@@ -528,17 +522,24 @@ inode::alloc(u32 dev, u32 inum)
 void
 inode::init(void)
 {
-  struct buf *bp = buf::get(dev, IBLOCK(inum));
-  struct dinode *dip = (struct dinode*)bp->data + inum%IPB;
+  scoped_gc_epoch e;
+  buf *bp = buf::get(dev, IBLOCK(inum));
+  dinode *dip = (struct dinode*)bp->data_ + inum%IPB;
+
+retry:
+  auto rs = bp->seq_.read_begin();
   type = dip->type;
   major = dip->major;
   minor = dip->minor;
   nlink_ = dip->nlink;
-  if (nlink_ > 0)
-    idup(this);
   size = dip->size;
   gen = dip->gen;
   memmove(addrs, dip->addrs, sizeof(addrs));
+  if (rs.need_retry())
+    goto retry;
+
+  if (nlink_ > 0)
+    idup(this);
   flags |= I_VALID;
 }
 
@@ -576,7 +577,7 @@ inode::onzero(void) const
 
   acquire(&ip->lock);
   if (ip->nlink())
-      panic("iput: nlink %u\n", ip->nlink());
+    panic("iput [%p]: nlink %u\n", ip, ip->nlink());
 
   // inode is no longer used: truncate and free inode.
   if(ip->flags & (I_BUSYR | I_BUSYW)) {
@@ -629,7 +630,7 @@ idup(struct inode *ip)
 void
 ilock(struct inode *ip, int writer)
 {
-  if(ip == 0 || !ip->valid())
+  if(ip == 0)
     panic("ilock");
 
   acquire(&ip->lock);
@@ -655,13 +656,6 @@ iunlock(struct inode *ip)
   ip->flags &= ~(I_BUSYW | ((lastreader==0) ? I_BUSYR : 0));
   ip->cv.wake_all();
   release(&ip->lock);
-}
-
-void
-iput(inode* ip, bool haveref)
-{
-  if (haveref)
-    iput(ip);
 }
 
 // Caller holds reference to unlocked ip.  Drop reference.
@@ -693,8 +687,8 @@ iunlockput(struct inode *ip)
 static u32
 bmap(struct inode *ip, u32 bn)
 {
-  buf *bp;
-  wbuf wb;
+  scoped_gc_epoch e;
+
   u32* ap;
   u32 addr;
 
@@ -723,8 +717,12 @@ bmap(struct inode *ip, u32 bn)
       }
 
       volatile u32* iaddrs = (u32*)kmalloc(IADDRSSZ, "iaddrs");
-      bp = buf::get(ip->dev, addr);
-      memmove((void*)iaddrs, bp->data, IADDRSSZ);
+      buf* bp = buf::get(ip->dev, addr);
+    retry1a:
+      auto rs = bp->seq_.read_begin();
+      memmove((void*)iaddrs, bp->data_, IADDRSSZ);
+      if (rs.need_retry())
+        goto retry1a;
       if (!cmpxch(&ip->iaddrs, (volatile u32*)nullptr, iaddrs)) {
         bfree(ip->dev, addr);
         kmfree((void*)iaddrs, IADDRSSZ);
@@ -760,23 +758,33 @@ retry3:
     }
   }
 
-  wb = buf::wget(ip->dev, ip->addrs[NDIRECT+1]);
-  ap = (u32*)wb.data;
+  buf* wb = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
+  ap = (u32*)wb->data_;
+retry3a:
+  auto rs = wb->seq_.read_begin();
   if (ap[bn / NINDIRECT] == 0) {
-    ap[bn / NINDIRECT] = balloc(ip->dev);
-    wb.w();
+    buf_scoped_writelock wl(wb);
+    if (ap[bn / NINDIRECT] == 0)
+      ap[bn / NINDIRECT] = balloc(ip->dev);
+    goto retry3a;
   }
   addr = ap[bn / NINDIRECT];
-  wb.wrelease();
+  if (rs.need_retry())
+    goto retry3a;
 
-  wb = buf::wget(ip->dev, addr);
-  ap = (u32*)wb.data;
+  wb = buf::get(ip->dev, addr);
+  ap = (u32*)wb->data_;
+retry3b:
+  auto rs2 = wb->seq_.read_begin();
   if (ap[bn % NINDIRECT] == 0) {
-    ap[bn % NINDIRECT] = balloc(ip->dev);
-    wb.w();
+    buf_scoped_writelock wl(wb);
+    if (ap[bn % NINDIRECT] == 0)
+      ap[bn % NINDIRECT] = balloc(ip->dev);
+    goto retry3b;
   }
   addr = ap[bn % NINDIRECT];
-  wb.wrelease();
+  if (rs2.need_retry())
+    goto retry3b;
 
   return addr;
 }
@@ -792,6 +800,7 @@ class diskblock : public rcu_freed {
  public:
   diskblock(int dev, u64 block) : rcu_freed("diskblock"), _dev(dev), _block(block) {}
   virtual void do_gc() {
+    scoped_gc_epoch e;
     bfree(_dev, _block);
     delete this;
   }
@@ -802,6 +811,11 @@ class diskblock : public rcu_freed {
 void
 itrunc(struct inode *ip)
 {
+  scoped_gc_epoch e;
+
+  // XXX how to serialize itrunc w.r.t. concurrent itrunc or expansion?
+  // Could lock disk blocks (buf's), or could lock the inode?
+
   for(int i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
       diskblock *db = new diskblock(ip->dev, ip->addrs[i]);
@@ -811,8 +825,8 @@ itrunc(struct inode *ip)
   }
   
   if(ip->addrs[NDIRECT]){
-    struct buf* bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
-    u32* a = (u32*)bp->data;
+    buf* bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
+    u32* a = (u32*)bp->data_;
     for(int i = 0; i < NINDIRECT; i++){
       if(a[i]) {
         diskblock *db = new diskblock(ip->dev, a[i]);
@@ -826,14 +840,14 @@ itrunc(struct inode *ip)
   }
 
   if(ip->addrs[NDIRECT+1]){
-    struct buf* bp1 = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
-    u32* a1 = (u32*)bp1->data;
+    buf* bp1 = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
+    u32* a1 = (u32*)bp1->data_;
     for(int i = 0; i < NINDIRECT; i++){
       if(!a1[i])
         continue;
 
-      struct buf* bp2 = buf::get(ip->dev, a1[i]);
-      u32* a2 = (u32*)bp2->data;
+      buf* bp2 = buf::get(ip->dev, a1[i]);
+      u32* a2 = (u32*)bp2->data_;
       for(int j = 0; j < NINDIRECT; j++){
         if(!a2[j])
           continue;
@@ -879,8 +893,10 @@ stati(struct inode *ip, struct stat *st)
 int
 readi(struct inode *ip, char *dst, u32 off, u32 n)
 {
+  scoped_gc_epoch e;
+
   u32 tot, m;
-  struct buf *bp;
+  buf *bp;
 
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
@@ -901,7 +917,11 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
       panic("readi: out of blocks");
     }
     m = min(n - tot, BSIZE - off%BSIZE);
-    memmove(dst, bp->data + off%BSIZE, m);
+  retry:
+    auto rs = bp->seq_.read_begin();
+    memmove(dst, bp->data_ + off%BSIZE, m);
+    if (rs.need_retry())
+      goto retry;
   }
   return n;
 }
@@ -911,8 +931,10 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
 int
 writei(struct inode *ip, const char *src, u32 off, u32 n)
 {
+  scoped_gc_epoch e;
+
   int tot, m;
-  wbuf bp;
+  buf* bp;
 
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].write)
@@ -927,7 +949,7 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
 
   for(tot=0; tot<n; tot+=m, off+=m, src+=m){
     try {
-      bp = buf::wget(ip->dev, bmap(ip, off/BSIZE));
+      bp = buf::get(ip->dev, bmap(ip, off/BSIZE));
     } catch (out_of_blocks& e) {
       console.println("writei: out of blocks");
       // If we haven't written anything, return an error
@@ -936,9 +958,8 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
       break;
     }
     m = min(n - tot, BSIZE - off%BSIZE);
-    memmove(bp.data + off%BSIZE, src, m);
-    bp.w();
-    bp.wrelease();
+    buf_scoped_writelock wl(bp);
+    memmove(bp->data_ + off%BSIZE, src, m);
   }
 
   if(tot > 0 && off > ip->size){
@@ -975,6 +996,8 @@ namehash(const strbuf<DIRSIZ> &n)
 void
 dir_init(struct inode *dp)
 {
+  scoped_gc_epoch e;
+
   if (dp->dir)
     return;
   if (dp->type != T_DIR)
@@ -989,13 +1012,20 @@ dir_init(struct inode *dp)
       // Read operations should never cause out-of-blocks conditions
       panic("dir_init: out of blocks");
     }
-    for (struct dirent *de = (struct dirent *) bp->data;
-	 de < (struct dirent *) (bp->data + BSIZE);
+    for (struct dirent *de = (struct dirent *) bp->data_;
+	 de < (struct dirent *) (bp->data_ + BSIZE);
 	 de++) {
-      if (de->inum == 0)
+    retry:
+      auto rs = bp->seq_.read_begin();
+      u16 inum = de->inum;
+      auto name = strbuf<DIRSIZ>(de->name);
+      if (rs.need_retry())
+        goto retry;
+
+      if (inum == 0)
 	continue;
 
-      dir->insert(strbuf<DIRSIZ>(de->name), de->inum);
+      dir->insert(name, inum);
     }
   }
 
@@ -1030,20 +1060,6 @@ dir_flush(struct inode *dp)
 }
 
 // Look for a directory entry in a directory.
-static inode*
-__dirlookup(struct inode *dp, char *name, bool* haveref)
-{
-  // Assumes caller is holding a gc_epoch
-
-  dir_init(dp);
-
-  u32 inum = dp->dir.load()->lookup(strbuf<DIRSIZ>(name));
-  if (inum == 0)
-    return 0;
-  return __iget(dp->dev, inum, haveref);
-}
-
-// Look for a directory entry in a directory.
 struct inode*
 dirlookup(struct inode *dp, char *name)
 {
@@ -1063,7 +1079,10 @@ dirlink(struct inode *dp, const char *name, u32 inum)
   dir_init(dp);
 
   //cprintf("dirlink: %x (%d): %s -> %d\n", dp, dp->inum, name, inum);
-  return dp->dir.load()->insert(strbuf<DIRSIZ>(name), inum);
+  if (!dp->dir.load()->insert(strbuf<DIRSIZ>(name), inum))
+    return -1;
+
+  return 0;
 }
 
 // Paths
@@ -1115,21 +1134,19 @@ skipelem(const char **rpath, char *name)
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
 static struct inode*
-__namex(inode *cwd, const char *path, int nameiparent, char *name,
-        bool* retref)
+namex(inode *cwd, const char *path, int nameiparent, char *name)
 {
-
   // Assumes caller is holding a gc_epoch
 
   struct inode *ip, *next;
-  bool haveref;
   int r;
 
-  if(*path == '/') 
+  if(*path == '/')
     ip = the_root;
   else
     ip = cwd;
-  haveref = false;
+
+  idup(ip);
 
   while((r = skipelem(&path, name)) == 1){
     // XXX Doing this here requires some annoying reasoning about all
@@ -1148,17 +1165,12 @@ __namex(inode *cwd, const char *path, int nameiparent, char *name,
       return 0;
     if(nameiparent && *path == '\0'){
       // Stop one level early.
-      *retref = haveref;
       return ip;
     }
 
-    bool nextref;
-    if((next = __dirlookup(ip, name, &nextref)) == 0)
+    if((next = dirlookup(ip, name)) == 0)
       return 0;
-    if (haveref)
-      iput(ip);
-
-    haveref = nextref;
+    iput(ip);
     ip = next;
   }
 
@@ -1172,58 +1184,20 @@ __namex(inode *cwd, const char *path, int nameiparent, char *name,
   // mtreadavar("inode:%x.%x", ip->dev, ip->inum);
   mtwriteavar("inode:%x.%x", ip->dev, ip->inum);
 
-  *retref = haveref;
   return ip;
-}
-
-inode*
-__namei(inode *cwd, const char *path, bool* haveref)
-{
-  // Assumes caller is holding a gc_epoch
-  char name[DIRSIZ];
-  return __namex(cwd, path, 0, name, haveref);
 }
 
 inode*
 namei(inode *cwd, const char *path)
 {
-  char name[DIRSIZ];
-  bool haveref;
-
-  inode* ip;
-retry:
-  {
-    scoped_gc_epoch e;
-    ip = __namex(cwd, path, 0, name, &haveref);
-    if (ip != nullptr && !haveref)
-      if (!ip->tryinc())
-        goto retry;
-  }
-
-  return ip;
-}
-
-inode*
-__nameiparent(inode *cwd, const char *path, char *name, bool* haveref)
-{
   // Assumes caller is holding a gc_epoch
-  return __namex(cwd, path, 1, name, haveref);
+  char name[DIRSIZ];
+  return namex(cwd, path, 0, name);
 }
-
 
 inode*
 nameiparent(inode *cwd, const char *path, char *name)
 {
-  bool haveref;
-
-  inode* ip;
-retry:
-  {
-    scoped_gc_epoch e;
-    ip = __namex(cwd, path, 1, name, &haveref);
-    if (ip != nullptr && !haveref)
-      if (!ip->tryinc())
-        goto retry;
-  }
-  return ip;
+  // Assumes caller is holding a gc_epoch
+  return namex(cwd, path, 1, name);
 }
