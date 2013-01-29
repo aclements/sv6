@@ -32,6 +32,7 @@ benchcodex::main(void)
       cprintf("value=%d\n", _ctr.load());
   }
   cprintf("value=%d\n", _ctr.load());
+  codex_trace_end();
   halt();
   panic("halt returned");
 }

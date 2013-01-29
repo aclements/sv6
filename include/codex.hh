@@ -123,6 +123,7 @@ codex_magic(uint64_t ax, uint64_t bx,
 
 enum class codex_call_type {
   TRACE_START = 0,
+  TRACE_END,
   ACTION_RUN,
 };
 
@@ -175,6 +176,17 @@ codex_trace_start(void)
     (uint64_t) codex_call_type::TRACE_START,
     (uint64_t) codex::current_tid(),
     0, 0, 0, 0);
+}
+
+static inline ALWAYS_INLINE void
+codex_trace_end(void)
+{
+  assert(codex::g_codex_trace_start);
+  codex_magic(
+    (uint64_t) codex_call_type::TRACE_END,
+    (uint64_t) codex::current_tid(),
+    0, 0, 0, 0);
+  codex::g_codex_trace_start = false; // must come after
 }
 
 // GCC __sync_* definitions from:

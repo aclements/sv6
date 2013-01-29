@@ -144,4 +144,5 @@ if __name__ == '__main__':
   upstream_fp.connect(UPSTREAM_SOCK)
   client = Client(upstream_fp, s)
   while client.next():
-    pass
+    print "Finished a run"
+    sys.stdout.flush()

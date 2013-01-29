@@ -108,7 +108,7 @@ $(O)/fs.img: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
 	$(Q)$(O)/tools/mkfs $@ $(FSEXTRA) $(UPROGS)
 
 .PRECIOUS: $(O)/%.o
-.PHONY: clean qemu gdb rsync
+.PHONY: clean qemu gdb rsync codex
 
 ##
 ## qemu
@@ -123,6 +123,8 @@ qemu: $(KERN)
 	$(QEMU) $(QEMUOPTS) -kernel $(KERN)
 gdb: $(KERN)
 	$(QEMU) $(QEMUOPTS) -kernel $(KERN) -s
+
+codex: $(KERN)
 
 ##
 ## mtrace
