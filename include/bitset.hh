@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "amd64.h"
+#include "pstream.hh"
 
 // A bit set capable of storing values between 0 and N-1.  Operations
 // marked "atomic" are safe to execute concurrently.  Read-only
@@ -202,3 +203,18 @@ public:
     return iterator();
   }
 };
+
+template<std::size_t N>
+static void
+to_stream(class print_stream *s, const bitset<N> &bs)
+{
+  bool first = true;
+  to_stream(s, '{');
+  for (auto it = bs.begin(), end = bs.end(); it != end; ++it) {
+    if (!first)
+      to_stream(s, ',');
+    first = false;
+    to_stream(s, *it);
+  }
+  to_stream(s, '}');
+}
