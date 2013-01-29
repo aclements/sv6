@@ -4,6 +4,8 @@
 #include "amd64.h"
 #include "traps.h"
 #include "kernel.hh"
+#include "bitset.hh"
+#include "kstream.hh"
 
 // I/O Addresses of the two programmable interrupt controllers
 #define IO_PIC1         0x20    // Master (IRQs 0-7)
@@ -39,6 +41,27 @@ piceoi(void)
   // xxx: specific interrupt line
   outb(IO_PIC1, 0x20);
   outb(IO_PIC2, 0x20);
+}
+
+void
+picdump(void)
+{
+  bitset<16> isr, irr;
+  scoped_cli cli();
+  // Read ISR
+  outb(IO_PIC1, 0x0b);
+  isr.setword(0, inb(IO_PIC1));
+  outb(IO_PIC2, 0x0b);
+  isr.setword(8, inb(IO_PIC2));
+  // Read IRR
+  outb(IO_PIC1, 0x0a);
+  irr.setword(0, inb(IO_PIC1));
+  outb(IO_PIC2, 0x0a);
+  irr.setword(8, inb(IO_PIC2));
+  if (isr.any() || irr.any())
+    // IRQs that are awaiting EOI (ISR) and that are pending delivery
+    // (IRR).
+    console.println("PIC IRQ    ISR ", isr, " IRR ", irr);
 }
 
 // Initialize the 8259A interrupt controllers.

@@ -6,6 +6,7 @@
 #include "cpu.hh"
 #include "apic.hh"
 #include "kstream.hh"
+#include "bitset.hh"
 
 #define ID      0x802   // ID
 #define VER     0x803   // Version
@@ -13,9 +14,10 @@
 #define EOI     0x80b   // EOI
 #define SVR     0x80f   // Spurious Interrupt Vector
   #define ENABLE     0x00000100   // Unit Enable
-#define IRR     0x820
 #define ISR     0x810
   #define ISR_NR     0x8
+#define TMR     0x818
+#define IRR     0x820
 #define ESR     0x828ull   // Error Status
 #define ICR     0x830ull   // Interrupt Command
   #define INIT       0x00000500ull   // INIT/RESET
@@ -54,6 +56,7 @@ public:
   void mask_pc(bool mask);
   void start_ap(struct cpu *c, u32 addr);
   bool is_x2apic();
+  void dump();
 private:
   void clearintr();
 };
@@ -271,6 +274,23 @@ x2apic_lapic::cpu_init()
   writemsr(EOI, 0);
 
   return;
+}
+
+void
+x2apic_lapic::dump()
+{
+  bitset<256> isr, irr, tmr;
+  scoped_cli cli();
+  for (int word = 0; word < ISR_NR; ++word) {
+    isr.setword(word * 32, readmsr(ISR + word));
+    irr.setword(word * 32, readmsr(IRR + word));
+    tmr.setword(word * 32, readmsr(TMR + word));
+  }
+  if (isr.any() || irr.any() || tmr.any())
+    // Fixed-mode interrupt vectors that are awaiting EOI (ISR), that
+    // are pending delivery (IRR), and are level-triggered and will
+    // trigger an IOAPIC EOI when acknowledged (TMR).
+    console.println("LAPIC INT  ISR ", isr, " IRR ", irr, " TMR ", tmr);
 }
 
 bool

@@ -11,6 +11,7 @@
 #include "pci.hh"
 #include "kstream.hh"
 #include "iommu.hh"
+#include "bitset.hh"
 
 static console_stream verbose(true);
 
@@ -25,7 +26,9 @@ static console_stream verbose(true);
 // CPUs can serve that interrupt.
 #define INT_DISABLED   0x00010000  // Interrupt disabled
 #define INT_LEVEL      0x00008000  // Level-triggered (vs edge-)
+#define INT_IRR        0x00004000  // Remote IRR (RO)
 #define INT_ACTIVELOW  0x00002000  // Active low (vs high)
+#define INT_DELIVS     0x00001000  // Delivery status (RO)
 #define INT_LOGICAL    0x00000800  // Destination is CPU id (vs APIC ID)
 #define INT_REMAPPABLE (1ull<<48)  // IOMMU remappable
 
@@ -64,6 +67,8 @@ public:
 
   irq map_isa_irq(int isa_irq);
   irq map_pci_irq(struct pci_func *f);
+
+  void dump();
 
 protected:
   void enable_irq(const struct irq &, bool enable);
@@ -215,6 +220,27 @@ ioapic_82093::eoi_irq(const struct irq &irq)
   assert(irq.valid());
   // Assume the LAPIC is in broadcast EOI mode
   lapic->eoi();
+}
+
+void
+ioapic_82093::dump()
+{
+  bitset<256> irr, delivs;
+  scoped_cli cli();
+  for (int i = 0; i < nioapics; ++i) {
+    for (int gsi = ioapic_base[i]; gsi < ioapic_lim[i]; ++gsi) {
+      int pin = gsi - ioapic_base[i];
+      uint32_t reg = ioapics[i]->read(REG_TABLE+2*pin);
+      if ((reg & INT_LEVEL) && (reg & INT_IRR))
+        irr.set(gsi);
+      if (reg & INT_DELIVS)
+        delivs.set(gsi);
+    }
+  }
+  if (irr.any() || delivs.any())
+    // GSIs that are awaiting EOI (IRR) and that are pending delivery
+    // to the LAPIC (DELIVS)
+    console.println("IOAPIC GSI IRR ", irr, " DELIVS ", delivs);
 }
 
 bool

@@ -165,6 +165,7 @@ void            nethwaddr(u8 *hwaddr);
 // picirq.c
 void            picenable(int);
 void            piceoi(void);
+void            picdump(void);
 
 // pipe.c
 int             pipealloc(struct file**, struct file**);

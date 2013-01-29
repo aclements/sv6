@@ -45,6 +45,9 @@ public:
   {
     return false;
   }
+
+  // Print a debug dump of the LAPIC's current state
+  virtual void dump() { }
 };
 
 struct pci_func;
@@ -63,6 +66,9 @@ public:
   // configure and enable any necessary PCI interrupt link devices to
   // route the interrupt.
   virtual irq map_pci_irq(struct pci_func *f) = 0;
+
+  // Print a debug dump of the IOAPIC's current state
+  virtual void dump() { }
 
 protected:
   friend struct irq;
