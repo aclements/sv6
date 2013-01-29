@@ -136,7 +136,9 @@ bootothers(void)
     bstate.store(0);
     bcpuid = c->id;
     lapic->start_ap(c, v2p(code));
+#if CODEX
     codex_magic_action_run_thread_create(c->id);
+#endif
     // Wait for cpu to finish mpmain()
     while(bstate.load() == 0)
       ;
@@ -204,7 +206,9 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   inituser();      // first user process
   initnmi();
+#if CODEX
   initcodex();
+#endif
   bootothers();    // start other processors
   cleanuppg();             // Requires bootothers
   initcpprt();
