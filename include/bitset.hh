@@ -43,6 +43,21 @@ public:
     return *this;
   }
 
+  // Assign bits @c pos to <tt>pos + 8*sizeof(T)</tt> to @c val.
+  // @c pos must be a multiple of <tt>8*sizeof(T)</tt> (that is, @c
+  // pos must be aligned to T's size).
+  template<typename T>
+  bitset &setword(std::size_t pos, T val) noexcept
+  {
+    static_assert(sizeof(T) * 8 <= BITS_PER_WORD,
+                  "setword not implemented for large T");
+    uint64_t sval = (uint64_t)val << (pos % BITS_PER_WORD);
+    uint64_t mask = (~0ull) & sval;
+    words[pos / BITS_PER_WORD] &= mask;
+    words[pos / BITS_PER_WORD] |= sval;
+    return *this;
+  }
+
   // If @c val is true, add pos to the bit set.  If @c val is false,
   // remove pos from the bit set.
   bitset &atomic_set(std::size_t pos, bool val = true) noexcept
