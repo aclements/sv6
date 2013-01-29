@@ -90,7 +90,9 @@ idleloop(void)
 
   // Enabling mtrace calls in scheduler generates many mtrace_call_entrys.
   // mtrace_call_set(1, cpu->id);
+#if CODEX
   cprintf("idleloop(): myid()=%d\n", myid());
+#endif
   mtstart(idleloop, myproc());
 
   // XXX: hacky bench for now- figure out how to test more later
