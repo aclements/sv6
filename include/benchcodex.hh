@@ -1,8 +1,6 @@
 #pragma once
 // codex benchmark in kernel space
 
-#include <atomic>
-
 class testcase {
 public:
   virtual ~testcase() {}

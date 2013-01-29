@@ -3,8 +3,6 @@
 #include "benchcodex.hh"
 #include "cpu.hh"
 
-#include <atomic>
-
 class count_down_latch {
 public:
   count_down_latch(unsigned int c) : c(c) {}

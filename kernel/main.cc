@@ -11,8 +11,6 @@
 #include "apic.hh"
 #include "codex.hh"
 
-#include <atomic>
-
 void initpic(void);
 void initextpic(void);
 void inituart(void);
