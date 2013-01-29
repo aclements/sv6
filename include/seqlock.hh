@@ -31,6 +31,10 @@ public:
 
   public:
     constexpr reader(seqcount *sc, T init) : sc_(sc), init_(init) { }
+    reader(reader &&o) = default;
+    reader &operator=(reader &&o) = default;
+    reader(const reader &o) = default;
+    reader &operator=(const reader &o) = default;
 
     /**
      * Return true if this read section needs to be retried because of
@@ -87,6 +91,22 @@ public:
 
   public:
     constexpr writer(seqcount *sc, T val) : sc_(sc), val_(val) { }
+
+    writer(writer &&o)
+      : sc_(o.sc_), val_(o.val_)
+    {
+      o.sc_ = nullptr;
+    }
+
+    writer &operator=(writer &&o)
+    {
+      sc_ = o.sc_;
+      val_ = o.val_;
+      o._sc = nullptr;
+    }
+
+    writer(const writer &o) = delete;
+    writer &operator=(const writer &o) = delete;
 
     /**
      * End the write section.
