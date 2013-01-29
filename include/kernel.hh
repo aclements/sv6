@@ -98,7 +98,6 @@ struct inode*   dirlookup(struct inode*, char*);
 struct inode*   ialloc(u32, short);
 struct inode*   namei(inode *cwd, const char*);
 void            iput(struct inode*);
-void            iput(inode* ip, bool haveref);
 struct inode*   iget(u32 dev, u32 inum);
 void            ilock(struct inode*, int writer);
 void            iunlockput(struct inode*);
@@ -113,9 +112,6 @@ struct inode*   nameiparent(inode *cwd, const char*, char*);
 int             dirlink(struct inode*, const char*, u32);
 void            dir_init(struct inode *dp);
 void	        dir_flush(struct inode *dp);
-inode*          __nameiparent(inode *cwd, const char *path,
-                              char *name, bool* haveref);
-inode*          __namei(inode *cwd, const char *path, bool* haveref);
 
 // futex.cc
 typedef u64* futexkey_t;

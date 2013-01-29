@@ -463,8 +463,8 @@ inode::~inode()
   }
 }
 
-static inode*
-__iget(u32 dev, u32 inum, bool* haveref)
+inode*
+iget(u32 dev, u32 inum)
 {
   inode* ip;
 
@@ -480,14 +480,15 @@ __iget(u32 dev, u32 inum, bool* haveref)
         ip->cv.sleep(&ip->lock);
       release(&ip->lock);
     }
-    *haveref = false;
+    if (!ip->tryinc())
+      goto retry;
     return ip;
   }
   
   // Allocate fresh inode cache slot.
   ip = inode::alloc(dev, inum);
   if (ip == nullptr)
-    panic("igetnoref: should throw_bad_alloc()");
+    panic("iget: should throw_bad_alloc()");
   
   // Lock the inode
   ip->flags = I_BUSYR | I_BUSYW;
@@ -502,24 +503,6 @@ __iget(u32 dev, u32 inum, bool* haveref)
   ip->init();
 
   iunlock(ip);
-  *haveref = true;
-  return ip;
-}
-
-inode*
-iget(u32 dev, u32 inum)
-{
-  bool haveref;
-  inode* ip;
-
-retry:
-  {
-    scoped_gc_epoch e;
-    ip = __iget(dev, inum, &haveref);
-    if (!haveref)
-      if (!ip->tryinc())
-        goto retry;
-  }
   return ip;
 }
 
@@ -594,7 +577,7 @@ inode::onzero(void) const
 
   acquire(&ip->lock);
   if (ip->nlink())
-      panic("iput: nlink %u\n", ip->nlink());
+    panic("iput [%p]: nlink %u\n", ip, ip->nlink());
 
   // inode is no longer used: truncate and free inode.
   if(ip->flags & (I_BUSYR | I_BUSYW)) {
@@ -673,13 +656,6 @@ iunlock(struct inode *ip)
   ip->flags &= ~(I_BUSYW | ((lastreader==0) ? I_BUSYR : 0));
   ip->cv.wake_all();
   release(&ip->lock);
-}
-
-void
-iput(inode* ip, bool haveref)
-{
-  if (haveref)
-    iput(ip);
 }
 
 // Caller holds reference to unlocked ip.  Drop reference.
@@ -1084,20 +1060,6 @@ dir_flush(struct inode *dp)
 }
 
 // Look for a directory entry in a directory.
-static inode*
-__dirlookup(struct inode *dp, char *name, bool* haveref)
-{
-  // Assumes caller is holding a gc_epoch
-
-  dir_init(dp);
-
-  u32 inum = dp->dir.load()->lookup(strbuf<DIRSIZ>(name));
-  if (inum == 0)
-    return 0;
-  return __iget(dp->dev, inum, haveref);
-}
-
-// Look for a directory entry in a directory.
 struct inode*
 dirlookup(struct inode *dp, char *name)
 {
@@ -1172,21 +1134,19 @@ skipelem(const char **rpath, char *name)
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
 static struct inode*
-__namex(inode *cwd, const char *path, int nameiparent, char *name,
-        bool* retref)
+namex(inode *cwd, const char *path, int nameiparent, char *name)
 {
-
   // Assumes caller is holding a gc_epoch
 
   struct inode *ip, *next;
-  bool haveref;
   int r;
 
-  if(*path == '/') 
+  if(*path == '/')
     ip = the_root;
   else
     ip = cwd;
-  haveref = false;
+
+  idup(ip);
 
   while((r = skipelem(&path, name)) == 1){
     // XXX Doing this here requires some annoying reasoning about all
@@ -1205,17 +1165,12 @@ __namex(inode *cwd, const char *path, int nameiparent, char *name,
       return 0;
     if(nameiparent && *path == '\0'){
       // Stop one level early.
-      *retref = haveref;
       return ip;
     }
 
-    bool nextref;
-    if((next = __dirlookup(ip, name, &nextref)) == 0)
+    if((next = dirlookup(ip, name)) == 0)
       return 0;
-    if (haveref)
-      iput(ip);
-
-    haveref = nextref;
+    iput(ip);
     ip = next;
   }
 
@@ -1229,58 +1184,20 @@ __namex(inode *cwd, const char *path, int nameiparent, char *name,
   // mtreadavar("inode:%x.%x", ip->dev, ip->inum);
   mtwriteavar("inode:%x.%x", ip->dev, ip->inum);
 
-  *retref = haveref;
   return ip;
-}
-
-inode*
-__namei(inode *cwd, const char *path, bool* haveref)
-{
-  // Assumes caller is holding a gc_epoch
-  char name[DIRSIZ];
-  return __namex(cwd, path, 0, name, haveref);
 }
 
 inode*
 namei(inode *cwd, const char *path)
 {
-  char name[DIRSIZ];
-  bool haveref;
-
-  inode* ip;
-retry:
-  {
-    scoped_gc_epoch e;
-    ip = __namex(cwd, path, 0, name, &haveref);
-    if (ip != nullptr && !haveref)
-      if (!ip->tryinc())
-        goto retry;
-  }
-
-  return ip;
-}
-
-inode*
-__nameiparent(inode *cwd, const char *path, char *name, bool* haveref)
-{
   // Assumes caller is holding a gc_epoch
-  return __namex(cwd, path, 1, name, haveref);
+  char name[DIRSIZ];
+  return namex(cwd, path, 0, name);
 }
-
 
 inode*
 nameiparent(inode *cwd, const char *path, char *name)
 {
-  bool haveref;
-
-  inode* ip;
-retry:
-  {
-    scoped_gc_epoch e;
-    ip = __namex(cwd, path, 1, name, &haveref);
-    if (ip != nullptr && !haveref)
-      if (!ip->tryinc())
-        goto retry;
-  }
-  return ip;
+  // Assumes caller is holding a gc_epoch
+  return namex(cwd, path, 1, name);
 }

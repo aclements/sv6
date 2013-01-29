@@ -207,19 +207,18 @@ sys_rename(userptr_str old_name, userptr_str new_name)
   if (!old_name.load(old, sizeof old) || !new_name.load(newn, sizeof newn))
     return -1;
 
-  bool haverefold = false;
   char oldname[DIRSIZ];
-  inode* dpold = __nameiparent(myproc()->cwd, old, oldname, &haverefold);
+  inode* dpold = nameiparent(myproc()->cwd, old, oldname);
   if (!dpold)
     return -1;
   if (dpold->type != T_DIR) {
-    iput(dpold, haverefold);
+    iput(dpold);
     return -1;
   }
 
   inode* ipold = dirlookup(dpold, oldname);
   if (!ipold) {
-    iput(dpold, haverefold);
+    iput(dpold);
     return -1;
   }
   if (ipold->dev != dpold->dev || ipold->type == T_DIR) {
@@ -227,28 +226,27 @@ sys_rename(userptr_str old_name, userptr_str new_name)
     // Would require checking for loops and dealing with refcounts
     // on the parent directories.
     iput(ipold);
-    iput(dpold, haverefold);
+    iput(dpold);
   }
 
-  bool haverefnew = false;
   char newname[DIRSIZ];
-  inode* dpnew = __nameiparent(myproc()->cwd, newn, newname, &haverefnew);
+  inode* dpnew = nameiparent(myproc()->cwd, newn, newname);
   if (!dpnew) {
     iput(ipold);
-    iput(dpold, haverefold);
+    iput(dpold);
     return -1;
   }
   if (dpnew->type != T_DIR || dpnew->dev != dpold->dev) {
-    iput(dpnew, haverefnew);
+    iput(dpnew);
     iput(ipold);
-    iput(dpold, haverefold);
+    iput(dpold);
     return -1;
   }
 
   if (dpold == dpnew && strbuf<DIRSIZ>(oldname) == strbuf<DIRSIZ>(newname)) {
-    iput(dpnew, haverefnew);
+    iput(dpnew);
     iput(ipold);
-    iput(dpold, haverefold);
+    iput(dpold);
     return 0;
   }
 
@@ -258,25 +256,25 @@ sys_rename(userptr_str old_name, userptr_str new_name)
   if (ipnew) {
     if (ipnew->type == T_DIR) {
       iput(ipnew);
-      iput(dpnew, haverefnew);
+      iput(dpnew);
       iput(ipold);
-      iput(dpold, haverefold);
+      iput(dpold);
       return -1;
     }
 
     if (!dpnew->dir.load()->replace(strbuf<DIRSIZ>(newname),
                                     ipnew->inum, ipold->inum)) {
       iput(ipnew);
-      iput(dpnew, haverefnew);
+      iput(dpnew);
       iput(ipold);
-      iput(dpold, haverefold);
+      iput(dpold);
       return -1;
     }
   } else {
     if (!dpnew->dir.load()->insert(strbuf<DIRSIZ>(newname), ipold->inum)) {
-      iput(dpnew, haverefnew);
+      iput(dpnew);
       iput(ipold);
-      iput(dpold, haverefold);
+      iput(dpold);
       return -1;
     }
   }
@@ -290,9 +288,9 @@ sys_rename(userptr_str old_name, userptr_str new_name)
     iunlockput(ipnew);
   }
 
-  iput(dpnew, haverefnew);
+  iput(dpnew);
   iput(ipold);
-  iput(dpold, haverefold);
+  iput(dpold);
   return 0;
 }
 
@@ -320,26 +318,25 @@ sys_unlink(userptr_str path)
   char path_copy[PATH_MAX];
   struct inode *ip, *dp;
   char name[DIRSIZ];
-  bool haveref = false;
 
   if (!path.load(path_copy, sizeof path_copy))
     return -1;
 
   scoped_gc_epoch e;
-  if((dp = __nameiparent(myproc()->cwd, path_copy, name, &haveref)) == 0)
+  if((dp = nameiparent(myproc()->cwd, path_copy, name)) == 0)
     return -1;
   if(dp->type != T_DIR)
     panic("sys_unlink");
 
   // Cannot unlink "." or "..".
   if(namecmp(name, ".") == 0 || namecmp(name, "..") == 0){
-    iput(dp, haveref);
+    iput(dp);
     return -1;
   }
 
  retry:
   if((ip = dirlookup(dp, name)) == 0){
-    iput(dp, haveref);
+    iput(dp);
     return -1;
   }
   ilock(ip, 1);
@@ -348,7 +345,7 @@ sys_unlink(userptr_str path)
     panic("unlink: nlink < 1");
   if(ip->type == T_DIR && !isdirempty(ip)){
     iunlockput(ip);
-    iput(dp, haveref);
+    iput(dp);
     return -1;
   }
 
@@ -365,7 +362,7 @@ sys_unlink(userptr_str path)
     iunlock(dp);
   }
 
-  iput(dp, haveref);
+  iput(dp);
 
   ip->unlink();
   iupdate(ip);
@@ -378,7 +375,6 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
 {
   struct inode *ip, *dp;
   char name[DIRSIZ];
-  bool haveref = false;
 
   mt_ascope ascope("%s(%d.%d,%s,%d,%d,%d)",
                    __func__, cwd->dev, cwd->inum,
@@ -387,14 +383,14 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
  retry:
   {
     scoped_gc_epoch e;
-    if((dp = __nameiparent(cwd, path, name, &haveref)) == 0)
+    if((dp = nameiparent(cwd, path, name)) == 0)
       return 0;
 
     if(dp->type != T_DIR)
       panic("create");
 
     if((ip = dirlookup(dp, name)) != 0){
-      iput(dp, haveref);
+      iput(dp);
       ilock(ip, 1);
       if(type == T_FILE && ip->type == T_FILE && !excl)
         return ip;
@@ -424,20 +420,13 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
       // create race
       ip->unlink();
       iunlockput(ip);
-      iput(dp, haveref);
+      iput(dp);
       goto retry;
-    }
-
-    if (!dp->valid()) {
-      // XXX(sbw) we need to undo everything we just did
-      // (at least all the modifications to dp) and retry
-      // (or return an error).
-      panic("create: race");
     }
   }
 
   //nc_insert(dp, name, ip);
-  iput(dp, haveref);
+  iput(dp);
   return ip;
 }
 
