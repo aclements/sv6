@@ -127,9 +127,11 @@ if __name__ == '__main__':
   if not os.path.exists(QEMU):
     print >>sys.stderr, \
         '[ERROR] Cannot find qemu (%s), did you forget to make install' % (QEMU)
+    sys.exit(1)
   if not os.path.exists(XV6_KERNEL):
     print >>sys.stderr, \
         '[ERROR] Cannot find xv6 kernel (%s), did you forget to run make?' % (XV6_KERNEL)
+    sys.exit(1)
 
   try:
     os.remove(DOWNSTREAM_SOCK)
