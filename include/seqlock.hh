@@ -1,6 +1,7 @@
 #pragma once
 
 #include "amd64.h"
+#include "spinlock.h"
 #ifdef XV6_KERNEL
 #include "atomic.hh"
 #else
@@ -26,11 +27,11 @@ public:
    */
   class reader
   {
-    seqcount * const sc_;
+    const seqcount * const sc_;
     T init_;
 
   public:
-    constexpr reader(seqcount *sc, T init) : sc_(sc), init_(init) { }
+    constexpr reader(const seqcount *sc, T init) : sc_(sc), init_(init) { }
     reader(reader &&o) = default;
     reader &operator=(reader &&o) = default;
     reader(const reader &o) = default;
@@ -64,7 +65,7 @@ public:
    * example, it's not safe to follow pointers without additional
    * protection from something like RCU).
    */
-  reader read_begin()
+  reader read_begin() const
   {
   retry:
     // Acquire order disables code hoisting so that reads in the
@@ -166,4 +167,48 @@ public:
     // XXX what memory order should we use here?
     return seq_.load();
   }
+};
+
+template<typename T>
+class seqlocked
+{
+public:
+  T read() const {
+    for (;;) {
+      auto r = seq_.read_begin();
+      T copy = state_;
+      if (!r.need_retry())
+        return copy;
+    }
+  }
+
+  template<typename Lock>
+  class writer {
+  public:
+    writer(seqcount<u32>* seq, Lock* l, T* s)
+      : sw_(seq->write_begin()), lg_(l), stateptr_(s) {}
+
+    writer(writer &&o) = default;
+    writer &operator=(writer &&o) = default;
+    writer(const writer &o) = delete;
+    writer &operator=(const writer &o) = delete;
+
+    T* operator->() const {
+      return stateptr_;
+    }
+
+  private:
+    seqcount<u32>::writer sw_;
+    lock_guard<Lock> lg_;
+    T* stateptr_;
+  };
+
+  template<typename Lock>
+  writer<Lock> write(Lock* l) {
+    return writer<Lock>(l, &state_);
+  }
+
+private:
+  seqcount<u32> seq_;
+  T state_;
 };
