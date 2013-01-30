@@ -66,13 +66,14 @@ buf::writeback()
 
   lock_guard<sleeplock> x(&writeback_lock_);
 
-retry:
-  auto r = seq_.read_begin();
-  memcpy(copy, data_, BSIZE);
-  if (r.need_retry())
-    goto retry;
-
-  wbseq_ = r.count();
+  for (;;) {
+    auto r = seq_.read_begin();
+    memcpy(copy, data_, BSIZE);
+    if (!r.need_retry()) {
+      wbseq_ = r.count();
+      break;
+    }
+  }
 
   // write copy[] to disk; don't need to wait for write to finish,
   // as long as write order to disk has been established.

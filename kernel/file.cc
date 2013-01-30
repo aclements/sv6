@@ -72,13 +72,15 @@ file::read(char *addr, int n)
   if(type == file::FD_PIPE)
     return piperead(pipe, addr, n);
   if(type == file::FD_INODE){
-  retry:
-    auto rs = ip->seq.read_begin();
-    if(ip->type == 0 && !rs.need_retry())
-      panic("fileread");
-    int r = readi(ip, addr, off, n);
-    if (rs.need_retry())
-      goto retry;
+    int r;
+
+    for (;;) {
+      auto rs = ip->seq.read_begin();
+      r = readi(ip, addr, off, n);
+      if (!rs.need_retry())
+        break;
+    }
+
     if (r > 0)
       off += r;
     return r;

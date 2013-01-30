@@ -54,11 +54,12 @@ readsb(int dev, struct superblock *sb)
 {
   buf* bp = buf::get(dev, 1);
 
-retry:
-  auto rs = bp->seq_.read_begin();
-  memmove(sb, bp->data_, sizeof(*sb));
-  if (rs.need_retry())
-    goto retry;
+  for (;;) {
+    auto rs = bp->seq_.read_begin();
+    memmove(sb, bp->data_, sizeof(*sb));
+    if (!rs.need_retry())
+      break;
+  }
 }
 
 // Zero a block.
@@ -528,17 +529,18 @@ inode::init(void)
   buf *bp = buf::get(dev, IBLOCK(inum));
   dinode *dip = (struct dinode*)bp->data_ + inum%IPB;
 
-retry:
-  auto rs = bp->seq_.read_begin();
-  type = dip->type;
-  major = dip->major;
-  minor = dip->minor;
-  nlink_ = dip->nlink;
-  size = dip->size;
-  gen = dip->gen;
-  memmove(addrs, dip->addrs, sizeof(addrs));
-  if (rs.need_retry())
-    goto retry;
+  for (;;) {
+    auto rs = bp->seq_.read_begin();
+    type = dip->type;
+    major = dip->major;
+    minor = dip->minor;
+    nlink_ = dip->nlink;
+    size = dip->size;
+    gen = dip->gen;
+    memmove(addrs, dip->addrs, sizeof(addrs));
+    if (!rs.need_retry())
+      break;
+  }
 
   if (nlink_ > 0)
     idup(this);
@@ -721,11 +723,14 @@ bmap(struct inode *ip, u32 bn)
 
       volatile u32* iaddrs = (u32*)kmalloc(IADDRSSZ, "iaddrs");
       buf* bp = buf::get(ip->dev, addr);
-    retry1a:
-      auto rs = bp->seq_.read_begin();
-      memmove((void*)iaddrs, bp->data_, IADDRSSZ);
-      if (rs.need_retry())
-        goto retry1a;
+
+      for (;;) {
+        auto rs = bp->seq_.read_begin();
+        memmove((void*)iaddrs, bp->data_, IADDRSSZ);
+        if (!rs.need_retry())
+          break;
+      }
+
       if (!cmpxch(&ip->iaddrs, (volatile u32*)nullptr, iaddrs)) {
         bfree(ip->dev, addr);
         kmfree((void*)iaddrs, IADDRSSZ);
@@ -763,31 +768,35 @@ retry3:
 
   buf* wb = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
   ap = (u32*)wb->data_;
-retry3a:
-  auto rs = wb->seq_.read_begin();
-  if (ap[bn / NINDIRECT] == 0) {
-    buf_scoped_writelock wl(wb);
-    if (ap[bn / NINDIRECT] == 0)
-      ap[bn / NINDIRECT] = balloc(ip->dev);
-    goto retry3a;
+
+  for (;;) {
+    auto rs = wb->seq_.read_begin();
+    if (ap[bn / NINDIRECT] == 0) {
+      buf_scoped_writelock wl(wb);
+      if (ap[bn / NINDIRECT] == 0)
+        ap[bn / NINDIRECT] = balloc(ip->dev);
+      continue;
+    }
+    addr = ap[bn / NINDIRECT];
+    if (!rs.need_retry())
+      break;
   }
-  addr = ap[bn / NINDIRECT];
-  if (rs.need_retry())
-    goto retry3a;
 
   wb = buf::get(ip->dev, addr);
   ap = (u32*)wb->data_;
-retry3b:
-  auto rs2 = wb->seq_.read_begin();
-  if (ap[bn % NINDIRECT] == 0) {
-    buf_scoped_writelock wl(wb);
-    if (ap[bn % NINDIRECT] == 0)
-      ap[bn % NINDIRECT] = balloc(ip->dev);
-    goto retry3b;
+
+  for (;;) {
+    auto rs2 = wb->seq_.read_begin();
+    if (ap[bn % NINDIRECT] == 0) {
+      buf_scoped_writelock wl(wb);
+      if (ap[bn % NINDIRECT] == 0)
+        ap[bn % NINDIRECT] = balloc(ip->dev);
+      continue;
+    }
+    addr = ap[bn % NINDIRECT];
+    if (!rs2.need_retry())
+      break;
   }
-  addr = ap[bn % NINDIRECT];
-  if (rs2.need_retry())
-    goto retry3b;
 
   return addr;
 }
@@ -920,11 +929,13 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
       panic("readi: out of blocks");
     }
     m = min(n - tot, BSIZE - off%BSIZE);
-  retry:
-    auto rs = bp->seq_.read_begin();
-    memmove(dst, bp->data_ + off%BSIZE, m);
-    if (rs.need_retry())
-      goto retry;
+
+    for (;;) {
+      auto rs = bp->seq_.read_begin();
+      memmove(dst, bp->data_ + off%BSIZE, m);
+      if (!rs.need_retry())
+        break;
+    }
   }
   return n;
 }
@@ -1018,17 +1029,16 @@ dir_init(struct inode *dp)
     for (struct dirent *de = (struct dirent *) bp->data_;
 	 de < (struct dirent *) (bp->data_ + BSIZE);
 	 de++) {
-    retry:
-      auto rs = bp->seq_.read_begin();
-      u16 inum = de->inum;
-      auto name = strbuf<DIRSIZ>(de->name);
-      if (rs.need_retry())
-        goto retry;
-
-      if (inum == 0)
-	continue;
-
-      dir->insert(name, inum);
+      for (;;) {
+        auto rs = bp->seq_.read_begin();
+        u16 inum = de->inum;
+        auto name = strbuf<DIRSIZ>(de->name);
+        if (!rs.need_retry()) {
+          if (inum)
+            dir->insert(name, inum);
+          break;
+        }
+      }
     }
   }
 
