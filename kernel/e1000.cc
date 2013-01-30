@@ -468,7 +468,19 @@ void
 e1000::reset_phy_82573()
 {
   // [E1000e 14.9] Reset PHY
-  panic("e1000: 82573x PHY reset not implemented");
+  verbose.println("e1000: Obtain software/firmware semaphore");
+  do {
+    ewr(WMREG_SWSM, SWSM_SWESMBI);
+  } while (!(erd(WMREG_SWSM) & SWSM_SWESMBI));
+
+  verbose.println("e1000: PHY reset");
+  u32 ctrl = erd(WMREG_CTRL);
+  ewr(WMREG_CTRL, ctrl|CTRL_PHY_RESET);
+  microdelay(100);
+  ewr(WMREG_CTRL, ctrl);
+  microdelay(10000);            // 10ms
+
+  verbose.println("e1000: PHY reset complete");
 }
 
 void
