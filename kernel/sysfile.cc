@@ -391,11 +391,11 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
 
     if((ip = dirlookup(dp, name)) != 0){
       iput(dp);
+      if(type != T_FILE || ip->type != T_FILE || excl)
+        return nullptr;
+
       ilock(ip, 1);
-      if(type == T_FILE && ip->type == T_FILE && !excl)
-        return ip;
-      iunlockput(ip);
-      return nullptr;
+      return ip;
     }
     
     if((ip = ialloc(dp->dev, type)) == nullptr)
