@@ -57,12 +57,12 @@
 #define CODEX         0
 #define PERFSIZE      (1<<20ull)
 #define E1000_PORT    1   // use second E1000 port
-#elif defined(HW_ud0)
+#elif defined(HW_ud0) || defined(HW_ud1)
 #define NCPU          4   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        0
 #define CODEX         0
-#define PERFSIZE      (512<<20ull)
+#define PERFSIZE      (1<<20ull)
 #define UART_BAUD     115200
 #elif defined(HW_tom)
 #define DEBUG         0
