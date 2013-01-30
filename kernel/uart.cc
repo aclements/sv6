@@ -111,8 +111,8 @@ inituart(void)
   };
 
   int i;
-#if defined(HW_ben)
-  int baud = 115200;
+#if defined(UART_BAUD)
+  int baud = UART_BAUD;
 #else
   int baud = 19200;
 #endif

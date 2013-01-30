@@ -63,6 +63,7 @@
 #define MTRACE        0
 #define CODEX         0
 #define PERFSIZE      (512<<20ull)
+#define UART_BAUD     115200
 #elif defined(HW_tom)
 #define DEBUG         0
 #define NCPU          48  // maximum number of CPUs
@@ -79,6 +80,7 @@
 #define MTRACE        0
 #define CODEX         0
 #define PERFSIZE      (1<<20ull)
+#define UART_BAUD     115200
 #elif defined(HW_user)
 #define NCPU          256
 #define MTRACE        0
