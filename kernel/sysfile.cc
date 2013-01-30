@@ -24,9 +24,9 @@ getfile(int fd, sref<file> *f)
 // Allocate a file descriptor for the given file.
 // Takes over file reference from caller on success.
 int
-fdalloc(file *f)
+fdalloc(file *f, int omode)
 {
-  return myproc()->ftable->allocfd(f);
+  return myproc()->ftable->allocfd(f, omode & O_ANYFD);
 }
 
 //SYSCALL
@@ -39,7 +39,7 @@ sys_dup(int ofd)
   if (!getfile(ofd, &f))
     return -1;
   f->inc();
-  if ((fd = fdalloc(f.get())) < 0) {
+  if ((fd = fdalloc(f.get(), 0)) < 0) {
     f->dec();
     return -1;
   }
@@ -535,7 +535,7 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     itrunc(ip);
   }
 
-  if((f = file::alloc()) == 0 || (fd = fdalloc(f)) < 0){
+  if((f = file::alloc()) == 0 || (fd = fdalloc(f, omode)) < 0){
     if(f)
       f->dec();
     if (iplocked)
@@ -682,7 +682,7 @@ sys_pipe(userptr<int> fd)
   if(pipealloc(&rf, &wf) < 0)
     return -1;
   fd_buf[0] = fd_buf[1] = -1;
-  if ((fd_buf[0] = fdalloc(rf)) < 0 || (fd_buf[1] = fdalloc(wf)) < 0 ||
+  if ((fd_buf[0] = fdalloc(rf, 0)) < 0 || (fd_buf[1] = fdalloc(wf, 0)) < 0 ||
       !fd.store(fd_buf, 2)) {
     if (fd_buf[0] >= 0)
       myproc()->ftable->close(fd_buf[0]);

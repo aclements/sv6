@@ -264,7 +264,7 @@ allocsocket(struct file **rf, int *rfd)
   if (f == nullptr)
     return -1;
 
-  fd = fdalloc(f);
+  fd = fdalloc(f, 0);
   if (fd < 0) {
     f->dec();
     return fd;

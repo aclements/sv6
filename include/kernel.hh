@@ -219,7 +219,7 @@ u64             syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 #include "ref.hh"
 int             doexec(const char* upath,
                        userptr<userptr<const char> > uargv);
-int             fdalloc(file *f);
+int             fdalloc(file *f, int omode);
 bool            getfile(int fd, sref<file> *f);
 struct inode*   create(inode *, const char *, short, short, short, bool);
 void            sockclose(const struct file *);
