@@ -36,7 +36,7 @@ static int xerrno(int r) {
       static int test_0_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -48,7 +48,7 @@ static int xerrno(int r) {
       static int test_0_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -75,7 +75,7 @@ static int xerrno(int r) {
       static int test_1_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -87,7 +87,7 @@ static int xerrno(int r) {
       static int test_1_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -114,7 +114,7 @@ static int xerrno(int r) {
       static int test_2_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -126,7 +126,7 @@ static int xerrno(int r) {
       static int test_2_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -164,7 +164,7 @@ static int xerrno(int r) {
       static int test_3_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -176,7 +176,7 @@ static int xerrno(int r) {
       static int test_3_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -214,7 +214,7 @@ static int xerrno(int r) {
       static int test_4_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -226,7 +226,7 @@ static int xerrno(int r) {
       static int test_4_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -264,7 +264,7 @@ static int xerrno(int r) {
       static int test_5_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -276,7 +276,7 @@ static int xerrno(int r) {
       static int test_5_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -303,7 +303,7 @@ static int xerrno(int r) {
       static int test_6_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -315,7 +315,7 @@ static int xerrno(int r) {
       static int test_6_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -353,7 +353,7 @@ static int xerrno(int r) {
       static int test_7_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -365,7 +365,7 @@ static int xerrno(int r) {
       static int test_7_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -392,7 +392,7 @@ static int xerrno(int r) {
       static int test_8_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -404,7 +404,7 @@ static int xerrno(int r) {
       static int test_8_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -442,7 +442,7 @@ static int xerrno(int r) {
       static int test_9_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -454,7 +454,7 @@ static int xerrno(int r) {
       static int test_9_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -492,7 +492,7 @@ static int xerrno(int r) {
       static int test_10_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -504,7 +504,7 @@ static int xerrno(int r) {
       static int test_10_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -531,7 +531,7 @@ static int xerrno(int r) {
       static int test_11_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -543,7 +543,7 @@ static int xerrno(int r) {
       static int test_11_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -570,7 +570,7 @@ static int xerrno(int r) {
       static int test_12_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -582,7 +582,7 @@ static int xerrno(int r) {
       static int test_12_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -609,7 +609,7 @@ static int xerrno(int r) {
       static int test_13_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -621,7 +621,7 @@ static int xerrno(int r) {
       static int test_13_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -648,7 +648,7 @@ static int xerrno(int r) {
       static int test_14_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -660,7 +660,7 @@ static int xerrno(int r) {
       static int test_14_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -698,7 +698,7 @@ static int xerrno(int r) {
       static int test_15_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -710,7 +710,7 @@ static int xerrno(int r) {
       static int test_15_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -748,7 +748,7 @@ static int xerrno(int r) {
       static int test_16_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -760,7 +760,7 @@ static int xerrno(int r) {
       static int test_16_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -798,7 +798,7 @@ static int xerrno(int r) {
       static int test_17_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -810,7 +810,7 @@ static int xerrno(int r) {
       static int test_17_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -837,7 +837,7 @@ static int xerrno(int r) {
       static int test_18_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -849,7 +849,7 @@ static int xerrno(int r) {
       static int test_18_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -887,7 +887,7 @@ static int xerrno(int r) {
       static int test_19_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -899,7 +899,7 @@ static int xerrno(int r) {
       static int test_19_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -926,7 +926,7 @@ static int xerrno(int r) {
       static int test_20_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -938,7 +938,7 @@ static int xerrno(int r) {
       static int test_20_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -976,7 +976,7 @@ static int xerrno(int r) {
       static int test_21_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -988,7 +988,7 @@ static int xerrno(int r) {
       static int test_21_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1026,7 +1026,7 @@ static int xerrno(int r) {
       static int test_22_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1038,7 +1038,7 @@ static int xerrno(int r) {
       static int test_22_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1065,7 +1065,7 @@ static int xerrno(int r) {
       static int test_23_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1077,7 +1077,7 @@ static int xerrno(int r) {
       static int test_23_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1104,7 +1104,7 @@ static int xerrno(int r) {
       static int test_24_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1116,7 +1116,7 @@ static int xerrno(int r) {
       static int test_24_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1143,7 +1143,7 @@ static int xerrno(int r) {
       static int test_25_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1155,7 +1155,7 @@ static int xerrno(int r) {
       static int test_25_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1182,7 +1182,7 @@ static int xerrno(int r) {
       static int test_26_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1194,7 +1194,7 @@ static int xerrno(int r) {
       static int test_26_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1232,7 +1232,7 @@ static int xerrno(int r) {
       static int test_27_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1244,7 +1244,7 @@ static int xerrno(int r) {
       static int test_27_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1282,7 +1282,7 @@ static int xerrno(int r) {
       static int test_28_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1294,7 +1294,7 @@ static int xerrno(int r) {
       static int test_28_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1332,7 +1332,7 @@ static int xerrno(int r) {
       static int test_29_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1344,7 +1344,7 @@ static int xerrno(int r) {
       static int test_29_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1371,7 +1371,7 @@ static int xerrno(int r) {
       static int test_30_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1383,7 +1383,7 @@ static int xerrno(int r) {
       static int test_30_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1421,7 +1421,7 @@ static int xerrno(int r) {
       static int test_31_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1433,7 +1433,7 @@ static int xerrno(int r) {
       static int test_31_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1460,7 +1460,7 @@ static int xerrno(int r) {
       static int test_32_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1472,7 +1472,7 @@ static int xerrno(int r) {
       static int test_32_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1510,7 +1510,7 @@ static int xerrno(int r) {
       static int test_33_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1522,7 +1522,7 @@ static int xerrno(int r) {
       static int test_33_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1560,7 +1560,7 @@ static int xerrno(int r) {
       static int test_34_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1572,7 +1572,7 @@ static int xerrno(int r) {
       static int test_34_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1599,7 +1599,7 @@ static int xerrno(int r) {
       static int test_35_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1611,7 +1611,7 @@ static int xerrno(int r) {
       static int test_35_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1638,7 +1638,7 @@ static int xerrno(int r) {
       static int test_36_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1650,7 +1650,7 @@ static int xerrno(int r) {
       static int test_36_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1677,7 +1677,7 @@ static int xerrno(int r) {
       static int test_37_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1689,7 +1689,7 @@ static int xerrno(int r) {
       static int test_37_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1716,7 +1716,7 @@ static int xerrno(int r) {
       static int test_38_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1728,7 +1728,7 @@ static int xerrno(int r) {
       static int test_38_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1755,7 +1755,7 @@ static int xerrno(int r) {
       static int test_39_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1767,7 +1767,7 @@ static int xerrno(int r) {
       static int test_39_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1794,7 +1794,7 @@ static int xerrno(int r) {
       static int test_40_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1806,7 +1806,7 @@ static int xerrno(int r) {
       static int test_40_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1833,7 +1833,7 @@ static int xerrno(int r) {
       static int test_41_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1845,7 +1845,7 @@ static int xerrno(int r) {
       static int test_41_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1872,7 +1872,7 @@ static int xerrno(int r) {
       static int test_42_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1884,7 +1884,7 @@ static int xerrno(int r) {
       static int test_42_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1911,7 +1911,7 @@ static int xerrno(int r) {
       static int test_43_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1923,7 +1923,7 @@ static int xerrno(int r) {
       static int test_43_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1950,7 +1950,7 @@ static int xerrno(int r) {
       static int test_44_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1962,7 +1962,7 @@ static int xerrno(int r) {
       static int test_44_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -1989,7 +1989,7 @@ static int xerrno(int r) {
       static int test_45_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2001,7 +2001,7 @@ static int xerrno(int r) {
       static int test_45_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2028,7 +2028,7 @@ static int xerrno(int r) {
       static int test_46_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2040,7 +2040,7 @@ static int xerrno(int r) {
       static int test_46_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2067,7 +2067,7 @@ static int xerrno(int r) {
       static int test_47_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2079,7 +2079,7 @@ static int xerrno(int r) {
       static int test_47_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2117,7 +2117,7 @@ static int xerrno(int r) {
       static int test_48_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2129,7 +2129,7 @@ static int xerrno(int r) {
       static int test_48_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2167,7 +2167,7 @@ static int xerrno(int r) {
       static int test_49_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2179,7 +2179,7 @@ static int xerrno(int r) {
       static int test_49_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2217,7 +2217,7 @@ static int xerrno(int r) {
       static int test_50_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2229,7 +2229,7 @@ static int xerrno(int r) {
       static int test_50_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2256,7 +2256,7 @@ static int xerrno(int r) {
       static int test_51_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2268,7 +2268,7 @@ static int xerrno(int r) {
       static int test_51_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2306,7 +2306,7 @@ static int xerrno(int r) {
       static int test_52_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2318,7 +2318,7 @@ static int xerrno(int r) {
       static int test_52_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2345,7 +2345,7 @@ static int xerrno(int r) {
       static int test_53_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2357,7 +2357,7 @@ static int xerrno(int r) {
       static int test_53_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2395,7 +2395,7 @@ static int xerrno(int r) {
       static int test_54_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2407,7 +2407,7 @@ static int xerrno(int r) {
       static int test_54_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2445,7 +2445,7 @@ static int xerrno(int r) {
       static int test_55_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2457,7 +2457,7 @@ static int xerrno(int r) {
       static int test_55_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2484,7 +2484,7 @@ static int xerrno(int r) {
       static int test_56_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2496,7 +2496,7 @@ static int xerrno(int r) {
       static int test_56_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2523,7 +2523,7 @@ static int xerrno(int r) {
       static int test_57_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2535,7 +2535,7 @@ static int xerrno(int r) {
       static int test_57_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2562,7 +2562,7 @@ static int xerrno(int r) {
       static int test_58_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2574,7 +2574,7 @@ static int xerrno(int r) {
       static int test_58_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2601,7 +2601,7 @@ static int xerrno(int r) {
       static int test_59_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2613,7 +2613,7 @@ static int xerrno(int r) {
       static int test_59_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2651,7 +2651,7 @@ static int xerrno(int r) {
       static int test_60_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2663,7 +2663,7 @@ static int xerrno(int r) {
       static int test_60_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2701,7 +2701,7 @@ static int xerrno(int r) {
       static int test_61_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2713,7 +2713,7 @@ static int xerrno(int r) {
       static int test_61_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2751,7 +2751,7 @@ static int xerrno(int r) {
       static int test_62_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2763,7 +2763,7 @@ static int xerrno(int r) {
       static int test_62_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2790,7 +2790,7 @@ static int xerrno(int r) {
       static int test_63_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2802,7 +2802,7 @@ static int xerrno(int r) {
       static int test_63_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2840,7 +2840,7 @@ static int xerrno(int r) {
       static int test_64_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2852,7 +2852,7 @@ static int xerrno(int r) {
       static int test_64_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2879,7 +2879,7 @@ static int xerrno(int r) {
       static int test_65_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2891,7 +2891,7 @@ static int xerrno(int r) {
       static int test_65_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2929,7 +2929,7 @@ static int xerrno(int r) {
       static int test_66_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2941,7 +2941,7 @@ static int xerrno(int r) {
       static int test_66_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2979,7 +2979,7 @@ static int xerrno(int r) {
       static int test_67_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -2991,7 +2991,7 @@ static int xerrno(int r) {
       static int test_67_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3018,7 +3018,7 @@ static int xerrno(int r) {
       static int test_68_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3030,7 +3030,7 @@ static int xerrno(int r) {
       static int test_68_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3057,7 +3057,7 @@ static int xerrno(int r) {
       static int test_69_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3069,7 +3069,7 @@ static int xerrno(int r) {
       static int test_69_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3096,7 +3096,7 @@ static int xerrno(int r) {
       static int test_70_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3108,7 +3108,7 @@ static int xerrno(int r) {
       static int test_70_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3135,7 +3135,7 @@ static int xerrno(int r) {
       static int test_71_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3147,7 +3147,7 @@ static int xerrno(int r) {
       static int test_71_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3174,7 +3174,7 @@ static int xerrno(int r) {
       static int test_72_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3186,7 +3186,7 @@ static int xerrno(int r) {
       static int test_72_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3213,7 +3213,7 @@ static int xerrno(int r) {
       static int test_73_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3225,7 +3225,7 @@ static int xerrno(int r) {
       static int test_73_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3252,7 +3252,7 @@ static int xerrno(int r) {
       static int test_74_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3264,7 +3264,7 @@ static int xerrno(int r) {
       static int test_74_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3291,7 +3291,7 @@ static int xerrno(int r) {
       static int test_75_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3303,7 +3303,7 @@ static int xerrno(int r) {
       static int test_75_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3330,7 +3330,7 @@ static int xerrno(int r) {
       static int test_76_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3342,7 +3342,7 @@ static int xerrno(int r) {
       static int test_76_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3369,7 +3369,7 @@ static int xerrno(int r) {
       static int test_77_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3381,7 +3381,7 @@ static int xerrno(int r) {
       static int test_77_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3419,7 +3419,7 @@ static int xerrno(int r) {
       static int test_78_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3431,7 +3431,7 @@ static int xerrno(int r) {
       static int test_78_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3469,7 +3469,7 @@ static int xerrno(int r) {
       static int test_79_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3481,7 +3481,7 @@ static int xerrno(int r) {
       static int test_79_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3519,7 +3519,7 @@ static int xerrno(int r) {
       static int test_80_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3531,7 +3531,7 @@ static int xerrno(int r) {
       static int test_80_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3558,7 +3558,7 @@ static int xerrno(int r) {
       static int test_81_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3570,7 +3570,7 @@ static int xerrno(int r) {
       static int test_81_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3608,7 +3608,7 @@ static int xerrno(int r) {
       static int test_82_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3620,7 +3620,7 @@ static int xerrno(int r) {
       static int test_82_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3647,7 +3647,7 @@ static int xerrno(int r) {
       static int test_83_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3659,7 +3659,7 @@ static int xerrno(int r) {
       static int test_83_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3697,7 +3697,7 @@ static int xerrno(int r) {
       static int test_84_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3709,7 +3709,7 @@ static int xerrno(int r) {
       static int test_84_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3747,7 +3747,7 @@ static int xerrno(int r) {
       static int test_85_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3759,7 +3759,7 @@ static int xerrno(int r) {
       static int test_85_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3786,7 +3786,7 @@ static int xerrno(int r) {
       static int test_86_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3798,7 +3798,7 @@ static int xerrno(int r) {
       static int test_86_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3825,7 +3825,7 @@ static int xerrno(int r) {
       static int test_87_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3837,7 +3837,7 @@ static int xerrno(int r) {
       static int test_87_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3864,7 +3864,7 @@ static int xerrno(int r) {
       static int test_88_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3876,7 +3876,7 @@ static int xerrno(int r) {
       static int test_88_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3903,7 +3903,7 @@ static int xerrno(int r) {
       static int test_89_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3915,7 +3915,7 @@ static int xerrno(int r) {
       static int test_89_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3953,7 +3953,7 @@ static int xerrno(int r) {
       static int test_90_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -3965,7 +3965,7 @@ static int xerrno(int r) {
       static int test_90_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4003,7 +4003,7 @@ static int xerrno(int r) {
       static int test_91_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4015,7 +4015,7 @@ static int xerrno(int r) {
       static int test_91_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4053,7 +4053,7 @@ static int xerrno(int r) {
       static int test_92_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4065,7 +4065,7 @@ static int xerrno(int r) {
       static int test_92_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4092,7 +4092,7 @@ static int xerrno(int r) {
       static int test_93_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4104,7 +4104,7 @@ static int xerrno(int r) {
       static int test_93_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4142,7 +4142,7 @@ static int xerrno(int r) {
       static int test_94_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4154,7 +4154,7 @@ static int xerrno(int r) {
       static int test_94_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4181,7 +4181,7 @@ static int xerrno(int r) {
       static int test_95_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4193,7 +4193,7 @@ static int xerrno(int r) {
       static int test_95_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4231,7 +4231,7 @@ static int xerrno(int r) {
       static int test_96_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4243,7 +4243,7 @@ static int xerrno(int r) {
       static int test_96_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4281,7 +4281,7 @@ static int xerrno(int r) {
       static int test_97_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4293,7 +4293,7 @@ static int xerrno(int r) {
       static int test_97_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4320,7 +4320,7 @@ static int xerrno(int r) {
       static int test_98_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4332,7 +4332,7 @@ static int xerrno(int r) {
       static int test_98_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4359,7 +4359,7 @@ static int xerrno(int r) {
       static int test_99_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4371,7 +4371,7 @@ static int xerrno(int r) {
       static int test_99_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4398,7 +4398,7 @@ static int xerrno(int r) {
       static int test_100_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4410,7 +4410,7 @@ static int xerrno(int r) {
       static int test_100_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4437,7 +4437,7 @@ static int xerrno(int r) {
       static int test_101_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4449,7 +4449,7 @@ static int xerrno(int r) {
       static int test_101_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4487,7 +4487,7 @@ static int xerrno(int r) {
       static int test_102_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4499,7 +4499,7 @@ static int xerrno(int r) {
       static int test_102_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4537,7 +4537,7 @@ static int xerrno(int r) {
       static int test_103_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4549,7 +4549,7 @@ static int xerrno(int r) {
       static int test_103_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4587,7 +4587,7 @@ static int xerrno(int r) {
       static int test_104_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4599,7 +4599,7 @@ static int xerrno(int r) {
       static int test_104_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4626,7 +4626,7 @@ static int xerrno(int r) {
       static int test_105_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4638,7 +4638,7 @@ static int xerrno(int r) {
       static int test_105_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4676,7 +4676,7 @@ static int xerrno(int r) {
       static int test_106_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4688,7 +4688,7 @@ static int xerrno(int r) {
       static int test_106_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4715,7 +4715,7 @@ static int xerrno(int r) {
       static int test_107_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4727,7 +4727,7 @@ static int xerrno(int r) {
       static int test_107_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4765,7 +4765,7 @@ static int xerrno(int r) {
       static int test_108_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4777,7 +4777,7 @@ static int xerrno(int r) {
       static int test_108_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4815,7 +4815,7 @@ static int xerrno(int r) {
       static int test_109_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4827,7 +4827,7 @@ static int xerrno(int r) {
       static int test_109_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4854,7 +4854,7 @@ static int xerrno(int r) {
       static int test_110_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4866,7 +4866,7 @@ static int xerrno(int r) {
       static int test_110_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4893,7 +4893,7 @@ static int xerrno(int r) {
       static int test_111_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4905,7 +4905,7 @@ static int xerrno(int r) {
       static int test_111_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4932,7 +4932,7 @@ static int xerrno(int r) {
       static int test_112_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4944,7 +4944,7 @@ static int xerrno(int r) {
       static int test_112_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4971,7 +4971,7 @@ static int xerrno(int r) {
       static int test_113_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -4983,7 +4983,7 @@ static int xerrno(int r) {
       static int test_113_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5010,7 +5010,7 @@ static int xerrno(int r) {
       static int test_114_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5022,7 +5022,7 @@ static int xerrno(int r) {
       static int test_114_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5049,7 +5049,7 @@ static int xerrno(int r) {
       static int test_115_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5061,7 +5061,7 @@ static int xerrno(int r) {
       static int test_115_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5088,7 +5088,7 @@ static int xerrno(int r) {
       static int test_116_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5100,7 +5100,7 @@ static int xerrno(int r) {
       static int test_116_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5127,7 +5127,7 @@ static int xerrno(int r) {
       static int test_117_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5139,7 +5139,7 @@ static int xerrno(int r) {
       static int test_117_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5166,7 +5166,7 @@ static int xerrno(int r) {
       static int test_118_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5178,7 +5178,7 @@ static int xerrno(int r) {
       static int test_118_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5205,7 +5205,7 @@ static int xerrno(int r) {
       static int test_119_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5217,7 +5217,7 @@ static int xerrno(int r) {
       static int test_119_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5244,7 +5244,7 @@ static int xerrno(int r) {
       static int test_120_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5256,7 +5256,7 @@ static int xerrno(int r) {
       static int test_120_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5283,7 +5283,7 @@ static int xerrno(int r) {
       static int test_121_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5295,7 +5295,7 @@ static int xerrno(int r) {
       static int test_121_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5322,7 +5322,7 @@ static int xerrno(int r) {
       static int test_122_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5334,7 +5334,7 @@ static int xerrno(int r) {
       static int test_122_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5372,7 +5372,7 @@ static int xerrno(int r) {
       static int test_123_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5384,7 +5384,7 @@ static int xerrno(int r) {
       static int test_123_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5422,7 +5422,7 @@ static int xerrno(int r) {
       static int test_124_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5434,7 +5434,7 @@ static int xerrno(int r) {
       static int test_124_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5472,7 +5472,7 @@ static int xerrno(int r) {
       static int test_125_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5484,7 +5484,7 @@ static int xerrno(int r) {
       static int test_125_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5511,7 +5511,7 @@ static int xerrno(int r) {
       static int test_126_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5523,7 +5523,7 @@ static int xerrno(int r) {
       static int test_126_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5561,7 +5561,7 @@ static int xerrno(int r) {
       static int test_127_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5573,7 +5573,7 @@ static int xerrno(int r) {
       static int test_127_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5600,7 +5600,7 @@ static int xerrno(int r) {
       static int test_128_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5612,7 +5612,7 @@ static int xerrno(int r) {
       static int test_128_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5650,7 +5650,7 @@ static int xerrno(int r) {
       static int test_129_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5662,7 +5662,7 @@ static int xerrno(int r) {
       static int test_129_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5700,7 +5700,7 @@ static int xerrno(int r) {
       static int test_130_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5712,7 +5712,7 @@ static int xerrno(int r) {
       static int test_130_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5739,7 +5739,7 @@ static int xerrno(int r) {
       static int test_131_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5751,7 +5751,7 @@ static int xerrno(int r) {
       static int test_131_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5778,7 +5778,7 @@ static int xerrno(int r) {
       static int test_132_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5790,7 +5790,7 @@ static int xerrno(int r) {
       static int test_132_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5817,7 +5817,7 @@ static int xerrno(int r) {
       static int test_133_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5829,7 +5829,7 @@ static int xerrno(int r) {
       static int test_133_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5856,7 +5856,7 @@ static int xerrno(int r) {
       static int test_134_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5868,7 +5868,7 @@ static int xerrno(int r) {
       static int test_134_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5906,7 +5906,7 @@ static int xerrno(int r) {
       static int test_135_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5918,7 +5918,7 @@ static int xerrno(int r) {
       static int test_135_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5956,7 +5956,7 @@ static int xerrno(int r) {
       static int test_136_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -5968,7 +5968,7 @@ static int xerrno(int r) {
       static int test_136_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6006,7 +6006,7 @@ static int xerrno(int r) {
       static int test_137_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6018,7 +6018,7 @@ static int xerrno(int r) {
       static int test_137_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6045,7 +6045,7 @@ static int xerrno(int r) {
       static int test_138_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6057,7 +6057,7 @@ static int xerrno(int r) {
       static int test_138_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6095,7 +6095,7 @@ static int xerrno(int r) {
       static int test_139_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6107,7 +6107,7 @@ static int xerrno(int r) {
       static int test_139_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6134,7 +6134,7 @@ static int xerrno(int r) {
       static int test_140_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6146,7 +6146,7 @@ static int xerrno(int r) {
       static int test_140_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6184,7 +6184,7 @@ static int xerrno(int r) {
       static int test_141_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6196,7 +6196,7 @@ static int xerrno(int r) {
       static int test_141_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6234,7 +6234,7 @@ static int xerrno(int r) {
       static int test_142_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6246,7 +6246,7 @@ static int xerrno(int r) {
       static int test_142_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6273,7 +6273,7 @@ static int xerrno(int r) {
       static int test_143_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6285,7 +6285,7 @@ static int xerrno(int r) {
       static int test_143_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6312,7 +6312,7 @@ static int xerrno(int r) {
       static int test_144_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6324,7 +6324,7 @@ static int xerrno(int r) {
       static int test_144_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6351,7 +6351,7 @@ static int xerrno(int r) {
       static int test_145_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6363,7 +6363,7 @@ static int xerrno(int r) {
       static int test_145_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6390,7 +6390,7 @@ static int xerrno(int r) {
       static int test_146_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6402,7 +6402,7 @@ static int xerrno(int r) {
       static int test_146_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6429,7 +6429,7 @@ static int xerrno(int r) {
       static int test_147_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6441,7 +6441,7 @@ static int xerrno(int r) {
       static int test_147_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6468,7 +6468,7 @@ static int xerrno(int r) {
       static int test_148_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6480,7 +6480,7 @@ static int xerrno(int r) {
       static int test_148_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6507,7 +6507,7 @@ static int xerrno(int r) {
       static int test_149_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6519,7 +6519,7 @@ static int xerrno(int r) {
       static int test_149_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6546,7 +6546,7 @@ static int xerrno(int r) {
       static int test_150_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6558,7 +6558,7 @@ static int xerrno(int r) {
       static int test_150_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6585,7 +6585,7 @@ static int xerrno(int r) {
       static int test_151_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6597,7 +6597,7 @@ static int xerrno(int r) {
       static int test_151_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6624,7 +6624,7 @@ static int xerrno(int r) {
       static int test_152_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6636,7 +6636,7 @@ static int xerrno(int r) {
       static int test_152_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6674,7 +6674,7 @@ static int xerrno(int r) {
       static int test_153_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6686,7 +6686,7 @@ static int xerrno(int r) {
       static int test_153_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6724,7 +6724,7 @@ static int xerrno(int r) {
       static int test_154_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6736,7 +6736,7 @@ static int xerrno(int r) {
       static int test_154_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6774,7 +6774,7 @@ static int xerrno(int r) {
       static int test_155_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6786,7 +6786,7 @@ static int xerrno(int r) {
       static int test_155_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6813,7 +6813,7 @@ static int xerrno(int r) {
       static int test_156_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6825,7 +6825,7 @@ static int xerrno(int r) {
       static int test_156_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6863,7 +6863,7 @@ static int xerrno(int r) {
       static int test_157_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6875,7 +6875,7 @@ static int xerrno(int r) {
       static int test_157_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6902,7 +6902,7 @@ static int xerrno(int r) {
       static int test_158_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6914,7 +6914,7 @@ static int xerrno(int r) {
       static int test_158_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6952,7 +6952,7 @@ static int xerrno(int r) {
       static int test_159_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -6964,7 +6964,7 @@ static int xerrno(int r) {
       static int test_159_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7002,7 +7002,7 @@ static int xerrno(int r) {
       static int test_160_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7014,7 +7014,7 @@ static int xerrno(int r) {
       static int test_160_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7041,7 +7041,7 @@ static int xerrno(int r) {
       static int test_161_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7053,7 +7053,7 @@ static int xerrno(int r) {
       static int test_161_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7080,7 +7080,7 @@ static int xerrno(int r) {
       static int test_162_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7092,7 +7092,7 @@ static int xerrno(int r) {
       static int test_162_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7119,7 +7119,7 @@ static int xerrno(int r) {
       static int test_163_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7131,7 +7131,7 @@ static int xerrno(int r) {
       static int test_163_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7158,7 +7158,7 @@ static int xerrno(int r) {
       static int test_164_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7170,7 +7170,7 @@ static int xerrno(int r) {
       static int test_164_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7208,7 +7208,7 @@ static int xerrno(int r) {
       static int test_165_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7220,7 +7220,7 @@ static int xerrno(int r) {
       static int test_165_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7258,7 +7258,7 @@ static int xerrno(int r) {
       static int test_166_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7270,7 +7270,7 @@ static int xerrno(int r) {
       static int test_166_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7308,7 +7308,7 @@ static int xerrno(int r) {
       static int test_167_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7320,7 +7320,7 @@ static int xerrno(int r) {
       static int test_167_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7347,7 +7347,7 @@ static int xerrno(int r) {
       static int test_168_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7359,7 +7359,7 @@ static int xerrno(int r) {
       static int test_168_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7397,7 +7397,7 @@ static int xerrno(int r) {
       static int test_169_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7409,7 +7409,7 @@ static int xerrno(int r) {
       static int test_169_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7436,7 +7436,7 @@ static int xerrno(int r) {
       static int test_170_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7448,7 +7448,7 @@ static int xerrno(int r) {
       static int test_170_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7486,7 +7486,7 @@ static int xerrno(int r) {
       static int test_171_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7498,7 +7498,7 @@ static int xerrno(int r) {
       static int test_171_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7536,7 +7536,7 @@ static int xerrno(int r) {
       static int test_172_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7548,7 +7548,7 @@ static int xerrno(int r) {
       static int test_172_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7575,7 +7575,7 @@ static int xerrno(int r) {
       static int test_173_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7587,7 +7587,7 @@ static int xerrno(int r) {
       static int test_173_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7614,7 +7614,7 @@ static int xerrno(int r) {
       static int test_174_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7626,7 +7626,7 @@ static int xerrno(int r) {
       static int test_174_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7653,7 +7653,7 @@ static int xerrno(int r) {
       static int test_175_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7665,7 +7665,7 @@ static int xerrno(int r) {
       static int test_175_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7692,7 +7692,7 @@ static int xerrno(int r) {
       static int test_176_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7704,7 +7704,7 @@ static int xerrno(int r) {
       static int test_176_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7742,7 +7742,7 @@ static int xerrno(int r) {
       static int test_177_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7754,7 +7754,7 @@ static int xerrno(int r) {
       static int test_177_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7792,7 +7792,7 @@ static int xerrno(int r) {
       static int test_178_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7804,7 +7804,7 @@ static int xerrno(int r) {
       static int test_178_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7842,7 +7842,7 @@ static int xerrno(int r) {
       static int test_179_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7854,7 +7854,7 @@ static int xerrno(int r) {
       static int test_179_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7881,7 +7881,7 @@ static int xerrno(int r) {
       static int test_180_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7893,7 +7893,7 @@ static int xerrno(int r) {
       static int test_180_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7931,7 +7931,7 @@ static int xerrno(int r) {
       static int test_181_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7943,7 +7943,7 @@ static int xerrno(int r) {
       static int test_181_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7970,7 +7970,7 @@ static int xerrno(int r) {
       static int test_182_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -7982,7 +7982,7 @@ static int xerrno(int r) {
       static int test_182_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8020,7 +8020,7 @@ static int xerrno(int r) {
       static int test_183_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8032,7 +8032,7 @@ static int xerrno(int r) {
       static int test_183_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8070,7 +8070,7 @@ static int xerrno(int r) {
       static int test_184_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8082,7 +8082,7 @@ static int xerrno(int r) {
       static int test_184_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8109,7 +8109,7 @@ static int xerrno(int r) {
       static int test_185_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8121,7 +8121,7 @@ static int xerrno(int r) {
       static int test_185_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8148,7 +8148,7 @@ static int xerrno(int r) {
       static int test_186_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8160,7 +8160,7 @@ static int xerrno(int r) {
       static int test_186_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8187,7 +8187,7 @@ static int xerrno(int r) {
       static int test_187_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8199,7 +8199,7 @@ static int xerrno(int r) {
       static int test_187_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8226,7 +8226,7 @@ static int xerrno(int r) {
       static int test_188_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8238,7 +8238,7 @@ static int xerrno(int r) {
       static int test_188_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8265,7 +8265,7 @@ static int xerrno(int r) {
       static int test_189_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8277,7 +8277,7 @@ static int xerrno(int r) {
       static int test_189_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8304,7 +8304,7 @@ static int xerrno(int r) {
       static int test_190_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8316,7 +8316,7 @@ static int xerrno(int r) {
       static int test_190_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8343,7 +8343,7 @@ static int xerrno(int r) {
       static int test_191_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8355,7 +8355,7 @@ static int xerrno(int r) {
       static int test_191_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8382,7 +8382,7 @@ static int xerrno(int r) {
       static int test_192_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8394,7 +8394,7 @@ static int xerrno(int r) {
       static int test_192_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8421,7 +8421,7 @@ static int xerrno(int r) {
       static int test_193_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8433,7 +8433,7 @@ static int xerrno(int r) {
       static int test_193_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8460,7 +8460,7 @@ static int xerrno(int r) {
       static int test_194_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8472,7 +8472,7 @@ static int xerrno(int r) {
       static int test_194_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8499,7 +8499,7 @@ static int xerrno(int r) {
       static int test_195_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8511,7 +8511,7 @@ static int xerrno(int r) {
       static int test_195_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8538,7 +8538,7 @@ static int xerrno(int r) {
       static int test_196_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8550,7 +8550,7 @@ static int xerrno(int r) {
       static int test_196_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8577,7 +8577,7 @@ static int xerrno(int r) {
       static int test_197_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8589,7 +8589,7 @@ static int xerrno(int r) {
       static int test_197_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8627,7 +8627,7 @@ static int xerrno(int r) {
       static int test_198_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8639,7 +8639,7 @@ static int xerrno(int r) {
       static int test_198_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8677,7 +8677,7 @@ static int xerrno(int r) {
       static int test_199_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8689,7 +8689,7 @@ static int xerrno(int r) {
       static int test_199_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8727,7 +8727,7 @@ static int xerrno(int r) {
       static int test_200_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8739,7 +8739,7 @@ static int xerrno(int r) {
       static int test_200_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8766,7 +8766,7 @@ static int xerrno(int r) {
       static int test_201_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8778,7 +8778,7 @@ static int xerrno(int r) {
       static int test_201_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8816,7 +8816,7 @@ static int xerrno(int r) {
       static int test_202_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8828,7 +8828,7 @@ static int xerrno(int r) {
       static int test_202_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8855,7 +8855,7 @@ static int xerrno(int r) {
       static int test_203_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8867,7 +8867,7 @@ static int xerrno(int r) {
       static int test_203_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8905,7 +8905,7 @@ static int xerrno(int r) {
       static int test_204_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8917,7 +8917,7 @@ static int xerrno(int r) {
       static int test_204_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8955,7 +8955,7 @@ static int xerrno(int r) {
       static int test_205_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8967,7 +8967,7 @@ static int xerrno(int r) {
       static int test_205_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -8994,7 +8994,7 @@ static int xerrno(int r) {
       static int test_206_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9006,7 +9006,7 @@ static int xerrno(int r) {
       static int test_206_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9033,7 +9033,7 @@ static int xerrno(int r) {
       static int test_207_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9045,7 +9045,7 @@ static int xerrno(int r) {
       static int test_207_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9072,7 +9072,7 @@ static int xerrno(int r) {
       static int test_208_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9084,7 +9084,7 @@ static int xerrno(int r) {
       static int test_208_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9111,7 +9111,7 @@ static int xerrno(int r) {
       static int test_209_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9123,7 +9123,7 @@ static int xerrno(int r) {
       static int test_209_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9161,7 +9161,7 @@ static int xerrno(int r) {
       static int test_210_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9173,7 +9173,7 @@ static int xerrno(int r) {
       static int test_210_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9211,7 +9211,7 @@ static int xerrno(int r) {
       static int test_211_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9223,7 +9223,7 @@ static int xerrno(int r) {
       static int test_211_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9261,7 +9261,7 @@ static int xerrno(int r) {
       static int test_212_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9273,7 +9273,7 @@ static int xerrno(int r) {
       static int test_212_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9300,7 +9300,7 @@ static int xerrno(int r) {
       static int test_213_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9312,7 +9312,7 @@ static int xerrno(int r) {
       static int test_213_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9350,7 +9350,7 @@ static int xerrno(int r) {
       static int test_214_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9362,7 +9362,7 @@ static int xerrno(int r) {
       static int test_214_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9389,7 +9389,7 @@ static int xerrno(int r) {
       static int test_215_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9401,7 +9401,7 @@ static int xerrno(int r) {
       static int test_215_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9439,7 +9439,7 @@ static int xerrno(int r) {
       static int test_216_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9451,7 +9451,7 @@ static int xerrno(int r) {
       static int test_216_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9489,7 +9489,7 @@ static int xerrno(int r) {
       static int test_217_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9501,7 +9501,7 @@ static int xerrno(int r) {
       static int test_217_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9528,7 +9528,7 @@ static int xerrno(int r) {
       static int test_218_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9540,7 +9540,7 @@ static int xerrno(int r) {
       static int test_218_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9567,7 +9567,7 @@ static int xerrno(int r) {
       static int test_219_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9579,7 +9579,7 @@ static int xerrno(int r) {
       static int test_219_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9606,7 +9606,7 @@ static int xerrno(int r) {
       static int test_220_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9618,7 +9618,7 @@ static int xerrno(int r) {
       static int test_220_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9645,7 +9645,7 @@ static int xerrno(int r) {
       static int test_221_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9657,7 +9657,7 @@ static int xerrno(int r) {
       static int test_221_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9684,7 +9684,7 @@ static int xerrno(int r) {
       static int test_222_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9696,7 +9696,7 @@ static int xerrno(int r) {
       static int test_222_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9723,7 +9723,7 @@ static int xerrno(int r) {
       static int test_223_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9735,7 +9735,7 @@ static int xerrno(int r) {
       static int test_223_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9762,7 +9762,7 @@ static int xerrno(int r) {
       static int test_224_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9774,7 +9774,7 @@ static int xerrno(int r) {
       static int test_224_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9827,7 +9827,7 @@ static int xerrno(int r) {
       static int test_225_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9839,7 +9839,7 @@ static int xerrno(int r) {
       static int test_225_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9892,7 +9892,7 @@ static int xerrno(int r) {
       static int test_226_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9904,7 +9904,7 @@ static int xerrno(int r) {
       static int test_226_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9957,7 +9957,7 @@ static int xerrno(int r) {
       static int test_227_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9969,7 +9969,7 @@ static int xerrno(int r) {
       static int test_227_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9985,7 +9985,7 @@ static int xerrno(int r) {
       static int test_228_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -9997,7 +9997,7 @@ static int xerrno(int r) {
       static int test_228_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10013,7 +10013,7 @@ static int xerrno(int r) {
       static int test_229_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10025,7 +10025,7 @@ static int xerrno(int r) {
       static int test_229_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10078,7 +10078,7 @@ static int xerrno(int r) {
       static int test_230_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10090,7 +10090,7 @@ static int xerrno(int r) {
       static int test_230_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10143,7 +10143,7 @@ static int xerrno(int r) {
       static int test_231_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10155,7 +10155,7 @@ static int xerrno(int r) {
       static int test_231_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10171,7 +10171,7 @@ static int xerrno(int r) {
       static int test_232_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10183,7 +10183,7 @@ static int xerrno(int r) {
       static int test_232_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10199,7 +10199,7 @@ static int xerrno(int r) {
       static int test_233_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10211,7 +10211,7 @@ static int xerrno(int r) {
       static int test_233_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10238,7 +10238,7 @@ static int xerrno(int r) {
       static int test_234_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10250,7 +10250,7 @@ static int xerrno(int r) {
       static int test_234_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10277,7 +10277,7 @@ static int xerrno(int r) {
       static int test_235_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10289,7 +10289,7 @@ static int xerrno(int r) {
       static int test_235_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10316,7 +10316,7 @@ static int xerrno(int r) {
       static int test_236_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10328,7 +10328,7 @@ static int xerrno(int r) {
       static int test_236_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10355,7 +10355,7 @@ static int xerrno(int r) {
       static int test_237_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10367,7 +10367,7 @@ static int xerrno(int r) {
       static int test_237_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10394,7 +10394,7 @@ static int xerrno(int r) {
       static int test_238_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10406,7 +10406,7 @@ static int xerrno(int r) {
       static int test_238_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10433,7 +10433,7 @@ static int xerrno(int r) {
       static int test_239_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10445,7 +10445,7 @@ static int xerrno(int r) {
       static int test_239_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10472,7 +10472,7 @@ static int xerrno(int r) {
       static int test_240_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10484,7 +10484,7 @@ static int xerrno(int r) {
       static int test_240_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10511,7 +10511,7 @@ static int xerrno(int r) {
       static int test_241_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10523,7 +10523,7 @@ static int xerrno(int r) {
       static int test_241_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10539,7 +10539,7 @@ static int xerrno(int r) {
       static int test_242_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10551,7 +10551,7 @@ static int xerrno(int r) {
       static int test_242_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10567,7 +10567,7 @@ static int xerrno(int r) {
       static int test_243_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10579,7 +10579,7 @@ static int xerrno(int r) {
       static int test_243_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10595,7 +10595,7 @@ static int xerrno(int r) {
       static int test_244_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10607,7 +10607,7 @@ static int xerrno(int r) {
       static int test_244_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10623,7 +10623,7 @@ static int xerrno(int r) {
       static int test_245_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10635,7 +10635,7 @@ static int xerrno(int r) {
       static int test_245_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10662,7 +10662,7 @@ static int xerrno(int r) {
       static int test_246_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10674,7 +10674,7 @@ static int xerrno(int r) {
       static int test_246_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10701,7 +10701,7 @@ static int xerrno(int r) {
       static int test_247_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10713,7 +10713,7 @@ static int xerrno(int r) {
       static int test_247_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10740,7 +10740,7 @@ static int xerrno(int r) {
       static int test_248_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10752,7 +10752,7 @@ static int xerrno(int r) {
       static int test_248_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10779,7 +10779,7 @@ static int xerrno(int r) {
       static int test_249_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10791,7 +10791,7 @@ static int xerrno(int r) {
       static int test_249_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10807,7 +10807,7 @@ static int xerrno(int r) {
       static int test_250_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10819,7 +10819,7 @@ static int xerrno(int r) {
       static int test_250_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10835,7 +10835,7 @@ static int xerrno(int r) {
       static int test_251_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10847,7 +10847,7 @@ static int xerrno(int r) {
       static int test_251_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10863,7 +10863,7 @@ static int xerrno(int r) {
       static int test_252_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10875,7 +10875,7 @@ static int xerrno(int r) {
       static int test_252_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10891,7 +10891,7 @@ static int xerrno(int r) {
       static int test_253_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10903,7 +10903,7 @@ static int xerrno(int r) {
       static int test_253_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10919,7 +10919,7 @@ static int xerrno(int r) {
       static int test_254_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10931,7 +10931,7 @@ static int xerrno(int r) {
       static int test_254_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10947,7 +10947,7 @@ static int xerrno(int r) {
       static int test_255_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10959,7 +10959,7 @@ static int xerrno(int r) {
       static int test_255_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10986,7 +10986,7 @@ static int xerrno(int r) {
       static int test_256_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -10998,7 +10998,7 @@ static int xerrno(int r) {
       static int test_256_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11025,7 +11025,7 @@ static int xerrno(int r) {
       static int test_257_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11037,7 +11037,7 @@ static int xerrno(int r) {
       static int test_257_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11064,7 +11064,7 @@ static int xerrno(int r) {
       static int test_258_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11076,7 +11076,7 @@ static int xerrno(int r) {
       static int test_258_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11103,7 +11103,7 @@ static int xerrno(int r) {
       static int test_259_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11115,7 +11115,7 @@ static int xerrno(int r) {
       static int test_259_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11142,7 +11142,7 @@ static int xerrno(int r) {
       static int test_260_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11154,7 +11154,7 @@ static int xerrno(int r) {
       static int test_260_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11181,7 +11181,7 @@ static int xerrno(int r) {
       static int test_261_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11193,7 +11193,7 @@ static int xerrno(int r) {
       static int test_261_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11220,7 +11220,7 @@ static int xerrno(int r) {
       static int test_262_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11232,7 +11232,7 @@ static int xerrno(int r) {
       static int test_262_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11259,7 +11259,7 @@ static int xerrno(int r) {
       static int test_263_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11271,7 +11271,7 @@ static int xerrno(int r) {
       static int test_263_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11287,7 +11287,7 @@ static int xerrno(int r) {
       static int test_264_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11299,7 +11299,7 @@ static int xerrno(int r) {
       static int test_264_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11315,7 +11315,7 @@ static int xerrno(int r) {
       static int test_265_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11327,7 +11327,7 @@ static int xerrno(int r) {
       static int test_265_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11343,7 +11343,7 @@ static int xerrno(int r) {
       static int test_266_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11355,7 +11355,7 @@ static int xerrno(int r) {
       static int test_266_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11371,7 +11371,7 @@ static int xerrno(int r) {
       static int test_267_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11383,7 +11383,7 @@ static int xerrno(int r) {
       static int test_267_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11410,7 +11410,7 @@ static int xerrno(int r) {
       static int test_268_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11422,7 +11422,7 @@ static int xerrno(int r) {
       static int test_268_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11449,7 +11449,7 @@ static int xerrno(int r) {
       static int test_269_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11461,7 +11461,7 @@ static int xerrno(int r) {
       static int test_269_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11488,7 +11488,7 @@ static int xerrno(int r) {
       static int test_270_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11500,7 +11500,7 @@ static int xerrno(int r) {
       static int test_270_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11527,7 +11527,7 @@ static int xerrno(int r) {
       static int test_271_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11539,7 +11539,7 @@ static int xerrno(int r) {
       static int test_271_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11566,7 +11566,7 @@ static int xerrno(int r) {
       static int test_272_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11578,7 +11578,7 @@ static int xerrno(int r) {
       static int test_272_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11605,7 +11605,7 @@ static int xerrno(int r) {
       static int test_273_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11617,7 +11617,7 @@ static int xerrno(int r) {
       static int test_273_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11644,7 +11644,7 @@ static int xerrno(int r) {
       static int test_274_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11656,7 +11656,7 @@ static int xerrno(int r) {
       static int test_274_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11683,7 +11683,7 @@ static int xerrno(int r) {
       static int test_275_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11695,7 +11695,7 @@ static int xerrno(int r) {
       static int test_275_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11711,7 +11711,7 @@ static int xerrno(int r) {
       static int test_276_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11723,7 +11723,7 @@ static int xerrno(int r) {
       static int test_276_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11739,7 +11739,7 @@ static int xerrno(int r) {
       static int test_277_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11751,7 +11751,7 @@ static int xerrno(int r) {
       static int test_277_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11767,7 +11767,7 @@ static int xerrno(int r) {
       static int test_278_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11779,7 +11779,7 @@ static int xerrno(int r) {
       static int test_278_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11795,7 +11795,7 @@ static int xerrno(int r) {
       static int test_279_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11807,7 +11807,7 @@ static int xerrno(int r) {
       static int test_279_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11834,7 +11834,7 @@ static int xerrno(int r) {
       static int test_280_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11846,7 +11846,7 @@ static int xerrno(int r) {
       static int test_280_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11873,7 +11873,7 @@ static int xerrno(int r) {
       static int test_281_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11885,7 +11885,7 @@ static int xerrno(int r) {
       static int test_281_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11912,7 +11912,7 @@ static int xerrno(int r) {
       static int test_282_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11924,7 +11924,7 @@ static int xerrno(int r) {
       static int test_282_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11951,7 +11951,7 @@ static int xerrno(int r) {
       static int test_283_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11963,7 +11963,7 @@ static int xerrno(int r) {
       static int test_283_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11979,7 +11979,7 @@ static int xerrno(int r) {
       static int test_284_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -11991,7 +11991,7 @@ static int xerrno(int r) {
       static int test_284_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12007,7 +12007,7 @@ static int xerrno(int r) {
       static int test_285_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12019,7 +12019,7 @@ static int xerrno(int r) {
       static int test_285_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12035,7 +12035,7 @@ static int xerrno(int r) {
       static int test_286_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12047,7 +12047,7 @@ static int xerrno(int r) {
       static int test_286_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12063,7 +12063,7 @@ static int xerrno(int r) {
       static int test_287_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12075,7 +12075,7 @@ static int xerrno(int r) {
       static int test_287_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12091,7 +12091,7 @@ static int xerrno(int r) {
       static int test_288_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12103,7 +12103,7 @@ static int xerrno(int r) {
       static int test_288_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12119,7 +12119,7 @@ static int xerrno(int r) {
       static int test_289_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12131,7 +12131,7 @@ static int xerrno(int r) {
       static int test_289_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12158,7 +12158,7 @@ static int xerrno(int r) {
       static int test_290_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12170,7 +12170,7 @@ static int xerrno(int r) {
       static int test_290_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12197,7 +12197,7 @@ static int xerrno(int r) {
       static int test_291_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12209,7 +12209,7 @@ static int xerrno(int r) {
       static int test_291_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12236,7 +12236,7 @@ static int xerrno(int r) {
       static int test_292_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12248,7 +12248,7 @@ static int xerrno(int r) {
       static int test_292_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12275,7 +12275,7 @@ static int xerrno(int r) {
       static int test_293_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12287,7 +12287,7 @@ static int xerrno(int r) {
       static int test_293_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12314,7 +12314,7 @@ static int xerrno(int r) {
       static int test_294_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12326,7 +12326,7 @@ static int xerrno(int r) {
       static int test_294_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12353,7 +12353,7 @@ static int xerrno(int r) {
       static int test_295_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12365,7 +12365,7 @@ static int xerrno(int r) {
       static int test_295_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12392,7 +12392,7 @@ static int xerrno(int r) {
       static int test_296_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12404,7 +12404,7 @@ static int xerrno(int r) {
       static int test_296_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12431,7 +12431,7 @@ static int xerrno(int r) {
       static int test_297_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12443,7 +12443,7 @@ static int xerrno(int r) {
       static int test_297_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12459,7 +12459,7 @@ static int xerrno(int r) {
       static int test_298_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12471,7 +12471,7 @@ static int xerrno(int r) {
       static int test_298_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12487,7 +12487,7 @@ static int xerrno(int r) {
       static int test_299_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12499,7 +12499,7 @@ static int xerrno(int r) {
       static int test_299_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12515,7 +12515,7 @@ static int xerrno(int r) {
       static int test_300_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12527,7 +12527,7 @@ static int xerrno(int r) {
       static int test_300_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12543,7 +12543,7 @@ static int xerrno(int r) {
       static int test_301_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12555,7 +12555,7 @@ static int xerrno(int r) {
       static int test_301_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12582,7 +12582,7 @@ static int xerrno(int r) {
       static int test_302_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12594,7 +12594,7 @@ static int xerrno(int r) {
       static int test_302_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12621,7 +12621,7 @@ static int xerrno(int r) {
       static int test_303_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12633,7 +12633,7 @@ static int xerrno(int r) {
       static int test_303_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12660,7 +12660,7 @@ static int xerrno(int r) {
       static int test_304_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12672,7 +12672,7 @@ static int xerrno(int r) {
       static int test_304_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12710,7 +12710,7 @@ static int xerrno(int r) {
       static int test_305_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12722,7 +12722,7 @@ static int xerrno(int r) {
       static int test_305_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12760,7 +12760,7 @@ static int xerrno(int r) {
       static int test_306_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12772,7 +12772,7 @@ static int xerrno(int r) {
       static int test_306_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12810,7 +12810,7 @@ static int xerrno(int r) {
       static int test_307_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12822,7 +12822,7 @@ static int xerrno(int r) {
       static int test_307_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12849,7 +12849,7 @@ static int xerrno(int r) {
       static int test_308_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12861,7 +12861,7 @@ static int xerrno(int r) {
       static int test_308_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12899,7 +12899,7 @@ static int xerrno(int r) {
       static int test_309_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12911,7 +12911,7 @@ static int xerrno(int r) {
       static int test_309_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12938,7 +12938,7 @@ static int xerrno(int r) {
       static int test_310_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12950,7 +12950,7 @@ static int xerrno(int r) {
       static int test_310_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -12988,7 +12988,7 @@ static int xerrno(int r) {
       static int test_311_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13000,7 +13000,7 @@ static int xerrno(int r) {
       static int test_311_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13038,7 +13038,7 @@ static int xerrno(int r) {
       static int test_312_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13050,7 +13050,7 @@ static int xerrno(int r) {
       static int test_312_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13077,7 +13077,7 @@ static int xerrno(int r) {
       static int test_313_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13089,7 +13089,7 @@ static int xerrno(int r) {
       static int test_313_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13116,7 +13116,7 @@ static int xerrno(int r) {
       static int test_314_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13128,7 +13128,7 @@ static int xerrno(int r) {
       static int test_314_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13155,7 +13155,7 @@ static int xerrno(int r) {
       static int test_315_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13167,7 +13167,7 @@ static int xerrno(int r) {
       static int test_315_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13194,7 +13194,7 @@ static int xerrno(int r) {
       static int test_316_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13206,7 +13206,7 @@ static int xerrno(int r) {
       static int test_316_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13244,7 +13244,7 @@ static int xerrno(int r) {
       static int test_317_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13256,7 +13256,7 @@ static int xerrno(int r) {
       static int test_317_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13294,7 +13294,7 @@ static int xerrno(int r) {
       static int test_318_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13306,7 +13306,7 @@ static int xerrno(int r) {
       static int test_318_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13344,7 +13344,7 @@ static int xerrno(int r) {
       static int test_319_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13356,7 +13356,7 @@ static int xerrno(int r) {
       static int test_319_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13383,7 +13383,7 @@ static int xerrno(int r) {
       static int test_320_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13395,7 +13395,7 @@ static int xerrno(int r) {
       static int test_320_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13433,7 +13433,7 @@ static int xerrno(int r) {
       static int test_321_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13445,7 +13445,7 @@ static int xerrno(int r) {
       static int test_321_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13472,7 +13472,7 @@ static int xerrno(int r) {
       static int test_322_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13484,7 +13484,7 @@ static int xerrno(int r) {
       static int test_322_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13522,7 +13522,7 @@ static int xerrno(int r) {
       static int test_323_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13534,7 +13534,7 @@ static int xerrno(int r) {
       static int test_323_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13572,7 +13572,7 @@ static int xerrno(int r) {
       static int test_324_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13584,7 +13584,7 @@ static int xerrno(int r) {
       static int test_324_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13611,7 +13611,7 @@ static int xerrno(int r) {
       static int test_325_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13623,7 +13623,7 @@ static int xerrno(int r) {
       static int test_325_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13650,7 +13650,7 @@ static int xerrno(int r) {
       static int test_326_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13662,7 +13662,7 @@ static int xerrno(int r) {
       static int test_326_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13689,7 +13689,7 @@ static int xerrno(int r) {
       static int test_327_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13701,7 +13701,7 @@ static int xerrno(int r) {
       static int test_327_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13728,7 +13728,7 @@ static int xerrno(int r) {
       static int test_328_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13740,7 +13740,7 @@ static int xerrno(int r) {
       static int test_328_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13778,7 +13778,7 @@ static int xerrno(int r) {
       static int test_329_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13790,7 +13790,7 @@ static int xerrno(int r) {
       static int test_329_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13828,7 +13828,7 @@ static int xerrno(int r) {
       static int test_330_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13840,7 +13840,7 @@ static int xerrno(int r) {
       static int test_330_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13878,7 +13878,7 @@ static int xerrno(int r) {
       static int test_331_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13890,7 +13890,7 @@ static int xerrno(int r) {
       static int test_331_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13917,7 +13917,7 @@ static int xerrno(int r) {
       static int test_332_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13929,7 +13929,7 @@ static int xerrno(int r) {
       static int test_332_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13967,7 +13967,7 @@ static int xerrno(int r) {
       static int test_333_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -13979,7 +13979,7 @@ static int xerrno(int r) {
       static int test_333_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14006,7 +14006,7 @@ static int xerrno(int r) {
       static int test_334_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14018,7 +14018,7 @@ static int xerrno(int r) {
       static int test_334_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14056,7 +14056,7 @@ static int xerrno(int r) {
       static int test_335_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14068,7 +14068,7 @@ static int xerrno(int r) {
       static int test_335_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14106,7 +14106,7 @@ static int xerrno(int r) {
       static int test_336_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14118,7 +14118,7 @@ static int xerrno(int r) {
       static int test_336_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14145,7 +14145,7 @@ static int xerrno(int r) {
       static int test_337_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14157,7 +14157,7 @@ static int xerrno(int r) {
       static int test_337_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14184,7 +14184,7 @@ static int xerrno(int r) {
       static int test_338_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14196,7 +14196,7 @@ static int xerrno(int r) {
       static int test_338_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14223,7 +14223,7 @@ static int xerrno(int r) {
       static int test_339_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14235,7 +14235,7 @@ static int xerrno(int r) {
       static int test_339_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14262,7 +14262,7 @@ static int xerrno(int r) {
       static int test_340_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14274,7 +14274,7 @@ static int xerrno(int r) {
       static int test_340_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14301,7 +14301,7 @@ static int xerrno(int r) {
       static int test_341_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14313,7 +14313,7 @@ static int xerrno(int r) {
       static int test_341_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14340,7 +14340,7 @@ static int xerrno(int r) {
       static int test_342_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14352,7 +14352,7 @@ static int xerrno(int r) {
       static int test_342_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14379,7 +14379,7 @@ static int xerrno(int r) {
       static int test_343_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14391,7 +14391,7 @@ static int xerrno(int r) {
       static int test_343_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14418,7 +14418,7 @@ static int xerrno(int r) {
       static int test_344_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14430,7 +14430,7 @@ static int xerrno(int r) {
       static int test_344_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14457,7 +14457,7 @@ static int xerrno(int r) {
       static int test_345_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14469,7 +14469,7 @@ static int xerrno(int r) {
       static int test_345_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14496,7 +14496,7 @@ static int xerrno(int r) {
       static int test_346_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14508,7 +14508,7 @@ static int xerrno(int r) {
       static int test_346_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14535,7 +14535,7 @@ static int xerrno(int r) {
       static int test_347_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14547,7 +14547,7 @@ static int xerrno(int r) {
       static int test_347_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14574,7 +14574,7 @@ static int xerrno(int r) {
       static int test_348_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14586,7 +14586,7 @@ static int xerrno(int r) {
       static int test_348_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14613,7 +14613,7 @@ static int xerrno(int r) {
       static int test_349_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14625,7 +14625,7 @@ static int xerrno(int r) {
       static int test_349_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14663,7 +14663,7 @@ static int xerrno(int r) {
       static int test_350_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14675,7 +14675,7 @@ static int xerrno(int r) {
       static int test_350_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14713,7 +14713,7 @@ static int xerrno(int r) {
       static int test_351_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14725,7 +14725,7 @@ static int xerrno(int r) {
       static int test_351_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14763,7 +14763,7 @@ static int xerrno(int r) {
       static int test_352_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14775,7 +14775,7 @@ static int xerrno(int r) {
       static int test_352_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14802,7 +14802,7 @@ static int xerrno(int r) {
       static int test_353_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14814,7 +14814,7 @@ static int xerrno(int r) {
       static int test_353_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14852,7 +14852,7 @@ static int xerrno(int r) {
       static int test_354_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14864,7 +14864,7 @@ static int xerrno(int r) {
       static int test_354_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14891,7 +14891,7 @@ static int xerrno(int r) {
       static int test_355_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14903,7 +14903,7 @@ static int xerrno(int r) {
       static int test_355_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14941,7 +14941,7 @@ static int xerrno(int r) {
       static int test_356_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14953,7 +14953,7 @@ static int xerrno(int r) {
       static int test_356_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -14991,7 +14991,7 @@ static int xerrno(int r) {
       static int test_357_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15003,7 +15003,7 @@ static int xerrno(int r) {
       static int test_357_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15030,7 +15030,7 @@ static int xerrno(int r) {
       static int test_358_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15042,7 +15042,7 @@ static int xerrno(int r) {
       static int test_358_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15069,7 +15069,7 @@ static int xerrno(int r) {
       static int test_359_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15081,7 +15081,7 @@ static int xerrno(int r) {
       static int test_359_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15108,7 +15108,7 @@ static int xerrno(int r) {
       static int test_360_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15120,7 +15120,7 @@ static int xerrno(int r) {
       static int test_360_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15147,7 +15147,7 @@ static int xerrno(int r) {
       static int test_361_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15159,7 +15159,7 @@ static int xerrno(int r) {
       static int test_361_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15197,7 +15197,7 @@ static int xerrno(int r) {
       static int test_362_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15209,7 +15209,7 @@ static int xerrno(int r) {
       static int test_362_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15247,7 +15247,7 @@ static int xerrno(int r) {
       static int test_363_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15259,7 +15259,7 @@ static int xerrno(int r) {
       static int test_363_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15297,7 +15297,7 @@ static int xerrno(int r) {
       static int test_364_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15309,7 +15309,7 @@ static int xerrno(int r) {
       static int test_364_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15336,7 +15336,7 @@ static int xerrno(int r) {
       static int test_365_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15348,7 +15348,7 @@ static int xerrno(int r) {
       static int test_365_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15386,7 +15386,7 @@ static int xerrno(int r) {
       static int test_366_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15398,7 +15398,7 @@ static int xerrno(int r) {
       static int test_366_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15425,7 +15425,7 @@ static int xerrno(int r) {
       static int test_367_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15437,7 +15437,7 @@ static int xerrno(int r) {
       static int test_367_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15475,7 +15475,7 @@ static int xerrno(int r) {
       static int test_368_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15487,7 +15487,7 @@ static int xerrno(int r) {
       static int test_368_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15525,7 +15525,7 @@ static int xerrno(int r) {
       static int test_369_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15537,7 +15537,7 @@ static int xerrno(int r) {
       static int test_369_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15564,7 +15564,7 @@ static int xerrno(int r) {
       static int test_370_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15576,7 +15576,7 @@ static int xerrno(int r) {
       static int test_370_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15603,7 +15603,7 @@ static int xerrno(int r) {
       static int test_371_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15615,7 +15615,7 @@ static int xerrno(int r) {
       static int test_371_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15642,7 +15642,7 @@ static int xerrno(int r) {
       static int test_372_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15654,7 +15654,7 @@ static int xerrno(int r) {
       static int test_372_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15681,7 +15681,7 @@ static int xerrno(int r) {
       static int test_373_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15693,7 +15693,7 @@ static int xerrno(int r) {
       static int test_373_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15720,7 +15720,7 @@ static int xerrno(int r) {
       static int test_374_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15732,7 +15732,7 @@ static int xerrno(int r) {
       static int test_374_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15759,7 +15759,7 @@ static int xerrno(int r) {
       static int test_375_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15771,7 +15771,7 @@ static int xerrno(int r) {
       static int test_375_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15798,7 +15798,7 @@ static int xerrno(int r) {
       static int test_376_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15810,7 +15810,7 @@ static int xerrno(int r) {
       static int test_376_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15837,7 +15837,7 @@ static int xerrno(int r) {
       static int test_377_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15849,7 +15849,7 @@ static int xerrno(int r) {
       static int test_377_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15876,7 +15876,7 @@ static int xerrno(int r) {
       static int test_378_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15888,7 +15888,7 @@ static int xerrno(int r) {
       static int test_378_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15915,7 +15915,7 @@ static int xerrno(int r) {
       static int test_379_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15927,7 +15927,7 @@ static int xerrno(int r) {
       static int test_379_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15965,7 +15965,7 @@ static int xerrno(int r) {
       static int test_380_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -15977,7 +15977,7 @@ static int xerrno(int r) {
       static int test_380_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16015,7 +16015,7 @@ static int xerrno(int r) {
       static int test_381_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16027,7 +16027,7 @@ static int xerrno(int r) {
       static int test_381_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16065,7 +16065,7 @@ static int xerrno(int r) {
       static int test_382_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16077,7 +16077,7 @@ static int xerrno(int r) {
       static int test_382_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16104,7 +16104,7 @@ static int xerrno(int r) {
       static int test_383_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16116,7 +16116,7 @@ static int xerrno(int r) {
       static int test_383_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16154,7 +16154,7 @@ static int xerrno(int r) {
       static int test_384_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16166,7 +16166,7 @@ static int xerrno(int r) {
       static int test_384_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16193,7 +16193,7 @@ static int xerrno(int r) {
       static int test_385_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16205,7 +16205,7 @@ static int xerrno(int r) {
       static int test_385_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16243,7 +16243,7 @@ static int xerrno(int r) {
       static int test_386_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16255,7 +16255,7 @@ static int xerrno(int r) {
       static int test_386_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16293,7 +16293,7 @@ static int xerrno(int r) {
       static int test_387_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16305,7 +16305,7 @@ static int xerrno(int r) {
       static int test_387_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16332,7 +16332,7 @@ static int xerrno(int r) {
       static int test_388_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16344,7 +16344,7 @@ static int xerrno(int r) {
       static int test_388_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16371,7 +16371,7 @@ static int xerrno(int r) {
       static int test_389_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16383,7 +16383,7 @@ static int xerrno(int r) {
       static int test_389_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16410,7 +16410,7 @@ static int xerrno(int r) {
       static int test_390_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16422,7 +16422,7 @@ static int xerrno(int r) {
       static int test_390_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16449,7 +16449,7 @@ static int xerrno(int r) {
       static int test_391_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16461,7 +16461,7 @@ static int xerrno(int r) {
       static int test_391_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16499,7 +16499,7 @@ static int xerrno(int r) {
       static int test_392_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16511,7 +16511,7 @@ static int xerrno(int r) {
       static int test_392_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16549,7 +16549,7 @@ static int xerrno(int r) {
       static int test_393_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16561,7 +16561,7 @@ static int xerrno(int r) {
       static int test_393_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16599,7 +16599,7 @@ static int xerrno(int r) {
       static int test_394_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16611,7 +16611,7 @@ static int xerrno(int r) {
       static int test_394_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16638,7 +16638,7 @@ static int xerrno(int r) {
       static int test_395_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16650,7 +16650,7 @@ static int xerrno(int r) {
       static int test_395_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16688,7 +16688,7 @@ static int xerrno(int r) {
       static int test_396_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16700,7 +16700,7 @@ static int xerrno(int r) {
       static int test_396_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16727,7 +16727,7 @@ static int xerrno(int r) {
       static int test_397_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16739,7 +16739,7 @@ static int xerrno(int r) {
       static int test_397_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16777,7 +16777,7 @@ static int xerrno(int r) {
       static int test_398_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16789,7 +16789,7 @@ static int xerrno(int r) {
       static int test_398_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16827,7 +16827,7 @@ static int xerrno(int r) {
       static int test_399_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16839,7 +16839,7 @@ static int xerrno(int r) {
       static int test_399_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16866,7 +16866,7 @@ static int xerrno(int r) {
       static int test_400_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16878,7 +16878,7 @@ static int xerrno(int r) {
       static int test_400_1(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16905,7 +16905,7 @@ static int xerrno(int r) {
       static int test_401_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16917,7 +16917,7 @@ static int xerrno(int r) {
       static int test_401_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16944,7 +16944,7 @@ static int xerrno(int r) {
       static int test_402_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16956,7 +16956,7 @@ static int xerrno(int r) {
       static int test_402_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16983,7 +16983,7 @@ static int xerrno(int r) {
       static int test_403_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -16995,7 +16995,7 @@ static int xerrno(int r) {
       static int test_403_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17033,7 +17033,7 @@ static int xerrno(int r) {
       static int test_404_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17045,7 +17045,7 @@ static int xerrno(int r) {
       static int test_404_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17083,7 +17083,7 @@ static int xerrno(int r) {
       static int test_405_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17095,7 +17095,7 @@ static int xerrno(int r) {
       static int test_405_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17133,7 +17133,7 @@ static int xerrno(int r) {
       static int test_406_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17145,7 +17145,7 @@ static int xerrno(int r) {
       static int test_406_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17172,7 +17172,7 @@ static int xerrno(int r) {
       static int test_407_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17184,7 +17184,7 @@ static int xerrno(int r) {
       static int test_407_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17222,7 +17222,7 @@ static int xerrno(int r) {
       static int test_408_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17234,7 +17234,7 @@ static int xerrno(int r) {
       static int test_408_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17261,7 +17261,7 @@ static int xerrno(int r) {
       static int test_409_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17273,7 +17273,7 @@ static int xerrno(int r) {
       static int test_409_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17311,7 +17311,7 @@ static int xerrno(int r) {
       static int test_410_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17323,7 +17323,7 @@ static int xerrno(int r) {
       static int test_410_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17361,7 +17361,7 @@ static int xerrno(int r) {
       static int test_411_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17373,7 +17373,7 @@ static int xerrno(int r) {
       static int test_411_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17400,7 +17400,7 @@ static int xerrno(int r) {
       static int test_412_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17412,7 +17412,7 @@ static int xerrno(int r) {
       static int test_412_1(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17439,7 +17439,7 @@ static int xerrno(int r) {
       static int test_413_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17451,7 +17451,7 @@ static int xerrno(int r) {
       static int test_413_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17478,7 +17478,7 @@ static int xerrno(int r) {
       static int test_414_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17490,7 +17490,7 @@ static int xerrno(int r) {
       static int test_414_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17517,7 +17517,7 @@ static int xerrno(int r) {
       static int test_415_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17529,7 +17529,7 @@ static int xerrno(int r) {
       static int test_415_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17556,7 +17556,7 @@ static int xerrno(int r) {
       static int test_416_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17568,7 +17568,7 @@ static int xerrno(int r) {
       static int test_416_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17595,7 +17595,7 @@ static int xerrno(int r) {
       static int test_417_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17607,7 +17607,7 @@ static int xerrno(int r) {
       static int test_417_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17634,7 +17634,7 @@ static int xerrno(int r) {
       static int test_418_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17646,7 +17646,7 @@ static int xerrno(int r) {
       static int test_418_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17673,7 +17673,7 @@ static int xerrno(int r) {
       static int test_419_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17685,7 +17685,7 @@ static int xerrno(int r) {
       static int test_419_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17712,7 +17712,7 @@ static int xerrno(int r) {
       static int test_420_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17724,7 +17724,7 @@ static int xerrno(int r) {
       static int test_420_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17751,7 +17751,7 @@ static int xerrno(int r) {
       static int test_421_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17763,7 +17763,7 @@ static int xerrno(int r) {
       static int test_421_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17790,7 +17790,7 @@ static int xerrno(int r) {
       static int test_422_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17802,7 +17802,7 @@ static int xerrno(int r) {
       static int test_422_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17829,7 +17829,7 @@ static int xerrno(int r) {
       static int test_423_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17841,7 +17841,7 @@ static int xerrno(int r) {
       static int test_423_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17868,7 +17868,7 @@ static int xerrno(int r) {
       static int test_424_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17880,7 +17880,7 @@ static int xerrno(int r) {
       static int test_424_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17918,7 +17918,7 @@ static int xerrno(int r) {
       static int test_425_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17930,7 +17930,7 @@ static int xerrno(int r) {
       static int test_425_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17968,7 +17968,7 @@ static int xerrno(int r) {
       static int test_426_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -17980,7 +17980,7 @@ static int xerrno(int r) {
       static int test_426_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18018,7 +18018,7 @@ static int xerrno(int r) {
       static int test_427_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18030,7 +18030,7 @@ static int xerrno(int r) {
       static int test_427_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18057,7 +18057,7 @@ static int xerrno(int r) {
       static int test_428_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18069,7 +18069,7 @@ static int xerrno(int r) {
       static int test_428_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18107,7 +18107,7 @@ static int xerrno(int r) {
       static int test_429_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18119,7 +18119,7 @@ static int xerrno(int r) {
       static int test_429_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18146,7 +18146,7 @@ static int xerrno(int r) {
       static int test_430_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18158,7 +18158,7 @@ static int xerrno(int r) {
       static int test_430_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18196,7 +18196,7 @@ static int xerrno(int r) {
       static int test_431_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18208,7 +18208,7 @@ static int xerrno(int r) {
       static int test_431_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18246,7 +18246,7 @@ static int xerrno(int r) {
       static int test_432_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18258,7 +18258,7 @@ static int xerrno(int r) {
       static int test_432_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18285,7 +18285,7 @@ static int xerrno(int r) {
       static int test_433_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18297,7 +18297,7 @@ static int xerrno(int r) {
       static int test_433_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18324,7 +18324,7 @@ static int xerrno(int r) {
       static int test_434_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18336,7 +18336,7 @@ static int xerrno(int r) {
       static int test_434_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18363,7 +18363,7 @@ static int xerrno(int r) {
       static int test_435_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18375,7 +18375,7 @@ static int xerrno(int r) {
       static int test_435_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18402,7 +18402,7 @@ static int xerrno(int r) {
       static int test_436_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18414,7 +18414,7 @@ static int xerrno(int r) {
       static int test_436_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18452,7 +18452,7 @@ static int xerrno(int r) {
       static int test_437_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18464,7 +18464,7 @@ static int xerrno(int r) {
       static int test_437_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18502,7 +18502,7 @@ static int xerrno(int r) {
       static int test_438_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18514,7 +18514,7 @@ static int xerrno(int r) {
       static int test_438_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18552,7 +18552,7 @@ static int xerrno(int r) {
       static int test_439_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18564,7 +18564,7 @@ static int xerrno(int r) {
       static int test_439_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18591,7 +18591,7 @@ static int xerrno(int r) {
       static int test_440_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18603,7 +18603,7 @@ static int xerrno(int r) {
       static int test_440_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18641,7 +18641,7 @@ static int xerrno(int r) {
       static int test_441_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18653,7 +18653,7 @@ static int xerrno(int r) {
       static int test_441_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18680,7 +18680,7 @@ static int xerrno(int r) {
       static int test_442_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18692,7 +18692,7 @@ static int xerrno(int r) {
       static int test_442_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18730,7 +18730,7 @@ static int xerrno(int r) {
       static int test_443_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18742,7 +18742,7 @@ static int xerrno(int r) {
       static int test_443_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18780,7 +18780,7 @@ static int xerrno(int r) {
       static int test_444_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18792,7 +18792,7 @@ static int xerrno(int r) {
       static int test_444_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18819,7 +18819,7 @@ static int xerrno(int r) {
       static int test_445_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18831,7 +18831,7 @@ static int xerrno(int r) {
       static int test_445_1(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18858,7 +18858,7 @@ static int xerrno(int r) {
       static int test_446_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18870,7 +18870,7 @@ static int xerrno(int r) {
       static int test_446_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18897,7 +18897,7 @@ static int xerrno(int r) {
       static int test_447_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18909,7 +18909,7 @@ static int xerrno(int r) {
       static int test_447_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18936,7 +18936,7 @@ static int xerrno(int r) {
       static int test_448_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18948,7 +18948,7 @@ static int xerrno(int r) {
       static int test_448_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18975,7 +18975,7 @@ static int xerrno(int r) {
       static int test_449_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -18987,7 +18987,7 @@ static int xerrno(int r) {
       static int test_449_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19014,7 +19014,7 @@ static int xerrno(int r) {
       static int test_450_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19026,7 +19026,7 @@ static int xerrno(int r) {
       static int test_450_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19053,7 +19053,7 @@ static int xerrno(int r) {
       static int test_451_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19065,7 +19065,7 @@ static int xerrno(int r) {
       static int test_451_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19092,7 +19092,7 @@ static int xerrno(int r) {
       static int test_452_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19104,7 +19104,7 @@ static int xerrno(int r) {
       static int test_452_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19131,7 +19131,7 @@ static int xerrno(int r) {
       static int test_453_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19143,7 +19143,7 @@ static int xerrno(int r) {
       static int test_453_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19170,7 +19170,7 @@ static int xerrno(int r) {
       static int test_454_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19182,7 +19182,7 @@ static int xerrno(int r) {
       static int test_454_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19209,7 +19209,7 @@ static int xerrno(int r) {
       static int test_455_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19221,7 +19221,7 @@ static int xerrno(int r) {
       static int test_455_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19248,7 +19248,7 @@ static int xerrno(int r) {
       static int test_456_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19260,7 +19260,7 @@ static int xerrno(int r) {
       static int test_456_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19287,7 +19287,7 @@ static int xerrno(int r) {
       static int test_457_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19299,7 +19299,7 @@ static int xerrno(int r) {
       static int test_457_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19326,7 +19326,7 @@ static int xerrno(int r) {
       static int test_458_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19338,7 +19338,7 @@ static int xerrno(int r) {
       static int test_458_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19365,7 +19365,7 @@ static int xerrno(int r) {
       static int test_459_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19377,7 +19377,7 @@ static int xerrno(int r) {
       static int test_459_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19404,7 +19404,7 @@ static int xerrno(int r) {
       static int test_460_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19416,7 +19416,7 @@ static int xerrno(int r) {
       static int test_460_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19443,7 +19443,7 @@ static int xerrno(int r) {
       static int test_461_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19455,7 +19455,7 @@ static int xerrno(int r) {
       static int test_461_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19482,7 +19482,7 @@ static int xerrno(int r) {
       static int test_462_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19494,7 +19494,7 @@ static int xerrno(int r) {
       static int test_462_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19521,7 +19521,7 @@ static int xerrno(int r) {
       static int test_463_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19533,7 +19533,7 @@ static int xerrno(int r) {
       static int test_463_1(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19560,7 +19560,7 @@ static int xerrno(int r) {
       static int test_464_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19572,7 +19572,7 @@ static int xerrno(int r) {
       static int test_464_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19599,7 +19599,7 @@ static int xerrno(int r) {
       static int test_465_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19611,7 +19611,7 @@ static int xerrno(int r) {
       static int test_465_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19638,7 +19638,7 @@ static int xerrno(int r) {
       static int test_466_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19650,7 +19650,7 @@ static int xerrno(int r) {
       static int test_466_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19677,7 +19677,7 @@ static int xerrno(int r) {
       static int test_467_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19689,7 +19689,7 @@ static int xerrno(int r) {
       static int test_467_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19716,7 +19716,7 @@ static int xerrno(int r) {
       static int test_468_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19728,7 +19728,7 @@ static int xerrno(int r) {
       static int test_468_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19755,7 +19755,7 @@ static int xerrno(int r) {
       static int test_469_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19767,7 +19767,7 @@ static int xerrno(int r) {
       static int test_469_1(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19783,7 +19783,7 @@ static int xerrno(int r) {
       static int test_470_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19795,7 +19795,7 @@ static int xerrno(int r) {
       static int test_470_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19811,7 +19811,7 @@ static int xerrno(int r) {
       static int test_471_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19823,7 +19823,7 @@ static int xerrno(int r) {
       static int test_471_1(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19839,7 +19839,7 @@ static int xerrno(int r) {
       static int test_472_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19851,7 +19851,7 @@ static int xerrno(int r) {
       static int test_472_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19867,7 +19867,7 @@ static int xerrno(int r) {
       static int test_473_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19879,7 +19879,7 @@ static int xerrno(int r) {
       static int test_473_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19895,7 +19895,7 @@ static int xerrno(int r) {
       static int test_474_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19907,7 +19907,7 @@ static int xerrno(int r) {
       static int test_474_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19923,7 +19923,7 @@ static int xerrno(int r) {
       static int test_475_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19935,7 +19935,7 @@ static int xerrno(int r) {
       static int test_475_1(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19951,7 +19951,7 @@ static int xerrno(int r) {
       static int test_476_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19963,7 +19963,7 @@ static int xerrno(int r) {
       static int test_476_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19979,7 +19979,7 @@ static int xerrno(int r) {
       static int test_477_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -19991,7 +19991,7 @@ static int xerrno(int r) {
       static int test_477_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20007,7 +20007,7 @@ static int xerrno(int r) {
       static int test_478_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20019,7 +20019,7 @@ static int xerrno(int r) {
       static int test_478_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20035,7 +20035,7 @@ static int xerrno(int r) {
       static int test_479_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20047,7 +20047,7 @@ static int xerrno(int r) {
       static int test_479_1(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20074,7 +20074,7 @@ static int xerrno(int r) {
       static int test_480_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20086,7 +20086,7 @@ static int xerrno(int r) {
       static int test_480_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20113,7 +20113,7 @@ static int xerrno(int r) {
       static int test_481_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20125,7 +20125,7 @@ static int xerrno(int r) {
       static int test_481_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20152,7 +20152,7 @@ static int xerrno(int r) {
       static int test_482_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20164,7 +20164,7 @@ static int xerrno(int r) {
       static int test_482_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20191,7 +20191,7 @@ static int xerrno(int r) {
       static int test_483_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20203,7 +20203,7 @@ static int xerrno(int r) {
       static int test_483_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20230,7 +20230,7 @@ static int xerrno(int r) {
       static int test_484_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20242,7 +20242,7 @@ static int xerrno(int r) {
       static int test_484_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20269,7 +20269,7 @@ static int xerrno(int r) {
       static int test_485_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20281,7 +20281,7 @@ static int xerrno(int r) {
       static int test_485_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20308,7 +20308,7 @@ static int xerrno(int r) {
       static int test_486_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20320,7 +20320,7 @@ static int xerrno(int r) {
       static int test_486_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20347,7 +20347,7 @@ static int xerrno(int r) {
       static int test_487_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20359,7 +20359,7 @@ static int xerrno(int r) {
       static int test_487_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20386,7 +20386,7 @@ static int xerrno(int r) {
       static int test_488_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20398,7 +20398,7 @@ static int xerrno(int r) {
       static int test_488_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20425,7 +20425,7 @@ static int xerrno(int r) {
       static int test_489_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20437,7 +20437,7 @@ static int xerrno(int r) {
       static int test_489_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20464,7 +20464,7 @@ static int xerrno(int r) {
       static int test_490_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20476,7 +20476,7 @@ static int xerrno(int r) {
       static int test_490_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20503,7 +20503,7 @@ static int xerrno(int r) {
       static int test_491_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20515,7 +20515,7 @@ static int xerrno(int r) {
       static int test_491_1(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20531,7 +20531,7 @@ static int xerrno(int r) {
       static int test_492_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20543,7 +20543,7 @@ static int xerrno(int r) {
       static int test_492_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20559,7 +20559,7 @@ static int xerrno(int r) {
       static int test_493_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20571,7 +20571,7 @@ static int xerrno(int r) {
       static int test_493_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20587,7 +20587,7 @@ static int xerrno(int r) {
       static int test_494_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20599,7 +20599,7 @@ static int xerrno(int r) {
       static int test_494_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20615,7 +20615,7 @@ static int xerrno(int r) {
       static int test_495_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20627,7 +20627,7 @@ static int xerrno(int r) {
       static int test_495_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20643,7 +20643,7 @@ static int xerrno(int r) {
       static int test_496_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20655,7 +20655,7 @@ static int xerrno(int r) {
       static int test_496_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20671,7 +20671,7 @@ static int xerrno(int r) {
       static int test_497_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20683,7 +20683,7 @@ static int xerrno(int r) {
       static int test_497_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20699,7 +20699,7 @@ static int xerrno(int r) {
       static int test_498_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20711,7 +20711,7 @@ static int xerrno(int r) {
       static int test_498_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20727,7 +20727,7 @@ static int xerrno(int r) {
       static int test_499_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20739,7 +20739,7 @@ static int xerrno(int r) {
       static int test_499_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20755,7 +20755,7 @@ static int xerrno(int r) {
       static int test_500_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20767,7 +20767,7 @@ static int xerrno(int r) {
       static int test_500_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20783,7 +20783,7 @@ static int xerrno(int r) {
       static int test_501_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20795,7 +20795,7 @@ static int xerrno(int r) {
       static int test_501_1(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20811,7 +20811,7 @@ static int xerrno(int r) {
       static int test_502_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20823,7 +20823,7 @@ static int xerrno(int r) {
       static int test_502_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20839,7 +20839,7 @@ static int xerrno(int r) {
       static int test_503_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20851,7 +20851,7 @@ static int xerrno(int r) {
       static int test_503_1(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20915,7 +20915,7 @@ static int xerrno(int r) {
       static int test_504_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -20993,7 +20993,7 @@ static int xerrno(int r) {
       static int test_505_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21071,7 +21071,7 @@ static int xerrno(int r) {
       static int test_506_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21140,7 +21140,7 @@ static int xerrno(int r) {
       static int test_507_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21209,7 +21209,7 @@ static int xerrno(int r) {
       static int test_508_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21278,7 +21278,7 @@ static int xerrno(int r) {
       static int test_509_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21319,7 +21319,7 @@ static int xerrno(int r) {
       static int test_510_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21360,7 +21360,7 @@ static int xerrno(int r) {
       static int test_511_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21401,7 +21401,7 @@ static int xerrno(int r) {
       static int test_512_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21479,7 +21479,7 @@ static int xerrno(int r) {
       static int test_513_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21557,7 +21557,7 @@ static int xerrno(int r) {
       static int test_514_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21635,7 +21635,7 @@ static int xerrno(int r) {
       static int test_515_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21704,7 +21704,7 @@ static int xerrno(int r) {
       static int test_516_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21773,7 +21773,7 @@ static int xerrno(int r) {
       static int test_517_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21842,7 +21842,7 @@ static int xerrno(int r) {
       static int test_518_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21883,7 +21883,7 @@ static int xerrno(int r) {
       static int test_519_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21924,7 +21924,7 @@ static int xerrno(int r) {
       static int test_520_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -21965,7 +21965,7 @@ static int xerrno(int r) {
       static int test_521_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22043,7 +22043,7 @@ static int xerrno(int r) {
       static int test_522_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22121,7 +22121,7 @@ static int xerrno(int r) {
       static int test_523_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22199,7 +22199,7 @@ static int xerrno(int r) {
       static int test_524_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22268,7 +22268,7 @@ static int xerrno(int r) {
       static int test_525_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22337,7 +22337,7 @@ static int xerrno(int r) {
       static int test_526_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22406,7 +22406,7 @@ static int xerrno(int r) {
       static int test_527_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22447,7 +22447,7 @@ static int xerrno(int r) {
       static int test_528_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22488,7 +22488,7 @@ static int xerrno(int r) {
       static int test_529_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22529,7 +22529,7 @@ static int xerrno(int r) {
       static int test_530_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22596,7 +22596,7 @@ static int xerrno(int r) {
       static int test_531_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22626,7 +22626,7 @@ static int xerrno(int r) {
       static int test_532_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22656,7 +22656,7 @@ static int xerrno(int r) {
       static int test_533_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22723,7 +22723,7 @@ static int xerrno(int r) {
       static int test_534_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22790,7 +22790,7 @@ static int xerrno(int r) {
       static int test_535_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22820,7 +22820,7 @@ static int xerrno(int r) {
       static int test_536_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22850,7 +22850,7 @@ static int xerrno(int r) {
       static int test_537_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22917,7 +22917,7 @@ static int xerrno(int r) {
       static int test_538_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -22984,7 +22984,7 @@ static int xerrno(int r) {
       static int test_539_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23014,7 +23014,7 @@ static int xerrno(int r) {
       static int test_540_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23044,7 +23044,7 @@ static int xerrno(int r) {
       static int test_541_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23122,7 +23122,7 @@ static int xerrno(int r) {
       static int test_542_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23200,7 +23200,7 @@ static int xerrno(int r) {
       static int test_543_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23278,7 +23278,7 @@ static int xerrno(int r) {
       static int test_544_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23347,7 +23347,7 @@ static int xerrno(int r) {
       static int test_545_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23416,7 +23416,7 @@ static int xerrno(int r) {
       static int test_546_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23485,7 +23485,7 @@ static int xerrno(int r) {
       static int test_547_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23526,7 +23526,7 @@ static int xerrno(int r) {
       static int test_548_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23567,7 +23567,7 @@ static int xerrno(int r) {
       static int test_549_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23608,7 +23608,7 @@ static int xerrno(int r) {
       static int test_550_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23686,7 +23686,7 @@ static int xerrno(int r) {
       static int test_551_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23764,7 +23764,7 @@ static int xerrno(int r) {
       static int test_552_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23842,7 +23842,7 @@ static int xerrno(int r) {
       static int test_553_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23911,7 +23911,7 @@ static int xerrno(int r) {
       static int test_554_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -23980,7 +23980,7 @@ static int xerrno(int r) {
       static int test_555_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24049,7 +24049,7 @@ static int xerrno(int r) {
       static int test_556_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24090,7 +24090,7 @@ static int xerrno(int r) {
       static int test_557_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24131,7 +24131,7 @@ static int xerrno(int r) {
       static int test_558_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24172,7 +24172,7 @@ static int xerrno(int r) {
       static int test_559_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24239,7 +24239,7 @@ static int xerrno(int r) {
       static int test_560_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24306,7 +24306,7 @@ static int xerrno(int r) {
       static int test_561_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24373,7 +24373,7 @@ static int xerrno(int r) {
       static int test_562_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24403,7 +24403,7 @@ static int xerrno(int r) {
       static int test_563_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24433,7 +24433,7 @@ static int xerrno(int r) {
       static int test_564_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24463,7 +24463,7 @@ static int xerrno(int r) {
       static int test_565_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24493,7 +24493,7 @@ static int xerrno(int r) {
       static int test_566_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24523,7 +24523,7 @@ static int xerrno(int r) {
       static int test_567_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24553,7 +24553,7 @@ static int xerrno(int r) {
       static int test_568_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24594,7 +24594,7 @@ static int xerrno(int r) {
       static int test_569_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24646,7 +24646,7 @@ static int xerrno(int r) {
       static int test_570_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24698,7 +24698,7 @@ static int xerrno(int r) {
       static int test_571_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24750,7 +24750,7 @@ static int xerrno(int r) {
       static int test_572_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24802,7 +24802,7 @@ static int xerrno(int r) {
       static int test_573_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24854,7 +24854,7 @@ static int xerrno(int r) {
       static int test_574_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24895,7 +24895,7 @@ static int xerrno(int r) {
       static int test_575_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24936,7 +24936,7 @@ static int xerrno(int r) {
       static int test_576_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -24977,7 +24977,7 @@ static int xerrno(int r) {
       static int test_577_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25018,7 +25018,7 @@ static int xerrno(int r) {
       static int test_578_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25070,7 +25070,7 @@ static int xerrno(int r) {
       static int test_579_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25111,7 +25111,7 @@ static int xerrno(int r) {
       static int test_580_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25152,7 +25152,7 @@ static int xerrno(int r) {
       static int test_581_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25193,7 +25193,7 @@ static int xerrno(int r) {
       static int test_582_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25234,7 +25234,7 @@ static int xerrno(int r) {
       static int test_583_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25275,7 +25275,7 @@ static int xerrno(int r) {
       static int test_584_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25316,7 +25316,7 @@ static int xerrno(int r) {
       static int test_585_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25357,7 +25357,7 @@ static int xerrno(int r) {
       static int test_586_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25398,7 +25398,7 @@ static int xerrno(int r) {
       static int test_587_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25450,7 +25450,7 @@ static int xerrno(int r) {
       static int test_588_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25502,7 +25502,7 @@ static int xerrno(int r) {
       static int test_589_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25554,7 +25554,7 @@ static int xerrno(int r) {
       static int test_590_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25606,7 +25606,7 @@ static int xerrno(int r) {
       static int test_591_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25658,7 +25658,7 @@ static int xerrno(int r) {
       static int test_592_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25699,7 +25699,7 @@ static int xerrno(int r) {
       static int test_593_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25751,7 +25751,7 @@ static int xerrno(int r) {
       static int test_594_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25792,7 +25792,7 @@ static int xerrno(int r) {
       static int test_595_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25833,7 +25833,7 @@ static int xerrno(int r) {
       static int test_596_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25874,7 +25874,7 @@ static int xerrno(int r) {
       static int test_597_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25915,7 +25915,7 @@ static int xerrno(int r) {
       static int test_598_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25956,7 +25956,7 @@ static int xerrno(int r) {
       static int test_599_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -25997,7 +25997,7 @@ static int xerrno(int r) {
       static int test_600_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26038,7 +26038,7 @@ static int xerrno(int r) {
       static int test_601_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26079,7 +26079,7 @@ static int xerrno(int r) {
       static int test_602_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26131,7 +26131,7 @@ static int xerrno(int r) {
       static int test_603_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26183,7 +26183,7 @@ static int xerrno(int r) {
       static int test_604_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26235,7 +26235,7 @@ static int xerrno(int r) {
       static int test_605_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26287,7 +26287,7 @@ static int xerrno(int r) {
       static int test_606_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26339,7 +26339,7 @@ static int xerrno(int r) {
       static int test_607_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26380,7 +26380,7 @@ static int xerrno(int r) {
       static int test_608_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26421,7 +26421,7 @@ static int xerrno(int r) {
       static int test_609_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26462,7 +26462,7 @@ static int xerrno(int r) {
       static int test_610_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26503,7 +26503,7 @@ static int xerrno(int r) {
       static int test_611_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26555,7 +26555,7 @@ static int xerrno(int r) {
       static int test_612_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26596,7 +26596,7 @@ static int xerrno(int r) {
       static int test_613_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26637,7 +26637,7 @@ static int xerrno(int r) {
       static int test_614_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26678,7 +26678,7 @@ static int xerrno(int r) {
       static int test_615_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26719,7 +26719,7 @@ static int xerrno(int r) {
       static int test_616_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26760,7 +26760,7 @@ static int xerrno(int r) {
       static int test_617_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26801,7 +26801,7 @@ static int xerrno(int r) {
       static int test_618_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26842,7 +26842,7 @@ static int xerrno(int r) {
       static int test_619_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26883,7 +26883,7 @@ static int xerrno(int r) {
       static int test_620_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26924,7 +26924,7 @@ static int xerrno(int r) {
       static int test_621_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26954,7 +26954,7 @@ static int xerrno(int r) {
       static int test_622_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -26984,7 +26984,7 @@ static int xerrno(int r) {
       static int test_623_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27014,7 +27014,7 @@ static int xerrno(int r) {
       static int test_624_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27044,7 +27044,7 @@ static int xerrno(int r) {
       static int test_625_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27085,7 +27085,7 @@ static int xerrno(int r) {
       static int test_626_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27126,7 +27126,7 @@ static int xerrno(int r) {
       static int test_627_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27167,7 +27167,7 @@ static int xerrno(int r) {
       static int test_628_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27208,7 +27208,7 @@ static int xerrno(int r) {
       static int test_629_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27238,7 +27238,7 @@ static int xerrno(int r) {
       static int test_630_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27268,7 +27268,7 @@ static int xerrno(int r) {
       static int test_631_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27298,7 +27298,7 @@ static int xerrno(int r) {
       static int test_632_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27328,7 +27328,7 @@ static int xerrno(int r) {
       static int test_633_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27369,7 +27369,7 @@ static int xerrno(int r) {
       static int test_634_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27410,7 +27410,7 @@ static int xerrno(int r) {
       static int test_635_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27451,7 +27451,7 @@ static int xerrno(int r) {
       static int test_636_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27492,7 +27492,7 @@ static int xerrno(int r) {
       static int test_637_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27522,7 +27522,7 @@ static int xerrno(int r) {
       static int test_638_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27552,7 +27552,7 @@ static int xerrno(int r) {
       static int test_639_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27582,7 +27582,7 @@ static int xerrno(int r) {
       static int test_640_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27612,7 +27612,7 @@ static int xerrno(int r) {
       static int test_641_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27653,7 +27653,7 @@ static int xerrno(int r) {
       static int test_642_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27705,7 +27705,7 @@ static int xerrno(int r) {
       static int test_643_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27757,7 +27757,7 @@ static int xerrno(int r) {
       static int test_644_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27809,7 +27809,7 @@ static int xerrno(int r) {
       static int test_645_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27861,7 +27861,7 @@ static int xerrno(int r) {
       static int test_646_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27913,7 +27913,7 @@ static int xerrno(int r) {
       static int test_647_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -27954,7 +27954,7 @@ static int xerrno(int r) {
       static int test_648_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28006,7 +28006,7 @@ static int xerrno(int r) {
       static int test_649_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28047,7 +28047,7 @@ static int xerrno(int r) {
       static int test_650_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28088,7 +28088,7 @@ static int xerrno(int r) {
       static int test_651_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28129,7 +28129,7 @@ static int xerrno(int r) {
       static int test_652_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28170,7 +28170,7 @@ static int xerrno(int r) {
       static int test_653_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28211,7 +28211,7 @@ static int xerrno(int r) {
       static int test_654_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28252,7 +28252,7 @@ static int xerrno(int r) {
       static int test_655_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28293,7 +28293,7 @@ static int xerrno(int r) {
       static int test_656_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28334,7 +28334,7 @@ static int xerrno(int r) {
       static int test_657_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28386,7 +28386,7 @@ static int xerrno(int r) {
       static int test_658_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28438,7 +28438,7 @@ static int xerrno(int r) {
       static int test_659_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28490,7 +28490,7 @@ static int xerrno(int r) {
       static int test_660_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28542,7 +28542,7 @@ static int xerrno(int r) {
       static int test_661_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28594,7 +28594,7 @@ static int xerrno(int r) {
       static int test_662_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28635,7 +28635,7 @@ static int xerrno(int r) {
       static int test_663_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28676,7 +28676,7 @@ static int xerrno(int r) {
       static int test_664_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28717,7 +28717,7 @@ static int xerrno(int r) {
       static int test_665_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28758,7 +28758,7 @@ static int xerrno(int r) {
       static int test_666_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28810,7 +28810,7 @@ static int xerrno(int r) {
       static int test_667_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28851,7 +28851,7 @@ static int xerrno(int r) {
       static int test_668_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28892,7 +28892,7 @@ static int xerrno(int r) {
       static int test_669_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28933,7 +28933,7 @@ static int xerrno(int r) {
       static int test_670_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -28974,7 +28974,7 @@ static int xerrno(int r) {
       static int test_671_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29015,7 +29015,7 @@ static int xerrno(int r) {
       static int test_672_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29056,7 +29056,7 @@ static int xerrno(int r) {
       static int test_673_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29097,7 +29097,7 @@ static int xerrno(int r) {
       static int test_674_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29138,7 +29138,7 @@ static int xerrno(int r) {
       static int test_675_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29179,7 +29179,7 @@ static int xerrno(int r) {
       static int test_676_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29220,7 +29220,7 @@ static int xerrno(int r) {
       static int test_677_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29261,7 +29261,7 @@ static int xerrno(int r) {
       static int test_678_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29302,7 +29302,7 @@ static int xerrno(int r) {
       static int test_679_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29343,7 +29343,7 @@ static int xerrno(int r) {
       static int test_680_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29373,7 +29373,7 @@ static int xerrno(int r) {
       static int test_681_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29403,7 +29403,7 @@ static int xerrno(int r) {
       static int test_682_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29433,7 +29433,7 @@ static int xerrno(int r) {
       static int test_683_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29463,7 +29463,7 @@ static int xerrno(int r) {
       static int test_684_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29493,7 +29493,7 @@ static int xerrno(int r) {
       static int test_685_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29523,7 +29523,7 @@ static int xerrno(int r) {
       static int test_686_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29553,7 +29553,7 @@ static int xerrno(int r) {
       static int test_687_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29583,7 +29583,7 @@ static int xerrno(int r) {
       static int test_688_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29613,7 +29613,7 @@ static int xerrno(int r) {
       static int test_689_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29643,7 +29643,7 @@ static int xerrno(int r) {
       static int test_690_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29673,7 +29673,7 @@ static int xerrno(int r) {
       static int test_691_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29703,7 +29703,7 @@ static int xerrno(int r) {
       static int test_692_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29757,7 +29757,7 @@ static int xerrno(int r) {
       static int test_693_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29803,7 +29803,7 @@ static int xerrno(int r) {
       static int test_694_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29849,7 +29849,7 @@ static int xerrno(int r) {
       static int test_695_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29893,7 +29893,7 @@ static int xerrno(int r) {
       static int test_696_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29937,7 +29937,7 @@ static int xerrno(int r) {
       static int test_697_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -29981,7 +29981,7 @@ static int xerrno(int r) {
       static int test_698_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30014,7 +30014,7 @@ static int xerrno(int r) {
       static int test_699_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30047,7 +30047,7 @@ static int xerrno(int r) {
       static int test_700_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30080,7 +30080,7 @@ static int xerrno(int r) {
       static int test_701_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30126,7 +30126,7 @@ static int xerrno(int r) {
       static int test_702_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30172,7 +30172,7 @@ static int xerrno(int r) {
       static int test_703_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30218,7 +30218,7 @@ static int xerrno(int r) {
       static int test_704_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30262,7 +30262,7 @@ static int xerrno(int r) {
       static int test_705_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30306,7 +30306,7 @@ static int xerrno(int r) {
       static int test_706_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30350,7 +30350,7 @@ static int xerrno(int r) {
       static int test_707_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30383,7 +30383,7 @@ static int xerrno(int r) {
       static int test_708_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30416,7 +30416,7 @@ static int xerrno(int r) {
       static int test_709_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30449,7 +30449,7 @@ static int xerrno(int r) {
       static int test_710_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30495,7 +30495,7 @@ static int xerrno(int r) {
       static int test_711_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30541,7 +30541,7 @@ static int xerrno(int r) {
       static int test_712_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30587,7 +30587,7 @@ static int xerrno(int r) {
       static int test_713_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30631,7 +30631,7 @@ static int xerrno(int r) {
       static int test_714_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30675,7 +30675,7 @@ static int xerrno(int r) {
       static int test_715_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30719,7 +30719,7 @@ static int xerrno(int r) {
       static int test_716_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30752,7 +30752,7 @@ static int xerrno(int r) {
       static int test_717_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30785,7 +30785,7 @@ static int xerrno(int r) {
       static int test_718_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30818,7 +30818,7 @@ static int xerrno(int r) {
       static int test_719_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30853,7 +30853,7 @@ static int xerrno(int r) {
       static int test_720_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30875,7 +30875,7 @@ static int xerrno(int r) {
       static int test_721_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30897,7 +30897,7 @@ static int xerrno(int r) {
       static int test_722_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30932,7 +30932,7 @@ static int xerrno(int r) {
       static int test_723_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -30967,7 +30967,7 @@ static int xerrno(int r) {
       static int test_724_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31000,7 +31000,7 @@ static int xerrno(int r) {
       static int test_725_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31033,7 +31033,7 @@ static int xerrno(int r) {
       static int test_726_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31055,7 +31055,7 @@ static int xerrno(int r) {
       static int test_727_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31077,7 +31077,7 @@ static int xerrno(int r) {
       static int test_728_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31112,7 +31112,7 @@ static int xerrno(int r) {
       static int test_729_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31147,7 +31147,7 @@ static int xerrno(int r) {
       static int test_730_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31180,7 +31180,7 @@ static int xerrno(int r) {
       static int test_731_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31213,7 +31213,7 @@ static int xerrno(int r) {
       static int test_732_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31235,7 +31235,7 @@ static int xerrno(int r) {
       static int test_733_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31257,7 +31257,7 @@ static int xerrno(int r) {
       static int test_734_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31303,7 +31303,7 @@ static int xerrno(int r) {
       static int test_735_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31349,7 +31349,7 @@ static int xerrno(int r) {
       static int test_736_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31395,7 +31395,7 @@ static int xerrno(int r) {
       static int test_737_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31439,7 +31439,7 @@ static int xerrno(int r) {
       static int test_738_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31483,7 +31483,7 @@ static int xerrno(int r) {
       static int test_739_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31527,7 +31527,7 @@ static int xerrno(int r) {
       static int test_740_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31560,7 +31560,7 @@ static int xerrno(int r) {
       static int test_741_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31593,7 +31593,7 @@ static int xerrno(int r) {
       static int test_742_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31626,7 +31626,7 @@ static int xerrno(int r) {
       static int test_743_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31672,7 +31672,7 @@ static int xerrno(int r) {
       static int test_744_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31718,7 +31718,7 @@ static int xerrno(int r) {
       static int test_745_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31764,7 +31764,7 @@ static int xerrno(int r) {
       static int test_746_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31808,7 +31808,7 @@ static int xerrno(int r) {
       static int test_747_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31852,7 +31852,7 @@ static int xerrno(int r) {
       static int test_748_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31896,7 +31896,7 @@ static int xerrno(int r) {
       static int test_749_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31929,7 +31929,7 @@ static int xerrno(int r) {
       static int test_750_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31962,7 +31962,7 @@ static int xerrno(int r) {
       static int test_751_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -31995,7 +31995,7 @@ static int xerrno(int r) {
       static int test_752_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32030,7 +32030,7 @@ static int xerrno(int r) {
       static int test_753_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32065,7 +32065,7 @@ static int xerrno(int r) {
       static int test_754_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32100,7 +32100,7 @@ static int xerrno(int r) {
       static int test_755_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32133,7 +32133,7 @@ static int xerrno(int r) {
       static int test_756_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32166,7 +32166,7 @@ static int xerrno(int r) {
       static int test_757_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32199,7 +32199,7 @@ static int xerrno(int r) {
       static int test_758_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32221,7 +32221,7 @@ static int xerrno(int r) {
       static int test_759_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32243,7 +32243,7 @@ static int xerrno(int r) {
       static int test_760_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32265,7 +32265,7 @@ static int xerrno(int r) {
       static int test_761_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32287,7 +32287,7 @@ static int xerrno(int r) {
       static int test_762_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32309,7 +32309,7 @@ static int xerrno(int r) {
       static int test_763_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32331,7 +32331,7 @@ static int xerrno(int r) {
       static int test_764_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32375,7 +32375,7 @@ static int xerrno(int r) {
       static int test_765_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32419,7 +32419,7 @@ static int xerrno(int r) {
       static int test_766_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32474,7 +32474,7 @@ static int xerrno(int r) {
       static int test_767_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32529,7 +32529,7 @@ static int xerrno(int r) {
       static int test_768_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32584,7 +32584,7 @@ static int xerrno(int r) {
       static int test_769_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32628,7 +32628,7 @@ static int xerrno(int r) {
       static int test_770_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32672,7 +32672,7 @@ static int xerrno(int r) {
       static int test_771_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32716,7 +32716,7 @@ static int xerrno(int r) {
       static int test_772_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32760,7 +32760,7 @@ static int xerrno(int r) {
       static int test_773_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32793,7 +32793,7 @@ static int xerrno(int r) {
       static int test_774_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32826,7 +32826,7 @@ static int xerrno(int r) {
       static int test_775_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32870,7 +32870,7 @@ static int xerrno(int r) {
       static int test_776_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32914,7 +32914,7 @@ static int xerrno(int r) {
       static int test_777_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32958,7 +32958,7 @@ static int xerrno(int r) {
       static int test_778_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -32991,7 +32991,7 @@ static int xerrno(int r) {
       static int test_779_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33035,7 +33035,7 @@ static int xerrno(int r) {
       static int test_780_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33079,7 +33079,7 @@ static int xerrno(int r) {
       static int test_781_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33123,7 +33123,7 @@ static int xerrno(int r) {
       static int test_782_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33156,7 +33156,7 @@ static int xerrno(int r) {
       static int test_783_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33189,7 +33189,7 @@ static int xerrno(int r) {
       static int test_784_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33222,7 +33222,7 @@ static int xerrno(int r) {
       static int test_785_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33255,7 +33255,7 @@ static int xerrno(int r) {
       static int test_786_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33288,7 +33288,7 @@ static int xerrno(int r) {
       static int test_787_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33321,7 +33321,7 @@ static int xerrno(int r) {
       static int test_788_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33354,7 +33354,7 @@ static int xerrno(int r) {
       static int test_789_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33387,7 +33387,7 @@ static int xerrno(int r) {
       static int test_790_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33420,7 +33420,7 @@ static int xerrno(int r) {
       static int test_791_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33453,7 +33453,7 @@ static int xerrno(int r) {
       static int test_792_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33486,7 +33486,7 @@ static int xerrno(int r) {
       static int test_793_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33519,7 +33519,7 @@ static int xerrno(int r) {
       static int test_794_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33563,7 +33563,7 @@ static int xerrno(int r) {
       static int test_795_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33607,7 +33607,7 @@ static int xerrno(int r) {
       static int test_796_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33662,7 +33662,7 @@ static int xerrno(int r) {
       static int test_797_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33717,7 +33717,7 @@ static int xerrno(int r) {
       static int test_798_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33772,7 +33772,7 @@ static int xerrno(int r) {
       static int test_799_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33816,7 +33816,7 @@ static int xerrno(int r) {
       static int test_800_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33860,7 +33860,7 @@ static int xerrno(int r) {
       static int test_801_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33904,7 +33904,7 @@ static int xerrno(int r) {
       static int test_802_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33948,7 +33948,7 @@ static int xerrno(int r) {
       static int test_803_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -33981,7 +33981,7 @@ static int xerrno(int r) {
       static int test_804_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34014,7 +34014,7 @@ static int xerrno(int r) {
       static int test_805_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34058,7 +34058,7 @@ static int xerrno(int r) {
       static int test_806_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34102,7 +34102,7 @@ static int xerrno(int r) {
       static int test_807_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34146,7 +34146,7 @@ static int xerrno(int r) {
       static int test_808_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34179,7 +34179,7 @@ static int xerrno(int r) {
       static int test_809_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34223,7 +34223,7 @@ static int xerrno(int r) {
       static int test_810_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34267,7 +34267,7 @@ static int xerrno(int r) {
       static int test_811_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34311,7 +34311,7 @@ static int xerrno(int r) {
       static int test_812_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34344,7 +34344,7 @@ static int xerrno(int r) {
       static int test_813_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34377,7 +34377,7 @@ static int xerrno(int r) {
       static int test_814_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34410,7 +34410,7 @@ static int xerrno(int r) {
       static int test_815_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34443,7 +34443,7 @@ static int xerrno(int r) {
       static int test_816_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34476,7 +34476,7 @@ static int xerrno(int r) {
       static int test_817_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34509,7 +34509,7 @@ static int xerrno(int r) {
       static int test_818_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34542,7 +34542,7 @@ static int xerrno(int r) {
       static int test_819_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34575,7 +34575,7 @@ static int xerrno(int r) {
       static int test_820_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34608,7 +34608,7 @@ static int xerrno(int r) {
       static int test_821_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34641,7 +34641,7 @@ static int xerrno(int r) {
       static int test_822_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34674,7 +34674,7 @@ static int xerrno(int r) {
       static int test_823_0(void) {
         
       {
-        int fd = open("1", 0x242, 0666);
+        int fd = open("1", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34707,7 +34707,7 @@ static int xerrno(int r) {
       static int test_824_0(void) {
         
       {
-        int fd = open("0", 0x242, 0666);
+        int fd = open("0", O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34751,7 +34751,7 @@ static int xerrno(int r) {
       static int test_825_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34795,7 +34795,7 @@ static int xerrno(int r) {
       static int test_826_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34850,7 +34850,7 @@ static int xerrno(int r) {
       static int test_827_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34905,7 +34905,7 @@ static int xerrno(int r) {
       static int test_828_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -34960,7 +34960,7 @@ static int xerrno(int r) {
       static int test_829_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35004,7 +35004,7 @@ static int xerrno(int r) {
       static int test_830_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35048,7 +35048,7 @@ static int xerrno(int r) {
       static int test_831_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35092,7 +35092,7 @@ static int xerrno(int r) {
       static int test_832_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35136,7 +35136,7 @@ static int xerrno(int r) {
       static int test_833_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35169,7 +35169,7 @@ static int xerrno(int r) {
       static int test_834_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35202,7 +35202,7 @@ static int xerrno(int r) {
       static int test_835_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35246,7 +35246,7 @@ static int xerrno(int r) {
       static int test_836_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35290,7 +35290,7 @@ static int xerrno(int r) {
       static int test_837_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35334,7 +35334,7 @@ static int xerrno(int r) {
       static int test_838_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35367,7 +35367,7 @@ static int xerrno(int r) {
       static int test_839_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35411,7 +35411,7 @@ static int xerrno(int r) {
       static int test_840_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35455,7 +35455,7 @@ static int xerrno(int r) {
       static int test_841_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35499,7 +35499,7 @@ static int xerrno(int r) {
       static int test_842_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35532,7 +35532,7 @@ static int xerrno(int r) {
       static int test_843_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35565,7 +35565,7 @@ static int xerrno(int r) {
       static int test_844_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35598,7 +35598,7 @@ static int xerrno(int r) {
       static int test_845_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35631,7 +35631,7 @@ static int xerrno(int r) {
       static int test_846_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35664,7 +35664,7 @@ static int xerrno(int r) {
       static int test_847_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35697,7 +35697,7 @@ static int xerrno(int r) {
       static int test_848_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35730,7 +35730,7 @@ static int xerrno(int r) {
       static int test_849_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35763,7 +35763,7 @@ static int xerrno(int r) {
       static int test_850_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35796,7 +35796,7 @@ static int xerrno(int r) {
       static int test_851_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35829,7 +35829,7 @@ static int xerrno(int r) {
       static int test_852_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35862,7 +35862,7 @@ static int xerrno(int r) {
       static int test_853_0(void) {
         
       {
-        int fd = open("1", 0x42, 0666);
+        int fd = open("1", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35895,7 +35895,7 @@ static int xerrno(int r) {
       static int test_854_0(void) {
         
       {
-        int fd = open("0", 0x42, 0666);
+        int fd = open("0", O_RDWR | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35939,7 +35939,7 @@ static int xerrno(int r) {
       static int test_855_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -35972,7 +35972,7 @@ static int xerrno(int r) {
       static int test_856_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36005,7 +36005,7 @@ static int xerrno(int r) {
       static int test_857_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36027,7 +36027,7 @@ static int xerrno(int r) {
       static int test_858_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36049,7 +36049,7 @@ static int xerrno(int r) {
       static int test_859_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36071,7 +36071,7 @@ static int xerrno(int r) {
       static int test_860_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36093,7 +36093,7 @@ static int xerrno(int r) {
       static int test_861_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36115,7 +36115,7 @@ static int xerrno(int r) {
       static int test_862_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36159,7 +36159,7 @@ static int xerrno(int r) {
       static int test_863_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36203,7 +36203,7 @@ static int xerrno(int r) {
       static int test_864_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36236,7 +36236,7 @@ static int xerrno(int r) {
       static int test_865_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36269,7 +36269,7 @@ static int xerrno(int r) {
       static int test_866_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36302,7 +36302,7 @@ static int xerrno(int r) {
       static int test_867_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36335,7 +36335,7 @@ static int xerrno(int r) {
       static int test_868_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36357,7 +36357,7 @@ static int xerrno(int r) {
       static int test_869_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36379,7 +36379,7 @@ static int xerrno(int r) {
       static int test_870_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36401,7 +36401,7 @@ static int xerrno(int r) {
       static int test_871_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36423,7 +36423,7 @@ static int xerrno(int r) {
       static int test_872_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36445,7 +36445,7 @@ static int xerrno(int r) {
       static int test_873_0(void) {
         
       {
-        int fd = open("1", 0x2c2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36467,7 +36467,7 @@ static int xerrno(int r) {
       static int test_874_0(void) {
         
       {
-        int fd = open("0", 0x2c2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36511,7 +36511,7 @@ static int xerrno(int r) {
       static int test_875_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36555,7 +36555,7 @@ static int xerrno(int r) {
       static int test_876_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36588,7 +36588,7 @@ static int xerrno(int r) {
       static int test_877_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36621,7 +36621,7 @@ static int xerrno(int r) {
       static int test_878_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36654,7 +36654,7 @@ static int xerrno(int r) {
       static int test_879_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36687,7 +36687,7 @@ static int xerrno(int r) {
       static int test_880_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36709,7 +36709,7 @@ static int xerrno(int r) {
       static int test_881_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36731,7 +36731,7 @@ static int xerrno(int r) {
       static int test_882_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36753,7 +36753,7 @@ static int xerrno(int r) {
       static int test_883_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36775,7 +36775,7 @@ static int xerrno(int r) {
       static int test_884_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36797,7 +36797,7 @@ static int xerrno(int r) {
       static int test_885_0(void) {
         
       {
-        int fd = open("1", 0xc2, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36819,7 +36819,7 @@ static int xerrno(int r) {
       static int test_886_0(void) {
         
       {
-        int fd = open("0", 0xc2, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_CREAT, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36863,7 +36863,7 @@ static int xerrno(int r) {
       static int test_887_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36907,7 +36907,7 @@ static int xerrno(int r) {
       static int test_888_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -36962,7 +36962,7 @@ static int xerrno(int r) {
       static int test_889_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37017,7 +37017,7 @@ static int xerrno(int r) {
       static int test_890_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37072,7 +37072,7 @@ static int xerrno(int r) {
       static int test_891_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37116,7 +37116,7 @@ static int xerrno(int r) {
       static int test_892_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37160,7 +37160,7 @@ static int xerrno(int r) {
       static int test_893_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37204,7 +37204,7 @@ static int xerrno(int r) {
       static int test_894_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37248,7 +37248,7 @@ static int xerrno(int r) {
       static int test_895_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37281,7 +37281,7 @@ static int xerrno(int r) {
       static int test_896_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37314,7 +37314,7 @@ static int xerrno(int r) {
       static int test_897_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37358,7 +37358,7 @@ static int xerrno(int r) {
       static int test_898_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37402,7 +37402,7 @@ static int xerrno(int r) {
       static int test_899_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37446,7 +37446,7 @@ static int xerrno(int r) {
       static int test_900_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37479,7 +37479,7 @@ static int xerrno(int r) {
       static int test_901_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37523,7 +37523,7 @@ static int xerrno(int r) {
       static int test_902_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37567,7 +37567,7 @@ static int xerrno(int r) {
       static int test_903_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37611,7 +37611,7 @@ static int xerrno(int r) {
       static int test_904_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37644,7 +37644,7 @@ static int xerrno(int r) {
       static int test_905_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37677,7 +37677,7 @@ static int xerrno(int r) {
       static int test_906_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37710,7 +37710,7 @@ static int xerrno(int r) {
       static int test_907_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37743,7 +37743,7 @@ static int xerrno(int r) {
       static int test_908_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37776,7 +37776,7 @@ static int xerrno(int r) {
       static int test_909_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37809,7 +37809,7 @@ static int xerrno(int r) {
       static int test_910_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37842,7 +37842,7 @@ static int xerrno(int r) {
       static int test_911_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37875,7 +37875,7 @@ static int xerrno(int r) {
       static int test_912_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37908,7 +37908,7 @@ static int xerrno(int r) {
       static int test_913_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37941,7 +37941,7 @@ static int xerrno(int r) {
       static int test_914_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -37974,7 +37974,7 @@ static int xerrno(int r) {
       static int test_915_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38007,7 +38007,7 @@ static int xerrno(int r) {
       static int test_916_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38051,7 +38051,7 @@ static int xerrno(int r) {
       static int test_917_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38095,7 +38095,7 @@ static int xerrno(int r) {
       static int test_918_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38150,7 +38150,7 @@ static int xerrno(int r) {
       static int test_919_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38205,7 +38205,7 @@ static int xerrno(int r) {
       static int test_920_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38260,7 +38260,7 @@ static int xerrno(int r) {
       static int test_921_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38304,7 +38304,7 @@ static int xerrno(int r) {
       static int test_922_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38348,7 +38348,7 @@ static int xerrno(int r) {
       static int test_923_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38392,7 +38392,7 @@ static int xerrno(int r) {
       static int test_924_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38436,7 +38436,7 @@ static int xerrno(int r) {
       static int test_925_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38469,7 +38469,7 @@ static int xerrno(int r) {
       static int test_926_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38502,7 +38502,7 @@ static int xerrno(int r) {
       static int test_927_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38546,7 +38546,7 @@ static int xerrno(int r) {
       static int test_928_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38590,7 +38590,7 @@ static int xerrno(int r) {
       static int test_929_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38634,7 +38634,7 @@ static int xerrno(int r) {
       static int test_930_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38667,7 +38667,7 @@ static int xerrno(int r) {
       static int test_931_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38711,7 +38711,7 @@ static int xerrno(int r) {
       static int test_932_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38755,7 +38755,7 @@ static int xerrno(int r) {
       static int test_933_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38799,7 +38799,7 @@ static int xerrno(int r) {
       static int test_934_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38832,7 +38832,7 @@ static int xerrno(int r) {
       static int test_935_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38865,7 +38865,7 @@ static int xerrno(int r) {
       static int test_936_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38898,7 +38898,7 @@ static int xerrno(int r) {
       static int test_937_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38931,7 +38931,7 @@ static int xerrno(int r) {
       static int test_938_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38964,7 +38964,7 @@ static int xerrno(int r) {
       static int test_939_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -38997,7 +38997,7 @@ static int xerrno(int r) {
       static int test_940_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39030,7 +39030,7 @@ static int xerrno(int r) {
       static int test_941_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39063,7 +39063,7 @@ static int xerrno(int r) {
       static int test_942_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39096,7 +39096,7 @@ static int xerrno(int r) {
       static int test_943_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39129,7 +39129,7 @@ static int xerrno(int r) {
       static int test_944_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39162,7 +39162,7 @@ static int xerrno(int r) {
       static int test_945_0(void) {
         
       {
-        int fd = open("1", 0x82, 0666);
+        int fd = open("1", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39195,7 +39195,7 @@ static int xerrno(int r) {
       static int test_946_0(void) {
         
       {
-        int fd = open("0", 0x82, 0666);
+        int fd = open("0", O_RDWR | O_EXCL, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39239,7 +39239,7 @@ static int xerrno(int r) {
       static int test_947_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39283,7 +39283,7 @@ static int xerrno(int r) {
       static int test_948_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39327,7 +39327,7 @@ static int xerrno(int r) {
       static int test_949_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39360,7 +39360,7 @@ static int xerrno(int r) {
       static int test_950_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39393,7 +39393,7 @@ static int xerrno(int r) {
       static int test_951_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39426,7 +39426,7 @@ static int xerrno(int r) {
       static int test_952_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39459,7 +39459,7 @@ static int xerrno(int r) {
       static int test_953_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39492,7 +39492,7 @@ static int xerrno(int r) {
       static int test_954_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39525,7 +39525,7 @@ static int xerrno(int r) {
       static int test_955_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39547,7 +39547,7 @@ static int xerrno(int r) {
       static int test_956_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39569,7 +39569,7 @@ static int xerrno(int r) {
       static int test_957_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39591,7 +39591,7 @@ static int xerrno(int r) {
       static int test_958_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39613,7 +39613,7 @@ static int xerrno(int r) {
       static int test_959_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39635,7 +39635,7 @@ static int xerrno(int r) {
       static int test_960_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39657,7 +39657,7 @@ static int xerrno(int r) {
       static int test_961_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39679,7 +39679,7 @@ static int xerrno(int r) {
       static int test_962_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39701,7 +39701,7 @@ static int xerrno(int r) {
       static int test_963_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39723,7 +39723,7 @@ static int xerrno(int r) {
       static int test_964_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39745,7 +39745,7 @@ static int xerrno(int r) {
       static int test_965_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39767,7 +39767,7 @@ static int xerrno(int r) {
       static int test_966_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39789,7 +39789,7 @@ static int xerrno(int r) {
       static int test_967_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39811,7 +39811,7 @@ static int xerrno(int r) {
       static int test_968_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39833,7 +39833,7 @@ static int xerrno(int r) {
       static int test_969_0(void) {
         
       {
-        int fd = open("1", 0x282, 0666);
+        int fd = open("1", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
@@ -39855,7 +39855,7 @@ static int xerrno(int r) {
       static int test_970_0(void) {
         
       {
-        int fd = open("0", 0x282, 0666);
+        int fd = open("0", O_RDWR | O_EXCL | O_TRUNC, 0666);
         if (fd < 0)
           return xerrno(fd);
         close(fd);
