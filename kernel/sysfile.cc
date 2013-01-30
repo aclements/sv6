@@ -394,7 +394,6 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
       if(type != T_FILE || ip->type != T_FILE || excl)
         return nullptr;
 
-      ilock(ip, 1);
       return ip;
     }
     
@@ -423,6 +422,8 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
       iput(dp);
       goto retry;
     }
+
+    iunlock(ip);
   }
 
   //nc_insert(dp, name, ip);
@@ -479,7 +480,6 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     // XXX necessary because the mtwriteavar() to the same abstract variable
     // does not propagate to our scope, since create() has its own inner scope.
     mtwriteavar("inode:%x.%x", ip->dev, ip->inum);
-    iplocked = true;
   } else {
     if((ip = namei(cwd, path_copy)) == 0){
       if(omode & O_WAIT){
@@ -499,8 +499,8 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
       }
       return -1;
     }
-    iplocked = false;
   }
+  iplocked = false;
 
   auto itype = ip->type;
   if (itype == 0) {
@@ -526,7 +526,7 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     dir_flush(ip);
   }
 
-  if (omode & O_TRUNC) {
+  if (omode & O_TRUNC && ip->size) {
     if (!iplocked) {
       ilock(ip, 1);
       iplocked = true;
@@ -580,7 +580,7 @@ sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
   ip = create(cwd, path_copy, T_DIR, 0, 0, true);
   if (ip == nullptr)
     return -1;
-  iunlockput(ip);
+  iput(ip);
   return 0;
 }
 
@@ -594,7 +594,7 @@ sys_mknod(userptr_str path, int major, int minor)
   if(!path.load(path_copy, sizeof path_copy) ||
      (ip = create(myproc()->cwd, path_copy, T_DEV, major, minor, true)) == 0)
     return -1;
-  iunlockput(ip);
+  iput(ip);
   return 0;
 }
 
