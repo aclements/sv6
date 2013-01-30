@@ -365,6 +365,7 @@ e1000::attach(struct pci_func *pcif)
 
 e1000::e1000(const struct e1000_model *model, struct pci_func *pcif)
   : model_(model), membase_(pcif->reg_base[0]), iobase_(pcif->reg_base[2]),
+    txclean_(0), txinuse_(0), rxclean_(0), rxuse_(0), txd_{}, rxd_{},
     lk_("e1000", true), valid_(false)
 {
   verbose.println("e1000: Initializing");
