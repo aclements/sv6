@@ -181,6 +181,13 @@ holding(struct spinlock* lk)
 }
 #endif
 
+class nolock {
+public:
+  void acquire() {}
+  void release() {}
+  bool try_acquire() { return true; }
+};
+
 // XXX(Austin) scoped_acquire is the old name for the
 // spinlock-specific RAII lock holder.
 typedef lock_guard<spinlock> scoped_acquire;

@@ -59,40 +59,49 @@ struct inode : public referenced, public rcu_freed
   void  link();
   void  unlink();
   short nlink();
-  
+
   inode& operator=(const inode&) = delete;
   inode(const inode& x) = delete;
-  
-  const u32 dev;     // Device number
-  const u32 inum;    // Inode number
-  u32 gen;           // Generation number
-  std::atomic<bool> busy;
-  std::atomic<bool> valid;
-  std::atomic<int> readbusy;
+
+  virtual void do_gc() { delete this; }
+
+  // const for lifetime of object:
+  const u32 dev;
+  const u32 inum;
+
+  // const unless inode is reused:
+  u32 gen;
+  short type;
+  short major;
+  short minor;
+
+  // locks for the rest of the inode
   seqcount<u64> seq;
   struct condvar cv;
   struct spinlock lock;
   char lockname[16];
+
+  // initially null, set once:
   std::atomic<dirns*> dir;
+  std::atomic<bool> valid;
 
-  struct localsock *localsock;
-  char socketpath[PATH_MAX];
+  // protected by seq/lock:
+  std::atomic<bool> busy;
+  std::atomic<int> readbusy;
 
-  short type;        // copy of disk inode
-  short major;
-  short minor;
   u32 size;
   std::atomic<u32> addrs[NDIRECT+2];
   std::atomic<volatile u32*> iaddrs;
+  short nlink_;
 
-  virtual void do_gc() { delete this; }
+  // ??? what's the concurrency control plan?
+  struct localsock *localsock;
+  char socketpath[PATH_MAX];
 
 private:
   inode(u32 dev, u32 inum);
   ~inode();
   NEW_DELETE_OPS(inode)
-
-  short nlink_;
 
 protected:
   virtual void onzero() const;

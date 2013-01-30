@@ -442,7 +442,9 @@ iupdate(struct inode *ip)
 inode::inode(u32 d, u32 i)
   : rcu_freed("inode"),
     dev(d), inum(i),
-    busy(false), valid(false), readbusy(0)
+    valid(false),
+    busy(false),
+    readbusy(0)
 {
   dir.store(nullptr);
   iaddrs.store(nullptr);
