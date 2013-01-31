@@ -126,8 +126,8 @@ void            inithz(void);
 // ide.c
 void            ideinit(void);
 void            ideintr(void);
-void            ideread(struct buf*);
-void            idewrite(struct buf*);
+void            ideread(u32 dev, u64 sector, char* data);
+void            idewrite(u32 dev, u64 sector, const char* data);
 
 // idle.cc
 struct proc *   idleproc(void);

@@ -173,12 +173,15 @@ template<typename T>
 class seqlocked
 {
 public:
-  T read() const {
+  T read(u32* store_count = nullptr) const {
     for (;;) {
       auto r = seq_.read_begin();
       T copy = state_;
-      if (!r.need_retry())
+      if (!r.need_retry()) {
+        if (store_count)
+          *store_count = r.count();
         return copy;
+      }
     }
   }
 
@@ -205,7 +208,11 @@ public:
 
   template<typename Lock>
   writer<Lock> write(Lock* l) {
-    return writer<Lock>(l, &state_);
+    return writer<Lock>(&seq_, l, &state_);
+  }
+
+  u32 count() const {
+    return seq_.count();
   }
 
 private:

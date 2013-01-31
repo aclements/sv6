@@ -6,11 +6,14 @@
 
 class buf : public uniqitem<pair<u32, u64>, buf> {
 public:
-  char data_[BSIZE];
-  seqcount<u64> seq_;
+  struct bufdata {
+    char data[BSIZE];
+  };
+
+  seqlocked<bufdata> seq_;
 
 private:
-  std::atomic<u64> wbseq_;
+  std::atomic<u32> wbseq_;
   sleeplock writeback_lock_;
 
 public:
@@ -37,20 +40,12 @@ public:
   // To write: acquire write_lock_ and use seq_.write_begin()
 };
 
-class buf_scoped_writelock {
-public:
-  buf_scoped_writelock(buf* b) : l(&b->write_lock_),
-                                 ws(b->seq_.write_begin()) {}
-
-private:
-  lock_guard<sleeplock> l;
-  seqcount<u64>::writer ws;
-};
-
 inline void
 buf::load()
 {
-  ideread(this);
+  // Assume caller [uniqcache] holds the lock
+  auto locked = seq_.write<nolock>(nullptr);
+  ideread(dev(), sector(), locked->data);
 }
 
 inline bool
@@ -62,20 +57,12 @@ buf::dirty()
 inline void
 buf::writeback()
 {
-  char copy[BSIZE];
-
   lock_guard<sleeplock> x(&writeback_lock_);
-
-  for (;;) {
-    auto r = seq_.read_begin();
-    memcpy(copy, data_, BSIZE);
-    if (!r.need_retry()) {
-      wbseq_ = r.count();
-      break;
-    }
-  }
+  u32 count;
+  auto copy = seq_.read(&count);
+  wbseq_ = count;
 
   // write copy[] to disk; don't need to wait for write to finish,
   // as long as write order to disk has been established.
-  idewrite(this);
+  idewrite(dev(), sector(), copy.data);
 }

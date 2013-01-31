@@ -34,29 +34,29 @@ ideintr(void)
 }
 
 void
-ideread(struct buf *b)
+ideread(u32 dev, u64 sector, char* data)
 {
   u8 *p;
 
-  if(b->dev() != 1)
+  if(dev != 1)
     panic("ideread: request not for disk 1");
-  if(b->sector() >= disksize)
+  if(sector >= disksize)
     panic("ideread: sector out of range");
 
-  p = memdisk + b->sector()*512;
-  memmove(b->data_, p, 512);
+  p = memdisk + sector*512;
+  memmove(data, p, 512);
 }
 
 void
-idewrite(struct buf *b)
+idewrite(u32 dev, u64 sector, const char* data)
 {
   u8 *p;
 
-  if(b->dev() != 1)
+  if(dev != 1)
     panic("ideread: request not for disk 1");
-  if(b->sector() >= disksize)
+  if(sector >= disksize)
     panic("ideread: sector out of range");
 
-  p = memdisk + b->sector()*512;
-  memmove(p, b->data_, 512);
+  p = memdisk + sector*512;
+  memmove(p, data, 512);
 }
