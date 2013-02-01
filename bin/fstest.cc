@@ -32,7 +32,11 @@ main(int ac, char** av)
 {
   setaffinity(0);
 
-  for (int i = 0; fstests[i].setup; i++) {
+  int max = 0;
+  if (ac > 1)
+    max = atoi(av[1]);
+
+  for (int i = 0; (max == 0 || i < max) && fstests[i].setup; i++) {
     fstests[i].setup();
     int ra0 = fstests[i].call0();
     int ra1 = fstests[i].call1();
