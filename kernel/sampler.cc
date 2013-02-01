@@ -189,9 +189,6 @@ sampintr(struct trapframe *tf)
     pmuconfig(1, wd_selector, wd_period);
   }
 
-  // Clear overflow bits
-  writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, overflow & 3);
-
   return r;
 }
 
