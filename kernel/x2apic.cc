@@ -326,9 +326,9 @@ x2apic_lapic::dumpall()
 bool
 initlapic_x2apic(void)
 {
-  u32 edx;
-  cpuid(CPUID_FEATURES, nullptr, nullptr, nullptr, &edx);
-  if (!(edx & FEATURE_ECX_X2APIC))
+  u32 ecx;
+  cpuid(CPUID_FEATURES, nullptr, nullptr, &ecx, nullptr);
+  if (!(ecx & FEATURE_ECX_X2APIC))
     return false;
 
   // According to [Intel SDM 3A 10.12.8.1], if the BIOS initializes
