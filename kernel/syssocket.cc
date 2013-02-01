@@ -330,7 +330,7 @@ sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
     f->ip = ip;
     strncpy(ip->socketpath, uaddr.sun_path, UNIX_PATH_MAX);
 
-    iunlockput(ip);
+    iput(ip);
     return 0;
   }  else {
     r = netbind(f->socket, xaddr, xaddrlen);
