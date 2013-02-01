@@ -86,8 +86,8 @@ retry_lookup:
 
   if (i->state_ == uniqstate::EMBRYO) {
     // Wait for the load()er to release the lock
-    i->write_lock_.release();
     i->write_lock_.acquire();
+    i->write_lock_.release();
     assert(i->state_ != uniqstate::EMBRYO);
   }
 
