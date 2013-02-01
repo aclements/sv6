@@ -62,13 +62,14 @@ class xapic_lapic : public abstract_lapic
 {
 public:
   void init();
-  void cpu_init();
-  hwid_t id();
-  void eoi();
-  void send_ipi(struct cpu *c, int ino);
-  void mask_pc(bool mask);
-  void start_ap(struct cpu *c, u32 addr);
-  void dump();
+  void cpu_init() override;
+  hwid_t id() override;
+  void eoi() override;
+  void send_ipi(struct cpu *c, int ino) override;
+  void mask_pc(bool mask) override;
+  void start_ap(struct cpu *c, u32 addr) override;
+  void dump() override;
+private:
   void dumpall();
 };
 

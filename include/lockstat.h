@@ -13,7 +13,7 @@ struct klockstat : public rcu_freed {
   struct lockstat s;
 
   klockstat(const char *name);
-  virtual void do_gc() { delete this; }
+  virtual void do_gc() override { delete this; }
 
   static void* operator new(unsigned long nbytes);
   static void operator delete(void *p);

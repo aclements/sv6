@@ -33,7 +33,7 @@ struct zwork : public work {
     frame_->inc();
   }
 
-  virtual void run() {
+  virtual void run() override {
     for (int i = 0; i < 32; i++) {
       auto *r = (struct free_page*)kalloc("zpage");
       if (r == nullptr)

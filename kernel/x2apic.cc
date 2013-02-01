@@ -53,16 +53,16 @@ static u64 x2apichz;
 class x2apic_lapic : public abstract_lapic
 {
 public:
-  void cpu_init();
-  hwid_t id();
-  void eoi();
-  void send_ipi(struct cpu *c, int ino);
-  void mask_pc(bool mask);
-  void start_ap(struct cpu *c, u32 addr);
-  bool is_x2apic();
-  void dump();
-  void dumpall();
+  void cpu_init() override;
+  hwid_t id() override;
+  void eoi() override;
+  void send_ipi(struct cpu *c, int ino) override;
+  void mask_pc(bool mask) override;
+  void start_ap(struct cpu *c, u32 addr) override;
+  bool is_x2apic() override;
+  void dump() override;
 private:
+  void dumpall();
   void clearintr();
 };
 

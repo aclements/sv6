@@ -112,7 +112,7 @@ struct proc : public rcu_freed, public sched_link {
 
   static u64   hash(const u32& p);
 
-  virtual void do_gc(void) { delete this; }
+  virtual void do_gc(void) override { delete this; }
 
 private:
   proc(int npid);

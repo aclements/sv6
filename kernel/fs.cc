@@ -71,7 +71,7 @@ bzero(int dev, int bno)
 //
 class out_of_blocks : public std::exception
 {
-  virtual const char* what() const throw()
+  virtual const char* what() const throw() override
   {
     return "Out of blocks";
   }
@@ -796,7 +796,7 @@ class diskblock : public rcu_freed {
 
  public:
   diskblock(int dev, u64 block) : rcu_freed("diskblock"), _dev(dev), _block(block) {}
-  virtual void do_gc() {
+  virtual void do_gc() override {
     scoped_gc_epoch e;
     bfree(_dev, _block);
     delete this;

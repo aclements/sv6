@@ -46,7 +46,7 @@ public:
   racy_counter() : ctr(0) {}
 
   virtual void
-  do_work(void)
+  do_work(void) override
   {
     for (int i = 0; i < 5; i++) {
       unsigned int l = ctr.load();
@@ -55,7 +55,7 @@ public:
   }
 
   virtual void
-  validate_work(void)
+  validate_work(void) override
   {
     unsigned int v = ctr.load();
     cprintf("value=%d\n", v);
@@ -165,7 +165,7 @@ public:
   static const size_t ElemsPerWorker = 1;
 
   virtual void
-  do_work(void)
+  do_work(void) override
   {
     for (size_t i = (myid() * ElemsPerWorker);
          i < ((myid() + 1) * ElemsPerWorker);
@@ -176,7 +176,7 @@ public:
   }
 
   virtual void
-  validate_work(void)
+  validate_work(void) override
   {
   }
 

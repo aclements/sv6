@@ -29,7 +29,7 @@ class xelem : public rcu_freed {
     : rcu_freed("xelem"), val(v), key(k),
       next_lock(0), next(0),
       percore_next(0), percore_pprev(0) {}
-  virtual void do_gc() {
+  virtual void do_gc() override {
     delete this;
   }
 
@@ -69,7 +69,7 @@ class xns : public rcu_freed {
         panic("~xns: not empty");
   }
 
-  virtual void do_gc() {
+  virtual void do_gc() override {
     delete this;
   }
 

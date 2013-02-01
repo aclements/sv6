@@ -150,7 +150,7 @@ struct cleanup_work : public work
   cleanup_work(vmap* oldvmap)
     : work(), oldvmap_(oldvmap) {}
   
-  virtual void run() {
+  virtual void run() override {
     oldvmap_->decref();
     delete this;
   }

@@ -110,8 +110,8 @@ struct futexaddr : public referenced, public rcu_freed
 {
   static futexaddr* alloc(futexkey_t key);
 
-  virtual void do_gc();
-  virtual void onzero();
+  virtual void do_gc() override;
+  virtual void onzero() override;
 
   futexkey_t key_;
   bool inserted_;
