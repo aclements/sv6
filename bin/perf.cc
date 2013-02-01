@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include "sampler.h"
 
+#if defined(HW_josmp) || defined(HW_tom)
 static u64 selector = 
   0UL << 32 |
   1 << 24 | 
@@ -12,6 +13,11 @@ static u64 selector =
   1 << 16 | 
   0x00 << 8 | 
   0x76;
+#elif defined(HW_ben) || defined(HW_ud1)
+static u64 selector = (0x3003c | (1<<20) | (1<<22));
+#else
+static u64 selector = 0;
+#endif
 static u64 period = 100000;
 
 static void
@@ -31,6 +37,9 @@ conf(int fd, sampop_t op)
 int
 main(int ac, const char *av[])
 {
+  if (selector == 0)
+    die("perf: unknown hardware");
+
   int fd = open("/dev/sampler", O_RDWR);
   if (fd < 0)
     die("perf: open failed");
