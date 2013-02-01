@@ -17,7 +17,9 @@ static console_stream verbose(true);
 #define ID      (0x0020/4)   // ID
 #define VER     (0x0030/4)   // Version
 #define TPR     (0x0080/4)   // Task Priority
+#define PPR     (0x00A0/4)   // Processor Priority
 #define EOI     (0x00B0/4)   // EOI
+#define LDR     (0x00D0/4)   // Logical Destination
 #define SVR     (0x00F0/4)   // Spurious Interrupt Vector
   #define ENABLE     0x00000100   // Unit Enable
 #define ISR     (0x0100/4)   // In-service register
@@ -25,6 +27,7 @@ static console_stream verbose(true);
 #define TMR     (0x0180/4)   // Trigger mode register
 #define IRR     (0x0200/4)   // Interrupt request register
 #define ESR     (0x0280/4)   // Error Status
+#define CMCI    (0x02f0/4)   // CMCI LVT
 #define ICRLO   (0x0300/4)   // Interrupt Command
   #define INIT       0x00000500   // INIT/RESET
   #define STARTUP    0x00000600   // Startup IPI
@@ -38,6 +41,7 @@ static console_stream verbose(true);
 #define TIMER   (0x0320/4)   // Local Vector Table 0 (TIMER)
   #define X1         0x0000000B   // divide counts by 1
   #define PERIODIC   0x00020000   // Periodic
+#define THERM   (0x0330/4)   // Thermal sensor LVT
 #define PCINT   (0x0340/4)   // Performance Counter LVT
 #define LINT0   (0x0350/4)   // Local Vector Table 1 (LINT0)
 #define LINT1   (0x0360/4)   // Local Vector Table 2 (LINT1)
@@ -65,6 +69,7 @@ public:
   void mask_pc(bool mask);
   void start_ap(struct cpu *c, u32 addr);
   void dump();
+  void dumpall();
 };
 
 static void
@@ -250,6 +255,34 @@ xapic_lapic::dump()
     // are pending delivery (IRR), and are level-triggered and will
     // trigger an IOAPIC EOI when acknowledged (TMR).
     console.println("LAPIC INT  ISR ", isr, " IRR ", irr, " TMR ", tmr);
+}
+
+void
+xapic_lapic::dumpall()
+{
+  scoped_cli cli();
+  console.println("LAPIC CPU ", myid());
+#define SHOW(reg) console.println("  " #reg "\t", shex(xapicr(reg)).width(10).pad())
+  SHOW(ID);
+  SHOW(VER);
+  SHOW(TPR);
+  SHOW(PPR);
+  SHOW(LDR);
+  SHOW(SVR);
+  SHOW(ESR);
+  SHOW(CMCI);
+  console.println("  ICR\t", shex(xapicr(ICRLO) | ((u64)xapicr(ICRHI) << 32)).
+                  width(18).pad());
+  SHOW(TIMER);
+  SHOW(THERM);
+  SHOW(PCINT);
+  SHOW(LINT0);
+  SHOW(LINT1);
+  SHOW(ERROR);
+  SHOW(TICR);
+  SHOW(TCCR);
+  SHOW(TDCR);
+#undef SHOW
 }
 
 bool

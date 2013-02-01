@@ -11,7 +11,9 @@
 #define ID      0x802   // ID
 #define VER     0x803   // Version
 #define TPR     0x808   // Task Priority
+#define PPR     0x80a   // Processor Priority
 #define EOI     0x80b   // EOI
+#define LDR     0x80d   // Logical Destination
 #define SVR     0x80f   // Spurious Interrupt Vector
   #define ENABLE     0x00000100   // Unit Enable
 #define ISR     0x810
@@ -30,6 +32,7 @@
 #define TIMER   0x832   // Local Vector Table 0 (TIMER)
   #define X1         0x0000000B   // divide counts by 1
   #define PERIODIC   0x00020000   // Periodic
+#define THERM   0x833   // Thermal sensor LVT
 #define PCINT   0x834   // Performance Counter LVT
 #define LINT0   0x835   // Local Vector Table 1 (LINT0)
 #define LINT1   0x836   // Local Vector Table 2 (LINT1)
@@ -57,6 +60,7 @@ public:
   void start_ap(struct cpu *c, u32 addr);
   bool is_x2apic();
   void dump();
+  void dumpall();
 private:
   void clearintr();
 };
@@ -291,6 +295,32 @@ x2apic_lapic::dump()
     // are pending delivery (IRR), and are level-triggered and will
     // trigger an IOAPIC EOI when acknowledged (TMR).
     console.println("LAPIC INT  ISR ", isr, " IRR ", irr, " TMR ", tmr);
+}
+
+void
+x2apic_lapic::dumpall()
+{
+  scoped_cli cli();
+  console.println("LAPIC CPU ", myid());
+#define SHOW(reg) console.println("  " #reg "\t", shex(readmsr(reg)).width(10).pad())
+  SHOW(ID);
+  SHOW(VER);
+  SHOW(TPR);
+  SHOW(PPR);
+  SHOW(LDR);
+  SHOW(SVR);
+  SHOW(ESR);
+  SHOW(ICR);
+  SHOW(TIMER);
+  SHOW(THERM);
+  SHOW(PCINT);
+  SHOW(LINT0);
+  SHOW(LINT1);
+  SHOW(ERROR);
+  SHOW(TICR);
+  SHOW(TCCR);
+  SHOW(TDCR);
+#undef SHOW
 }
 
 bool
