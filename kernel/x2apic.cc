@@ -213,9 +213,6 @@ x2apic_lapic::cpu_init()
 
   verbose.println("x2apic: Initializing LAPIC (CPU ", myid(), ")");
 
-  // Enable performance counter overflow interrupts for sampler.cc
-  mask_pc(false);
-
   // Enable interrupts on the APIC (but not on the processor).
   value = readmsr(TPR);
   value &= ~0xffU;
@@ -244,6 +241,9 @@ x2apic_lapic::cpu_init()
   // enables sending errors
   value = T_IRQ0 + IRQ_ERROR;
   writemsr(ERROR, value);
+
+  // Enable performance counter overflow interrupts for sampler.cc
+  mask_pc(false);
 
   if (maxlvt > 3)
     writemsr(ESR, 0);
