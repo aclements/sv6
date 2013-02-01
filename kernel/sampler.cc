@@ -80,6 +80,8 @@ static void
 intelconfig(u64 ctr, u64 sel, u64 val)
 {
   writemsr(MSR_INTEL_PERF_SEL0 + ctr, 0);
+  // Clear the overflow indicator
+  writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, 1<<ctr);
   writemsr(MSR_INTEL_PERF_CNT0 + ctr, val);
   writemsr(MSR_INTEL_PERF_SEL0 + ctr, sel);
 }
@@ -156,7 +158,6 @@ int
 sampintr(struct trapframe *tf)
 {
   int r = 0;
-  u64 cnt;
 
   // Acquire locks that we only acquire during NMI.
   // NMIs are disabled until the next iret.
@@ -164,20 +165,22 @@ sampintr(struct trapframe *tf)
   // Linux unmasks LAPIC.PC after every interrupt (perf_event.c)
   lapic->mask_pc(false);
 
-  cnt = rdpmc(0);
-  if ((cnt & (1ULL << (pmu.cntval_bits - 1))) == 0) {
-    // We've overflowed
+  auto overflow = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
+
+  if (overflow & (1<<0)) {
     r = 1;
     if (samplog(tf))
       pmuconfig(0, selector, period);
   }
 
-  cnt = rdpmc(1);
-  if ((cnt & (1ULL << (pmu.cntval_bits - 1))) == 0) {
+  if (overflow & (1<<1)) {
     r = 1;
     wdcheck(tf);
     pmuconfig(1, wd_selector, wd_period);
   }
+
+  // Clear overflow bits
+  writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, overflow & 3);
 
   return r;
 }
@@ -351,6 +354,9 @@ initsamp(void)
     else if (!strcmp(s, "GenuineIntel")) {
       u32 eax;
       cpuid(CPUID_PERFMON, &eax, 0, 0, 0);
+      if (PERFMON_EAX_VERSION(eax) < 2)
+        panic("Unsupported performance monitor version %d",
+              PERFMON_EAX_VERSION(eax));
       pmu = intelpmu;
       pmu.cntval_bits = PERFMON_EAX_NUM_COUNTERS(eax);
     } else

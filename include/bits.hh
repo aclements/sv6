@@ -66,11 +66,11 @@
 
 // Intel performance event-select registers
 #define MSR_INTEL_PERF_SEL0 0x00000186
-#define MSR_INTEL_PERF_SEL1 0x00000187
 // Intel performance event-count registers
 #define MSR_INTEL_PERF_CNT0 0x000000c1
-#define MSR_INTEL_PERF_CNT1 0x000000c2
-#define MSR_INTEL_PERF_GLOBAL_CTRL 0x38f
+#define MSR_INTEL_PERF_GLOBAL_STATUS   0x38e
+#define MSR_INTEL_PERF_GLOBAL_CTRL     0x38f
+#define MSR_INTEL_PERF_GLOBAL_OVF_CTRL 0x390
 
 // Common event-select bits
 #define PERF_SEL_USR        (1ULL << 16)
