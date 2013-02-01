@@ -189,7 +189,7 @@ public:
   class writer {
   public:
     writer(seqcount<u32>* seq, Lock* l, T* s)
-      : sw_(seq->write_begin()), lg_(l), stateptr_(s) {}
+      : lg_(l), sw_(seq->write_begin()), stateptr_(s) {}
 
     writer(writer &&o) = default;
     writer &operator=(writer &&o) = default;
@@ -201,8 +201,8 @@ public:
     }
 
   private:
-    seqcount<u32>::writer sw_;
     lock_guard<Lock> lg_;
+    seqcount<u32>::writer sw_;
     T* stateptr_;
   };
 
