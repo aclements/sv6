@@ -17,6 +17,17 @@
 #define LOGHEADER_SZ (sizeof(struct logheader) + \
                       sizeof(((struct logheader*)0)->cpu[0])*NCPU)
 
+// Maximum bytes in a log segment
+#define LOG_SEGMENT_MAX (1024*1024)
+// The total number of log segments
+#define LOG_SEGMENTS (PERFSIZE / LOG_SEGMENT_MAX)
+// The number of log segments per CPU
+#define LOG_SEGMENTS_PER_CPU (LOG_SEGMENTS < NCPU ? 1 : LOG_SEGMENTS / NCPU)
+// The number of pmuevents in a log segment
+#define LOG_SEGMENT_COUNT (LOG_SEGMENT_MAX / sizeof(struct pmuevent))
+// The byte size of a log segment
+#define LOG_SEGMENT_SZ (LOG_SEGMENT_COUNT * sizeof(struct pmuevent))
+
 static volatile u64 selector;
 static volatile u64 period;
 
@@ -54,8 +65,7 @@ struct pmu pmu;
 
 struct pmulog {
   u64 count;
-  u64 capacity;
-  struct pmuevent *event;
+  struct pmuevent *segments[LOG_SEGMENTS_PER_CPU];
   __padout__;
 } __mpalign__;
 
@@ -133,17 +143,6 @@ pmuconfig(u64 ctr, u64 sel, u64 val)
 }
 
 void
-sampdump(void)
-{
-  for (int c = 0; c < NCPU; c++) {
-    struct pmulog *l = &pmulog[c];    
-    cprintf("%u samples %lu\n", c, l->count);
-    for (u64 i = 0; i < 4 && i < l->count; i++)
-      cprintf(" %lx\n", l->event[i].rip);
-  }
-}
-
-void
 sampconf(void)
 {
   pushcli();
@@ -173,10 +172,11 @@ samplog(struct trapframe *tf)
   struct pmuevent *e;
   l = &pmulog[mycpu()->id];
 
-  if (l->count == l->capacity)
+  size_t segment = l->count / LOG_SEGMENT_COUNT;
+  if (segment == LOG_SEGMENTS_PER_CPU)
     return 0;
 
-  e = &l->event[l->count];
+  e = &l->segments[segment][l->count % LOG_SEGMENT_COUNT];
 
   e->idle = (myproc() == idleproc());
   e->rip = tf->rip;
@@ -223,16 +223,21 @@ readlog(char *dst, u32 off, u32 n)
 
   for (p = &pmulog[0]; p != q && n != 0; p++) {
     u64 len = p->count * sizeof(struct pmuevent);
-    char *buf = (char*)p->event;
     if (cur <= off && off < cur+len) {
       u64 boff = off-cur;
       u64 cc = MIN(len-boff, n);
-      memmove(dst, buf+boff, cc);
-
-      n -= cc;
-      ret += cc;
-      off += cc;
-      dst += cc;
+      while (cc) {
+        size_t segment = boff / LOG_SEGMENT_SZ;
+        size_t segoff = boff % LOG_SEGMENT_SZ;
+        char *buf = (char*)p->segments[segment];
+        size_t segcc = MIN(cc, LOG_SEGMENT_SZ - segoff);
+        memmove(dst, buf + segoff, segcc);
+        cc -= segcc;
+        n -= segcc;
+        ret += segcc;
+        off += segcc;
+        dst += segcc;
+      }
     }
     cur += len;
   }
@@ -397,12 +402,12 @@ initsamp(void)
   // enable RDPMC at CPL > 0
   u64 cr4 = rcr4();
   lcr4(cr4 | CR4_PCE);
-  
-  void *p = ksalloc(slab_perf);
-  if (p == nullptr)
-    panic("initprof: ksalloc");
-  pmulog[myid()].event = (pmuevent*) p;
-  pmulog[myid()].capacity = PERFSIZE / sizeof(struct pmuevent);
+
+  for (int i = 0; i < LOG_SEGMENTS_PER_CPU; ++i) {
+    pmulog[myid()].segments[i] = (pmuevent*)kmalloc(LOG_SEGMENT_SZ, "perf");
+    if (!pmulog[myid()].segments[i])
+      panic("initsamp: kalloc");
+  }
 
   if (pmu.config == intelpmu.config)
     enable_nehalem_workaround();
