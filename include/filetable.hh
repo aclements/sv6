@@ -3,8 +3,8 @@
 
 class filetable {
 private:
-  const int cpushift = 16;
-  const int fdmask = (1 << cpushift) - 1;
+  static const int cpushift = 16;
+  static const int fdmask = (1 << cpushift) - 1;
 
 public:
   static filetable* alloc() {
