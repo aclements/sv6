@@ -120,9 +120,9 @@ QEMUOPTS = -smp $(QEMUSMP) -m 512 -serial mon:stdio -nographic \
 	$(if $(RUN),-append "\$$ $(RUN)",)
 
 qemu: $(KERN)
-	$(QEMU) $(QEMUOPTS) -kernel $(KERN)
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN)
 gdb: $(KERN)
-	$(QEMU) $(QEMUOPTS) -kernel $(KERN) -s
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -s
 
 codex: $(KERN)
 
