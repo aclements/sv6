@@ -122,7 +122,7 @@ refcache::cache::review()
   // re-added to the review list, or dropped from the review list.
   auto review = reviewable.begin();
   auto review_end = reviewable.end();
-  uint64_t nreviewed = 0, nfreed = 0, nrequeued = 0, ndisowned = 0;
+  uint64_t nreviewed = 0, nrequeued = 0, ndisowned = 0;
   while (review != review_end) {
     auto obj = review++;
     ++nreviewed;
@@ -147,8 +147,10 @@ refcache::cache::review()
         // since it's now inevitable that onzero will be called.
         obj->review_epoch_ = ~0ull;
         l.release();
-        obj->onzero();
-        ++nfreed;
+
+        scoped_acquire rl(&reap_lock_);
+        reap_.push_back(&*obj);
+        reap_cv_.wake_all();
       }
     } else {
       // The count is now non-zero and hence clearly unstable.  Drop
@@ -165,7 +167,6 @@ refcache::cache::review()
   //                   " disowned ", ndisowned);
 
   kstats::inc(&kstats::refcache_item_reviewed_count, nreviewed);
-  kstats::inc(&kstats::refcache_item_freed_count, nfreed);
   kstats::inc(&kstats::refcache_item_requeued_count, nrequeued);
   kstats::inc(&kstats::refcache_item_disowned_count, ndisowned);
 }
@@ -229,6 +230,36 @@ refcache::cache::tick()
   review();
 }
 
+void
+refcache::cache::reaper()
+{
+  for (;;) {
+    referenced::list reapable;
+    for (;;) {
+      scoped_acquire l(&reap_lock_);
+      reapable = std::move(reap_);
+      if (reapable.begin() != reapable.end())
+        break;
+
+      reap_cv_.sleep(&reap_lock_);
+    }
+
+    kstats::inc(&kstats::refcache_reap_count);
+    kstats::timer timer(&kstats::refcache_reap_cycles);
+
+    auto reap = reapable.begin();
+    auto reap_end = reapable.end();
+    uint64_t nfreed = 0;
+    while (reap != reap_end) {
+      auto obj = reap++;
+      obj->onzero();
+      ++nfreed;
+    }
+
+    kstats::inc(&kstats::refcache_item_freed_count, nfreed);
+  }
+}
+
 #ifdef TEST
 class reftest : public refcache::referenced
 {
@@ -254,6 +285,13 @@ test(void *)
 }
 #endif
 
+static void
+refcache_reaper(void*)
+{
+  refcache::cache* c = refcache::mycache.get_unchecked();
+  c->reaper();
+}
+
 void
 initrefcache(void)
 {
@@ -261,6 +299,9 @@ initrefcache(void)
   // no reviewer, so start the global epoch count at 1.
   refcache::global_epoch = 1;
   refcache::global_epoch_left = ncpu;
+
+  for (int i = 0; i < NCPU; i++)
+    threadpin(refcache_reaper, nullptr, "refcache reaper", i);
 
 #ifdef TEST
   threadpin(test, nullptr, "refcache test", 0);

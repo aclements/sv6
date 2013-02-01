@@ -132,6 +132,7 @@
 #include "ilist.hh"
 #include "percpu.hh"
 #include "kstats.hh"
+#include "condvar.h"
 
 #ifndef REFCACHE_DEBUG
 #define REFCACHE_DEBUG 1
@@ -257,6 +258,13 @@ namespace refcache {
     // most one reviewer at a time per core.
     referenced::list review_;
 
+    // The list of objects whose onzero() method should be called.  Call
+    // onzero() from a separate thread, instead of the timer interrupt,
+    // to avoid deadlock with the thread preempted by the timer.
+    referenced::list reap_;
+    spinlock reap_lock_;
+    condvar reap_cv_;
+
     // The last global epoch number observed by this core.
     uint64_t local_epoch;
 
@@ -313,6 +321,10 @@ namespace refcache {
     // lists.  The latency of garbage collection is between two and
     // three times the delay between calls to tic.
     void tick();
+
+    // Reap dead objects.  This is done in a dedicated thread to
+    // avoid deadlock with threads preempted by the timer interrupt.
+    void reaper() __attribute__((noreturn));
   };
 
   // Per-CPU reference delta cache.  In general this has to be

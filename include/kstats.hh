@@ -50,6 +50,8 @@
   X(uint64_t, refcache_review_cycles)           \
   X(uint64_t, refcache_flush_count)             \
   X(uint64_t, refcache_flush_cycles)            \
+  X(uint64_t, refcache_reap_count)              \
+  X(uint64_t, refcache_reap_cycles)             \
   X(uint64_t, refcache_item_flushed_count)      \
   X(uint64_t, refcache_item_reviewed_count)     \
   X(uint64_t, refcache_item_freed_count)        \
