@@ -16,6 +16,7 @@
 #define LDR     0x80d   // Logical Destination
 #define SVR     0x80f   // Spurious Interrupt Vector
   #define ENABLE     0x00000100   // Unit Enable
+  #define NO_BROADCAST (1<<12)    // Disable EOI broadcast
 #define ISR     0x810
   #define ISR_NR     0x8
 #define TMR     0x818
@@ -222,10 +223,11 @@ x2apic_lapic::cpu_init()
 
   clearintr();
 
-  // Enable local APIC; set spurious interrupt vector.
+  // Enable local APIC and EOI broadcast; set spurious interrupt vector.
   value = readmsr(SVR);
   value &= ~0x000FF;
   value |= ENABLE;
+  value &= ~NO_BROADCAST;
   value |= T_IRQ0 + IRQ_SPURIOUS;
   writemsr(SVR, value);
 
