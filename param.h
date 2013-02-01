@@ -55,14 +55,14 @@
 #define NSOCKET       4
 #define MTRACE        0
 #define CODEX         0
-#define PERFSIZE      (1<<20ull)
+#define PERFSIZE      (128<<20ull)
 #define E1000_PORT    1   // use second E1000 port
 #elif defined(HW_ud0) || defined(HW_ud1)
 #define NCPU          4   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        0
 #define CODEX         0
-#define PERFSIZE      (1<<20ull)
+#define PERFSIZE      (128<<20ull)
 #define UART_BAUD     115200
 #elif defined(HW_tom)
 #define DEBUG         0
@@ -70,7 +70,7 @@
 #define NSOCKET       8
 #define MTRACE        0
 #define CODEX         0
-#define PERFSIZE      (1<<20ull)
+#define PERFSIZE      (128<<20ull)
 // tom's IPMI SOL console looses sync if we don't delay
 #define UART_SEND_DELAY_USEC 1000
 #elif defined(HW_ben)
@@ -79,7 +79,7 @@
 #define NSOCKET       8
 #define MTRACE        0
 #define CODEX         0
-#define PERFSIZE      (1<<20ull)
+#define PERFSIZE      (128<<20ull)
 #define UART_BAUD     115200
 #elif defined(HW_user)
 #define NCPU          256
