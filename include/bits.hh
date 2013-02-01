@@ -70,6 +70,7 @@
 // Intel performance event-count registers
 #define MSR_INTEL_PERF_CNT0 0x000000c1
 #define MSR_INTEL_PERF_CNT1 0x000000c2
+#define MSR_INTEL_PERF_GLOBAL_CTRL 0x38f
 
 // Common event-select bits
 #define PERF_SEL_USR        (1ULL << 16)
@@ -88,6 +89,10 @@
 
 // CPUID function 0x00000005
 #define CPUID_MWAIT         0x00000005
+
+#define CPUID_PERFMON       0x0000000a
+#define PERFMON_EAX_VERSION(x)      ((x) & 0xFF)
+#define PERFMON_EAX_NUM_COUNTERS(x) (((x) >> 8) & 0xFF)
 
 // CPUID function 0x80000001
 #define CPUID_EXTENDED_1 0x80000001

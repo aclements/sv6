@@ -294,6 +294,47 @@ sampwrite(struct inode *ip, const char *buf, u32 off, u32 n)
   return n;
 }
 
+// Enable PMU Workaround for
+// * Intel Errata AAK100 (model 26)
+// * Intel Errata AAP53  (model 30)
+// * Intel Errata BD53   (model 44)
+// Without this, performance counters may fail to count
+static void
+enable_nehalem_workaround(void)
+{
+  static const unsigned long magic[4] = {
+    0x4300B5,
+    0x4300D2,
+    0x4300B1,
+    0x4300B1
+  };
+
+  uint32_t eax;
+  cpuid(CPUID_PERFMON, &eax, nullptr, nullptr, nullptr);
+  if (PERFMON_EAX_VERSION(eax) == 0)
+    return;
+  int num = PERFMON_EAX_NUM_COUNTERS(eax);
+  if (num > 4)
+    num = 4;
+
+  writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, 0x0);
+
+  for (int i = 0; i < num; i++) {
+    writemsr(MSR_INTEL_PERF_SEL0 + i, magic[i]);
+    writemsr(MSR_INTEL_PERF_CNT0 + i, 0x0);
+  }
+
+  writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, 0xf);
+  writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, 0x0);
+
+  for (int i = 0; i < num; i++) {
+    writemsr(MSR_INTEL_PERF_SEL0 + i, 0);
+    writemsr(MSR_INTEL_PERF_CNT0 + i, 0);
+  }
+
+  writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, 0x3);
+}
+
 void
 initsamp(void)
 {
@@ -309,9 +350,9 @@ initsamp(void)
       pmu = amdpmu;
     else if (!strcmp(s, "GenuineIntel")) {
       u32 eax;
-      cpuid(10, &eax, 0, 0, 0);
+      cpuid(CPUID_PERFMON, &eax, 0, 0, 0);
       pmu = intelpmu;
-      pmu.cntval_bits = (0xff & (eax >> 16));
+      pmu.cntval_bits = PERFMON_EAX_NUM_COUNTERS(eax);
     } else
       panic("Unknown Manufacturer");
   }
@@ -325,6 +366,9 @@ initsamp(void)
     panic("initprof: ksalloc");
   pmulog[myid()].event = (pmuevent*) p;
   pmulog[myid()].capacity = PERFSIZE / sizeof(struct pmuevent);
+
+  if (pmu.config == intelpmu.config)
+    enable_nehalem_workaround();
 
   devsw[MAJ_SAMPLER].write = sampwrite;
   devsw[MAJ_SAMPLER].read = sampread;
