@@ -47,7 +47,7 @@ private:
   NEW_DELETE_OPS(file);
 
 protected:
-  virtual void onzero() const;
+  virtual void onzero();
 };
 
 // in-core file system types
@@ -104,7 +104,7 @@ private:
   NEW_DELETE_OPS(inode)
 
 protected:
-  virtual void onzero() const;
+  virtual void onzero();
 };
 
 

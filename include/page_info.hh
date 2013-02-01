@@ -26,13 +26,6 @@ protected:
     kfree(va());
   }
 
-  // XXX(Austin) ::referenced expects const onzero, refcache and
-  // locked_snzi expect non-const onzero.  Make this consistent.
-  void onzero() const
-  {
-    kfree(va());
-  }
-
 public:
   page_info() { }
 

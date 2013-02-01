@@ -24,7 +24,7 @@ file::file(void)
 }
 
 void
-file::onzero(void) const
+file::onzero(void)
 {
   if(type == file::FD_PIPE)
     pipeclose(pipe, writable);

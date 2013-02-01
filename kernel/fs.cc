@@ -566,7 +566,7 @@ inode::nlink(void)
 }
 
 void
-inode::onzero(void) const
+inode::onzero(void)
 {
   inode* ip = (inode*)this;
 
