@@ -93,6 +93,16 @@ intelconfig(u64 ctr, u64 sel, u64 val)
 //   the value of bit 31."
 struct pmu intelpmu = { intelconfig, 0, (1ull << 31) - 1 };
 
+//
+// No PMU
+//
+static void
+nopmuconfig(u64 ctr, u64 sel, u64 val)
+{
+}
+
+struct pmu nopmu = { nopmuconfig, 0, (1ull << 31) - 1 };
+
 static void
 pmuconfig(u64 ctr, u64 sel, u64 val)
 {
@@ -349,18 +359,21 @@ initsamp(void)
     cpuid(0, 0, &name[0], &name[2], &name[1]);
     if (VERBOSE)
       cprintf("%s\n", s);
+    pmu = nopmu;
     if (!strcmp(s, "AuthenticAMD"))
       pmu = amdpmu;
     else if (!strcmp(s, "GenuineIntel")) {
       u32 eax;
       cpuid(CPUID_PERFMON, &eax, 0, 0, 0);
-      if (PERFMON_EAX_VERSION(eax) < 2)
-        panic("Unsupported performance monitor version %d",
-              PERFMON_EAX_VERSION(eax));
-      pmu = intelpmu;
-      pmu.cntval_bits = PERFMON_EAX_NUM_COUNTERS(eax);
+      if (PERFMON_EAX_VERSION(eax) < 2) {
+        cprintf("initsamp: Unsupported performance monitor version %d\n",
+                PERFMON_EAX_VERSION(eax));
+      } else {
+        pmu = intelpmu;
+        pmu.cntval_bits = PERFMON_EAX_NUM_COUNTERS(eax);
+      }
     } else
-      panic("Unknown Manufacturer");
+      cprintf("initsamp: Unknown Manufacturer\n");
   }
 
   // enable RDPMC at CPL > 0
