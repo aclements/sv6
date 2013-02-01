@@ -46,6 +46,7 @@ static void wdcheck(struct trapframe*);
 
 struct pmu {
   void (*config)(u64 ctr, u64 sel, u64 val);  
+  u64 (*get_overflow)(void);
   u64 cntval_bits;
   u64 max_period;
 };
@@ -71,7 +72,19 @@ amdconfig(u64 ctr, u64 sel, u64 val)
   writemsr(MSR_AMD_PERF_SEL0 + ctr, sel);
 }
 
-struct pmu amdpmu = { amdconfig, 48, (1ull << 47) - 1 };
+static u64
+amd_get_overflow(void)
+{
+  u64 ovf = 0;
+  for (int pmc = 0; pmc < 2; ++pmc) {
+    u64 cnt = rdpmc(pmc);
+    if ((cnt & (1ull << (pmu.cntval_bits - 1))) == 0)
+      ovf |= 1 << pmc;
+  }
+  return ovf;
+}
+
+struct pmu amdpmu = { amdconfig, amd_get_overflow, 48, (1ull << 47) - 1 };
 
 //
 // Intel stuff
@@ -86,12 +99,20 @@ intelconfig(u64 ctr, u64 sel, u64 val)
   writemsr(MSR_INTEL_PERF_SEL0 + ctr, sel);
 }
 
+static u64
+intel_get_overflow(void)
+{
+  auto ovf = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
+  writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, ovf & 0xffffffff);
+  return ovf;
+}
+
 // We fill in cntval_bits at boot.
 // From Intel Arch. Vol 3b:
 //   "On write operations, the lower 32-bits of the MSR may be written
 //   with any value, and the high-order bits are sign-extended from
 //   the value of bit 31."
-struct pmu intelpmu = { intelconfig, 0, (1ull << 31) - 1 };
+struct pmu intelpmu = { intelconfig, intel_get_overflow, 0, (1ull << 31) - 1 };
 
 //
 // No PMU
@@ -175,7 +196,7 @@ sampintr(struct trapframe *tf)
   // Linux unmasks LAPIC.PC after every interrupt (perf_event.c)
   lapic->mask_pc(false);
 
-  auto overflow = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
+  u64 overflow = pmu.get_overflow();
 
   if (overflow & (1<<0)) {
     r = 1;
