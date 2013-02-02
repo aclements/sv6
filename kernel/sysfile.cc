@@ -177,7 +177,6 @@ sys_link(userptr_str old_name, userptr_str new_name)
     return -1;
   }
   ip->link();
-  iupdate(ip);
   iunlock(ip);
 
   if((dp = nameiparent(myproc()->cwd, newn, name)) == 0)
@@ -192,7 +191,6 @@ sys_link(userptr_str old_name, userptr_str new_name)
 bad:
   ilock(ip, 1);
   ip->unlink();
-  iupdate(ip);
   iunlockput(ip);
   return -1;
 }
@@ -284,7 +282,6 @@ sys_rename(userptr_str old_name, userptr_str new_name)
   if (ipnew) {
     ilock(ipnew, 1);
     ipnew->unlink();
-    iupdate(ipnew);
     iunlockput(ipnew);
   }
 
@@ -358,14 +355,12 @@ sys_unlink(userptr_str path)
   if(ip->type == T_DIR){
     ilock(dp, 1);
     dp->unlink();
-    iupdate(dp);
     iunlock(dp);
   }
 
   iput(dp);
 
   ip->unlink();
-  iupdate(ip);
   iunlockput(ip);
   return 0;
 }
@@ -403,13 +398,11 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
     ip->major = major;
     ip->minor = minor;
     ip->link();
-    iupdate(ip);
     
     mtwriteavar("inode:%x.%x", ip->dev, ip->inum);
     
     if(type == T_DIR){  // Create . and .. entries.
       dp->link(); // for ".."
-      iupdate(dp);
       // No ip->nlink++ for ".": avoid cyclic ref count.
       if(dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
         panic("create dots");

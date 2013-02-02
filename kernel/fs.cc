@@ -329,28 +329,17 @@ static inode_cache_dir the_inode_cache;
 static inode*
 try_ialloc(u32 inum, u32 dev, short type)
 {
-  // XXX this whole function seems a bit suspect..
-  scoped_gc_epoch e;
-  buf *bp = buf::get(dev, IBLOCK(inum));
-  auto copy = bp->seq_.read();
-
-  dinode* dip = (dinode*)copy.data + inum%IPB;
-  int seemsfree = (dip->type == 0);
-  if(seemsfree) {
-    // maybe this inode is free. look at it via the
-    // inode cache to make sure.
-    inode* ip = iget(dev, inum);
-    ilock(ip, 1);
-    if(ip->type == 0) {
-      ip->type = type;
-      ip->gen += 1;
-      if(ip->nlink() || ip->size || ip->addrs[0])
-        panic("ialloc not zeroed");
-      iupdate(ip);
-      return ip;
-    }
-    iunlockput(ip);
+  inode* ip = iget(dev, inum);
+  ilock(ip, 1);
+  if(ip->type == 0) {
+    auto w = ip->seq.write_begin();
+    ip->type = type;
+    ip->gen += 1;
+    if(ip->nlink() || ip->size || ip->addrs[0])
+      panic("ialloc not zeroed");
+    return ip;
   }
+  iunlockput(ip);
   return nullptr;
 }
 
@@ -403,6 +392,9 @@ ialloc(u32 dev, short type)
 void
 iupdate(struct inode *ip)
 {
+  // XXX call iupdate to flush in-memory inode state to
+  // buffer cache.  use seq value to detect updates.
+
   scoped_gc_epoch e;
 
   {
@@ -542,6 +534,7 @@ void
 inode::link(void)
 {
   // Must hold ilock if inode is accessible by multiple threads
+  auto w = seq.write_begin();
   if (++nlink_ == 1) {
     // A non-zero nlink_ holds a reference to the inode
     idup(this);
@@ -552,6 +545,7 @@ void
 inode::unlink(void)
 {
   // Must hold ilock if inode is accessible by multiple threads
+  auto w = seq.write_begin();
   if (--nlink_ == 0) {
     // This should never be the last reference..
     iput(this);
@@ -587,15 +581,18 @@ inode::onzero(void)
 
   // XXX: use gc_delayed() to truncate the inode later.
   // flag it as a victim in the meantime.
-  
-  release(&ip->lock);
-      
+
   itrunc(ip);
-  ip->type = 0;
-  ip->major = 0;
-  ip->minor = 0;
-  ip->gen += 1;
-  iupdate(ip);
+
+  {
+    auto w = ip->seq.write_begin();
+    ip->type = 0;
+    ip->major = 0;
+    ip->minor = 0;
+    ip->gen += 1;
+  }
+
+  release(&ip->lock);
   
   ins->remove(make_pair(ip->dev, ip->inum), &ip);
   the_inode_cache.add(ip->inum);
@@ -813,6 +810,8 @@ itrunc(struct inode *ip)
   // XXX how to serialize itrunc w.r.t. concurrent itrunc or expansion?
   // Could lock disk blocks (buf's), or could lock the inode?
 
+  auto w = ip->seq.write_begin();
+
   for(int i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
       diskblock *db = new diskblock(ip->dev, ip->addrs[i]);
@@ -866,7 +865,6 @@ itrunc(struct inode *ip)
   }
 
   ip->size = 0;
-  iupdate(ip);
 }
 
 // Copy stat information from inode.
@@ -961,8 +959,8 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
   }
 
   if(tot > 0 && off > ip->size){
+    auto w = ip->seq.write_begin();
     ip->size = off;
-    iupdate(ip);
   }
   return tot;
 }
@@ -1044,8 +1042,8 @@ dir_flush(struct inode *dp)
       return false;
     });
   if (dp->size != off) {
+    auto w = dp->seq.write_begin();
     dp->size = off;
-    iupdate(dp);
   }
 }
 
