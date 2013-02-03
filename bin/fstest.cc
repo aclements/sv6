@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "pthread.h"
 #include <atomic>
+#ifndef XV6_USER
+#include <string.h>
+#endif
 #include "mtrace.h"
 #include "fstest.h"
 

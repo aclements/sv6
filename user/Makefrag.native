@@ -1,12 +1,14 @@
+COMFLAGS := -include user/nativetypes.h -Iuser/nativeinc -I$(QEMUSRC) -DMTRACE=1
+
 $(O)/native/%.o: %.cc
 	@echo "  CXX    $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) -c -o $@ $< -Iuser/nativeinc -std=c++11
+	$(Q)$(CXX) -c -o $@ $< $(COMFLAGS) -std=c++11
 
 $(O)/native/%.o: %.c
 	@echo "  CC     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CC) -c -o $@ $< -Iuser/nativeinc -std=c99
+	$(Q)$(CC) -c -o $@ $< $(COMFLAGS) -std=c99
 
 $(O)/fstest: $(O)/native/bin/fstest.o \
              $(O)/native/lib/testgen.o
