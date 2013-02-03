@@ -1,8 +1,9 @@
 #pragma once
 
-#include "atomic.hh"
 #include "percpu.hh"
+#include "atomic_util.hh"
 
+#include <atomic>
 #include <typeinfo>
 #include <memory>
 

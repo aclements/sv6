@@ -2,6 +2,7 @@
 #include "kernel.hh"
 #include "benchcodex.hh"
 #include "cpu.hh"
+#include "codex.hh"
 
 class count_down_latch {
 public:

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "atomic.hh"
+#include <atomic>
 #include "bitset.hh"
 #include "percpu.hh"
 

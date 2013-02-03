@@ -1,7 +1,7 @@
 #include "types.h"
 #include "pthread.h"
 #include "user.h"
-#include "atomic.hh"
+#include <atomic>
 #include "elfuser.hh"
 #include <unistd.h>
 #include <sched.h>

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "pthread.h"
-#include "atomic.hh"
+#include <atomic>
 #include "mtrace.h"
 #include "fstest.h"
 

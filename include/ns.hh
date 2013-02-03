@@ -2,6 +2,7 @@
 
 #include "gc.hh"
 #include "percpu.hh"
+#include "atomic_util.hh"
 
 // name spaces
 // XXX maybe use open hash table, no chain, better cache locality

@@ -2,11 +2,7 @@
 
 #include "amd64.h"
 #include "spinlock.h"
-#ifdef XV6_KERNEL
-#include "atomic.hh"
-#else
 #include <atomic>
-#endif
 
 /**
  * A seqcount is a synchronization primitive that, in conjunction with

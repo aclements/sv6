@@ -1,7 +1,7 @@
 #pragma once
 
 #include "spinlock.h"
-#include "atomic.hh"
+#include <atomic>
 #include "cpputil.hh"
 #include "fs.h"
 #include "file.hh"

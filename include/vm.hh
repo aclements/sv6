@@ -1,5 +1,5 @@
 #include "gc.hh"
-#include "atomic.hh"
+#include <atomic>
 #include "cpputil.hh"
 #include "hwvm.hh"
 #include "distref.hh"

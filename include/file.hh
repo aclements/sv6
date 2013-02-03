@@ -3,7 +3,7 @@
 #include "cpputil.hh"
 #include "ns.hh"
 #include "gc.hh"
-#include "atomic.hh"
+#include <atomic>
 #include "refcache.hh"
 #include "condvar.h"
 #include "semaphore.h"

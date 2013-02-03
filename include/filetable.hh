@@ -1,4 +1,4 @@
-#include "atomic.hh"
+#include <atomic>
 #include "percpu.hh"
 
 class filetable {

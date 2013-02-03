@@ -4,7 +4,7 @@ extern "C" {
 #include "kern_c.h"
 }
 
-#include "atomic.hh"
+#include <atomic>
 #include "memlayout.h"
 #include <stdarg.h>
 #include <cassert>

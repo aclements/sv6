@@ -4,7 +4,7 @@
 #include "pthread.h"
 #include "futex.h"
 #include "errno.h"
-#include "atomic.hh"
+#include <atomic>
 #include "mtrace.h"
 
 static volatile std::atomic<u64> waiting;

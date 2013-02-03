@@ -9,7 +9,7 @@
 
 #include <sys/mman.h>
 
-#include "atomic.hh"
+#include <atomic>
 #include <utility>
 
 static int cpu;

@@ -1,8 +1,8 @@
 #include "refcache.hh"
 #include "proc.hh"
 #include "kstream.hh"
-#include "atomic.hh"
 
+#include <atomic>
 #include <iterator>
 
 //#define TEST

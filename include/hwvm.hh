@@ -1,6 +1,6 @@
 #pragma once
 
-#include "atomic.hh"
+#include <atomic>
 #include "bitset.hh"
 
 // A TLB shootdown gatherer that doesn't track anything, but as a

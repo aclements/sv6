@@ -5,7 +5,7 @@
  */
 
 #ifdef __cplusplus
-#include "atomic.hh"
+#include <atomic>
 #endif
 
 typedef int pthread_t;
