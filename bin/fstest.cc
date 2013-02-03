@@ -4,6 +4,20 @@
 #include "mtrace.h"
 #include "fstest.h"
 
+#ifndef XV6_USER
+#include <stdlib.h>
+#include <sched.h>
+
+int
+setaffinity(int cpu)
+{
+  cpu_set_t mask;
+  CPU_ZERO(&mask);
+  CPU_SET(cpu, &mask);
+  return sched_setaffinity(0, sizeof(mask), &mask);
+}
+#endif
+
 static bool verbose = false;
 static bool check_commutativity = false;
 

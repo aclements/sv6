@@ -4,6 +4,8 @@ o.qemu/
 o.ben/
 o.josmp/
 o.tom/
+o.user/
+o.native/
 /mtrace.out
 /mtrace.txt
 /mscan.out

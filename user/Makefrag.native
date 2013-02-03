@@ -1,0 +1,20 @@
+$(O)/native/%.o: %.cc
+	@echo "  CXX    $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) -c -o $@ $< -Iuser/nativeinc -std=c++11
+
+$(O)/native/%.o: %.c
+	@echo "  CC     $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CC) -c -o $@ $< -Iuser/nativeinc -std=c99
+
+$(O)/fstest: $(O)/native/bin/fstest.o \
+             $(O)/native/lib/testgen.o
+	@echo "  LD     $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) -o $@ $^ -lpthread
+
+.PRECIOUS: $(O)/native/%.o
+
+ALL := $(O)/fstest
+
