@@ -393,11 +393,11 @@ main (int argc, char *argv[])
   struct kstats kstats = kstats_after - kstats_before;
   printf("%d %lu # recv msg through lb\n", nclient, kstats.socket_load_balance);
   printf("%d %lu # recv msg locally\n", nclient, kstats.socket_local_read);
-  printf("%d %f # cycles/server sendto\n", nclient,
+  printf("%d %f # cycles/sendto\n", nclient,
          (double)kstats.socket_local_sendto_cycles / kstats.socket_local_sendto_cnt);
-  printf("%d %f # cycles/client sendto\n", nclient,
-         (double)kstats.socket_local_client_sendto_cycles / 
-         kstats.socket_local_client_sendto_cnt);
+  // printf("%d %f # cycles/client sendto\n", nclient,
+  //        (double)kstats.socket_local_client_sendto_cycles / 
+  //        kstats.socket_local_client_sendto_cnt);
   printf("%d %f #cycles/recvfrom\n", nclient,
          (double)kstats.socket_local_recvfrom_cycles / kstats.socket_local_recvfrom_cnt);
 #endif
