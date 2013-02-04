@@ -9,11 +9,11 @@
 # ./lsocketbench 42 42 100000
 #./lsocketbench 48 48 100000
 
-# ./lsocketbench 10 10 100000
-# ./lsocketbench 20 20 100000
+./lsocketbench 10 10 100000 0
+./lsocketbench 20 20 100000 0
 # ./lsocketbench 30 30 100000
-# ./lsocketbench 40 40 100000
+./lsocketbench 40 40 100000 0
 # ./lsocketbench 50 50 100000
 # ./lsocketbench 60 60 100000
 # ./lsocketbench 70 70 100000
-# ./lsocketbench 80 80 100000
+./lsocketbench 80 80 100000 0
