@@ -421,21 +421,13 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   sref<file> f;
   struct sockaddr_un uaddr;
 
-  if (client) {
 #ifdef XV6_KERNEL
-    kstats::timer timer_fill(&kstats::socket_local_client_sendto_cycles);
-    kstats::inc(&kstats::socket_local_client_sendto_cnt);
+  kstats::timer timer_fill(&kstats::socket_local_sendto_cycles);
+  kstats::inc(&kstats::socket_local_sendto_cnt);
 #endif
-    if (!getsocket(sockfd, &f))
-      return -1;
-  } else {
-    kstats::timer timer_fill(&kstats::socket_local_sendto_cycles);
-    kstats::inc(&kstats::socket_local_sendto_cnt);
 
-    if (!getsocket(sockfd, &f))
-      return -1;
-
-  }
+  if (!getsocket(sockfd, &f))
+    return -1;
 
   if (fetchmem(&uaddr, dest_addr, sizeof(sockaddr_un)) < 0) 
     return -1;
