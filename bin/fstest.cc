@@ -93,7 +93,11 @@ main(int ac, char** av)
 
     char mtname[64];
     snprintf(mtname, sizeof(mtname), "fstest-%d", i);
+#ifdef XV6_USER
     mtenable_type(mtrace_record_ascope, mtname);
+#else
+    mtenable_type(mtrace_record_kernelscope, mtname);
+#endif
 
     ready = 1;
 
