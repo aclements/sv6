@@ -70,16 +70,18 @@ extern const int nsyscalls;
 u64
 syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 {
-  mt_ascope ascope("syscall:%ld", num);
-
   for (;;) {
 #if EXCEPTIONS
     try {
 #endif
       if(num < nsyscalls && syscalls[num]) {
+        u64 r;
         mtstart(syscalls[num], myproc());
         mtrec();
-        u64 r = syscalls[num](a0, a1, a2, a3, a4, a5);
+        {
+          mt_ascope ascope("syscall:%ld", num);
+          r = syscalls[num](a0, a1, a2, a3, a4, a5);
+        }
         mtstop(myproc());
         mtign();
         return r;

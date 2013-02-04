@@ -44,7 +44,7 @@ inituser(void)
   p->data_cpuid = myid();
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
-  p->cwd = 0; // forkret will fix in the process's context
+  p->cwd.reset(); // forkret will fix in the process's context
   acquire(&p->lock);
   addrun(p);
   release(&p->lock);

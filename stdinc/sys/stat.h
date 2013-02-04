@@ -31,6 +31,7 @@
 BEGIN_DECLS
 
 int fstat(int, struct stat *);
+int fstatat(int dirfd, const char*, struct stat*);
 int mkdir(const char *, mode_t);
 int mkdirat(int, const char *, mode_t);
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "spinlock.h"
-#include "atomic.hh"
+#include <atomic>
 #include "cpputil.hh"
 #include "fs.h"
 #include "file.hh"
@@ -64,7 +64,7 @@ struct proc : public rcu_freed, public sched_link {
   struct context *context;     // swtch() here to run process
   int killed;                  // If non-zero, have been killed
   filetable *ftable;
-  struct inode *cwd;           // Current directory
+  sref<inode> cwd;             // Current directory
   char name[16];               // Process name (debugging)
   u64 tsc;
   u64 curcycles;
@@ -112,7 +112,7 @@ struct proc : public rcu_freed, public sched_link {
 
   static u64   hash(const u32& p);
 
-  virtual void do_gc(void) { delete this; }
+  void do_gc(void) override { delete this; }
 
 private:
   proc(int npid);

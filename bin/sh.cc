@@ -2,7 +2,11 @@
 
 #include "types.h"
 #include "user.h"
+
 #include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 bool interactive;
 
@@ -78,14 +82,14 @@ runcmd(struct cmd *cmd)
     if(ecmd->argv[0] == 0)
       exit();
     exec(ecmd->argv[0], ecmd->argv);
-    fprintf(2, "exec %s failed\n", ecmd->argv[0]);
+    fprintf(stderr, "exec %s failed\n", ecmd->argv[0]);
     break;
 
   case REDIR:
     rcmd = (struct redircmd*)cmd;
     close(rcmd->fd);
     if(open(rcmd->file, rcmd->mode, 0666) < 0){
-      fprintf(2, "open %s failed\n", rcmd->file);
+      fprintf(stderr, "open %s failed\n", rcmd->file);
       exit();
     }
     runcmd(rcmd->cmd);
@@ -136,7 +140,7 @@ int
 getcmd(char *buf, int nbuf)
 {
   if (interactive)
-    fprintf(2, "$ ");
+    fprintf(stderr, "$ ");
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if(buf[0] == 0) // EOF
@@ -185,7 +189,7 @@ main(int ac, char** av)
     interactive = false;
     close(0);
     if (open(av[1], O_RDONLY) < 0) {
-      fprintf(2, "cannot open %s\n", av[1]);
+      fprintf(stderr, "cannot open %s\n", av[1]);
       return -1;
     }
   }
@@ -197,7 +201,7 @@ main(int ac, char** av)
       // Chdir has no effect on the parent if run in the child.
       buf[strlen(buf)-1] = 0;  // chop \n
       if(chdir(buf+3) < 0)
-        fprintf(2, "cannot cd %s\n", buf+3);
+        fprintf(stderr, "cannot cd %s\n", buf+3);
       continue;
     } else if(!strcmp(buf, "exit\n") || !strcmp(buf, "exit\r")){
       exit();
@@ -214,7 +218,7 @@ main(int ac, char** av)
 void
 panic(const char *s)
 {
-  fprintf(2, "%s\n", s);
+  fprintf(stderr, "%s\n", s);
   exit();
 }
 
@@ -374,7 +378,7 @@ parsecmd(char *s)
   cmd = parseline(&s, es);
   peek(&s, es, "");
   if(s != es){
-    fprintf(2, "leftovers: %s\n", s);
+    fprintf(stderr, "leftovers: %s\n", s);
     panic("syntax");
   }
   nulterminate(cmd);

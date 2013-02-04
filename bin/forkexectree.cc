@@ -1,6 +1,9 @@
 #include "types.h"
 #include "user.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #define NCHILD 2
 #define NDEPTH 5
 
@@ -8,7 +11,7 @@ void
 forktree(int depth)
 {
   if (depth == 0) {
-    fprintf(1, "%d: forkexectree\n", getpid());
+    printf("%d: forkexectree\n", getpid());
   }
 
   if (depth >= NDEPTH)
@@ -17,8 +20,7 @@ forktree(int depth)
   for (int i = 0; i < NCHILD; i++) {
     int pid = fork(0);
     if (pid < 0) {
-      fprintf(1, "fork error\n");
-      exit();
+      die("fork error");
     }
 
     if (pid == 0) {
@@ -27,27 +29,24 @@ forktree(int depth)
       snprintf(depthbuf, sizeof(depthbuf), "%d", depth);
       const char *av[] = { "forkexectree", depthbuf, 0 };
       int r = exec("forkexectree", av);
-      fprintf(1, "forkexectree: exec failed %d\n", r);
-      exit();
+      die("forkexectree: exec failed %d", r);
     }
   }
 
   for (int i = 0; i < NCHILD; i++) {
     if (wait(-1) < 0) {
-      fprintf(1, "wait stopped early\n");
-      exit();
+      die("wait stopped early");
     }
   }
   
   if (wait(-1) != -1) {
-    fprintf(1, "wait got too many\n");
-    exit();
+    die("wait got too many");
   }
 
   if (depth > 0)
     exit();
 
-  fprintf(1, "%d: forkexectree OK\n", getpid());
+  printf("%d: forkexectree OK\n", getpid());
   // halt();
 }
 

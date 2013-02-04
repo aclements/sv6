@@ -1,10 +1,12 @@
 #include "types.h"
 #include "pthread.h"
 #include "user.h"
-#include "atomic.hh"
+#include <atomic>
 #include "elfuser.hh"
 #include <unistd.h>
 #include <sched.h>
+#include <stdio.h>
+#include <string.h>
 
 enum { stack_size = 8192 };
 static std::atomic<int> nextkey;

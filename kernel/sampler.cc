@@ -17,6 +17,17 @@
 #define LOGHEADER_SZ (sizeof(struct logheader) + \
                       sizeof(((struct logheader*)0)->cpu[0])*NCPU)
 
+// Maximum bytes in a log segment
+#define LOG_SEGMENT_MAX (1024*1024)
+// The total number of log segments
+#define LOG_SEGMENTS (PERFSIZE / LOG_SEGMENT_MAX)
+// The number of log segments per CPU
+#define LOG_SEGMENTS_PER_CPU (LOG_SEGMENTS < NCPU ? 1 : LOG_SEGMENTS / NCPU)
+// The number of pmuevents in a log segment
+#define LOG_SEGMENT_COUNT (LOG_SEGMENT_MAX / sizeof(struct pmuevent))
+// The byte size of a log segment
+#define LOG_SEGMENT_SZ (LOG_SEGMENT_COUNT * sizeof(struct pmuevent))
+
 static volatile u64 selector;
 static volatile u64 period;
 
@@ -46,6 +57,7 @@ static void wdcheck(struct trapframe*);
 
 struct pmu {
   void (*config)(u64 ctr, u64 sel, u64 val);  
+  u64 (*get_overflow)(void);
   u64 cntval_bits;
   u64 max_period;
 };
@@ -53,8 +65,7 @@ struct pmu pmu;
 
 struct pmulog {
   u64 count;
-  u64 capacity;
-  struct pmuevent *event;
+  struct pmuevent *segments[LOG_SEGMENTS_PER_CPU];
   __padout__;
 } __mpalign__;
 
@@ -71,7 +82,19 @@ amdconfig(u64 ctr, u64 sel, u64 val)
   writemsr(MSR_AMD_PERF_SEL0 + ctr, sel);
 }
 
-struct pmu amdpmu = { amdconfig, 48, (1ull << 47) - 1 };
+static u64
+amd_get_overflow(void)
+{
+  u64 ovf = 0;
+  for (int pmc = 0; pmc < 2; ++pmc) {
+    u64 cnt = rdpmc(pmc);
+    if ((cnt & (1ull << (pmu.cntval_bits - 1))) == 0)
+      ovf |= 1 << pmc;
+  }
+  return ovf;
+}
+
+struct pmu amdpmu = { amdconfig, amd_get_overflow, 48, (1ull << 47) - 1 };
 
 //
 // Intel stuff
@@ -86,12 +109,30 @@ intelconfig(u64 ctr, u64 sel, u64 val)
   writemsr(MSR_INTEL_PERF_SEL0 + ctr, sel);
 }
 
+static u64
+intel_get_overflow(void)
+{
+  auto ovf = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
+  writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, ovf & 0xffffffff);
+  return ovf;
+}
+
 // We fill in cntval_bits at boot.
 // From Intel Arch. Vol 3b:
 //   "On write operations, the lower 32-bits of the MSR may be written
 //   with any value, and the high-order bits are sign-extended from
 //   the value of bit 31."
-struct pmu intelpmu = { intelconfig, 0, (1ull << 31) - 1 };
+struct pmu intelpmu = { intelconfig, intel_get_overflow, 0, (1ull << 31) - 1 };
+
+//
+// No PMU
+//
+static void
+nopmuconfig(u64 ctr, u64 sel, u64 val)
+{
+}
+
+struct pmu nopmu = { nopmuconfig, 0, (1ull << 31) - 1 };
 
 static void
 pmuconfig(u64 ctr, u64 sel, u64 val)
@@ -99,17 +140,6 @@ pmuconfig(u64 ctr, u64 sel, u64 val)
   if (val > pmu.max_period)
     val = pmu.max_period;
   pmu.config(ctr, sel, -val);
-}
-
-void
-sampdump(void)
-{
-  for (int c = 0; c < NCPU; c++) {
-    struct pmulog *l = &pmulog[c];    
-    cprintf("%u samples %lu\n", c, l->count);
-    for (u64 i = 0; i < 4 && i < l->count; i++)
-      cprintf(" %lx\n", l->event[i].rip);
-  }
 }
 
 void
@@ -142,10 +172,11 @@ samplog(struct trapframe *tf)
   struct pmuevent *e;
   l = &pmulog[mycpu()->id];
 
-  if (l->count == l->capacity)
+  size_t segment = l->count / LOG_SEGMENT_COUNT;
+  if (segment == LOG_SEGMENTS_PER_CPU)
     return 0;
 
-  e = &l->event[l->count];
+  e = &l->segments[segment][l->count % LOG_SEGMENT_COUNT];
 
   e->idle = (myproc() == idleproc());
   e->rip = tf->rip;
@@ -165,22 +196,19 @@ sampintr(struct trapframe *tf)
   // Linux unmasks LAPIC.PC after every interrupt (perf_event.c)
   lapic->mask_pc(false);
 
-  auto overflow = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
+  u64 overflow = pmu.get_overflow();
 
   if (overflow & (1<<0)) {
-    r = 1;
+    ++r;
     if (samplog(tf))
       pmuconfig(0, selector, period);
   }
 
   if (overflow & (1<<1)) {
-    r = 1;
+    ++r;
     wdcheck(tf);
     pmuconfig(1, wd_selector, wd_period);
   }
-
-  // Clear overflow bits
-  writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, overflow & 3);
 
   return r;
 }
@@ -195,16 +223,21 @@ readlog(char *dst, u32 off, u32 n)
 
   for (p = &pmulog[0]; p != q && n != 0; p++) {
     u64 len = p->count * sizeof(struct pmuevent);
-    char *buf = (char*)p->event;
     if (cur <= off && off < cur+len) {
       u64 boff = off-cur;
       u64 cc = MIN(len-boff, n);
-      memmove(dst, buf+boff, cc);
-
-      n -= cc;
-      ret += cc;
-      off += cc;
-      dst += cc;
+      while (cc) {
+        size_t segment = boff / LOG_SEGMENT_SZ;
+        size_t segoff = boff % LOG_SEGMENT_SZ;
+        char *buf = (char*)p->segments[segment];
+        size_t segcc = MIN(cc, LOG_SEGMENT_SZ - segoff);
+        memmove(dst, buf + segoff, segcc);
+        cc -= segcc;
+        n -= segcc;
+        ret += segcc;
+        off += segcc;
+        dst += segcc;
+      }
     }
     cur += len;
   }
@@ -213,7 +246,7 @@ readlog(char *dst, u32 off, u32 n)
 }
 
 static void
-sampstat(struct inode *ip, struct stat *st)
+sampstat(sref<inode> ip, struct stat *st)
 {
   struct pmulog *q = &pmulog[NCPU];
   struct pmulog *p;
@@ -231,7 +264,7 @@ sampstat(struct inode *ip, struct stat *st)
 }
 
 static int
-sampread(struct inode *ip, char *dst, u32 off, u32 n)
+sampread(sref<inode> ip, char *dst, u32 off, u32 n)
 {
   struct pmulog *q = &pmulog[NCPU];
   struct pmulog *p;
@@ -273,7 +306,7 @@ sampread(struct inode *ip, char *dst, u32 off, u32 n)
 }
 
 static int
-sampwrite(struct inode *ip, const char *buf, u32 off, u32 n)
+sampwrite(sref<inode> ip, const char *buf, u32 off, u32 n)
 {
   struct sampconf *conf;
 
@@ -349,29 +382,32 @@ initsamp(void)
     cpuid(0, 0, &name[0], &name[2], &name[1]);
     if (VERBOSE)
       cprintf("%s\n", s);
+    pmu = nopmu;
     if (!strcmp(s, "AuthenticAMD"))
       pmu = amdpmu;
     else if (!strcmp(s, "GenuineIntel")) {
       u32 eax;
       cpuid(CPUID_PERFMON, &eax, 0, 0, 0);
-      if (PERFMON_EAX_VERSION(eax) < 2)
-        panic("Unsupported performance monitor version %d",
-              PERFMON_EAX_VERSION(eax));
-      pmu = intelpmu;
-      pmu.cntval_bits = PERFMON_EAX_NUM_COUNTERS(eax);
+      if (PERFMON_EAX_VERSION(eax) < 2) {
+        cprintf("initsamp: Unsupported performance monitor version %d\n",
+                PERFMON_EAX_VERSION(eax));
+      } else {
+        pmu = intelpmu;
+        pmu.cntval_bits = PERFMON_EAX_NUM_COUNTERS(eax);
+      }
     } else
-      panic("Unknown Manufacturer");
+      cprintf("initsamp: Unknown Manufacturer\n");
   }
 
   // enable RDPMC at CPL > 0
   u64 cr4 = rcr4();
   lcr4(cr4 | CR4_PCE);
-  
-  void *p = ksalloc(slab_perf);
-  if (p == nullptr)
-    panic("initprof: ksalloc");
-  pmulog[myid()].event = (pmuevent*) p;
-  pmulog[myid()].capacity = PERFSIZE / sizeof(struct pmuevent);
+
+  for (int i = 0; i < LOG_SEGMENTS_PER_CPU; ++i) {
+    pmulog[myid()].segments[i] = (pmuevent*)kmalloc(LOG_SEGMENT_SZ, "perf");
+    if (!pmulog[myid()].segments[i])
+      panic("initsamp: kalloc");
+  }
 
   if (pmu.config == intelpmu.config)
     enable_nehalem_workaround();

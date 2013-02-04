@@ -13,6 +13,9 @@
 #include "pthread.h"
 #endif
 #include "xsys.h"
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -22,7 +25,7 @@ static int niter;
 void*
 thr(void *arg)
 {
-  u64 tid = (u64)arg;
+  int tid = (uintptr_t)arg;
 
   if (setaffinity(tid) < 0)
     die("setaffinity err");

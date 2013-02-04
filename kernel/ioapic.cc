@@ -236,7 +236,7 @@ void
 ioapic_82093::dump()
 {
   bitset<256> irr, delivs;
-  scoped_cli cli();
+  scoped_cli cli;
   for (int i = 0; i < nioapics; ++i) {
     for (int gsi = ioapic_base[i]; gsi < ioapic_lim[i]; ++gsi) {
       int pin = gsi - ioapic_base[i];

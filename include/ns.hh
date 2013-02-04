@@ -2,6 +2,7 @@
 
 #include "gc.hh"
 #include "percpu.hh"
+#include "atomic_util.hh"
 
 // name spaces
 // XXX maybe use open hash table, no chain, better cache locality
@@ -29,7 +30,7 @@ class xelem : public rcu_freed {
     : rcu_freed("xelem"), val(v), key(k),
       next_lock(0), next(0),
       percore_next(0), percore_pprev(0) {}
-  virtual void do_gc() {
+  void do_gc() override {
     delete this;
   }
 
@@ -69,7 +70,7 @@ class xns : public rcu_freed {
         panic("~xns: not empty");
   }
 
-  virtual void do_gc() {
+  void do_gc() override {
     delete this;
   }
 

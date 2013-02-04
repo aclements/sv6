@@ -101,14 +101,32 @@ void
 trap(struct trapframe *tf)
 {
   if (tf->trapno == T_NMI) {
+    static percpu<uintptr_t> lastpc;
+    static percpu<bool> swallow;
+
     // The only locks that we can acquire during NMI are ones
     // we acquire only during NMI.
-    if (sampintr(tf))
-      return;
+
+    // Is this the second or more NMI we've received in a row?  If so,
+    // we might have handled all of the NMI sources the first time.
+    bool repeat = (*lastpc == tf->rip);
+    *lastpc = tf->rip;
+
+    // Handle NMIs
+    int handled = 0;
+    handled += sampintr(tf);
+
     // No lapiceoi because only fixed delivery mode interrupts need to
     // be EOI'd (and fixed mode interrupts can't be programmed to
     // produce an NMI vector).
-    panic("NMI");
+
+    if (handled == 0 && !(repeat && *swallow))
+      panic("NMI");
+
+    // If we handled more than one NMI source, we might still have an
+    // NMI pending from the second source.
+    *swallow = (handled > 1);
+    return;
   }
 
 #if MTRACE

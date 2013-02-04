@@ -140,7 +140,7 @@ tcpip_init_done(void *arg)
 }
 
 static int
-netifread(struct inode *inode, char *dst, u32 off, u32 n)
+netifread(sref<struct inode> inode, char *dst, u32 off, u32 n)
 {
   u32 ip, nm, gw;
   char buf[512];

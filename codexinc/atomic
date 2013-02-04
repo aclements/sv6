@@ -3,7 +3,8 @@
 #define __barrier() do { __asm__ __volatile__("" ::: "memory"); } while (0)
 
 #include "atomic_std.h"
-#include "atomic_util.hh"
+
+#pragma message "codex"
 
 inline void
 std::atomic_thread_fence(std::memory_order order)

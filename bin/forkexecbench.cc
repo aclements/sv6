@@ -2,6 +2,7 @@
 #include "user.h"
 #include "mtrace.h"
 #include "amd64.h"
+#include <stdio.h>
 
 #define NITERS 1024
 
@@ -13,14 +14,12 @@ execbench(void)
   for (int i = 0; i < NITERS; i++) {
     int pid = fork(0);
     if (pid < 0) {
-      fprintf(1, "fork error\n");
-      exit();
+      die("fork error");
     }
     if (pid == 0) {
       const char *av[] = { "forkexecbench", "x", 0 };
       exec("forkexecbench", av);
-      fprintf(1, "exec failed\n");
-      exit();
+      die("exec failed\n");
     } else {
       wait(-1);
     }
@@ -29,7 +28,7 @@ execbench(void)
   mtdisable("xv6-forkexecbench");
 
   u64 e = rdtsc();
-  fprintf(1, "%lu\n", (e-s) / NITERS);
+  printf("%lu\n", (e-s) / NITERS);
 }
 
 int

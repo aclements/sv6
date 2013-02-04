@@ -160,8 +160,20 @@ struct islist
     return iterator(head.next);
   }
 
+  const iterator
+  begin() const noexcept
+  {
+    return iterator(head.next);
+  }
+
   iterator
   end() noexcept
+  {
+    return iterator(nullptr);
+  }
+
+  const iterator
+  end() const noexcept
   {
     return iterator(nullptr);
   }

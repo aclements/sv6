@@ -1,8 +1,8 @@
 #include "refcache.hh"
 #include "proc.hh"
 #include "kstream.hh"
-#include "atomic.hh"
 
+#include <atomic>
 #include <iterator>
 
 //#define TEST
@@ -68,6 +68,12 @@ refcache::cache::evict(struct refcache::cache::way *way,
       obj->review_epoch_ = local_epoch + (local_epoch_is_exact ? 2 : 3);
       obj->dirty_ = false;
       review_.push_back(obj);
+      // If this object has a weak reference, mark it dying.
+      if (obj->weak_) {
+        weak_referenced *wobj = static_cast<weak_referenced*>(obj);
+        if (wobj->weakref_)
+          wobj->weakref_->mark_dying();
+      }
     } else {
       // The object has a reviewer, which means the reviewer needs
       // to know that, even though it's zero again now, it was
@@ -122,12 +128,29 @@ refcache::cache::review()
   // re-added to the review list, or dropped from the review list.
   auto review = reviewable.begin();
   auto review_end = reviewable.end();
-  uint64_t nreviewed = 0, nfreed = 0, nrequeued = 0, ndisowned = 0;
+  uint64_t nreviewed = 0, nrequeued = 0, ndisowned = 0;
   while (review != review_end) {
     auto obj = review++;
     ++nreviewed;
     scoped_acquire l(&obj->lock_);
     if (obj->refcount_ == 0) {
+      // If this object is weak-referenced and we're about to collect
+      // it, break the weak reference.
+      if (obj->weak_ && !obj->dirty_) {
+        weak_referenced *wobj = static_cast<weak_referenced*>(&*obj);
+        if (wobj->weakref_ && !wobj->weakref_->try_break(wobj)) {
+          verbose.println("refcache: Failed to break weakref to obj ", &*obj);
+          kstats::inc(&kstats::refcache_weakref_break_failed);
+          // We failed to break the weak reference, meaning that this
+          // object has been revived.  It still has a zero global
+          // count, however, so re-enqueue it like we would have for a
+          // dirty zero (otherwise, for example, if this object was
+          // revived by a transient inc/dec, we could lose track of
+          // the object).  Likewise, we have to mark it dying again.
+          wobj->dirty_ = true;
+          wobj->weakref_->mark_dying();
+        }
+      }
       // The global count was zero at the last epoch and is zero now.
       // Was it non-zero in the meantime?
       if (obj->dirty_) {
@@ -143,18 +166,26 @@ refcache::cache::review()
       } else {
         // It was zero for the whole round.  Free it.
         verbose.println("refcache: CPU ", myid(), " freeing obj ", &*obj);
-        // Mark the object dead so inc_revive knows it can't touch it,
-        // since it's now inevitable that onzero will be called.
-        obj->review_epoch_ = ~0ull;
+        obj->review_epoch_ = 0;
         l.release();
-        obj->onzero();
-        ++nfreed;
+
+        scoped_acquire rl(&reap_lock_);
+        reap_.push_back(&*obj);
+        reap_cv_.wake_all();
       }
     } else {
       // The count is now non-zero and hence clearly unstable.  Drop
       // it from our review list.  When it goes zero again, some
       // other core will put it on their review list.
       verbose.println("refcache: CPU ", myid(), " disowning obj ", &*obj);
+      if (obj->weak_) {
+        // The object is no longer dying
+        weak_referenced *wobj = static_cast<weak_referenced*>(&*obj);
+        if (wobj->weakref_) {
+          verbose.println("refcache: Un-dying obj ", &*obj);
+          wobj->weakref_->mark_dying(false);
+        }
+      }
       obj->review_epoch_ = 0;
       ++ndisowned;
     }
@@ -165,7 +196,6 @@ refcache::cache::review()
   //                   " disowned ", ndisowned);
 
   kstats::inc(&kstats::refcache_item_reviewed_count, nreviewed);
-  kstats::inc(&kstats::refcache_item_freed_count, nfreed);
   kstats::inc(&kstats::refcache_item_requeued_count, nrequeued);
   kstats::inc(&kstats::refcache_item_disowned_count, ndisowned);
 }
@@ -229,8 +259,38 @@ refcache::cache::tick()
   review();
 }
 
+void
+refcache::cache::reaper()
+{
+  for (;;) {
+    referenced::list reapable;
+    for (;;) {
+      scoped_acquire l(&reap_lock_);
+      reapable = std::move(reap_);
+      if (reapable.begin() != reapable.end())
+        break;
+
+      reap_cv_.sleep(&reap_lock_);
+    }
+
+    kstats::inc(&kstats::refcache_reap_count);
+    kstats::timer timer(&kstats::refcache_reap_cycles);
+
+    auto reap = reapable.begin();
+    auto reap_end = reapable.end();
+    uint64_t nfreed = 0;
+    while (reap != reap_end) {
+      auto obj = reap++;
+      obj->onzero();
+      ++nfreed;
+    }
+
+    kstats::inc(&kstats::refcache_item_freed_count, nfreed);
+  }
+}
+
 #ifdef TEST
-class reftest : public refcache::referenced
+class reftest : public refcache::weak_referenced
 {
 public:
   void onzero()
@@ -243,6 +303,7 @@ static void
 test(void *)
 {
   static reftest rt;
+  refcache::weakref<reftest> wr(&rt);
   for (int i = 0; i < 100; i++) {
     myproc()->set_cpu_pin(i % ncpu);
     if (i % 2 == 0)
@@ -250,9 +311,26 @@ test(void *)
     else
       rt.dec();
   }
+  assert(wr.get().get() == &rt);
   rt.dec();
+  for (int i = 0; i < 100; i++) {
+    auto sr = wr.get();
+    assert(!sr || sr.get() == &rt);
+  }
+  for (int i = 0; i < 10; i++) {
+    yield();
+    microdelay(100000);
+  }
+  assert(!wr.get());
 }
 #endif
+
+static void
+refcache_reaper(void*)
+{
+  refcache::cache* c = refcache::mycache.get_unchecked();
+  c->reaper();
+}
 
 void
 initrefcache(void)
@@ -261,6 +339,9 @@ initrefcache(void)
   // no reviewer, so start the global epoch count at 1.
   refcache::global_epoch = 1;
   refcache::global_epoch_left = ncpu;
+
+  for (int i = 0; i < NCPU; i++)
+    threadpin(refcache_reaper, nullptr, "refcache reaper", i);
 
 #ifdef TEST
   threadpin(test, nullptr, "refcache test", 0);

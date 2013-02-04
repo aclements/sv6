@@ -2,8 +2,9 @@
 #include "user.h"
 #include "lib.h"
 #include "amd64.h"
-#include "ipc.hh"
 #include "mmu.h"
+
+#include <string.h>
 
 int
 main(int ac, char **av)

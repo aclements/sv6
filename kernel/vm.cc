@@ -115,25 +115,13 @@ vmap::alloc(void)
 }
 
 vmap::vmap() : 
-  ref(1), kshared((char*) ksalloc(slab_kshared)), brk_(0),
+  ref(1), brk_(0),
   brklock_("brk_lock", LOCKSTAT_VM)
 {
-  if (kshared == nullptr) {
-    cprintf("vmap::vmap: kshared out of memory\n");
-    goto err;
-  }
-  return;
-
- err:
-  if (kshared)
-    ksfree(slab_kshared, kshared);
-  throw_bad_alloc();
 }
 
 vmap::~vmap()
 {
-  if (kshared)
-    ksfree(slab_kshared, kshared);
 }
 
 void
@@ -571,7 +559,7 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
     // This is a file mapping; read in the page
     mtreadavar("inode:%x.%x", desc.inode->dev, desc.inode->inum);
     // XXX(austin) readi can sleep, but we're holding a spinlock
-    if (readi(desc.inode.get(), p, it.index() * PGSIZE - desc.start,
+    if (readi(desc.inode, p, it.index() * PGSIZE - desc.start,
               PGSIZE) < 0) {
       kfree(p);
       return nullptr;

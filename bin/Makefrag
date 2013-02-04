@@ -1,6 +1,11 @@
-# -*-Makefile-*-
+# -*- makefile-gmake -*-
+$(O)/bin/%.o: CFLAGS:=$(CFLAGS)
+$(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -fno-exceptions -fno-rtti
+
+ifeq ($(PLATFORM),xv6)
 $(O)/bin/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
-$(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER -fno-exceptions -fno-rtti
+$(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER
+endif
 
 UPROGS_BIN= \
         bench \
@@ -26,9 +31,7 @@ UPROGS_BIN= \
 	dirbench \
 	usertests \
 	lockstat \
-	preadtest \
 	scripttest \
-	ftest \
 	cp \
 	perf \
         xtime \
@@ -52,6 +55,7 @@ UPROGS_BIN= \
 	lsocketbench \
         fstest \
 	base64 \
+	tee \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
@@ -66,6 +70,13 @@ UPROGS := $(UPROGS_BIN) \
 
 UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
 
+# Binaries that are known to build on PLATFORM=native
+UPROGS_NATIVE := \
+	benchhdr \
+	mapbench \
+	tee \
+        fstest \
+
 FSEXTRA += \
 	bin/linkbench-tom \
 	bin/mapbench-ben \
@@ -73,10 +84,19 @@ FSEXTRA += \
 	bin/lsocket \
 	bin/countbench-ben \
 
-$(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIBA)
+ifeq ($(PLATFORM),native)
+ALL += $(addprefix $(O)/bin/, $(UPROGS_NATIVE))
+endif
+
+ifneq ($(PLATFORM),native)
+UPROGS_LIBS += $(ULIBA)
+endif
+UPROGS_LIBS += $(LIBUTIL_A)
+
+$(O)/bin/%.unstripped: $(O)/bin/%.o $(UPROGS_LIBS)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(LD) $(LDFLAGS) -o $@ $< $(ULIBA)
+	$(Q)$(LD) $(LDFLAGS) -o $@ $^
 
 $(O)/bin/%: $(O)/bin/%.unstripped
 	@echo "  STRIP  $@"

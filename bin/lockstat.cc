@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include "amd64.h"
 #include "uk/lockstat.h"
+#include <stdio.h>
 
 static void
 xwrite(int fd, char c)
@@ -28,8 +29,8 @@ stats(void)
   if (sfd < 0)
     die("lockstat: open failed");
 
-  fprintf(1, "## name acquires contends locking locked\n");
-  fprintf(sfd, "## name acquires contends locking locked\n");
+  printf("## name acquires contends locking locked\n");
+  dprintf(sfd, "## name acquires contends locking locked\n");
   
   while (1) {
     r = read(fd, &ls, sz);
@@ -50,9 +51,9 @@ stats(void)
       locked += ls.cpu[i].locked;
     }
     if (contends > 0) {
-      fprintf(1, "%s %lu %lu %lu %lu\n", 
+      printf("%s %lu %lu %lu %lu\n", 
              ls.name, acquires, contends, locking, locked);
-      fprintf(sfd, "%s %lu %lu %lu %lu\n", 
+      dprintf(sfd, "%s %lu %lu %lu %lu\n",
              ls.name, acquires, contends, locking, locked);
     }
   }

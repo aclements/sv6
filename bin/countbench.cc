@@ -6,15 +6,18 @@
 
 #include <fcntl.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/types.h>
+
+#include "libutil.h"
 
 #if defined(LINUX)
 #include "include/compiler.h"
 #define NCPU 256
 #include <pthread.h>
-#include <stdio.h>
 #include "user/util.h"
 #include <assert.h>
 #include <sys/wait.h>
@@ -98,21 +101,6 @@ rdpmc(uint32_t ecx)
   return ((uint64_t) lo) | (((uint64_t) hi) << 32);
 }
 #endif
-
-int
-xread(int fd, const void *buf, size_t n)
-{
-  size_t pos = 0;
-  while (pos < n) {
-    int r = read(fd, (char*)buf + pos, n - pos);
-    if (r < 0)
-      die("read failed");
-    if (r == 0)
-      break;
-    pos += r;
-  }
-  return pos;
-}
 
 #ifndef XV6_USER
 struct kstats

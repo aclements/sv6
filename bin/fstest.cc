@@ -1,10 +1,32 @@
 #include <stdio.h>
 #include "pthread.h"
-#include "atomic.hh"
+#include <atomic>
+#include <stdlib.h>
+#ifndef XV6_USER
+#include <string.h>
+#else
+#include "types.h"
+#include "user.h"
+#endif
 #include "mtrace.h"
 #include "fstest.h"
 
+#ifndef XV6_USER
+#include <stdlib.h>
+#include <sched.h>
+
+int
+setaffinity(int cpu)
+{
+  cpu_set_t mask;
+  CPU_ZERO(&mask);
+  CPU_SET(cpu, &mask);
+  return sched_setaffinity(0, sizeof(mask), &mask);
+}
+#endif
+
 static bool verbose = false;
+static bool check_commutativity = false;
 
 static std::atomic<int> waiters;
 static std::atomic<int> ready;
@@ -32,26 +54,31 @@ main(int ac, char** av)
 {
   setaffinity(0);
 
-  for (int i = 0; fstests[i].setup; i++) {
-    fstests[i].setup();
-    int ra0 = fstests[i].call0();
-    int ra1 = fstests[i].call1();
-    fstests[i].cleanup();
+  int max = 0;
+  if (ac > 1)
+    max = atoi(av[1]);
 
-    fstests[i].setup();
-    int rb1 = fstests[i].call1();
-    int rb0 = fstests[i].call0();
-    fstests[i].cleanup();
+  for (int i = 0; (max == 0 || i < max) && fstests[i].setup; i++) {
+    if (check_commutativity) {
+      fstests[i].setup();
+      int ra0 = fstests[i].call0();
+      int ra1 = fstests[i].call1();
+      fstests[i].cleanup();
 
-    if (ra0 == rb0 && ra1 == rb1) {
-      if (verbose)
-        printf("test %d: commutes: %s->%d %s->%d\n",
-               i, fstests[i].call0name, ra0, fstests[i].call1name, ra1);
-    } else {
-      printf("test %d: diverges: %s->%d %s->%d vs %s->%d %s->%d\n",
-             i, fstests[i].call0name, ra0, fstests[i].call1name, ra1,
-                fstests[i].call0name, rb0, fstests[i].call1name, rb1);
-      continue;
+      fstests[i].setup();
+      int rb1 = fstests[i].call1();
+      int rb0 = fstests[i].call0();
+      fstests[i].cleanup();
+
+      if (ra0 == rb0 && ra1 == rb1) {
+        if (verbose)
+          printf("test %d: commutes: %s->%d %s->%d\n",
+                 i, fstests[i].call0name, ra0, fstests[i].call1name, ra1);
+      } else {
+        printf("test %d: diverges: %s->%d %s->%d vs %s->%d %s->%d\n",
+               i, fstests[i].call0name, ra0, fstests[i].call1name, ra1,
+                  fstests[i].call0name, rb0, fstests[i].call1name, rb1);
+      }
     }
 
     fstests[i].setup();
@@ -70,7 +97,11 @@ main(int ac, char** av)
 
     char mtname[64];
     snprintf(mtname, sizeof(mtname), "fstest-%d", i);
+#ifdef XV6_USER
     mtenable_type(mtrace_record_ascope, mtname);
+#else
+    mtenable_type(mtrace_record_kernelscope, mtname);
+#endif
 
     ready = 1;
 

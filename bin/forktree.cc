@@ -1,5 +1,6 @@
 #include "types.h"
 #include "user.h"
+#include <stdio.h>
 
 #define NCHILD 2
 #define NDEPTH 5
@@ -9,7 +10,7 @@ forktree(void)
 {
   int depth = 0;
 
-  fprintf(1, "%d: fork tree\n", getpid());
+  printf("%d: fork tree\n", getpid());
 
  next_level:
   //printf(1, "pid %d, depth %d\n", getpid(), depth);
@@ -19,8 +20,7 @@ forktree(void)
   for (int i = 0; i < NCHILD; i++) {
     int pid = fork(0);
     if (pid < 0) {
-      fprintf(1, "fork error\n");
-      exit();
+      die("fork error");
     }
 
     if (pid == 0) {
@@ -31,20 +31,18 @@ forktree(void)
 
   for (int i = 0; i < NCHILD; i++) {
     if (wait(-1) < 0) {
-      fprintf(1, "wait stopped early\n");
-      exit();
+      die("wait stopped early");
     }
   }
   
   if (wait(-1) != -1) {
-    fprintf(1, "wait got too many\n");
-    exit();
+    die("wait got too many");
   }
 
   if (depth > 0)
     exit();
 
-  fprintf(1, "%d: fork tree OK\n", getpid());
+  printf("%d: fork tree OK\n", getpid());
   // halt();
 }
 

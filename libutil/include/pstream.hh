@@ -19,6 +19,8 @@
 // two-digit-wide hex and use it several times.  This could be
 // accomplished by making formatters functor objects.
 
+#include <cstddef>
+#include <cstdint>
 #include <initializer_list>
 #include <utility>
 

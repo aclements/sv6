@@ -1,8 +1,6 @@
 #if defined(LINUX)
-#include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #define die perror
@@ -15,6 +13,10 @@
 #define SERVER  "/serversocket"
 #endif
      
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #define MAXMSG  512
 #define MESSAGE "ni hao"
 
@@ -46,7 +48,7 @@ make_named_socket(const char *filename)
 static void*
 thread(void* x)
 {
-  long id = (long)x;
+  int id = (uintptr_t)x;
   char message[MAXMSG];
   struct sockaddr_un name;
   socklen_t size;

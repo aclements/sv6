@@ -1,6 +1,9 @@
 #include "types.h"
 #include "user.h"
 
+#include <stdio.h>
+#include <string.h>
+
 static const char *
 readpw(void)
 {
@@ -24,7 +27,7 @@ main(void)
 {
   const char *pw;
 
-  fprintf(1, "password: ");
+  printf("password: ");
   pw = readpw();
 
   if (pw && !strcmp(pw, "xv6")) {

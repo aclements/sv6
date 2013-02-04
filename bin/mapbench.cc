@@ -1,35 +1,30 @@
 // To build on Linux:
-//  g++ -O3 -DLINUX -std=c++0x -Wall -g -I.. -pthread mapbench.cc -o mapbench
+//  make HW=linux
 
+#include <atomic>
 #include <fcntl.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 
-#if defined(LINUX)
-#include "include/compiler.h"
-#define CACHELINE 64
-#define NCPU 256
+#include "libutil.h"
+#include "amd64.h"
+#include "rnd.hh"
+#include "xsys.h"
+
+#if !defined(XV6_USER)
 #include <pthread.h>
-#include <stdio.h>
-#include "user/util.h"
-#include <assert.h>
 #include <sys/wait.h>
-#include <atomic>
-#include "include/xsys.h"
 #else
-#include "compiler.h"
 #include "types.h"
 #include "user.h"
-#include "amd64.h"
-#include "uspinlock.h"
-#include "mtrace.h"
 #include "pthread.h"
 #include "bits.hh"
-#include "rnd.hh"
 #include "kstats.hh"
-#include "xsys.h"
 #endif
 
 #define PGSIZE 4096
@@ -78,7 +73,7 @@ enum {
 #endif
 };
 
-#if !defined(LINUX) && !defined(HW_qemu)
+#if defined(XV6_USER) && !defined(HW_qemu)
 #define RECORD_PMC pmc_llc_misses
 #define PMCNO 0
 #endif
@@ -166,31 +161,6 @@ timer_thread(void *)
   return NULL;
 }
 
-#ifdef LINUX
-static inline uint64_t
-rdpmc(uint32_t ecx)
-{
-  uint32_t hi, lo;
-  __asm volatile("rdpmc" : "=a" (lo), "=d" (hi) : "c" (ecx));
-  return ((uint64_t) lo) | (((uint64_t) hi) << 32);
-}
-#endif
-
-int
-xread(int fd, const void *buf, size_t n)
-{
-  size_t pos = 0;
-  while (pos < n) {
-    int r = read(fd, (char*)buf + pos, n - pos);
-    if (r < 0)
-      die("read failed");
-    if (r == 0)
-      break;
-    pos += r;
-  }
-  return pos;
-}
-
 #ifndef XV6_USER
 struct kstats
 {
@@ -224,7 +194,7 @@ pipeline_get_region(uint64_t channel, uint64_t step)
 void*
 thr(void *arg)
 {
-  const uintptr_t cpu = (uintptr_t)arg;
+  const int cpu = (uintptr_t)arg;
 
   const uint64_t inchan = cpu;
   const uint64_t outchan = (cpu + 1) % nthread;

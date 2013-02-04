@@ -1,4 +1,4 @@
-#if defined(LINUX)
+#if !defined(XV6_USER)
 
 #include <sys/wait.h>
 

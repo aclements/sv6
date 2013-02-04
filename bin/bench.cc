@@ -3,6 +3,10 @@
 #include "amd64.h"
 #include "lib.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 static u64
 time_this(const char *av[])
 {
@@ -82,7 +86,7 @@ struct LoopsBench : public Bench
         r = (r*(1000*1000)) / cpuhz();
         min = MIN(r, min);
       }
-      snprintf(res, n, "%u %lu %lu\n", ncore, min, nloops_);
+      snprintf(res, n, "%u %lu %u\n", ncore, min, nloops_);
       return res + strlen(res);
   }
 

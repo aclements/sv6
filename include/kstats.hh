@@ -50,15 +50,16 @@
   X(uint64_t, refcache_review_cycles)           \
   X(uint64_t, refcache_flush_count)             \
   X(uint64_t, refcache_flush_cycles)            \
+  X(uint64_t, refcache_reap_count)              \
+  X(uint64_t, refcache_reap_cycles)             \
   X(uint64_t, refcache_item_flushed_count)      \
   X(uint64_t, refcache_item_reviewed_count)     \
   X(uint64_t, refcache_item_freed_count)        \
   X(uint64_t, refcache_item_requeued_count)     \
   X(uint64_t, refcache_item_disowned_count)     \
-  X(uint64_t, refcache_item_revive_failed_count) \
-  X(uint64_t, refcache_item_revived_count)      \
   X(uint64_t, refcache_dirtied_count)           \
   X(uint64_t, refcache_conflict_count)          \
+  X(uint64_t, refcache_weakref_break_failed)    \
 
 #define KSTATS_SOCKET(X)\
   X(uint64_t, socket_load_balance) \

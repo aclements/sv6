@@ -5,13 +5,14 @@
 #include <assert.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/types.h>
 #include <stdint.h>
 typedef uint32_t u32;
 typedef uint64_t u64;
 #endif
 
+#include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
 
 struct header {

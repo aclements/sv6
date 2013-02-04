@@ -21,9 +21,8 @@
 // true reference count of an object is thus the sum of its global
 // count and any local deltas for that object found in the per-core
 // caches.  The value of the true count is generally unknown, but we
-// (generally) assume that once it drops to zero, it will remain zero.
-// Because of this stability, we can detect a zero true count after
-// some delay.
+// assume that once it drops to zero, it will remain zero.  We depend
+// on this stability to detect a zero true count after some delay.
 //
 // To detect a zero true reference count, refcache divides time into
 // periodic *epochs* during which each core flushes all of the
@@ -75,16 +74,21 @@
 // refcache will queue the object to be examined again after another
 // epoch.
 //
-// We can take advantage of this dirtying mechanism to support weak
-// references (such as caches) with best-effort revival of objects
-// with zero reference counts.  For such objects, when a reviewer
-// commits to deleting the object, it marks it as dead, removes all
-// weak references to it, and then RCU-frees it.  When a caller
-// follows a weak reference to an object, it will attempt to revive
-// the object if it is on some core's review list by ensuring that it
-// is not yet dead and marking it as dirty.  If it is dead, the caller
-// must retry until the weak reference it followed has been cleaned
-// up.
+// We can extend this approach to support "weak references", which
+// provide a controlled way to access an object without preventing its
+// reference count from reaching zero.  This is useful in situations
+// like caches, where the cache needs to reference objects while still
+// allowing them to be garbage collected.  A caller can convert a weak
+// reference into a regular reference; this will simply fail if the
+// referenced object has already been garbage collected.  A weak
+// reference is simply a regular pointer plus a "dying" bit.  When an
+// object's global reference count initially reaches zero, refcache
+// marks the weak reference dying.  After this, the weak reference can
+// either be "revived" when a caller converts it to a regular
+// reference by clearing the dying bit, or it can be garbage collected
+// after the review process clears both its dying bit and its pointer.
+// In a race, which succeeds is determined by which clears the dying
+// bit first.
 //
 // The pseudocode for refcache is given below.  Each core maintains a
 // hash table storing its reference delta cache and a "review" queue
@@ -103,6 +107,8 @@
 //       if object is not on any review queue:
 //         object.dirty <- false
 //         add (object, epoch) to the local review queue
+//         if object.weakref
+//           object.weakref.dying <- true
 //       else:
 //         object.dirty <- true
 //
@@ -112,11 +118,23 @@
 //         remove object from the review queue
 //         if object.refcnt = 0:
 //           if object.dirty:
-//             object.dirty <- false
-//             add (object, epoch) to the review queue
+//             evict(object, 0)
+//           else if object.weakref and not object.weakref.dying:
+//             evict(object, 0)
 //           else:
-//             object.dead <- true
+//             if object.weakref:
+//               object.weakref.pointer <- null
+//               object.weakref.dying <- false
 //             free object
+//         else:
+//           if object.weakref:
+//             object.weakref.dying <- false
+//
+//   get_weakref(weakref):
+//     weakref.dying <- false
+//     if weakref.pointer:
+//       inc(weakref.pointer)
+//     return weakref.pointer
 //
 // For epoch management, our current implementation uses a simple
 // barrier scheme that tracks a global epoch counter, per-core epochs,
@@ -132,6 +150,9 @@
 #include "ilist.hh"
 #include "percpu.hh"
 #include "kstats.hh"
+#include "condvar.h"
+
+#include <stdexcept>
 
 #ifndef REFCACHE_DEBUG
 #define REFCACHE_DEBUG 1
@@ -142,12 +163,15 @@ namespace refcache {
     CACHE_SLOTS = 4096
   };
 
+  template<class T> class weakref;
+
   // Base class for an object that's reference counted using the
   // refcaching scheme.
   class referenced
   {
   private:
     friend class cache;
+    template<class T> friend class weakref;
 
     // XXX This can all be packed into three words
 
@@ -169,12 +193,16 @@ namespace refcache {
 
     // If this object is on a review list, the epoch in which this
     // object can be reviewed.  0 if this object is not on a review
-    // list, ~0ull if this object is dead and cannot be revived.
+    // list.
     uint64_t review_epoch_;
 
     // True if this object's refcount was non-zero and then zero again
     // since it was last reviewed.
-    bool dirty_;
+    bool dirty_ : 1;
+
+    // True if this object is weak_referenced and may have a weak
+    // reference.
+    bool weak_ : 1;
 
   public:
     constexpr referenced(uint64_t refcount = 1)
@@ -182,35 +210,16 @@ namespace refcache {
         refcount_(refcount),
         next_(),
         review_epoch_(0),
-        dirty_(false) { }
+        dirty_(false),
+        weak_(false) { }
 
     referenced(const referenced &o) = delete;
     referenced(referenced &&o) = delete;
     referenced &operator=(const referenced &o) = delete;
     referenced &operator=(referenced &&o) = delete;
 
-    // Increment this object's reference count.  The caller must
-    // ensure that the reference count is non-zero (for example, true
-    // counts of the number of references to an object ensure this
-    // because there's no way to reach an object with a zero reference
-    // count).
     void inc();
-
-    // Decrement this object's reference count.
     void dec();
-
-    // Increment this object's reference count when it might be zero,
-    // for example if the caller followed a weak reference to this
-    // object.  If the object is already dead (meaning its onzero
-    // method has been called or will be called shortly), this will
-    // fail and return false, indicating that the caller must retry
-    // finding the object.  Revivable objects must override onzero to
-    // 1) quickly remove any weak references to this object (since
-    // callers will retry until the weak reference is invalidated) and
-    // 2) ensure this object's memory remains valid until it is
-    // impossible for any other threads to call inc_revive on it (for
-    // example, using RCU).
-    bool inc_revive();
 
   protected:
     // We could eliminate these virtual methods and the vtable
@@ -226,6 +235,143 @@ namespace refcache {
 
     virtual ~referenced() { };
     virtual void onzero() { delete this; }
+  };
+
+  // A subclass of referenced for objects that support a weak
+  // reference.  A weak_referenced object can have at most one weak
+  // reference to it.
+  class weak_referenced : public referenced
+  {
+    friend class cache;
+    template<class T> friend class weakref;
+
+  protected:
+    // The weak reference to this object, or nullptr.  We never call
+    // get() through this, so it doesn't actually matter what type we
+    // use.  Protected (and not private) for weakcache'd objects.
+    weakref<weak_referenced> *weakref_;
+
+  public:
+    constexpr weak_referenced(uint64_t refcount = 1)
+      : referenced(refcount),
+        weakref_(nullptr) { }
+  };
+
+  // A weak reference to an object of type T, which must be a subclass
+  // of weak_referenced.  Unlike a regular reference, a weak reference
+  // does not prevent an object's reference count from reaching zero.
+  // Prior to an object's onzero method being called to collect the
+  // object, any weak reference to it will be set to null.
+  //
+  // Weak references are designed so that the memory of a referenced
+  // object will never be accessed unless we can guarantee that it
+  // hasn't been garbage collected and that we can prevent garbage
+  // collection by increasing its reference count.  As a result, the
+  // referenced object can be deleted immediately in its onzero
+  // method, without the need for type-safe memory or delayed freeing
+  // techniques (there may, of course, be other constraints on the
+  // caller that do require such techniques).
+  template<class T>
+  class weakref
+  {
+    static_assert(std::is_base_of<weak_referenced, T>::value,
+                  "in weakref<T>, T must be a subclass of weak_referenced");
+
+    friend class cache;
+
+    // Internally, a weakref is a pointer and a single bit "dying"
+    // state.  This dying bit is what synchronizes reviving a weak
+    // reference and garbage collecting an object: for a dying
+    // weakref, either ::get() will successfully revive the pointer by
+    // clearing the dying bit (keeping the same pointer value) or
+    // garbage collection will successfully clear the dying bit (while
+    // also clearing the pointer value).
+    struct ptr_and_state
+    {
+      T* ptr_;
+      bool dying_;
+      enum { STATE_MASK = 1 };
+
+      ptr_and_state(uintptr_t packed)
+        : ptr_((T*)(packed & ~(uintptr_t)STATE_MASK)),
+          dying_(packed & STATE_MASK)
+      { }
+
+      ptr_and_state(T* ptr, bool dying)
+        : ptr_(ptr), dying_(dying)
+      { }
+
+      operator uintptr_t() const
+      {
+        return (uintptr_t)ptr_ | (dying_ ? 1 : 0);
+      }
+    };
+
+    mutable atomic<uintptr_t> ptr_and_state_;
+
+    // Mark this weak reference as dying to indicate that the
+    // referenced object is on a core's review queue.
+    void mark_dying(bool dying = true)
+    {
+      if (dying) {
+        if (REFCACHE_DEBUG) {
+          // The weakref should only be marked dying by the core that
+          // detects the initial zero and puts the object on its
+          // review queue.  It could be marked dying again later, but
+          // only after it's been revived.
+          assert(!ptr_and_state(ptr_and_state_.load()).dying_);
+        }
+        // XXX Would weaker ordering suffice?
+        ptr_and_state_.fetch_or(1);
+      } else {
+        // (We can't assert that it's not dying here, because it could
+        // have been revived in addition to being disowned.)
+        ptr_and_state_.fetch_and(~(uintptr_t)1);
+      }
+    }
+
+    // Compare-exchange from a dying pointer to obj into a null
+    // pointer.  This will fail if this weak reference doesn't point
+    // to obj or isn't dying (e.g., because it has been revived).
+    bool try_break(T* obj)
+    {
+      uintptr_t expected = ptr_and_state(obj, true);
+      return ptr_and_state_.compare_exchange_strong(expected, 0);
+    }
+
+  public:
+    // Create a null weakref.
+    constexpr weakref() : ptr_and_state_() { }
+
+    // Create a weakref initialized to point to ptr.  ptr must have a
+    // non-zero reference count and must not have any existing
+    // weakref.
+    // XXX Should this take an sref<T>?
+    weakref(T *ptr = nullptr) : ptr_and_state_((uintptr_t)ptr)
+    {
+      // Register the back-pointer
+      scoped_acquire l(&ptr->lock_);
+      if (ptr->review_epoch_)
+        // ptr is already on a review list, so this pointer needs to
+        // be marked dirty.  While it's an error to create a weakref
+        // to a dead object, refcache can conservatively review an
+        // object, so referencing a reviewable object isn't
+        // necessarily an error.
+        mark_dying();
+      if (ptr->weakref_)
+        throw std::invalid_argument("object cannot have multiple weakrefs");
+      ptr->weakref_ = reinterpret_cast<weakref<weak_referenced>*>(this);
+      ptr->weak_ = true;
+    }
+
+    weakref(const weakref &o) = delete;
+    weakref(weakref &&o) = delete;
+    weakref &operator=(weakref &o) = delete;
+    weakref &operator=(weakref &&o) = delete;
+
+    // Convert this weak reference into a regular reference.  If the
+    // pointed-to object has been collected, this will return sref().
+    sref<T> get() const;
   };
 
   // The reference delta cache.  There is one instance of class cache
@@ -256,6 +402,13 @@ namespace refcache {
     // must be accessed only by the local core and there must be at
     // most one reviewer at a time per core.
     referenced::list review_;
+
+    // The list of objects whose onzero() method should be called.  Call
+    // onzero() from a separate thread, instead of the timer interrupt,
+    // to avoid deadlock with the thread preempted by the timer.
+    referenced::list reap_;
+    spinlock reap_lock_;
+    condvar reap_cv_;
 
     // The last global epoch number observed by this core.
     uint64_t local_epoch;
@@ -313,6 +466,10 @@ namespace refcache {
     // lists.  The latency of garbage collection is between two and
     // three times the delay between calls to tic.
     void tick();
+
+    // Reap dead objects.  This is done in a dedicated thread to
+    // avoid deadlock with threads preempted by the timer interrupt.
+    void reaper() __attribute__((noreturn));
   };
 
   // Per-CPU reference delta cache.  In general this has to be
@@ -325,56 +482,40 @@ namespace refcache {
   inline void
   referenced::inc()
   {
-    pushcli();
+    // Disable interrupts to prevent review from running on this core
+    // in the middle of us updating the local reference cache.
+    scoped_cli cli;
     ++mycache->get_way(this)->delta;
-    popcli();
   }
 
   inline void
   referenced::dec()
   {
-    pushcli();
+    scoped_cli cli;
     --mycache->get_way(this)->delta;
-    popcli();
   }
 
-  inline bool
-  referenced::inc_revive()
+  template<class T>
+  sref<T>
+  weakref<T>::get() const
   {
-    scoped_cli cli();
-    // Fast-path: We only need to attempt revival if the object is on
-    // a review list or dead, both of which mean review_epoch_ is
-    // nonzero.  It's okay if the object goes on a review list between
-    // when we do this check and when we increment the local count;
-    // the CLI prevents a refcache epoch boundary, so our local
-    // increment will get flushed normally and dirty the global count
-    // before the reviewer can review this object.
-    uint64_t re = review_epoch_;
-    if (re) {
-      if (re == ~0ull) {
-        // The object is dead.
-        kstats::inc(&kstats::refcache_item_revive_failed_count);
-        return false;
-      }
-      // This object is on a core's review list, which means someone
-      // thinks it may be zero.  Try to revive it.
-      scoped_acquire l(&lock_);
-      // Things might have changed while we were acquiring the lock,
-      // so check for a dead object again.
-      re = review_epoch_;
-      if (re == ~0ull) {
-        kstats::inc(&kstats::refcache_item_revive_failed_count);
-        return false;
-      }
-      // The refcache hasn't officially declared this object dead yet,
-      // so we can revive it by marking it dirty if it isn't already
-      // dirty, thus preventing the reviewer from collecting it.
-      if (re && !dirty_ && refcount_ == 0) {
-        kstats::inc(&kstats::refcache_item_revived_count);
-        dirty_ = true;
-      }
+    // Disable interrupts to prevent a refcache epoch boundary from
+    // occurring between this reviving the pointer and incrementing
+    // the reference count.
+    scoped_cli cli;
+
+    auto psval = ptr_and_state_.load();
+  retry:
+    ptr_and_state ps(psval);
+    if (ps.dying_) {
+      // Revive the pointer
+      ptr_and_state ps2 = ps;
+      ps2.dying_ = false;
+      if (!ptr_and_state_.compare_exchange_weak(psval, ps2))
+        goto retry;
     }
-    // Increment the local count like usual
-    ++mycache->get_way(this)->delta;
+
+    // Return sref (and increment the reference count)
+    return sref<T>::newref(ps.ptr_);
   }
 }

@@ -1,5 +1,5 @@
 #include "gc.hh"
-#include "atomic.hh"
+#include <atomic>
 #include "cpputil.hh"
 #include "hwvm.hh"
 #include "distref.hh"
@@ -116,7 +116,6 @@ struct vmap {
   static vmap* alloc();
 
   atomic<u64> ref;
-  char *const kshared;
 
   void decref();
   void incref();

@@ -11,6 +11,19 @@ EXCEPTIONS ?= y
 RUN	   ?= $(empty)
 PYTHON     ?= python
 O  	   = o.$(HW)
+CODEX      ?= 0
+
+ifeq ($(HW),linux)
+PLATFORM   := native
+else
+PLATFORM   := xv6
+endif
+
+ifeq ($(CODEX),1)
+CODEXINC = -Icodexinc
+else
+CODEXINC =
+endif
 
 ifdef USE_CLANG
 CC  = $(TOOLPREFIX)clang
@@ -31,15 +44,29 @@ NM = $(TOOLPREFIX)nm
 OBJCOPY = $(TOOLPREFIX)objcopy
 STRIP = $(TOOLPREFIX)strip
 
-INCLUDES  = --sysroot=$(O)/sysroot -iquote include -iquote$(O)/include -Istdinc -I$(QEMUSRC) -include param.h -include include/compiler.h
-COMFLAGS  = -static -g -MD -MP -m64 -O3 -Wall -Werror -DHW_$(HW) -DXV6_HW=$(HW) -DXV6 \
+ifeq ($(PLATFORM),xv6)
+INCLUDES  = --sysroot=$(O)/sysroot \
+	-iquote include -iquote$(O)/include \
+	-iquote libutil/include \
+	-Istdinc $(CODEXINC) -I$(QEMUSRC) \
+	-include param.h -include libutil/include/compiler.h
+COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 -DCODEX=$(CODEX) \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
-	    -mno-red-zone $(INCLUDES)
+	    -mno-red-zone
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
+LDFLAGS   = -m elf_x86_64
+else
+INCLUDES := -include param.h -iquote libutil/include -I$(QEMUSRC)
+COMFLAGS := -pthread -Wno-unused-result
+LDFLAGS := -pthread
+# No mere mortal can call ld correctly on a real machine, so use gcc's
+# link driver instead.
+LD = $(TOOLPREFIX)gcc
+endif
+COMFLAGS += -g -MD -MP -O3 -Wall -Werror -DHW_$(HW) $(INCLUDES)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare $(CXXFLAGS)
 ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
-LDFLAGS   = -m elf_x86_64
 
 ALL := 
 all:
@@ -51,10 +78,13 @@ define SYSCALLGEN
 	$(Q)cmp -s $@.tmp $@ || mv $@.tmp $@
 endef
 
+ifeq ($(PLATFORM),xv6)
 include net/Makefrag
-include lib/Makefrag
-include bin/Makefrag
 include kernel/Makefrag
+endif
+include lib/Makefrag
+include libutil/Makefrag
+include bin/Makefrag
 include tools/Makefrag
 include metis/Makefrag
 -include user/Makefrag.$(HW)
@@ -120,9 +150,9 @@ QEMUOPTS = -smp $(QEMUSMP) -m 512 -serial mon:stdio -nographic \
 	$(if $(RUN),-append "\$$ $(RUN)",)
 
 qemu: $(KERN)
-	$(QEMU) $(QEMUOPTS) -kernel $(KERN)
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN)
 gdb: $(KERN)
-	$(QEMU) $(QEMUOPTS) -kernel $(KERN) -s
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -s
 
 codex: $(KERN)
 

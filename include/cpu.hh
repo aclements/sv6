@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mmu.h"
-#include "atomic.hh"
+#include <atomic>
 #include "spinlock.h"
 
 using std::atomic;

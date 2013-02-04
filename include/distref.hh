@@ -3,7 +3,7 @@
 #pragma once
 
 #include "types.h"
-#include "atomic.hh"
+#include <atomic>
 #include "percpu.hh"
 
 class distributed_refcnt;

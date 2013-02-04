@@ -2,7 +2,6 @@ OBJS = \
 	acpi.o \
 	acpidbg.o \
 	acpiosl.o \
-	async.o \
 	bio.o \
 	bootdata.o \
 	cga.o \
@@ -70,6 +69,8 @@ OBJS = \
 	codex.o \
 	benchcodex.o \
 	iommu.o \
+	rtc.o \
+	timemath.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
@@ -111,6 +112,16 @@ $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 		-o $@ $(O)/kernel/boot.o $(OBJS) -L$(O) $(LFLAGS)
 
 $(O)/kernel/%.o: lib/%.cc $(O)/sysroot
+	@echo "  CXX    $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(O)/kernel/%.o: lib/%.c $(O)/sysroot
+	@echo "  CC     $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
+
+$(O)/kernel/%.o: libutil/%.cc $(O)/sysroot
 	@echo "  CXX    $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<

@@ -34,11 +34,11 @@ struct ordered : pipe {
     lock = spinlock("pipe", LOCKSTAT_PIPE);
     cv = condvar("pipe");
   };
-  ~ordered() {
+  ~ordered() override {
   };
   NEW_DELETE_OPS(ordered);
 
-  virtual int write(const char *addr, int n) {
+  virtual int write(const char *addr, int n) override {
     acquire(&lock);
     for(int i = 0; i < n; i++){
       while(nwrite == nread + PIPESIZE){ 
@@ -56,7 +56,7 @@ struct ordered : pipe {
     return n;
   }
 
-  virtual int read(char *addr, int n) {
+  virtual int read(char *addr, int n) override {
     int i;
     acquire(&lock);
     while(nread == nwrite && writeopen) { 
@@ -76,7 +76,7 @@ struct ordered : pipe {
     return i;
   }
 
-  virtual int close(int writable) {
+  virtual int close(int writable) override {
     acquire(&lock);
     if(writable){
       writeopen = 0;

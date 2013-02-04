@@ -110,8 +110,8 @@ struct futexaddr : public referenced, public rcu_freed
 {
   static futexaddr* alloc(futexkey_t key);
 
-  virtual void do_gc();
-  virtual void onzero() const;
+  virtual void do_gc() override;
+  virtual void onzero() override;
 
   futexkey_t key_;
   bool inserted_;
@@ -157,7 +157,7 @@ futexaddr::do_gc(void)
 }
 
 void
-futexaddr::onzero(void) const
+futexaddr::onzero(void)
 {
   if (inserted_)
     assert(nsfutex->remove(key_, nullptr));

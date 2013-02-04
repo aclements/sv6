@@ -2,12 +2,13 @@
 #include "user.h"
 #include "amd64.h"
 
+#include <stdlib.h>
+
 int
 main(int ac, char *av[])
 {
   if (ac != 2) {
-    fprintf(1, "Usage: %s seconds\n", av[0]);
-    exit();
+    die("Usage: %s seconds", av[0]);
   }
 
   u64 x = atoi(av[1])*1000000000ull;

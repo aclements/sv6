@@ -11,3 +11,4 @@ typedef int dev_t;
 typedef uint32_t ino_t;
 typedef short nlink_t;
 typedef short mode_t;
+typedef int pid_t;

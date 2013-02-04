@@ -82,7 +82,7 @@ public:
     }
   }
 
-  virtual void do_gc(void) {
+  void do_gc(void) override {
     delete this;
   }
 

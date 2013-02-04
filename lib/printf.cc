@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include "fmt.hh"
 #include "lib.h"
+#include <stdio.h>
 
 struct outbuf {
   char b[128];
@@ -38,31 +39,50 @@ writeoutbuf(int c, void *arg)
 }
 
 void
-fprintf(int fd, const char *fmt, ...)
+fprintf(FILE *f, const char *fmt, ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt);
+  vfprintf(f, fmt, ap);
+  va_end(ap);
+}
+
+void
+vfprintf(FILE *f, const char *fmt, va_list ap)
+{
+  vdprintf(f->fd, fmt, ap);
+}
+
+void
+dprintf(int fd, const char *fmt, ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt);
+  vdprintf(fd, fmt, ap);
+  va_end(ap);
+}
+
+void
+vdprintf(int fd, const char *fmt, va_list ap)
 {
   struct outbuf b;
-  va_list ap;
 
   b.n = 0;
   b.fd = fd;
-  va_start(ap, fmt);
   vprintfmt(writeoutbuf, (void*) &b, fmt, ap);
-  va_end(ap);
   flushoutbuf(&b);
 }
 
 void
 printf(const char *fmt, ...)
 {
-  struct outbuf b;
   va_list ap;
 
-  b.n = 0;
-  b.fd = 1;
   va_start(ap, fmt);
-  vprintfmt(writeoutbuf, (void*) &b, fmt, ap);
+  vfprintf(stdout, fmt, ap);
   va_end(ap);
-  flushoutbuf(&b);
 }
 
 // Print to a buffer.
@@ -82,7 +102,7 @@ writebuf(int c, void *arg)
 }
 
 void
-vsnprintf(char *buf, u32 n, const char *fmt, va_list ap)
+vsnprintf(char *buf, size_t n, const char *fmt, va_list ap)
 {
   struct bufstate bs = { buf, buf+n-1 };
   vprintfmt(writebuf, (void*) &bs, fmt, ap);
@@ -97,20 +117,4 @@ snprintf(char *buf, u32 n, const char *fmt, ...)
   va_start(ap, fmt);
   vsnprintf(buf, n, fmt, ap);
   va_end(ap);
-}
-
-void __attribute__((noreturn))
-die(const char* errstr, ...)
-{
-  struct outbuf b;
-  va_list ap;
-
-  b.n = 0;
-  b.fd = 2;
-  va_start(ap, errstr);
-  vprintfmt(writeoutbuf, (void*)&b, errstr, ap);
-  va_end(ap);
-  flushoutbuf(&b);
-  fprintf(2, "\n");
-  exit();
 }

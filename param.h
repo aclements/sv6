@@ -23,10 +23,7 @@
 #define BUDDY_DEBUG   DEBUG
 #define REFCACHE_DEBUG DEBUG
 #define RADIX_DEBUG   DEBUG
-#define KSHAREDSIZE   (32 << 10)
-#define USERWQSIZE    (1 << 14)
 #define USTACKPAGES   8
-#define WQSHIFT       7
 #define EXECSWITCH    1
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
 #define GC_GLOBAL     true
@@ -47,30 +44,26 @@
 #define NCPU          8   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_josmp)
 #define DEBUG         0
 #define NCPU          16  // maximum number of CPUs
 #define NSOCKET       4
 #define MTRACE        0
-#define CODEX         0
-#define PERFSIZE      (1<<20ull)
+#define PERFSIZE      (128<<20ull)
 #define E1000_PORT    1   // use second E1000 port
 #elif defined(HW_ud0) || defined(HW_ud1)
 #define NCPU          4   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        0
-#define CODEX         0
-#define PERFSIZE      (1<<20ull)
+#define PERFSIZE      (128<<20ull)
 #define UART_BAUD     115200
 #elif defined(HW_tom)
 #define DEBUG         0
 #define NCPU          48  // maximum number of CPUs
 #define NSOCKET       8
 #define MTRACE        0
-#define CODEX         0
-#define PERFSIZE      (1<<20ull)
+#define PERFSIZE      (128<<20ull)
 // tom's IPMI SOL console looses sync if we don't delay
 #define UART_SEND_DELAY_USEC 1000
 #elif defined(HW_ben)
@@ -78,35 +71,25 @@
 #define NCPU          80  // maximum number of CPUs
 #define NSOCKET       8
 #define MTRACE        0
-#define CODEX         0
-#define PERFSIZE      (1<<20ull)
+#define PERFSIZE      (128<<20ull)
 #define UART_BAUD     115200
 #elif defined(HW_user)
 #define NCPU          256
 #define MTRACE        0
-#define CODEX         0
-#define PERFSIZE      (16<<20ull)
-#elif defined(HW_wq)
-#define NCPU          2
-#define MTRACE        0
-#define CODEX         0
-#define PERFSIZE      (16<<20ull)
-#elif defined(HW_usched)
-#define NCPU          2
-#define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_bench)
 #define NCPU          48
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_ugc)
 #define NCPU          256
 #define CACHELINE    64  // cache line size
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (16<<20ull)
+#elif defined(HW_linux)
+#define NCPU          256
+#define MTRACE        0
+// No kernel, so other options aren't set
 #else
 #error "Unknown HW"
 #endif
@@ -117,4 +100,14 @@
 #ifndef E1000_PORT
 // Use E1000 port 0 by default
 #define E1000_PORT 0
+#endif
+#ifndef TZ_SECS
+// Local time zone in seconds west of UTC.  Default to EST.
+#define TZ_SECS (5*60*60)
+#endif
+#ifndef RTC_TZ_SECS
+// RTC timezone in seconds west of UTC.  We assume the RTC is GMT by
+// default.  Also common is setting the RTC to local time, in which
+// case this should be TZ_SECS.
+#define RTC_TZ_SECS 0
 #endif

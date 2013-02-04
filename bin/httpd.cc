@@ -2,8 +2,12 @@
 #include "user.h"
 #include "lib.h"
 #include "unet.h"
+
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define VERSION "0.1"
 #define HTTP_VERSION "1.0"
@@ -16,7 +20,7 @@ static int xwrite(int fd, const void *buf, u64 n)
   while (n) {
     r = write(fd, buf, n);
     if (r < 0 || r == 0) {
-      fprintf(1, "xwrite: failed %d\n", r);
+      fprintf(stderr, "xwrite: failed %d\n", r);
       return -1;
     }
     buf = (char *) buf + r;
@@ -59,7 +63,7 @@ error(int s, int code)
   r = strlen(buf);
 
   if (xwrite(s, buf, r))
-    fprintf(2, "httpd error: incomplete write\n");
+    fprintf(stderr, "httpd error: incomplete write\n");
 }
 
 static int
@@ -128,7 +132,7 @@ content(int s, int fd)
   for (;;) {
     n = read(fd, buf, sizeof(buf));
     if (n < 0) {
-      fprintf(2, "send_data: read failed %d\n", n);
+      fprintf(stderr, "send_data: read failed %d\n", n);
       return n;
     } else if (n == 0) {
       return 0;
@@ -154,7 +158,7 @@ resp_get(int s, const char *url)
 
   r = fstat(fd, &stat);
   if (r < 0) {
-    fprintf(2, "httpd resp: fstat %d\n", r);
+    fprintf(stderr, "httpd resp: fstat %d\n", r);
     close(fd);
     return error(s, 404);
   }
@@ -211,14 +215,14 @@ resp_put(int s, const char *url, int content_length)
   char buf[1024];
   while (content_length && (r = read(s, buf, NELEM(buf))) != 0) {
     if (r < 0) {
-      fprintf(1, "httpd client: read %d\n", r);
+      fprintf(stderr, "httpd client: read %d\n", r);
       r = -400;
       goto error;
     }
     content_length -= r;
     r = xwrite(fd, buf, r);
     if (r < 0) {
-      fprintf(1, "httpd client: write %d\n", r);
+      fprintf(stderr, "httpd client: write %d\n", r);
       r = -400;
       goto error;
     }
@@ -300,7 +304,7 @@ client(int s)
 
   r = readline(s, b, NELEM(b));
   if (r < 0) {
-    fprintf(1, "httpd client: read request %d\n", r);
+    fprintf(stderr, "httpd client: read request %d\n", r);
     return;
   }
 
@@ -313,14 +317,14 @@ client(int s)
   do {
     r = readline(s, b, NELEM(b));
     if (r <= 0) {
-      fprintf(1, "httpd client: read headers %d\n", r);
+      fprintf(stderr, "httpd client: read headers %d\n", r);
       return;
     }
     if (strncmp(b, "Content-Length: ", 16) == 0)
       content_length = atoi(b + 16);
   } while (strcmp(b, "\r\n"));
 
-  fprintf(1, "httpd client: %s %s\n", method, url);
+  fprintf(stderr, "httpd client: %s %s\n", method, url);
   if (method[0] == 'G')
     resp_get(s, url);
   else if (method[0] == 'P')
@@ -350,7 +354,7 @@ main(void)
   if (r < 0)
     die("httpd listen: %d\n", r);
 
-  fprintf(1, "httpd: port 80\n");
+  fprintf(stderr, "httpd: port 80\n");
 
   for (;;) {
     socklen_t socklen;
@@ -359,10 +363,10 @@ main(void)
     socklen = sizeof(sin);
     ss = accept(s, (struct sockaddr *)&sin, &socklen);
     if (ss < 0) {
-      fprintf(2, "telnetd accept: %d\n", ss);
+      fprintf(stderr, "httpd accept: %d\n", ss);
       continue;
     }
-    fprintf(1, "httpd: connection %s\n", ipaddr(&sin));
+    fprintf(stderr, "httpd: connection %s\n", ipaddr(&sin));
 
     client(ss);
     close(ss);

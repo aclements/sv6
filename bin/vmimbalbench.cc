@@ -14,6 +14,10 @@
 #include "xsys.h"
 #include <sys/mman.h>
 #include "lib.h"
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // That's ~1GB or so? Somewhere plenty high in the address space,
 // but a good bajillion bytes or so below USERTOP.
@@ -58,13 +62,13 @@ consumer()
     alloctop = alloc + PAGECHUNK;
   }
   t1 = rdtsc();
-  printf("Consumer %d: %u cycles/page\n", consumercpu, (t1-t0)/(u64)npages);
+  printf("Consumer %d: %" PRIu64 " cycles/page\n", consumercpu, (t1-t0)/(u64)npages);
 }
 
 void *
 producer(void *arg)
 {
-  u64 cpu = (u64)arg;
+  int cpu = (u64)arg;
   if (setaffinity(cpu) < 0) {
     printf("sys_setaffinity(%d) failed", cpu);
     return nullptr;

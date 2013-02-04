@@ -3,7 +3,7 @@
 #include "cpputil.hh"
 #include "ns.hh"
 #include "gc.hh"
-#include "atomic.hh"
+#include <atomic>
 #include "refcache.hh"
 #include "condvar.h"
 #include "semaphore.h"
@@ -31,14 +31,14 @@ struct file : public refcache::referenced, public rcu_freed {
   int socket;
   struct pipe *pipe;
   struct localsock *localsock;
-  struct inode *ip;
+  sref<inode> ip;
   u32 off;
 
   // Used for sockets (XXX could be just a mutex)
   // XXX This locking should be handled in net, not here.
   semaphore wsem, rsem;
 
-  virtual void do_gc(void);
+  void do_gc(void) override;
 
 private:
   file();
@@ -47,14 +47,12 @@ private:
   NEW_DELETE_OPS(file);
 
 protected:
-  virtual void onzero() const;
+  void onzero() override;
 };
 
 // in-core file system types
 struct inode : public referenced, public rcu_freed
 {
-  static inode* alloc(u32 dev, u32 inum);
-
   void  init();
   void  link();
   void  unlink();
@@ -63,7 +61,7 @@ struct inode : public referenced, public rcu_freed
   inode& operator=(const inode&) = delete;
   inode(const inode& x) = delete;
 
-  virtual void do_gc() { delete this; }
+  void do_gc() override { delete this; }
 
   // const for lifetime of object:
   const u32 dev;
@@ -71,7 +69,7 @@ struct inode : public referenced, public rcu_freed
 
   // const unless inode is reused:
   u32 gen;
-  short type;
+  std::atomic<short> type;
   short major;
   short minor;
 
@@ -103,17 +101,21 @@ private:
   ~inode();
   NEW_DELETE_OPS(inode)
 
+  static sref<inode> alloc(u32 dev, u32 inum);
+  friend void initinode();
+  friend sref<inode> iget(u32, u32);
+
 protected:
-  virtual void onzero() const;
+  void onzero() override;
 };
 
 
 // device implementations
 
 struct devsw {
-  int (*read)(struct inode*, char*, u32, u32);
-  int (*write)(struct inode*, const char*, u32, u32);
-  void (*stat)(struct inode*, struct stat*);
+  int (*read)(sref<inode>, char*, u32, u32);
+  int (*write)(sref<inode>, const char*, u32, u32);
+  void (*stat)(sref<inode>, struct stat*);
 };
 
 extern struct devsw devsw[];

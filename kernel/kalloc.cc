@@ -767,14 +767,8 @@ initkalloc(u64 mbaddr)
   strncpy(slabmem[slab_perf].name, "kperf", MAXNAME);
   slabmem[slab_perf].order = ceil_log2(PERFSIZE);
 
-  strncpy(slabmem[slab_kshared].name, "kshared", MAXNAME);
-  slabmem[slab_kshared].order = ceil_log2(KSHAREDSIZE);
-
   strncpy(slabmem[slab_wq].name, "wq", MAXNAME);
   slabmem[slab_wq].order = ceil_log2(PGROUNDUP(wq_size()));
-
-  strncpy(slabmem[slab_userwq].name, "uwq", MAXNAME);
-  slabmem[slab_userwq].order = ceil_log2(USERWQSIZE);
 
   kminit();
   kinited = 1;

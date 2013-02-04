@@ -9,38 +9,11 @@ struct sockaddr;
 #include "sysstubs.h"
 
 // ulib.c
-int stat(char*, struct stat*);
-int fstatat(int dirfd, const char*, struct stat*);
-char* strcpy(char*, const char*);
-char* strncpy(char *s, const char *t, size_t n);
-void* memcpy(void *dst, const void *src, size_t n);
-void* memmove(void*, const void*, size_t);
-char* strchr(const char*, int c);
-int strcmp(const char*, const char*);
-int strncmp(const char *p, const char *q, size_t n);
-int open(const char*, int, ...);
-int mkdir(const char*, mode_t);
-
 char* gets(char*, int max);
-size_t strlen(const char*);
-void* memset(void*, int, size_t);
-void* malloc(size_t);
-void free(void*);
-int atoi(const char*);
-long atol(const char*);
-void* calloc(size_t, size_t);
-void* realloc(void*, size_t);
 
 // uthread.S
 int forkt(void *sp, void *pc, void *arg, int forkflags);
 void forkt_setup(u64 pid);
-
-// printf.c
-void printf(const char*, ...);
-void fprintf(int, const char*, ...);
-void snprintf(char *buf, unsigned int n, const char *fmt, ...);
-void vsnprintf(char *buf, u32 n, const char *fmt, va_list ap);
-void die(const char* errstr, ...) __attribute__((noreturn));
 
 // perf.cc
 // Default selector for AMD 10h:

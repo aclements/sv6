@@ -1,10 +1,6 @@
 #pragma once
 
-#ifdef XV6_KERNEL
-#include "atomic.hh"
-#else
 #include <atomic>
-#endif
 #include <cassert>
 #include <cstddef>
 #include <cstdint>

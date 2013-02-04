@@ -1,7 +1,9 @@
 #include "types.h"
 #include "user.h"
-#include <fcntl.h>
 #include "pthread.h"
+
+#include <fcntl.h>
+#include <string.h>
 
 static pthread_barrier_t bar;
 

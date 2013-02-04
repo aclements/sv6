@@ -11,7 +11,7 @@
 extern char cmdline[];
 
 static int
-cmdlineread(struct inode *inode, char *dst, u32 off, u32 n)
+cmdlineread(sref<inode> inode, char *dst, u32 off, u32 n)
 {
   u32 cc;
 

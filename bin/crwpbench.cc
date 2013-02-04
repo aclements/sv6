@@ -1,10 +1,11 @@
 #include <fcntl.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 
 #ifdef LINUX
-#include <stdio.h>
 #include <assert.h>
 #include "user/util.h"
 #include "include/xsys.h"

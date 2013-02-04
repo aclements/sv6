@@ -3,12 +3,16 @@
 #include "user.h"
 #include "fs.h"
 
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+
 static int
 du(int fd)
 {
   struct stat st;
   if (fstat(fd, &st) < 0) {
-    fprintf(2, "du: cannot stat\n");
+    fprintf(stderr, "du: cannot stat\n");
     close(fd);
     return 0;
   }

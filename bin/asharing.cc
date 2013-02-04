@@ -7,9 +7,11 @@
 #include "pthread.h"
 #include "rnd.hh"
 
+#include <stdio.h>
+#include <string.h>
 #include <sys/mman.h>
 
-#include "atomic.hh"
+#include <atomic>
 #include <utility>
 
 static int cpu;
@@ -105,7 +107,7 @@ vm2sharing(void *arg)
 void*
 fssharing(void* arg)
 {
-  u64 i = (u64) arg;
+  int i = (uintptr_t) arg;
 
   // Note that we keep these files open; otherwise all of these
   // operations will share the abstract FD object and we won't get any
@@ -118,7 +120,7 @@ fssharing(void* arg)
 
   ready();
 
-  for (u64 j = 0; j < ncore; j++) {
+  for (int j = 0; j < ncore; j++) {
     snprintf(filename, sizeof(filename), "f%d", j);
     open(filename, O_RDWR);
   }
@@ -136,7 +138,7 @@ main(int ac, char **av)
   else if (ac == 2 && strcmp(av[1], "fs") == 0)
     op = fssharing;
   else
-    fprintf(1, "usage: %s vm|fs\n", av[0]);
+    die("usage: %s vm|fs", av[0]);
 
   if (op) {
     barrier = ncore + 1;

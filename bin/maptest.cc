@@ -5,6 +5,7 @@
 #include "uspinlock.h"
 #include "pthread.h"
 
+#include <stdio.h>
 #include <sys/mman.h>
 
 static volatile char *p;
@@ -32,14 +33,14 @@ thr(void*)
 
     if (state == 3) {
       state = 4;
-      fprintf(1, "about to access after unmap\n");
+      printf("about to access after unmap\n");
       release(&l);
 
       p[0] = 'X';
       p[4096] = 'Y';
 
       acquire(&l);
-      fprintf(1, "still alive after unmap write\n");
+      printf("still alive after unmap write\n");
       exit();
     }
     release(&l);
@@ -53,8 +54,7 @@ main(void)
   p = (char *) 0x80000;
   if (mmap((void *) p, 8192, PROT_READ|PROT_WRITE,
            MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) < 0) {
-    fprintf(1, "map failed\n");
-    exit();
+    die("map failed");
   }
 
   pthread_t tid;
@@ -69,25 +69,23 @@ main(void)
   }
 
   if (p[0] != 'x' || p[4096] != 'y') {
-    fprintf(1, "mismatch\n");
-    exit();
+    die("mismatch");
   }
 
-  fprintf(1, "shm ok\n");
+  printf("shm ok\n");
 
   if (munmap((void *) p, 8192) < 0) {
-    fprintf(1, "unmap failed\n");
-    exit();
+    die("unmap failed\n");
   }
 
   state = 3;
-  fprintf(1, "waiting for unmap access\n");
+  printf("waiting for unmap access\n");
   while (state != 4) {
     release(&l);
     spin();
     acquire(&l);
   }
 
-  fprintf(1, "maptest done\n");
+  printf("maptest done\n");
   exit();
 }

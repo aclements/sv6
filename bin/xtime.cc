@@ -3,6 +3,7 @@
 #include "amd64.h"
 #include "pmc.hh"
 #include "bits.hh"
+#include <stdio.h>
 
 #define CMN PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE
 
@@ -68,11 +69,11 @@ main(int ac, const char *av[])
   u64 t1 = rdtsc();
   sys_stat* s2 = s1->delta(s0);
 
-  fprintf(1, "%s cycles\n", valstr(t1-t0));
-  fprintf(1, "%s %s\n", valstr(pmc1.delta(pmc0).sum()),
-          pmc_selector[pmci].name);
+  printf("%s cycles\n", valstr(t1-t0));
+  printf("%s %s\n", valstr(pmc1.delta(pmc0).sum()),
+         pmc_selector[pmci].name);
 
   u64 tot = s2->busy() + s2->idle();
-  fprintf(1, ".%lu idle\n", (s2->idle()*100)/tot);
+  printf(".%lu idle\n", (s2->idle()*100)/tot);
   exit();
 }

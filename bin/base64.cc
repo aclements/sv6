@@ -1,11 +1,8 @@
+#include "libutil.h"
+
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
-#if defined(LINUX)
-#include "user/util.h"
-#else
-#include "user.h"
-#endif
 
 static const char charset[] =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -35,35 +32,6 @@ encode(const void *data, size_t len, void *out)
   for (size_t pos = 0; pos < (len + 2) / 3; ++pos)
     encode24((char*)data + pos * 3, len - pos * 3, (char*)out + pos * 4);
   return (len + 2) / 3 * 4;
-}
-
-static size_t
-xread(int fd, const void *buf, size_t n)
-{
-  size_t pos = 0;
-  while (pos < n) {
-    int r = read(fd, (char*)buf + pos, n - pos);
-    if (r < 0)
-      die("read failed");
-    if (r == 0)
-      break;
-    pos += r;
-  }
-  return pos;
-}
-
-static void
-xwrite(int fd, const void *buf, size_t n)
-{
-  int r;
-  
-  while (n) {
-    r = write(fd, buf, n);
-    if (r < 0 || r == 0)
-      die("write failed");
-    buf = (char *) buf + r;
-    n -= r;
-  }
 }
 
 static void

@@ -47,7 +47,7 @@ void
 picdump(void)
 {
   bitset<16> isr, irr;
-  scoped_cli cli();
+  scoped_cli cli;
   // Read ISR
   outb(IO_PIC1, 0x0b);
   isr.setword(0, inb(IO_PIC1));

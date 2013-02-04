@@ -9,7 +9,7 @@
 #include <exception>
 #include <initializer_list>
 #include <type_traits>
-//#include <atomic>
+#include <atomic>
 
 // Likewise for C [C11 4/6].
 #include <stddef.h>

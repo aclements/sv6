@@ -6,7 +6,6 @@
 #include "proc.hh"
 #include "fs.h"
 #include "wq.hh"
-#include "ipc.hh"
 #include "vm.hh"
 #include "file.hh"
 

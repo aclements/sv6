@@ -18,22 +18,23 @@ file::alloc(void)
 file::file(void)
   : rcu_freed("file"), 
     type(file::FD_NONE), readable(0), writable(0), append(0), 
-    socket(0), pipe(nullptr), ip(nullptr), off(0),
+    socket(0), pipe(nullptr), off(0),
     wsem("file::wsem", 1), rsem("file::rsem", 1)
 {
 }
 
 void
-file::onzero(void) const
+file::onzero(void)
 {
-  if(type == file::FD_PIPE)
+  if(type == file::FD_PIPE) {
     pipeclose(pipe, writable);
-  else if(type == file::FD_INODE)
-    iput(ip);
-  else if(type == file::FD_SOCKET)
+  } else if(type == file::FD_INODE) {
+    /* do nothing */
+  } else if(type == file::FD_SOCKET) {
     sockclose(this);
-  else if(type != file::FD_NONE)
+  } else if(type != file::FD_NONE) {
     panic("file::close bad type");
+  }
   gc_delayed((file*)this);
 }
 

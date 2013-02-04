@@ -3,6 +3,8 @@
 #include "amd64.h"
 
 #include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 char*
@@ -217,7 +219,8 @@ sleep(unsigned secs)
 extern void __cxa_pure_virtual(void);
 void __cxa_pure_virtual(void)
 { 
-  die("__cxa_pure_virtual");
+  fprintf(stderr, "__cxa_pure_virtual");
+  exit();
 }
 
 struct proghdr *_dl_phdr;
