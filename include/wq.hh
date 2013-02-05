@@ -25,7 +25,7 @@ private:
 };
 
 struct cwork : public work {
-  virtual void run() override;
+  void run() override;
 
   static void* operator new(unsigned long);
   static void* operator new(unsigned long, cwork*);

@@ -18,7 +18,7 @@ struct forwork : public work {
   forwork(IT &it, bool (*cond)(IT &it), BODY &body, wframe &frame) 
     : it_(it), cond_(cond), body_(body), frame_(frame) {}
 
-  virtual void run() override {
+  void run() override {
     decltype(copy_value(it_)) v = copy_value(it_);
     ++it_;
     if (cond_(it_)) {

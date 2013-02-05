@@ -38,7 +38,7 @@ struct file : public refcache::referenced, public rcu_freed {
   // XXX This locking should be handled in net, not here.
   semaphore wsem, rsem;
 
-  virtual void do_gc(void) override;
+  void do_gc(void) override;
 
 private:
   file();
@@ -47,7 +47,7 @@ private:
   NEW_DELETE_OPS(file);
 
 protected:
-  virtual void onzero() override;
+  void onzero() override;
 };
 
 // in-core file system types
@@ -63,7 +63,7 @@ struct inode : public referenced, public rcu_freed
   inode& operator=(const inode&) = delete;
   inode(const inode& x) = delete;
 
-  virtual void do_gc() override { delete this; }
+  void do_gc() override { delete this; }
 
   // const for lifetime of object:
   const u32 dev;
@@ -104,7 +104,7 @@ private:
   NEW_DELETE_OPS(inode)
 
 protected:
-  virtual void onzero() override;
+  void onzero() override;
 };
 
 
