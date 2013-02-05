@@ -304,16 +304,16 @@ namespace refcache {
   inline void
   referenced::inc()
   {
-    pushcli();
+    // Disable interrupts to prevent review from running on this core
+    // in the middle of us updating the local reference cache.
+    scoped_cli cli;
     ++mycache->get_way(this)->delta;
-    popcli();
   }
 
   inline void
   referenced::dec()
   {
-    pushcli();
+    scoped_cli cli;
     --mycache->get_way(this)->delta;
-    popcli();
   }
 }
