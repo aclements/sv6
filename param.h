@@ -118,3 +118,7 @@
 // Use E1000 port 0 by default
 #define E1000_PORT 0
 #endif
+#ifndef TZ_SECS
+// Local time zone in seconds west of UTC.  Default to EST.
+#define TZ_SECS (5*60*60)
+#endif
