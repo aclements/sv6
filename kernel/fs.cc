@@ -330,17 +330,17 @@ static inode*
 try_ialloc(u32 inum, u32 dev, short type)
 {
   inode* ip = iget(dev, inum);
-  ilock(ip, 1);
-  if(ip->type == 0) {
-    auto w = ip->seq.write_begin();
-    ip->type = type;
-    ip->gen += 1;
-    if(ip->nlink() || ip->size || ip->addrs[0])
-      panic("ialloc not zeroed");
-    return ip;
+  if (ip->type || !cmpxch(&ip->type, (short) 0, type)) {
+    iput(ip);
+    return nullptr;
   }
-  iunlockput(ip);
-  return nullptr;
+
+  ilock(ip, 1);
+  auto w = ip->seq.write_begin();
+  ip->gen += 1;
+  if(ip->nlink() || ip->size || ip->addrs[0])
+    panic("ialloc not zeroed");
+  return ip;
 }
 
 // Allocate a new inode with the given type on device dev.

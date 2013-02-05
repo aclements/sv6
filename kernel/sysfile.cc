@@ -495,7 +495,7 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
   }
   iplocked = false;
 
-  auto itype = ip->type;
+  short itype = ip->type;
   if (itype == 0) {
     if (iplocked)
       iunlock(ip);

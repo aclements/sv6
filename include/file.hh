@@ -71,7 +71,7 @@ struct inode : public referenced, public rcu_freed
 
   // const unless inode is reused:
   u32 gen;
-  short type;
+  std::atomic<short> type;
   short major;
   short minor;
 
