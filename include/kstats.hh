@@ -59,6 +59,7 @@
   X(uint64_t, refcache_item_disowned_count)     \
   X(uint64_t, refcache_dirtied_count)           \
   X(uint64_t, refcache_conflict_count)          \
+  X(uint64_t, refcache_weakref_break_failed)    \
 
 #define KSTATS_SOCKET(X)\
   X(uint64_t, socket_load_balance) \

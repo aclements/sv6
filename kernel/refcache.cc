@@ -68,6 +68,12 @@ refcache::cache::evict(struct refcache::cache::way *way,
       obj->review_epoch_ = local_epoch + (local_epoch_is_exact ? 2 : 3);
       obj->dirty_ = false;
       review_.push_back(obj);
+      // If this object has a weak reference, mark it dying.
+      if (obj->weak_) {
+        weak_referenced *wobj = static_cast<weak_referenced*>(obj);
+        if (wobj->weakref_)
+          wobj->weakref_->mark_dying();
+      }
     } else {
       // The object has a reviewer, which means the reviewer needs
       // to know that, even though it's zero again now, it was
@@ -128,6 +134,23 @@ refcache::cache::review()
     ++nreviewed;
     scoped_acquire l(&obj->lock_);
     if (obj->refcount_ == 0) {
+      // If this object is weak-referenced and we're about to collect
+      // it, break the weak reference.
+      if (obj->weak_ && !obj->dirty_) {
+        weak_referenced *wobj = static_cast<weak_referenced*>(&*obj);
+        if (wobj->weakref_ && !wobj->weakref_->try_break(wobj)) {
+          verbose.println("refcache: Failed to break weakref to obj ", &*obj);
+          kstats::inc(&kstats::refcache_weakref_break_failed);
+          // We failed to break the weak reference, meaning that this
+          // object has been revived.  It still has a zero global
+          // count, however, so re-enqueue it like we would have for a
+          // dirty zero (otherwise, for example, if this object was
+          // revived by a transient inc/dec, we could lose track of
+          // the object).  Likewise, we have to mark it dying again.
+          wobj->dirty_ = true;
+          wobj->weakref_->mark_dying();
+        }
+      }
       // The global count was zero at the last epoch and is zero now.
       // Was it non-zero in the meantime?
       if (obj->dirty_) {
@@ -155,6 +178,14 @@ refcache::cache::review()
       // it from our review list.  When it goes zero again, some
       // other core will put it on their review list.
       verbose.println("refcache: CPU ", myid(), " disowning obj ", &*obj);
+      if (obj->weak_) {
+        // The object is no longer dying
+        weak_referenced *wobj = static_cast<weak_referenced*>(&*obj);
+        if (wobj->weakref_) {
+          verbose.println("refcache: Un-dying obj ", &*obj);
+          wobj->weakref_->mark_dying(false);
+        }
+      }
       obj->review_epoch_ = 0;
       ++ndisowned;
     }
@@ -259,7 +290,7 @@ refcache::cache::reaper()
 }
 
 #ifdef TEST
-class reftest : public refcache::referenced
+class reftest : public refcache::weak_referenced
 {
 public:
   void onzero()
@@ -272,6 +303,7 @@ static void
 test(void *)
 {
   static reftest rt;
+  refcache::weakref<reftest> wr(&rt);
   for (int i = 0; i < 100; i++) {
     myproc()->set_cpu_pin(i % ncpu);
     if (i % 2 == 0)
@@ -279,7 +311,17 @@ test(void *)
     else
       rt.dec();
   }
+  assert(wr.get().get() == &rt);
   rt.dec();
+  for (int i = 0; i < 100; i++) {
+    auto sr = wr.get();
+    assert(!sr || sr.get() == &rt);
+  }
+  for (int i = 0; i < 10; i++) {
+    yield();
+    microdelay(100000);
+  }
+  assert(!wr.get());
 }
 #endif
 
