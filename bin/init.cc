@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include "lib.h"
 #include "major.h"
+#include <time.h>
 
 static const char *sh_argv[] = { "sh", 0 };
 static const char *app_argv[][MAXARG] = {
@@ -89,6 +90,9 @@ main(void)
   
   for (u32 i = 0; i < NELEM(app_argv); i++)
     startone(app_argv[i]);
+
+  time_t now = time(nullptr);
+  printf("init complete at %s", ctime(&now));
 
   runcmdline();
 
