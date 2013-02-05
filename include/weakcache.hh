@@ -36,7 +36,7 @@ private:
     {
       scoped_gc_epoch reader;
       for (auto &i: chain_) {
-        if (i.key_ != k)
+        if (!(i.key_ == k))
           continue;
         return i.weakref_.get();
       }
