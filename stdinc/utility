@@ -57,7 +57,7 @@ namespace std {
     constexpr pair() : first(), second() {}
     pair(const A &a, const B &b) : first(a), second(b) {}
 
-    bool operator==(const pair<A, B> &other) {
+    bool operator==(const pair<A, B> &other) const {
       return first == other.first && second == other.second;
     }
   };
