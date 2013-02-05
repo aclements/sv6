@@ -245,9 +245,10 @@ namespace refcache {
     friend class cache;
     template<class T> friend class weakref;
 
+  protected:
     // The weak reference to this object, or nullptr.  We never call
     // get() through this, so it doesn't actually matter what type we
-    // use.
+    // use.  Protected (and not private) for weakcache'd objects.
     weakref<weak_referenced> *weakref_;
 
   public:
