@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include <sys/utsname.h>
 
@@ -47,6 +48,21 @@ print_escaped(const char *x)
 }
 
 void
+print_iso8601(void)
+{
+  time_t now = time(nullptr);
+  struct tm tm;
+  localtime_r(&now, &tm);
+
+  printf("%04d-%02d-%02dT%02d:%02d:%02d%c%02d%02d",
+         tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+         tm.tm_hour, tm.tm_min, tm.tm_sec,
+         TZ_SECS < 0 ? '+' : '-',
+         std::max(TZ_SECS, -TZ_SECS) / 3600,
+         (std::max(TZ_SECS, -TZ_SECS) % 3600) / 60);
+}
+
+void
 print_kconfig(void)
 {
   char buf[512];
@@ -81,6 +97,10 @@ int main(int argc, char **argv)
   uname(&uts);
 
   printf("==");
+
+  printf(" id=");
+  print_iso8601();
+
   for (int i = 1; i < argc; ++i) {
     printf(" ");
     print_escaped(argv[i]);
