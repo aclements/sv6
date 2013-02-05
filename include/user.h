@@ -36,11 +36,15 @@ int forkt(void *sp, void *pc, void *arg, int forkflags);
 void forkt_setup(u64 pid);
 
 // printf.c
-void printf(const char*, ...);
-void fprintf(int, const char*, ...);
-void snprintf(char *buf, unsigned int n, const char *fmt, ...);
+void printf(const char*, ...)
+  __attribute__((__format__(__printf__, 1, 2)));
+void fprintf(int, const char*, ...)
+  __attribute__((__format__(__printf__, 2, 3)));
+void snprintf(char *buf, unsigned int n, const char *fmt, ...)
+  __attribute__((__format__(__printf__, 3, 4)));
 void vsnprintf(char *buf, u32 n, const char *fmt, va_list ap);
-void die(const char* errstr, ...) __attribute__((noreturn));
+void die(const char* errstr, ...)
+  __attribute__((noreturn, __format__(__printf__, 1, 2)));
 
 // perf.cc
 // Default selector for AMD 10h:
