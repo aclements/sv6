@@ -122,3 +122,9 @@
 // Local time zone in seconds west of UTC.  Default to EST.
 #define TZ_SECS (5*60*60)
 #endif
+#ifndef RTC_TZ_SECS
+// RTC timezone in seconds west of UTC.  We assume the RTC is GMT by
+// default.  Also common is setting the RTC to local time, in which
+// case this should be TZ_SECS.
+#define RTC_TZ_SECS 0
+#endif
