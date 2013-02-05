@@ -224,7 +224,7 @@ pipeline_get_region(uint64_t channel, uint64_t step)
 void*
 thr(void *arg)
 {
-  const uintptr_t cpu = (uintptr_t)arg;
+  const int cpu = (uintptr_t)arg;
 
   const uint64_t inchan = cpu;
   const uint64_t outchan = (cpu + 1) % nthread;

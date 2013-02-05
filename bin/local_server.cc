@@ -46,7 +46,7 @@ make_named_socket(const char *filename)
 static void*
 thread(void* x)
 {
-  long id = (long)x;
+  int id = (uintptr_t)x;
   char message[MAXMSG];
   struct sockaddr_un name;
   socklen_t size;

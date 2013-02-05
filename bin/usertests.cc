@@ -102,7 +102,7 @@ writetest1(void)
   for(u32 i = 0; i < MAXFILE; i++){
     ((int*)buf)[0] = i;
     if(write(fd, buf, 512) != 512){
-      fprintf(stdout, "error: write big file failed\n", i);
+      fprintf(stdout, "error: write big file %d failed\n", i);
       exit();
     }
   }
@@ -1267,7 +1267,7 @@ memtest(void)
     char *p = (char*) mmap(0, 256 * 1024, PROT_READ|PROT_WRITE,
                            MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
     if (p == MAP_FAILED)
-      die("%d: map failed");
+      die("map %d failed", i);
     addr[i] = p;
     // force allocation of memory
     for (int j = 0; j < 256*1024; j += 4096) {
@@ -1298,7 +1298,7 @@ sbrktest(void)
   for(i = 0; i < 5000; i++){
     b = sbrk(1);
     if(b != a){
-      fprintf(stdout, "sbrk test failed %d %x %x\n", i, a, b);
+      fprintf(stdout, "sbrk test failed %d %p %p\n", i, a, b);
       exit();
     }
     *b = 1;
@@ -1325,7 +1325,7 @@ sbrktest(void)
   amt = (632 * 1024) - (uptr)a;
   p = sbrk(amt);
   if(p != a){
-    fprintf(stdout, "sbrk test failed 632K test, p %x a %x\n", p, a);
+    fprintf(stdout, "sbrk test failed 632K test, p %p a %p\n", p, a);
     exit();
   }
   lastaddr = p - 1;
@@ -1335,7 +1335,7 @@ sbrktest(void)
   // is one forbidden from allocating more than 632K?
   c = sbrk(4096);
   if(c != (char*)0xffffffff){
-    fprintf(stdout, "sbrk allocated more than 632K, c %x\n", c);
+    fprintf(stdout, "sbrk allocated more than 632K, c %p\n", c);
     exit();
   }
 #endif
@@ -1349,7 +1349,7 @@ sbrktest(void)
   }
   c = sbrk(0);
   if(c != a - 4096){
-    fprintf(stdout, "sbrk deallocation produced wrong address, a %x c %x\n", a, c);
+    fprintf(stdout, "sbrk deallocation produced wrong address, a %p c %p\n", a, c);
     exit();
   }
 
@@ -1357,7 +1357,7 @@ sbrktest(void)
   a = sbrk(0);
   c = sbrk(4096);
   if(c != a || sbrk(0) != a + 4096){
-    fprintf(stdout, "sbrk re-allocation failed, a %x c %x\n", a, c);
+    fprintf(stdout, "sbrk re-allocation failed, a %p c %p\n", a, c);
     exit();
   }
 #if 0
@@ -1371,7 +1371,7 @@ sbrktest(void)
 #if 0
   c = sbrk(4096);
   if(c != (char*)0xffffffff){
-    fprintf(stdout, "sbrk was able to re-allocate beyond 632K, c %x\n", c);
+    fprintf(stdout, "sbrk was able to re-allocate beyond 632K, c %p\n", c);
     exit();
   }
 #endif

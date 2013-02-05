@@ -4,6 +4,7 @@
 #include "lib.h"
 #include <fcntl.h>
 #include <uk/gcstat.h>
+#include <inttypes.h>
 
 static int cpu = 0;
 static int sec = 2;
@@ -76,7 +77,7 @@ stats(int print)
       die("gct: unexpected read");
 
     if (print)
-      fprintf(1, "%d: ndelay %d nfree %d nrun %d ncycles %lu nop %lu cycles/op %lu\n", 
+      fprintf(1, "%d: ndelay %" PRId64 " nfree %" PRId64 " nrun %" PRId64 " ncycles %lu nop %lu cycles/op %lu\n",
             c++, gs.ndelay, gs.nfree, gs.nrun, gs.ncycles, gs.nop, 
               (gs.nop > 0) ? gs.ncycles/gs.nop : 0);
   }
@@ -134,7 +135,7 @@ child()
   // printf("%d: %d ops in %d sec\n", cpu, n, s);
 
   if (cpu == 0) { 
-    printf("stats for %d sec\n", s);
+    printf("stats for %" PRId64 " sec\n", s);
     stats(1);
   }
   if (cpu == 0) perf_stop();

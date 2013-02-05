@@ -43,7 +43,7 @@ ls(const char *path)
   
   switch(st.st_mode & S_IFMT){
   case S_IFREG:
-    fprintf(1, "- %s %d %d\n", fmtname(path), st.st_ino, st.st_size);
+    fprintf(1, "- %s %d %zu\n", fmtname(path), st.st_ino, st.st_size);
     break;
   
   case S_IFDIR:
@@ -63,7 +63,7 @@ ls(const char *path)
         fprintf(1, "ls: cannot stat %s\n", buf);
         continue;
       }
-      fprintf(1, "d %s %d %d\n", fmtname(buf), st.st_ino, st.st_size);
+      fprintf(1, "d %s %d %zu\n", fmtname(buf), st.st_ino, st.st_size);
     }
     break;
   }

@@ -45,7 +45,7 @@ main(int ac, char **av)
     if (check) {
       for (i = 0; i < count; i++)
         if (rbuf[i] != (i+off)%16)
-          die("ftest %u: %u != %u", i, (int)(rbuf[i]), (off+i)%16);
+          die("ftest %u: %u != %zu", i, (int)(rbuf[i]), (off+i)%16);
       off += count;
     }
   }

@@ -34,7 +34,7 @@ print_escaped(const char *x)
   const char *eq = strchr(x, '=');
   if (eq && eq != x) {
     ++eq;
-    printf("%.*s", (eq - x), x);
+    printf("%.*s", (int)(eq - x), x);
     x = eq;
   }
 

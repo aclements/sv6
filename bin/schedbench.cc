@@ -35,7 +35,7 @@ void* worker0(void* x)
     for (u64 i = 0; i < iters; i++) {
       r = futex(f, FUTEX_WAIT, (u64)(i<<1), 0);
       if (r < 0 && r != -EWOULDBLOCK)
-        die("futex: %d", r);
+        die("futex: %ld", r);
       *f = (i<<1)+2;
       r = futex(f, FUTEX_WAKE, 1, 0);
       assert(r == 0);
@@ -47,7 +47,7 @@ void* worker0(void* x)
       assert(r == 0);
       r = futex(f, FUTEX_WAIT, (u64)(i<<1)+1, 0);
       if (r < 0 && r != -EWOULDBLOCK)
-        die("futex: %d", r);
+        die("futex: %ld", r);
     }
   }
 

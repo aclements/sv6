@@ -75,7 +75,7 @@ mr_map_worker(void *arg)
     }
     kvst_map_worker_finished(cur_lcpu, mr_state.skip_reduce_phase);
     dprintf("total %d map tasks executed in thread %ld(%d)\n",
-	    num_tasks, pthread_self(), cur_lcpu);
+	    num_tasks, (long)pthread_self(), cur_lcpu);
     prof_worker_end(MAP, cur_lcpu);
     return 0;
 }
@@ -96,7 +96,7 @@ mr_reduce_worker(void *arg)
 	dprintf("thread : %d, num of tasks : %d\n", cur_lcpu, cur_task);
     }
     dprintf("total %d reduce tasks executed in thread %ld(%d)\n",
-	    num_tasks, getself(), cur_lcpu);
+	    num_tasks, (long)getself(), cur_lcpu);
     prof_worker_end(REDUCE, cur_lcpu);
     return 0;
 }
