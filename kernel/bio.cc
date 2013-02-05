@@ -1,18 +1,49 @@
 #include "types.h"
 #include "kernel.hh"
-#include "spinlock.h"
-#include "condvar.h"
 #include "buf.hh"
-#include "cpputil.hh"
-#include "ns.hh"
-#include "kstream.hh"
+#include "weakcache.hh"
 
-static console_stream debug(true);
+static weakcache<buf::key_t, buf, &buf::keyhash, 257> bufcache;
 
-static uniqcache<buf> bufcache;
-
-buf*
+sref<buf>
 buf::get(u32 dev, u64 sector)
 {
-  return bufcache.get({ dev, sector });
+  buf::key_t k = { dev, sector };
+  for (;;) {
+    sref<buf> b = bufcache.lookup(k);
+    if (b.get() != nullptr) {
+      // Wait for buffer to load, by getting a read seqlock,
+      // which waits for the write seqlock bit to be cleared.
+      b->seq_.read_begin();
+      return b;
+    }
+
+    sref<buf> nb = sref<buf>::newref(new buf(dev, sector));
+    auto locked = nb->write();
+    if (bufcache.insert(k, nb.get())) {
+      ideread(dev, sector, locked->data);
+      return nb;
+    }
+
+    nb->dec();
+  }
+}
+
+void
+buf::writeback()
+{
+  lock_guard<sleeplock> l(&writeback_lock_);
+  mark_clean();
+  auto copy = read();
+
+  // write copy[] to disk; don't need to wait for write to finish,
+  // as long as write order to disk has been established.
+  idewrite(dev_, sector_, copy->data);
+}
+
+void
+buf::onzero()
+{
+  bufcache.cleanup(weakref_);
+  delete this;
 }

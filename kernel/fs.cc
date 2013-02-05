@@ -52,17 +52,17 @@ static inode* the_root;
 static void
 readsb(int dev, struct superblock *sb)
 {
-  buf* bp = buf::get(dev, 1);
-  auto copy = bp->seq_.read();
-  memmove(sb, copy.data, sizeof(*sb));
+  sref<buf> bp = buf::get(dev, 1);
+  auto copy = bp->read();
+  memmove(sb, copy->data, sizeof(*sb));
 }
 
 // Zero a block.
 static void
 bzero(int dev, int bno)
 {
-  buf* bp = buf::get(dev, bno);
-  auto locked = bp->seq_.write(&bp->write_lock_);
+  sref<buf> bp = buf::get(dev, bno);
+  auto locked = bp->write();
   memset(locked->data, 0, BSIZE);
 }
 
@@ -95,8 +95,8 @@ balloc(u32 dev)
   readsb(dev, &sb);
 
   for(int b = 0; b < sb.size; b += BPB){
-    buf* bp = buf::get(dev, BBLOCK(b, sb.ninodes));
-    auto locked = bp->seq_.write(&bp->write_lock_);
+    sref<buf> bp = buf::get(dev, BBLOCK(b, sb.ninodes));
+    auto locked = bp->write();
 
     for(int bi = 0; bi < BPB && bi < (sb.size - b); bi++){
       int m = 1 << (bi % 8);
@@ -122,9 +122,8 @@ bfree(int dev, u64 x)
   struct superblock sb;
   readsb(dev, &sb);
 
-  buf* bp = buf::get(dev, BBLOCK(b, sb.ninodes));
-  lock_guard<sleeplock> l(&bp->write_lock_);
-  auto locked = bp->seq_.write(&bp->write_lock_);
+  sref<buf> bp = buf::get(dev, BBLOCK(b, sb.ninodes));
+  auto locked = bp->write();
 
   int bi = b % BPB;
   int m = 1 << (bi % 8);
@@ -398,8 +397,8 @@ iupdate(struct inode *ip)
   scoped_gc_epoch e;
 
   {
-    buf* bp = buf::get(ip->dev, IBLOCK(ip->inum));
-    auto locked = bp->seq_.write(&bp->write_lock_);
+    sref<buf> bp = buf::get(ip->dev, IBLOCK(ip->inum));
+    auto locked = bp->write();
 
     dinode *dip = (struct dinode*)locked->data + ip->inum%IPB;
     dip->type = ip->type;
@@ -413,9 +412,8 @@ iupdate(struct inode *ip)
 
   if (ip->addrs[NDIRECT] != 0) {
     assert(ip->iaddrs.load() != nullptr);
-    buf* bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
-    auto locked = bp->seq_.write(&bp->write_lock_);
-
+    sref<buf> bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
+    auto locked = bp->write();
     memmove(locked->data, (void*)ip->iaddrs.load(), IADDRSSZ);
   }
 }
@@ -513,9 +511,9 @@ void
 inode::init(void)
 {
   scoped_gc_epoch e;
-  buf *bp = buf::get(dev, IBLOCK(inum));
-  auto copy = bp->seq_.read();
-  dinode *dip = (struct dinode*)copy.data + inum%IPB;
+  sref<buf> bp = buf::get(dev, IBLOCK(inum));
+  auto copy = bp->read();
+  const dinode *dip = (const struct dinode*)copy->data + inum%IPB;
 
   type = dip->type;
   major = dip->major;
@@ -710,8 +708,9 @@ bmap(struct inode *ip, u32 bn)
       }
 
       volatile u32* iaddrs = (u32*)kmalloc(IADDRSSZ, "iaddrs");
-      buf* bp = buf::get(ip->dev, addr);
-      memmove((void*)iaddrs, bp->seq_.read().data, IADDRSSZ);
+      sref<buf> bp = buf::get(ip->dev, addr);
+      auto copy = bp->read();
+      memmove((void*)iaddrs, copy->data, IADDRSSZ);
 
       if (!cmpxch(&ip->iaddrs, (volatile u32*)nullptr, iaddrs)) {
         bfree(ip->dev, addr);
@@ -748,13 +747,13 @@ retry3:
     }
   }
 
-  buf* wb = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
+  sref<buf> wb = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
 
   for (;;) {
-    auto copy = wb->seq_.read();
-    ap = (u32*)copy.data;
+    auto copy = wb->read();
+    ap = (u32*)copy->data;
     if (ap[bn / NINDIRECT] == 0) {
-      auto locked = wb->seq_.write(&wb->write_lock_);
+      auto locked = wb->write();
       ap = (u32*)locked->data;
       if (ap[bn / NINDIRECT] == 0)
         ap[bn / NINDIRECT] = balloc(ip->dev);
@@ -767,10 +766,10 @@ retry3:
   wb = buf::get(ip->dev, addr);
 
   for (;;) {
-    auto copy = wb->seq_.read();
-    ap = (u32*)copy.data;
+    auto copy = wb->read();
+    ap = (u32*)copy->data;
     if (ap[bn % NINDIRECT] == 0) {
-      auto locked = wb->seq_.write(&wb->write_lock_);
+      auto locked = wb->write();
       ap = (u32*)locked->data;
       if (ap[bn % NINDIRECT] == 0)
         ap[bn % NINDIRECT] = balloc(ip->dev);
@@ -821,9 +820,9 @@ itrunc(struct inode *ip)
   }
   
   if(ip->addrs[NDIRECT]){
-    buf* bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
-    auto copy = bp->seq_.read();
-    u32* a = (u32*)copy.data;
+    sref<buf> bp = buf::get(ip->dev, ip->addrs[NDIRECT]);
+    auto copy = bp->read();
+    u32* a = (u32*)copy->data;
     for(int i = 0; i < NINDIRECT; i++){
       if(a[i]) {
         diskblock *db = new diskblock(ip->dev, a[i]);
@@ -837,16 +836,16 @@ itrunc(struct inode *ip)
   }
 
   if(ip->addrs[NDIRECT+1]){
-    buf* bp1 = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
-    auto copy1 = bp1->seq_.read();
-    u32* a1 = (u32*)copy1.data;
+    sref<buf> bp1 = buf::get(ip->dev, ip->addrs[NDIRECT+1]);
+    auto copy1 = bp1->read();
+    u32* a1 = (u32*)copy1->data;
     for(int i = 0; i < NINDIRECT; i++){
       if(!a1[i])
         continue;
 
-      buf* bp2 = buf::get(ip->dev, a1[i]);
-      auto copy2 = bp2->seq_.read();
-      u32* a2 = (u32*)copy2.data;
+      sref<buf> bp2 = buf::get(ip->dev, a1[i]);
+      auto copy2 = bp2->read();
+      u32* a2 = (u32*)copy2->data;
       for(int j = 0; j < NINDIRECT; j++){
         if(!a2[j])
           continue;
@@ -894,7 +893,7 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
   scoped_gc_epoch e;
 
   u32 tot, m;
-  buf *bp;
+  sref<buf> bp;
 
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
@@ -916,8 +915,8 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
     }
     m = min(n - tot, BSIZE - off%BSIZE);
 
-    auto copy = bp->seq_.read();
-    memmove(dst, copy.data + off%BSIZE, m);
+    auto copy = bp->read();
+    memmove(dst, copy->data + off%BSIZE, m);
   }
   return n;
 }
@@ -930,7 +929,7 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
   scoped_gc_epoch e;
 
   int tot, m;
-  buf* bp;
+  sref<buf> bp;
 
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].write)
@@ -954,7 +953,7 @@ writei(struct inode *ip, const char *src, u32 off, u32 n)
       break;
     }
     m = min(n - tot, BSIZE - off%BSIZE);
-    auto locked = bp->seq_.write(&bp->write_lock_);
+    auto locked = bp->write();
     memmove(locked->data + off%BSIZE, src, m);
   }
 
@@ -1001,16 +1000,16 @@ dir_init(struct inode *dp)
 
   auto dir = new dirns();
   for (u32 off = 0; off < dp->size; off += BSIZE) {
-    struct buf* bp;
+    sref<buf> bp;
     try {
       bp = buf::get(dp->dev, bmap(dp, off / BSIZE));
     } catch (out_of_blocks& e) {
       // Read operations should never cause out-of-blocks conditions
       panic("dir_init: out of blocks");
     }
-    auto copy = bp->seq_.read();
-    for (struct dirent *de = (struct dirent *) copy.data;
-	 de < (struct dirent *) (copy.data + BSIZE);
+    auto copy = bp->read();
+    for (const struct dirent *de = (const struct dirent *) copy->data;
+	 de < (const struct dirent *) (copy->data + BSIZE);
 	 de++) {
       if (de->inum)
         dir->insert(strbuf<DIRSIZ>(de->name), de->inum);

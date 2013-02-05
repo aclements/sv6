@@ -44,11 +44,6 @@ public:
       std::atomic_thread_fence(std::memory_order_release);
       return sc_->seq_.load(std::memory_order_relaxed) != init_;
     }
-
-    T count() const
-    {
-      return init_;
-    }
   };
 
   /**
@@ -157,61 +152,4 @@ public:
     std::atomic_thread_fence(std::memory_order_acquire);
     return writer(this, val + 1);
   }
-
-  T count() const
-  {
-    // XXX what memory order should we use here?
-    return seq_.load();
-  }
-};
-
-template<typename T>
-class seqlocked
-{
-public:
-  T read(u32* store_count = nullptr) const {
-    for (;;) {
-      auto r = seq_.read_begin();
-      T copy = state_;
-      if (!r.need_retry()) {
-        if (store_count)
-          *store_count = r.count();
-        return copy;
-      }
-    }
-  }
-
-  template<typename Lock>
-  class writer {
-  public:
-    writer(seqcount<u32>* seq, Lock* l, T* s)
-      : lg_(l), sw_(seq->write_begin()), stateptr_(s) {}
-
-    writer(writer &&o) = default;
-    writer &operator=(writer &&o) = default;
-    writer(const writer &o) = delete;
-    writer &operator=(const writer &o) = delete;
-
-    T* operator->() const {
-      return stateptr_;
-    }
-
-  private:
-    lock_guard<Lock> lg_;
-    seqcount<u32>::writer sw_;
-    T* stateptr_;
-  };
-
-  template<typename Lock>
-  writer<Lock> write(Lock* l) {
-    return writer<Lock>(&seq_, l, &state_);
-  }
-
-  u32 count() const {
-    return seq_.count();
-  }
-
-private:
-  seqcount<u32> seq_;
-  T state_;
 };
