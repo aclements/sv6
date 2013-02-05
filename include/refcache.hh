@@ -249,6 +249,11 @@ namespace refcache {
     // get() through this, so it doesn't actually matter what type we
     // use.
     weakref<weak_referenced> *weakref_;
+
+  public:
+    constexpr weak_referenced(uint64_t refcount = 1)
+      : referenced(refcount),
+        weakref_(nullptr) { }
   };
 
   // A weak reference to an object of type T, which must be a subclass
