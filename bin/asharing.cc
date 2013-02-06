@@ -7,6 +7,7 @@
 #include "pthread.h"
 #include "rnd.hh"
 
+#include <stdio.h>
 #include <sys/mman.h>
 
 #include <atomic>

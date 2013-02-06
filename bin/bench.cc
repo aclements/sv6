@@ -2,6 +2,7 @@
 #include "user.h"
 #include "amd64.h"
 #include "lib.h"
+#include <stdio.h>
 
 static u64
 time_this(const char *av[])

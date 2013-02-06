@@ -1,5 +1,4 @@
 #if defined(LINUX)
-#include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -15,6 +14,8 @@
 #define SERVER  "/serversocket"
 #define CLIENT  "/mysocket"
 #endif
+
+#include <stdio.h>
 
 #define MAXMSG  512
 #define MESSAGE "Hello, local socket server?"

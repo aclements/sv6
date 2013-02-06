@@ -1,6 +1,7 @@
 #include "types.h"
 #include "user.h"
 #include "pthread.h"
+#include <stdio.h>
 
 __thread u8 b = 0xee;
 __thread u64 a = 0xdeadbeef001234;

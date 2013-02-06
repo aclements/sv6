@@ -3,6 +3,7 @@
 #include "kstats.hh"
 
 #include <fcntl.h>
+#include <stdio.h>
 
 int
 xread(int fd, const void *buf, size_t n)

@@ -3,7 +3,7 @@ $(O)/lib/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER -fno-exceptions -fno-rtti
 
 ULIB = ulib.o printf.o umalloc.o uthread.o fmt.o stream.o \
        threads.o crt.o sysstubs.o ipc.o perf.o \
-       getopt.o rand.o msort.o qsort.o stdio.o ctype.o \
+       getopt.o rand.o msort.o qsort.o ctype.o \
        time.o timemath.o
 ULIB := $(addprefix $(O)/lib/, $(ULIB))
 ULIBA = $(O)/lib/libu.a

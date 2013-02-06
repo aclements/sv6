@@ -3,6 +3,7 @@
 #include "amd64.h"
 #include "pmc.hh"
 #include "bits.hh"
+#include <stdio.h>
 
 #define CMN PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE
 

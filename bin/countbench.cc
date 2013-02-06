@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -14,7 +15,6 @@
 #include "include/compiler.h"
 #define NCPU 256
 #include <pthread.h>
-#include <stdio.h>
 #include "user/util.h"
 #include <assert.h>
 #include <sys/wait.h>

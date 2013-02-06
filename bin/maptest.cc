@@ -5,6 +5,7 @@
 #include "uspinlock.h"
 #include "pthread.h"
 
+#include <stdio.h>
 #include <sys/mman.h>
 
 static volatile char *p;

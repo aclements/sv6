@@ -5,6 +5,7 @@
 #include "elfuser.hh"
 #include <unistd.h>
 #include <sched.h>
+#include <stdio.h>
 
 enum { stack_size = 8192 };
 static std::atomic<int> nextkey;

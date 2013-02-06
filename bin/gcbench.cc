@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <uk/gcstat.h>
 #include <inttypes.h>
+#include <stdio.h>
 
 static int cpu = 0;
 static int sec = 2;

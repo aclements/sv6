@@ -4,8 +4,9 @@
 #include "pthread.h"
 #include "futex.h"
 #include "errno.h"
-#include <atomic>
 #include "mtrace.h"
+#include <atomic>
+#include <stdio.h>
 
 static volatile std::atomic<u64> waiting;
 static volatile std::atomic<u64> waking __attribute__((unused));

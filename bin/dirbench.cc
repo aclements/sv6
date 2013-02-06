@@ -14,6 +14,7 @@
 #include "xsys.h"
 #endif
 #include <fcntl.h>
+#include <stdio.h>
 #include <sys/stat.h>
 
 static const bool pinit = true;

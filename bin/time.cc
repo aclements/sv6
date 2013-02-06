@@ -1,6 +1,7 @@
 #include "types.h"
 #include "user.h"
 #include "amd64.h"
+#include <stdio.h>
 
 int
 main(int ac, const char *av[])

@@ -2,6 +2,7 @@
 #include "user.h"
 #include "mtrace.h"
 #include "amd64.h"
+#include <stdio.h>
 
 #define NITERS 1024
 

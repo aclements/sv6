@@ -3,6 +3,12 @@ extern "C" {
 #include "lwip/sockets.h"
 }
 
+#if defined(XV6_KERNEL)
+#include "kernel.hh"
+#else
+#include <stdio.h>
+#endif
+
 static inline const char *
 ipaddr(struct sockaddr_in *sin)
 {

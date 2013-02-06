@@ -14,6 +14,7 @@
 #endif
 #include "xsys.h"
 #include <inttypes.h>
+#include <stdio.h>
 #include <sys/mman.h>
 #include <unistd.h>
 

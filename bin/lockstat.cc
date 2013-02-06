@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include "amd64.h"
 #include "uk/lockstat.h"
+#include <stdio.h>
 
 static void
 xwrite(int fd, char c)

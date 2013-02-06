@@ -1,5 +1,6 @@
 #include "types.h"
 #include "user.h"
+#include <stdio.h>
 
 #define NCHILD 2
 #define NDEPTH 5

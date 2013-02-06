@@ -4,7 +4,7 @@
 #include "lib.h"
 #include "amd64.h"
 #include "ipc.hh"
-#include "stream.h"
+#include <stdio.h>
 
 #define FSIZE (64 << 10)
 #define BSIZE 4096

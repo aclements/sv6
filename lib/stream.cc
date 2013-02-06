@@ -1,6 +1,5 @@
 #include "types.h"
 #include "user.h"
-#include "stream.h"
 #include "lib.h"
 #include "amd64.h"
 #include "ipc.hh"
@@ -169,4 +168,12 @@ int
 ferror(FILE *fp)
 {
   return fp->err;
+}
+
+int
+fflush(FILE* stream)
+{
+  // We don't implement buffering for writable files, so this does
+  // nothing.
+  return 0;
 }
