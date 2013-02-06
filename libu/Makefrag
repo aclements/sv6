@@ -1,0 +1,25 @@
+# -*- makefile-gmake -*-
+
+$(O)/libu/%.o: CXXFLAGS:=$(CXXFLAGS) -fno-exceptions -fno-rtti
+
+ifeq ($(PLATFORM),xv6)
+$(O)/libu/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
+$(O)/libu/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER
+endif
+
+LIBU_OBJS := \
+
+LIBU_OBJS := $(addprefix $(O)/libu/, $(LIBU_OBJS))
+LIBU_A = $(O)/libu/libu.a
+
+# Assume all of the library sources include sysstubs.h
+$(LIBU_OBJS): $(O)/include/sysstubs.h
+
+$(LIBU_A): $(LIBU_OBJS)
+	@echo "  AR     $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AR) rc $@ $^
+
+.PRECIOUS: $(O)/libu/%.o
+.PRECIOUS: $(LIBU_A)
+-include $(O)/libu/*.d
