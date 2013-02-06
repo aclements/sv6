@@ -1,6 +1,11 @@
 # -*-Makefile-*-
+$(O)/bin/%.o: CFLAGS:=$(CFLAGS)
+$(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -fno-exceptions -fno-rtti
+
+ifeq ($(PLATFORM),xv6)
 $(O)/bin/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
-$(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER -fno-exceptions -fno-rtti
+$(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER
+endif
 
 UPROGS_BIN= \
         bench \
@@ -73,10 +78,15 @@ FSEXTRA += \
 	bin/lsocket \
 	bin/countbench-ben \
 
-$(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIBA) $(LIBUTIL_A)
+ifneq ($(PLATFORM),native)
+UPROGS_LIBS += $(ULIBA)
+endif
+UPROGS_LIBS += $(LIBUTIL_A)
+
+$(O)/bin/%.unstripped: $(O)/bin/%.o $(UPROGS_LIBS)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(LD) $(LDFLAGS) -o $@ $< $(ULIBA) $(LIBUTIL_A)
+	$(Q)$(LD) $(LDFLAGS) -o $@ $^
 
 $(O)/bin/%: $(O)/bin/%.unstripped
 	@echo "  STRIP  $@"
