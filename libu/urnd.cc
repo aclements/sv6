@@ -1,10 +1,11 @@
-#include "types.h"
-#include "user.h"
+#include "rnd.hh"
+
+#include <unistd.h>
 
 // Random number generator for randomized tests
-static __thread u64 rseed;
+static __thread uint64_t rseed;
 
-u64
+uint64_t
 rnd(void)
 {
   if (rseed == 0)
@@ -12,4 +13,3 @@ rnd(void)
   rseed = rseed * 6364136223846793005 + 1442695040888963407;
   return rseed;
 }
-

@@ -1,3 +1,5 @@
 #pragma once
 
-u64 rnd();
+#include <stdint.h>
+
+uint64_t rnd();

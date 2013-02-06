@@ -37,19 +37,29 @@ NM = $(TOOLPREFIX)nm
 OBJCOPY = $(TOOLPREFIX)objcopy
 STRIP = $(TOOLPREFIX)strip
 
+ifeq ($(PLATFORM),xv6)
 INCLUDES  = --sysroot=$(O)/sysroot \
 	-iquote include -iquote$(O)/include \
 	-iquote libu/include \
 	-Istdinc -I$(QEMUSRC) \
 	-include param.h -include libu/include/compiler.h
-COMFLAGS  = -static -g -MD -MP -m64 -O3 -Wall -Werror -DHW_$(HW) -DXV6_HW=$(HW) -DXV6 \
+COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
-	    -mno-red-zone $(INCLUDES)
+	    -mno-red-zone
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
+LDFLAGS   = -m elf_x86_64
+else
+INCLUDES := -include param.h -iquote libu/include
+COMFLAGS := -pthread
+LDFLAGS := -pthread
+# No mere mortal can call ld correctly on a real machine, so use gcc's
+# link driver instead.
+LD = $(TOOLPREFIX)gcc
+endif
+COMFLAGS += -g -MD -MP -O3 -Wall -Werror -DHW_$(HW) $(INCLUDES)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare $(CXXFLAGS)
 ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
-LDFLAGS   = -m elf_x86_64
 
 ALL := 
 all:

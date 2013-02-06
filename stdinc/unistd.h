@@ -7,6 +7,7 @@
 BEGIN_DECLS
 
 unsigned sleep(unsigned);
+pid_t getpid(void);
 
 extern char* optarg;
 int getopt(int ac, char** av, const char* optstring);

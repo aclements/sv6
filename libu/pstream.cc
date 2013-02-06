@@ -1,5 +1,6 @@
 #include "pstream.hh"
-#include "user.h"               // For strlen
+
+#include <string.h>
 
 static void
 streamnum (print_stream *s, unsigned long long num,

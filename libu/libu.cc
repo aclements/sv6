@@ -1,11 +1,10 @@
 // Miscellaneous libu utilities
 
-#include "types.h"
-#include "user.h"
 #include "libu.h"
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 void __attribute__((noreturn))
 die(const char* errstr, ...)
@@ -16,5 +15,9 @@ die(const char* errstr, ...)
   vfprintf(stderr, errstr, ap);
   va_end(ap);
   fprintf(stderr, "\n");
+#if defined(XV6_USER)
   exit();
+#else
+  exit(1);
+#endif
 }
