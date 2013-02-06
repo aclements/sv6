@@ -14,14 +14,6 @@ LIBU_OBJS := \
 	urnd.o \
 	libu.o \
 
-ifeq ($(PLATFORM),xv6)
-# xv6-only sources
-LIBU_OBJS += \
-	ipc.o \
-	perf.o \
-
-endif
-
 LIBU_OBJS := $(addprefix $(O)/libu/, $(LIBU_OBJS))
 LIBU_A = $(O)/libu/libu.a
 
