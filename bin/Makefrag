@@ -82,6 +82,7 @@ ifeq ($(PLATFORM),native)
 # Build binaries that work on native
 ALL += $(O)/bin/mapbench \
 	$(O)/bin/tee \
+	$(O)/bin/benchhdr \
 
 endif
 
