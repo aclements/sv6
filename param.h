@@ -83,16 +83,6 @@
 #define MTRACE        0
 #define CODEX         0
 #define PERFSIZE      (16<<20ull)
-#elif defined(HW_wq)
-#define NCPU          2
-#define MTRACE        0
-#define CODEX         0
-#define PERFSIZE      (16<<20ull)
-#elif defined(HW_usched)
-#define NCPU          2
-#define MTRACE        0
-#define CODEX         0
-#define PERFSIZE      (16<<20ull)
 #elif defined(HW_bench)
 #define NCPU          48
 #define MTRACE        0
