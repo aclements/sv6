@@ -63,36 +63,6 @@ echo
 ./mapbench 70 pipeline
 ./mapbench 80 pipeline
 
-./mapbench 1 global
-./mapbench 10 global
-./mapbench 20 global
-./mapbench 30 global
-./mapbench 40 global
-./mapbench 50 global
-./mapbench 60 global
-./mapbench 70 global
-./mapbench 80 global
-
-./mapbench 1 global
-./mapbench 10 global
-./mapbench 20 global
-./mapbench 30 global
-./mapbench 40 global
-./mapbench 50 global
-./mapbench 60 global
-./mapbench 70 global
-./mapbench 80 global
-
-./mapbench 1 global
-./mapbench 10 global
-./mapbench 20 global
-./mapbench 30 global
-./mapbench 40 global
-./mapbench 50 global
-./mapbench 60 global
-./mapbench 70 global
-./mapbench 80 global
-
 ./mapbench 1 global 16
 ./mapbench 10 global 16
 ./mapbench 20 global 16
@@ -122,6 +92,38 @@ echo
 ./mapbench 60 global 16
 ./mapbench 70 global 16
 ./mapbench 80 global 16
+
+# Below here is unused in RadixVM
+
+# ./mapbench 1 global
+# ./mapbench 10 global
+# ./mapbench 20 global
+# ./mapbench 30 global
+# ./mapbench 40 global
+# ./mapbench 50 global
+# ./mapbench 60 global
+# ./mapbench 70 global
+# ./mapbench 80 global
+
+# ./mapbench 1 global
+# ./mapbench 10 global
+# ./mapbench 20 global
+# ./mapbench 30 global
+# ./mapbench 40 global
+# ./mapbench 50 global
+# ./mapbench 60 global
+# ./mapbench 70 global
+# ./mapbench 80 global
+
+# ./mapbench 1 global
+# ./mapbench 10 global
+# ./mapbench 20 global
+# ./mapbench 30 global
+# ./mapbench 40 global
+# ./mapbench 50 global
+# ./mapbench 60 global
+# ./mapbench 70 global
+# ./mapbench 80 global
 
 # ./mapbench 1 global2
 # ./mapbench 10 global2
