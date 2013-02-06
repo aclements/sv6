@@ -65,6 +65,17 @@ printf(const char *fmt, ...)
   flushoutbuf(&b);
 }
 
+void
+vfdprintf(int fd, const char *fmt, va_list ap)
+{
+  struct outbuf b;
+
+  b.n = 0;
+  b.fd = fd;
+  vprintfmt(writeoutbuf, (void*) &b, fmt, ap);
+  flushoutbuf(&b);
+}
+
 // Print to a buffer.
 struct bufstate {
   char *p;
@@ -97,20 +108,4 @@ snprintf(char *buf, u32 n, const char *fmt, ...)
   va_start(ap, fmt);
   vsnprintf(buf, n, fmt, ap);
   va_end(ap);
-}
-
-void __attribute__((noreturn))
-die(const char* errstr, ...)
-{
-  struct outbuf b;
-  va_list ap;
-
-  b.n = 0;
-  b.fd = 2;
-  va_start(ap, errstr);
-  vprintfmt(writeoutbuf, (void*)&b, errstr, ap);
-  va_end(ap);
-  flushoutbuf(&b);
-  fprintf(2, "\n");
-  exit();
 }

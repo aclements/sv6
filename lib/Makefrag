@@ -1,9 +1,9 @@
 $(O)/lib/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
 $(O)/lib/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER -fno-exceptions -fno-rtti
 
-ULIB = ulib.o printf.o umalloc.o uthread.o urnd.o fmt.o stream.o ipc.o \
-       threads.o crt.o perf.o sysstubs.o testgen.o \
-       pstream.o getopt.o rand.o msort.o qsort.o stdio.o ctype.o \
+ULIB = ulib.o printf.o umalloc.o uthread.o fmt.o stream.o \
+       threads.o crt.o sysstubs.o \
+       getopt.o rand.o msort.o qsort.o stdio.o ctype.o \
        time.o timemath.o
 ULIB := $(addprefix $(O)/lib/, $(ULIB))
 ULIBA = $(O)/lib/libu.a

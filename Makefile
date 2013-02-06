@@ -41,7 +41,7 @@ INCLUDES  = --sysroot=$(O)/sysroot \
 	-iquote include -iquote$(O)/include \
 	-iquote libu/include \
 	-Istdinc -I$(QEMUSRC) \
-	-include param.h -include include/compiler.h
+	-include param.h -include libu/include/compiler.h
 COMFLAGS  = -static -g -MD -MP -m64 -O3 -Wall -Werror -DHW_$(HW) -DXV6_HW=$(HW) -DXV6 \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
 	    -mno-red-zone $(INCLUDES)
