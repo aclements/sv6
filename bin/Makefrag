@@ -73,10 +73,10 @@ FSEXTRA += \
 	bin/lsocket \
 	bin/countbench-ben \
 
-$(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIBA) $(LIBU_A)
+$(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIBA) $(LIBUTIL_A)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(LD) $(LDFLAGS) -o $@ $< $(ULIBA) $(LIBU_A)
+	$(Q)$(LD) $(LDFLAGS) -o $@ $< $(ULIBA) $(LIBUTIL_A)
 
 $(O)/bin/%: $(O)/bin/%.unstripped
 	@echo "  STRIP  $@"

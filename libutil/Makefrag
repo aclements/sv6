@@ -1,0 +1,30 @@
+# -*- makefile-gmake -*-
+
+$(O)/libutil/%.o: CXXFLAGS:=$(CXXFLAGS) -fno-exceptions -fno-rtti
+
+ifeq ($(PLATFORM),xv6)
+$(O)/libutil/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
+$(O)/libutil/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER
+endif
+
+LIBUTIL_OBJS := \
+	libgc.o \
+	pstream.o \
+	testgen.o \
+	urnd.o \
+	libutil.o \
+
+LIBUTIL_OBJS := $(addprefix $(O)/libutil/, $(LIBUTIL_OBJS))
+LIBUTIL_A = $(O)/libutil/libutil.a
+
+# Assume all of the library sources include sysstubs.h
+$(LIBUTIL_OBJS): $(O)/include/sysstubs.h
+
+$(LIBUTIL_A): $(LIBUTIL_OBJS)
+	@echo "  AR     $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)$(AR) rc $@ $^
+
+.PRECIOUS: $(O)/libutil/%.o
+.PRECIOUS: $(LIBUTIL_A)
+-include $(O)/libutil/*.d

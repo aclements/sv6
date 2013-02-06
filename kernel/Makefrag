@@ -122,7 +122,7 @@ $(O)/kernel/%.o: lib/%.c $(O)/sysroot
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
 
-$(O)/kernel/%.o: libu/%.cc $(O)/sysroot
+$(O)/kernel/%.o: libutil/%.cc $(O)/sysroot
 	@echo "  CXX    $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<

@@ -1,6 +1,6 @@
-// Miscellaneous libu utilities
+// Miscellaneous utilities
 
-#include "libu.h"
+#include "libutil.h"
 
 #include <stdarg.h>
 #include <stdio.h>

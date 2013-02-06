@@ -40,16 +40,16 @@ STRIP = $(TOOLPREFIX)strip
 ifeq ($(PLATFORM),xv6)
 INCLUDES  = --sysroot=$(O)/sysroot \
 	-iquote include -iquote$(O)/include \
-	-iquote libu/include \
+	-iquote libutil/include \
 	-Istdinc -I$(QEMUSRC) \
-	-include param.h -include libu/include/compiler.h
+	-include param.h -include libutil/include/compiler.h
 COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
 	    -mno-red-zone
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
 LDFLAGS   = -m elf_x86_64
 else
-INCLUDES := -include param.h -iquote libu/include
+INCLUDES := -include param.h -iquote libutil/include
 COMFLAGS := -pthread
 LDFLAGS := -pthread
 # No mere mortal can call ld correctly on a real machine, so use gcc's
@@ -73,7 +73,7 @@ endef
 
 include net/Makefrag
 include lib/Makefrag
-include libu/Makefrag
+include libutil/Makefrag
 include bin/Makefrag
 include kernel/Makefrag
 include tools/Makefrag
