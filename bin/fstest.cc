@@ -3,6 +3,9 @@
 #include <atomic>
 #ifndef XV6_USER
 #include <string.h>
+#else
+#include "types.h"
+#include "user.h"
 #endif
 #include "mtrace.h"
 #include "fstest.h"

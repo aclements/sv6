@@ -1,7 +1,6 @@
 #pragma once
-#include "types.h"
-#include "user.h"
 
+#include <stdarg.h>
 #include <sys/stat.h>
 
 BEGIN_DECLS
