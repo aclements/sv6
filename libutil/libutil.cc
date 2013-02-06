@@ -4,11 +4,13 @@
 
 #include <stdarg.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <unistd.h>
 
 static void __attribute__((noreturn))
 vdie(const char* errstr, va_list ap)
@@ -47,6 +49,35 @@ edie(const char* errstr, ...)
   fprintf(stderr, ": %s\n", strerror(errno));
   exit(1);
 #endif
+}
+
+size_t
+xread(int fd, void *buf, size_t n)
+{
+  size_t pos = 0;
+  while (pos < n) {
+    int r = read(fd, (char*)buf + pos, n - pos);
+    if (r < 0)
+      die("read failed");
+    if (r == 0)
+      break;
+    pos += r;
+  }
+  return pos;
+}
+
+void
+xwrite(int fd, const void *buf, size_t n)
+{
+  int r;
+
+  while (n) {
+    r = write(fd, buf, n);
+    if (r < 0 || r == 0)
+      die("write failed");
+    buf = (char *) buf + r;
+    n -= r;
+  }
 }
 
 #if !defined(XV6_USER)

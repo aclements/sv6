@@ -161,21 +161,6 @@ timer_thread(void *)
   return NULL;
 }
 
-int
-xread(int fd, const void *buf, size_t n)
-{
-  size_t pos = 0;
-  while (pos < n) {
-    int r = read(fd, (char*)buf + pos, n - pos);
-    if (r < 0)
-      die("read failed");
-    if (r == 0)
-      break;
-    pos += r;
-  }
-  return pos;
-}
-
 #ifndef XV6_USER
 struct kstats
 {
