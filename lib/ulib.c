@@ -217,7 +217,8 @@ sleep(unsigned secs)
 extern void __cxa_pure_virtual(void);
 void __cxa_pure_virtual(void)
 { 
-  die("__cxa_pure_virtual");
+  fprintf(2, "__cxa_pure_virtual");
+  exit();
 }
 
 struct proghdr *_dl_phdr;
