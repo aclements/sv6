@@ -130,7 +130,7 @@ idleloop(void)
           p->cpuid = mycpu()->id;
           p->cpu_pin = 1;
           p->context->rip = (u64)idleheir;
-          p->cwd = nullptr;
+          p->cwd.reset();
           myidle->heir = p;
         }
 

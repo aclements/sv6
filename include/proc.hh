@@ -64,7 +64,7 @@ struct proc : public rcu_freed, public sched_link {
   struct context *context;     // swtch() here to run process
   int killed;                  // If non-zero, have been killed
   filetable *ftable;
-  struct inode *cwd;           // Current directory
+  sref<inode> cwd;             // Current directory
   char name[16];               // Process name (debugging)
   u64 tsc;
   u64 curcycles;

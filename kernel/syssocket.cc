@@ -319,7 +319,7 @@ sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
     return -1;
 
   if (f->socket == PF_LOCAL) {
-    struct inode *ip;
+    sref<inode> ip;
     struct sockaddr_un uaddr;
 
     if (fetchmem(&uaddr, xaddr, sizeof(sockaddr_un)) < 0) 
@@ -329,8 +329,6 @@ sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
     ip->localsock = f->localsock;
     f->ip = ip;
     strncpy(ip->socketpath, uaddr.sun_path, UNIX_PATH_MAX);
-
-    iput(ip);
     return 0;
   }  else {
     r = netbind(f->socket, xaddr, xaddrlen);
@@ -417,7 +415,7 @@ int
 sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags, 
            const struct sockaddr *dest_addr, u32 addrlen, int client)
 {
-  struct inode *ip;
+  sref<inode> ip;
   sref<file> f;
   struct sockaddr_un uaddr;
 

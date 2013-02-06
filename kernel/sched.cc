@@ -328,7 +328,7 @@ public:
     post_swtch();
   }
 
-  int statread(struct inode *inode, char *dst, u32 off, u32 n)
+  int statread(sref<inode> inode, char *dst, u32 off, u32 n)
   {
     // Sort of like a binary /proc/stat
     size_t sz = NCPU*sizeof(sched_stat);
@@ -389,7 +389,7 @@ addrun(struct proc* p)
 }
 
 static int
-statread(struct inode *inode, char *dst, u32 off, u32 n)
+statread(sref<inode> inode, char *dst, u32 off, u32 n)
 {
   return thesched_dir.statread(inode, dst, off, n);
 }

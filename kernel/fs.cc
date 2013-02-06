@@ -44,7 +44,7 @@
 #include "lb.hh"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
-static inode* the_root;
+static sref<inode> the_root;
 
 #define IADDRSSZ (sizeof(u32)*NINDIRECT)
 
@@ -180,7 +180,7 @@ initinode(void)
 
   ins = new nstbl<pair<u32, u32>, inode*, ino_hash>();
   the_root = inode::alloc(ROOTDEV, ROOTINO);
-  if (!ins->insert(make_pair(the_root->dev, the_root->inum), the_root))
+  if (!ins->insert(make_pair(the_root->dev, the_root->inum), the_root.get()))
     panic("initinode: insert the_root failed");
   the_root->init();
 
@@ -325,14 +325,12 @@ private:
 
 static inode_cache_dir the_inode_cache;
 
-static inode*
+static sref<inode>
 try_ialloc(u32 inum, u32 dev, short type)
 {
-  inode* ip = iget(dev, inum);
-  if (ip->type || !cmpxch(&ip->type, (short) 0, type)) {
-    iput(ip);
-    return nullptr;
-  }
+  sref<inode> ip = iget(dev, inum);
+  if (ip->type || !cmpxch(&ip->type, (short) 0, type))
+    return sref<inode>();
 
   ilock(ip, 1);
   auto w = ip->seq.write_begin();
@@ -344,7 +342,7 @@ try_ialloc(u32 inum, u32 dev, short type)
 
 // Allocate a new inode with the given type on device dev.
 // Returns a locked inode.
-struct inode*
+sref<inode>
 ialloc(u32 dev, short type)
 {
   // XXX should be replaced with lb?
@@ -352,7 +350,7 @@ ialloc(u32 dev, short type)
   scoped_gc_epoch e;
 
   superblock sb;
-  inode* ip;
+  sref<inode> ip;
   int inum;
 
   // Try the local cache first..
@@ -384,7 +382,7 @@ ialloc(u32 dev, short type)
   }
 
   cprintf("ialloc: 0/%u inodes\n", sb.ninodes);
-  return nullptr;
+  return sref<inode>();
 }
 
 // Copy inode, which has changed, from memory to disk.
@@ -451,16 +449,16 @@ inode::~inode()
   }
 }
 
-inode*
+sref<inode>
 iget(u32 dev, u32 inum)
 {
-  inode* ip;
+  sref<inode> ip;
 
   // Assumes caller is holding a gc_epoch
 
  retry:
   // Try for cached inode.
-  ip = ins->lookup(make_pair(dev, inum));
+  ip = sref<inode>::newref(ins->lookup(make_pair(dev, inum)));
   if (ip) {
     if (!ip->valid) {
       acquire(&ip->lock);
@@ -468,8 +466,6 @@ iget(u32 dev, u32 inum)
         ip->cv.sleep(&ip->lock);
       release(&ip->lock);
     }
-    if (!ip->tryinc())
-      goto retry;
     return ip;
   }
   
@@ -482,28 +478,31 @@ iget(u32 dev, u32 inum)
   ip->busy = true;
   ip->readbusy = 1;
 
-  if (!ins->insert(make_pair(ip->dev, ip->inum), ip)) {
-    // We haven't touched anything on disk, so we can
-    // gc_delayed, instead of ip->onzero() (via ip->dec())
-    gc_delayed(ip);
+  if (!ins->insert(make_pair(ip->dev, ip->inum), ip.get())) {
+    iunlock(ip);
+    // reference counting will clean up memory allocation.
     goto retry;
   }
-  ip->init();
 
+  ip->inc();  // keep it in the cache
+  ip->init();
   iunlock(ip);
   return ip;
 }
 
-inode*
+sref<inode>
 inode::alloc(u32 dev, u32 inum)
 {
-  inode* ip = new inode(dev, inum);
+  sref<inode> ip = sref<inode>::newref(new inode(dev, inum));
   if (ip == nullptr)
-    return nullptr;
+    return sref<inode>();
+
+  // constructor gave one reference already
+  ip->dec();
+
   snprintf(ip->lockname, sizeof(ip->lockname), "cv:ino:%d", ip->inum);
   ip->lock = spinlock(ip->lockname+3, LOCKSTAT_FS);
   ip->cv = condvar(ip->lockname);
-  
   return ip;
 }
 
@@ -524,7 +523,7 @@ inode::init(void)
   memmove(addrs, dip->addrs, sizeof(addrs));
 
   if (nlink_ > 0)
-    idup(this);
+    inc();
   valid = true;
 }
 
@@ -535,7 +534,7 @@ inode::link(void)
   auto w = seq.write_begin();
   if (++nlink_ == 1) {
     // A non-zero nlink_ holds a reference to the inode
-    idup(this);
+    inc();
   }
 }
 
@@ -546,7 +545,7 @@ inode::unlink(void)
   auto w = seq.write_begin();
   if (--nlink_ == 0) {
     // This should never be the last reference..
-    iput(this);
+    dec();
   }
 }
 
@@ -560,51 +559,41 @@ inode::nlink(void)
 void
 inode::onzero(void)
 {
-  inode* ip = (inode*)this;
-
-  acquire(&ip->lock);
-  if (ip->nlink())
-    panic("iput [%p]: nlink %u\n", ip, ip->nlink());
+  acquire(&lock);
+  if (nlink())
+    panic("iput [%p]: nlink %u\n", this, nlink());
 
   // inode is no longer used: truncate and free inode.
-  if(ip->busy || ip->readbusy) {
+  if(busy || readbusy) {
     // race with iget
     panic("iput busy");
   }
-  if(!ip->valid)
+  if(!valid)
     panic("iput not valid");
   
-  ip->busy = true;
-  ip->readbusy++;
+  busy = true;
+  readbusy++;
 
   // XXX: use gc_delayed() to truncate the inode later.
   // flag it as a victim in the meantime.
 
-  itrunc(ip);
+  itrunc(this);
 
   {
-    auto w = ip->seq.write_begin();
-    ip->type = 0;
-    ip->major = 0;
-    ip->minor = 0;
-    ip->gen += 1;
+    auto w = seq.write_begin();
+    type = 0;
+    major = 0;
+    minor = 0;
+    gen += 1;
   }
 
-  release(&ip->lock);
-  
-  ins->remove(make_pair(ip->dev, ip->inum), &ip);
-  the_inode_cache.add(ip->inum);
+  release(&lock);
+ 
+  inode* ip = this; 
+  ins->remove(make_pair(dev, inum), &ip);
+  the_inode_cache.add(inum);
   gc_delayed(ip);
   return;
-}
-
-// Increment reference count for ip.
-// Returns ip to enable ip = idup(ip1) idiom.
-struct inode*
-idup(struct inode *ip)
-{
-  ip->inc();
-  return ip;
 }
 
 // Lock the given inode.
@@ -612,7 +601,7 @@ idup(struct inode *ip)
 // why doesn't the iget() that allocated the inode cache entry
 // read the inode from disk?
 void
-ilock(struct inode *ip, int writer)
+ilock(sref<inode> ip, int writer)
 {
   if(ip == 0)
     panic("ilock");
@@ -635,7 +624,7 @@ ilock(struct inode *ip, int writer)
 
 // Unlock the given inode.
 void
-iunlock(struct inode *ip)
+iunlock(sref<inode> ip)
 {
   if(ip == 0)
     panic("iunlock");
@@ -647,21 +636,6 @@ iunlock(struct inode *ip)
   ip->busy = false;
   ip->cv.wake_all();
   release(&ip->lock);
-}
-
-// Caller holds reference to unlocked ip.  Drop reference.
-void
-iput(struct inode *ip)
-{
-  ip->dec();
-}
-
-// Common idiom: unlock, then put.
-void
-iunlockput(struct inode *ip)
-{
-  iunlock(ip);
-  iput(ip);
 }
 
 //PAGEBREAK!
@@ -676,7 +650,7 @@ iunlockput(struct inode *ip)
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
 static u32
-bmap(struct inode *ip, u32 bn)
+bmap(sref<inode> ip, u32 bn)
 {
   scoped_gc_epoch e;
 
@@ -868,7 +842,7 @@ itrunc(struct inode *ip)
 
 // Copy stat information from inode.
 void
-stati(struct inode *ip, struct stat *st)
+stati(sref<inode> ip, struct stat *st)
 {
   if(ip->type == T_DEV){
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].stat)
@@ -888,7 +862,7 @@ stati(struct inode *ip, struct stat *st)
 //PAGEBREAK!
 // Read data from inode.
 int
-readi(struct inode *ip, char *dst, u32 off, u32 n)
+readi(sref<inode> ip, char *dst, u32 off, u32 n)
 {
   scoped_gc_epoch e;
 
@@ -924,7 +898,7 @@ readi(struct inode *ip, char *dst, u32 off, u32 n)
 // PAGEBREAK!
 // Write data to inode.
 int
-writei(struct inode *ip, const char *src, u32 off, u32 n)
+writei(sref<inode> ip, const char *src, u32 off, u32 n)
 {
   scoped_gc_epoch e;
 
@@ -989,7 +963,7 @@ namehash(const strbuf<DIRSIZ> &n)
 }
 
 void
-dir_init(struct inode *dp)
+dir_init(sref<inode> dp)
 {
   scoped_gc_epoch e;
 
@@ -1023,7 +997,7 @@ dir_init(struct inode *dp)
 }
 
 void
-dir_flush(struct inode *dp)
+dir_flush(sref<inode> dp)
 {
   // assume already locked
 
@@ -1047,21 +1021,21 @@ dir_flush(struct inode *dp)
 }
 
 // Look for a directory entry in a directory.
-struct inode*
-dirlookup(struct inode *dp, char *name)
+sref<inode>
+dirlookup(sref<inode> dp, char *name)
 {
   dir_init(dp);
 
   u32 inum = dp->dir.load()->lookup(strbuf<DIRSIZ>(name));
 
   if (inum == 0)
-    return 0;
+    return sref<inode>();
   return iget(dp->dev, inum);
 }
 
 // Write a new directory entry (name, inum) into the directory dp.
 int
-dirlink(struct inode *dp, const char *name, u32 inum)
+dirlink(sref<inode> dp, const char *name, u32 inum)
 {
   dir_init(dp);
 
@@ -1120,20 +1094,19 @@ skipelem(const char **rpath, char *name)
 // Look up and return the inode for a path name.
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
-static struct inode*
-namex(inode *cwd, const char *path, int nameiparent, char *name)
+static sref<inode>
+namex(sref<inode> cwd, const char *path, int nameiparent, char *name)
 {
   // Assumes caller is holding a gc_epoch
 
-  struct inode *ip, *next;
+  sref<inode> ip;
+  sref<inode> next;
   int r;
 
   if(*path == '/')
     ip = the_root;
   else
     ip = cwd;
-
-  idup(ip);
 
   while((r = skipelem(&path, name)) == 1){
     // XXX Doing this here requires some annoying reasoning about all
@@ -1149,41 +1122,33 @@ namex(inode *cwd, const char *path, int nameiparent, char *name)
     if(ip->type == 0)
       panic("namex");
     if(ip->type != T_DIR)
-      return 0;
+      return sref<inode>();
     if(nameiparent && *path == '\0'){
       // Stop one level early.
       return ip;
     }
 
     if((next = dirlookup(ip, name)) == 0)
-      return 0;
-    iput(ip);
+      return sref<inode>();
     ip = next;
   }
 
   if(r == -1 || nameiparent)
-    return 0;
-
-  // XXX write is necessary because of idup.  not logically required,
-  // so we should replace this with mtreadavar() eventually, perhaps
-  // once we implement sloppy counters for long-term inode refs.
-
-  // mtreadavar("inode:%x.%x", ip->dev, ip->inum);
-  mtwriteavar("inode:%x.%x", ip->dev, ip->inum);
+    return sref<inode>();
 
   return ip;
 }
 
-inode*
-namei(inode *cwd, const char *path)
+sref<inode>
+namei(sref<inode> cwd, const char *path)
 {
   // Assumes caller is holding a gc_epoch
   char name[DIRSIZ];
   return namex(cwd, path, 0, name);
 }
 
-inode*
-nameiparent(inode *cwd, const char *path, char *name)
+sref<inode>
+nameiparent(sref<inode> cwd, const char *path, char *name)
 {
   // Assumes caller is holding a gc_epoch
   return namex(cwd, path, 1, name);

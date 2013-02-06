@@ -12,6 +12,7 @@
 
 static_assert(sizeof(struct ipcctl) < PGSIZE, "struct ipcctl too large");
 
+#if 0
 static void
 pread_work(void *a0, void *a1, void *a2,
            void *a3, void *a4)
@@ -51,12 +52,16 @@ pread_allocwork(struct inode *ip, size_t count, off_t off,
 
   return w;
 }
+#endif
 
 //SYSCALL
 int
 sys_async(int fd, size_t count, off_t off,
           int msgid, int pageid)
 {
+  return -1;
+
+#if 0
   sref<file> f;;
   cwork *w;
 
@@ -92,5 +97,6 @@ sys_async(int fd, size_t count, off_t off,
   msg->off = off;
   msg->submitted = 1;
   return 0;
+#endif
 }
 

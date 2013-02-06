@@ -571,7 +571,7 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
     // This is a file mapping; read in the page
     mtreadavar("inode:%x.%x", desc.inode->dev, desc.inode->inum);
     // XXX(austin) readi can sleep, but we're holding a spinlock
-    if (readi(desc.inode.get(), p, it.index() * PGSIZE - desc.start,
+    if (readi(desc.inode, p, it.index() * PGSIZE - desc.start,
               PGSIZE) < 0) {
       kfree(p);
       return nullptr;

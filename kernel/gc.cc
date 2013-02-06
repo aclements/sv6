@@ -267,7 +267,7 @@ gc_worker(void *x)
 }
 
 static int
-readstat(struct inode *inode, char *dst, u32 off, u32 n)
+readstat(sref<inode> inode, char *dst, u32 off, u32 n)
 {
   size_t sz = sizeof(gc_stat);
   int i = off / sz;
@@ -287,7 +287,7 @@ readstat(struct inode *inode, char *dst, u32 off, u32 n)
 }
 
 static int
-writectrl(struct inode *inode, const char *buf, u32 off, u32 n)
+writectrl(sref<inode> inode, const char *buf, u32 off, u32 n)
 {
   int op;
   if (n != 3*sizeof(int))

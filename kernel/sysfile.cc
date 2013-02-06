@@ -165,7 +165,7 @@ sys_link(userptr_str old_name, userptr_str new_name)
 {
   char old[PATH_MAX], newn[PATH_MAX];
   char name[DIRSIZ];
-  struct inode *dp, *ip;
+  sref<inode> dp, ip;
 
   if (!old_name.load(old, sizeof old) || !new_name.load(newn, sizeof newn))
     return -1;
@@ -173,7 +173,7 @@ sys_link(userptr_str old_name, userptr_str new_name)
     return -1;
   ilock(ip, 1);
   if(ip->type == T_DIR){
-    iunlockput(ip);
+    iunlock(ip);
     return -1;
   }
   ip->link();
@@ -185,13 +185,12 @@ sys_link(userptr_str old_name, userptr_str new_name)
     goto bad;
 
   //nc_insert(dp, name, ip);
-  iput(ip);
   return 0;
 
 bad:
   ilock(ip, 1);
   ip->unlink();
-  iunlockput(ip);
+  iunlock(ip);
   return -1;
 }
 
@@ -206,75 +205,45 @@ sys_rename(userptr_str old_name, userptr_str new_name)
     return -1;
 
   char oldname[DIRSIZ];
-  inode* dpold = nameiparent(myproc()->cwd, old, oldname);
+  sref<inode> dpold = nameiparent(myproc()->cwd, old, oldname);
   if (!dpold)
     return -1;
-  if (dpold->type != T_DIR) {
-    iput(dpold);
+  if (dpold->type != T_DIR)
     return -1;
-  }
 
-  inode* ipold = dirlookup(dpold, oldname);
-  if (!ipold) {
-    iput(dpold);
+  sref<inode> ipold = dirlookup(dpold, oldname);
+  if (!ipold)
     return -1;
-  }
   if (ipold->dev != dpold->dev || ipold->type == T_DIR) {
     // Renaming directories not currently supported.
     // Would require checking for loops and dealing with refcounts
     // on the parent directories.
-    iput(ipold);
-    iput(dpold);
+    return -1;
   }
 
   char newname[DIRSIZ];
-  inode* dpnew = nameiparent(myproc()->cwd, newn, newname);
-  if (!dpnew) {
-    iput(ipold);
-    iput(dpold);
+  sref<inode> dpnew = nameiparent(myproc()->cwd, newn, newname);
+  if (!dpnew)
     return -1;
-  }
-  if (dpnew->type != T_DIR || dpnew->dev != dpold->dev) {
-    iput(dpnew);
-    iput(ipold);
-    iput(dpold);
+  if (dpnew->type != T_DIR || dpnew->dev != dpold->dev)
     return -1;
-  }
 
-  if (dpold == dpnew && strbuf<DIRSIZ>(oldname) == strbuf<DIRSIZ>(newname)) {
-    iput(dpnew);
-    iput(ipold);
-    iput(dpold);
+  if (dpold == dpnew && strbuf<DIRSIZ>(oldname) == strbuf<DIRSIZ>(newname))
     return 0;
-  }
 
   dir_init(dpold);
   dir_init(dpnew);
-  inode* ipnew = dirlookup(dpnew, newname);
+  sref<inode> ipnew = dirlookup(dpnew, newname);
   if (ipnew) {
-    if (ipnew->type == T_DIR) {
-      iput(ipnew);
-      iput(dpnew);
-      iput(ipold);
-      iput(dpold);
+    if (ipnew->type == T_DIR)
       return -1;
-    }
 
     if (!dpnew->dir.load()->replace(strbuf<DIRSIZ>(newname),
-                                    ipnew->inum, ipold->inum)) {
-      iput(ipnew);
-      iput(dpnew);
-      iput(ipold);
-      iput(dpold);
+                                    ipnew->inum, ipold->inum))
       return -1;
-    }
   } else {
-    if (!dpnew->dir.load()->insert(strbuf<DIRSIZ>(newname), ipold->inum)) {
-      iput(dpnew);
-      iput(ipold);
-      iput(dpold);
+    if (!dpnew->dir.load()->insert(strbuf<DIRSIZ>(newname), ipold->inum))
       return -1;
-    }
   }
 
   assert(dpold->dir.load()->remove(strbuf<DIRSIZ>(oldname), &ipold->inum));
@@ -282,18 +251,15 @@ sys_rename(userptr_str old_name, userptr_str new_name)
   if (ipnew) {
     ilock(ipnew, 1);
     ipnew->unlink();
-    iunlockput(ipnew);
+    iunlock(ipnew);
   }
 
-  iput(dpnew);
-  iput(ipold);
-  iput(dpold);
   return 0;
 }
 
 // Is the directory dp empty except for "." and ".." ?
 static int
-isdirempty(struct inode *dp)
+isdirempty(sref<inode> dp)
 {
   dir_init(dp);
   int empty = 1;
@@ -313,7 +279,7 @@ int
 sys_unlink(userptr_str path)
 {
   char path_copy[PATH_MAX];
-  struct inode *ip, *dp;
+  sref<inode> ip, dp;
   char name[DIRSIZ];
 
   if (!path.load(path_copy, sizeof path_copy))
@@ -326,29 +292,24 @@ sys_unlink(userptr_str path)
     panic("sys_unlink");
 
   // Cannot unlink "." or "..".
-  if(namecmp(name, ".") == 0 || namecmp(name, "..") == 0){
-    iput(dp);
+  if(namecmp(name, ".") == 0 || namecmp(name, "..") == 0)
     return -1;
-  }
 
  retry:
-  if((ip = dirlookup(dp, name)) == 0){
-    iput(dp);
+  if((ip = dirlookup(dp, name)) == 0)
     return -1;
-  }
   ilock(ip, 1);
 
   if(ip->nlink() < 1)
     panic("unlink: nlink < 1");
   if(ip->type == T_DIR && !isdirempty(ip)){
-    iunlockput(ip);
-    iput(dp);
+    iunlock(ip);
     return -1;
   }
 
   dir_init(dp);
   if (dp->dir.load()->remove(strbuf<DIRSIZ>(name), &ip->inum) == 0) {
-    iunlockput(ip);
+    iunlock(ip);
     goto retry;
   }
 
@@ -358,17 +319,15 @@ sys_unlink(userptr_str path)
     iunlock(dp);
   }
 
-  iput(dp);
-
   ip->unlink();
-  iunlockput(ip);
+  iunlock(ip);
   return 0;
 }
 
-struct inode*
-create(inode *cwd, const char *path, short type, short major, short minor, bool excl)
+sref<inode>
+create(sref<inode> cwd, const char *path, short type, short major, short minor, bool excl)
 {
-  struct inode *ip, *dp;
+  sref<inode> ip, dp;
   char name[DIRSIZ];
 
   mt_ascope ascope("%s(%d.%d,%s,%d,%d,%d)",
@@ -379,21 +338,20 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
   {
     scoped_gc_epoch e;
     if((dp = nameiparent(cwd, path, name)) == 0)
-      return 0;
+      return sref<inode>();
 
     if(dp->type != T_DIR)
       panic("create");
 
     if((ip = dirlookup(dp, name)) != 0){
-      iput(dp);
       if(type != T_FILE || ip->type != T_FILE || excl)
-        return nullptr;
+        return sref<inode>();
 
       return ip;
     }
     
     if((ip = ialloc(dp->dev, type)) == nullptr)
-      return nullptr;
+      return sref<inode>();
     
     ip->major = major;
     ip->minor = minor;
@@ -411,8 +369,7 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
     if(dirlink(dp, name, ip->inum) < 0) {
       // create race
       ip->unlink();
-      iunlockput(ip);
-      iput(dp);
+      iunlock(ip);
       goto retry;
     }
 
@@ -420,7 +377,6 @@ create(inode *cwd, const char *path, short type, short major, short minor, bool 
   }
 
   //nc_insert(dp, name, ip);
-  iput(dp);
   return ip;
 }
 
@@ -431,8 +387,8 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
   char path_copy[PATH_MAX];
   int fd;
   struct file *f;
-  struct inode *ip;
-  struct inode *cwd;
+  sref<inode> ip;
+  sref<inode> cwd;
   int rwmode = omode & (O_RDONLY|O_WRONLY|O_RDWR);
   bool iplocked = false;
 
@@ -463,7 +419,7 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
       // there's a race here that's hard to fix because
       // of how non-locking create() is.
       char dummy[DIRSIZ];
-      struct inode *pip = nameiparent(cwd, path_copy, dummy);
+      sref<inode> pip = nameiparent(cwd, path_copy, dummy);
       if(pip){
         acquire(&pip->lock);
         pip->cv.wake_all();
@@ -477,16 +433,15 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     if((ip = namei(cwd, path_copy)) == 0){
       if(omode & O_WAIT){
         char dummy[DIRSIZ];
-        struct inode *pip = nameiparent(cwd, path_copy, dummy);
+        sref<inode> pip = nameiparent(cwd, path_copy, dummy);
         if(pip == 0)
           return -1;
-        cprintf("O_WAIT waiting %s %p %d...\n", path_copy, pip, pip->inum);
+        cprintf("O_WAIT waiting %s %p %d...\n", path_copy, &*pip, pip->inum);
         // XXX wait for pip->cv.wake_all above
         acquire(&pip->lock);
         pip->cv.sleep(&pip->lock);
         release(&pip->lock);
         cprintf("O_WAIT done\n");
-        iput(pip);
         if(myproc()->killed == 0)
           goto retry;
       }
@@ -499,7 +454,6 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
   if (itype == 0) {
     if (iplocked)
       iunlock(ip);
-    iput(ip);
     goto retry;
   }
 
@@ -507,7 +461,6 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     if (rwmode != O_RDONLY) {
       if (iplocked)
         iunlock(ip);
-      iput(ip);
       return -1;
     }
 
@@ -525,7 +478,7 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
       iplocked = true;
     }
 
-    itrunc(ip);
+    itrunc(ip.get());
   }
 
   if((f = file::alloc()) == 0 || (fd = fdalloc(f, omode)) < 0){
@@ -533,7 +486,6 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
       f->dec();
     if (iplocked)
       iunlock(ip);
-    iput(ip);
     return -1;
   }
 
@@ -555,8 +507,8 @@ int
 sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
 {
   char path_copy[PATH_MAX];
-  struct inode *cwd;
-  struct inode *ip;
+  sref<inode> cwd;
+  sref<inode> ip;
 
   if (dirfd == AT_FDCWD) {
     cwd = myproc()->cwd;
@@ -573,7 +525,6 @@ sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
   ip = create(cwd, path_copy, T_DIR, 0, 0, true);
   if (ip == nullptr)
     return -1;
-  iput(ip);
   return 0;
 }
 
@@ -582,12 +533,11 @@ int
 sys_mknod(userptr_str path, int major, int minor)
 {
   char path_copy[PATH_MAX];
-  struct inode *ip;
+  sref<inode> ip;
   
   if(!path.load(path_copy, sizeof path_copy) ||
      (ip = create(myproc()->cwd, path_copy, T_DEV, major, minor, true)) == 0)
     return -1;
-  iput(ip);
   return 0;
 }
 
@@ -596,18 +546,17 @@ int
 sys_chdir(userptr_str path)
 {
   char path_copy[PATH_MAX];
-  struct inode *ip;
+  sref<inode> ip;
 
   if(!path.load(path_copy, sizeof path_copy) ||
      (ip = namei(myproc()->cwd, path_copy)) == 0)
     return -1;
   ilock(ip, 0);
   if(ip->type != T_DIR){
-    iunlockput(ip);
+    iunlock(ip);
     return -1;
   }
   iunlock(ip);
-  iput(myproc()->cwd);
   myproc()->cwd = ip;
   return 0;
 }

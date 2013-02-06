@@ -8,6 +8,7 @@ extern "C" {
 #include "memlayout.h"
 #include <stdarg.h>
 #include <cassert>
+#include "ref.hh"
 
 #define KCSEG (2<<3)  /* kernel code segment */
 #define KDSEG (3<<3)  /* kernel data segment */
@@ -94,24 +95,21 @@ int             exec(const char*, const char* const*, void* ascope);
 
 // fs.c
 int             namecmp(const char*, const char*);
-struct inode*   dirlookup(struct inode*, char*);
-struct inode*   ialloc(u32, short);
-struct inode*   namei(inode *cwd, const char*);
-void            iput(struct inode*);
-struct inode*   iget(u32 dev, u32 inum);
-void            ilock(struct inode*, int writer);
-void            iunlockput(struct inode*);
-void            iupdate(struct inode*);
-void            iunlock(struct inode*);
-void            itrunc(struct inode*);
-int             readi(struct inode*, char*, u32, u32);
-void            stati(struct inode*, struct stat*);
-int             writei(struct inode*, const char*, u32, u32);
-struct inode*   idup(struct inode*);
-struct inode*   nameiparent(inode *cwd, const char*, char*);
-int             dirlink(struct inode*, const char*, u32);
-void            dir_init(struct inode *dp);
-void	        dir_flush(struct inode *dp);
+sref<inode>     dirlookup(sref<inode>, char*);
+sref<inode>     ialloc(u32, short);
+sref<inode>     namei(sref<inode> cwd, const char*);
+sref<inode>     iget(u32 dev, u32 inum);
+void            ilock(sref<inode>, int writer);
+void            iupdate(sref<inode>);
+void            iunlock(sref<inode>);
+void            itrunc(inode*);
+int             readi(sref<inode>, char*, u32, u32);
+void            stati(sref<inode>, struct stat*);
+int             writei(sref<inode>, const char*, u32, u32);
+sref<inode>     nameiparent(sref<inode> cwd, const char*, char*);
+int             dirlink(sref<inode>, const char*, u32);
+void            dir_init(sref<inode> dp);
+void	        dir_flush(sref<inode> dp);
 
 // futex.cc
 typedef u64* futexkey_t;
@@ -220,7 +218,7 @@ int             doexec(const char* upath,
                        userptr<userptr<const char> > uargv);
 int             fdalloc(file *f, int omode);
 bool            getfile(int fd, sref<file> *f);
-struct inode*   create(inode *, const char *, short, short, short, bool);
+sref<inode>     create(sref<inode>, const char *, short, short, short, bool);
 void            sockclose(const struct file *);
 
 // string.c

@@ -246,7 +246,7 @@ readlog(char *dst, u32 off, u32 n)
 }
 
 static void
-sampstat(struct inode *ip, struct stat *st)
+sampstat(sref<inode> ip, struct stat *st)
 {
   struct pmulog *q = &pmulog[NCPU];
   struct pmulog *p;
@@ -264,7 +264,7 @@ sampstat(struct inode *ip, struct stat *st)
 }
 
 static int
-sampread(struct inode *ip, char *dst, u32 off, u32 n)
+sampread(sref<inode> ip, char *dst, u32 off, u32 n)
 {
   struct pmulog *q = &pmulog[NCPU];
   struct pmulog *p;
@@ -306,7 +306,7 @@ sampread(struct inode *ip, char *dst, u32 off, u32 n)
 }
 
 static int
-sampwrite(struct inode *ip, const char *buf, u32 off, u32 n)
+sampwrite(sref<inode> ip, const char *buf, u32 off, u32 n)
 {
   struct sampconf *conf;
 

@@ -8,7 +8,7 @@
 extern const char *kconfig;
 
 static int
-kconfigread(struct inode *inode, char *dst, u32 off, u32 n)
+kconfigread(sref<inode> inode, char *dst, u32 off, u32 n)
 {
   auto len = strlen(kconfig);
   if (off >= len)
@@ -20,7 +20,7 @@ kconfigread(struct inode *inode, char *dst, u32 off, u32 n)
 }
 
 static int
-kstatsread(struct inode *inode, char *dst, u32 off, u32 n)
+kstatsread(sref<inode> inode, char *dst, u32 off, u32 n)
 {
   kstats total{};
   if (off >= sizeof total)

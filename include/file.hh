@@ -31,7 +31,7 @@ struct file : public refcache::referenced, public rcu_freed {
   int socket;
   struct pipe *pipe;
   struct localsock *localsock;
-  struct inode *ip;
+  sref<inode> ip;
   u32 off;
 
   // Used for sockets (XXX could be just a mutex)
@@ -53,7 +53,7 @@ protected:
 // in-core file system types
 struct inode : public referenced, public rcu_freed
 {
-  static inode* alloc(u32 dev, u32 inum);
+  static sref<inode> alloc(u32 dev, u32 inum);
 
   void  init();
   void  link();
@@ -111,9 +111,9 @@ protected:
 // device implementations
 
 struct devsw {
-  int (*read)(struct inode*, char*, u32, u32);
-  int (*write)(struct inode*, const char*, u32, u32);
-  void (*stat)(struct inode*, struct stat*);
+  int (*read)(sref<inode>, char*, u32, u32);
+  int (*write)(sref<inode>, const char*, u32, u32);
+  void (*stat)(sref<inode>, struct stat*);
 };
 
 extern struct devsw devsw[];

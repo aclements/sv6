@@ -34,7 +34,7 @@ enum { sched_debug = 0 };
 proc::proc(int npid) :
   rcu_freed("proc"), vmap(0), kstack(0),
   pid(npid), parent(0), tf(0), context(0), killed(0),
-  ftable(0), cwd(0), tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
+  ftable(0), tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
   cpu_pin(0), oncv(0), cv_wakeup(0),
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
   user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
@@ -157,10 +157,8 @@ exit(void)
     myproc()->ftable->decref();
 
   // Kernel threads might not have a cwd
-  if (myproc()->cwd != nullptr) {
-      iput(myproc()->cwd);
-      myproc()->cwd = 0;
-  }
+  if (myproc()->cwd != nullptr)
+      myproc()->cwd.reset();
 
   // Pass abandoned children to init.
   wakeupinit = 0;
@@ -471,7 +469,7 @@ fork(int flags)
     np->ftable = myproc()->ftable->copy();
   }
 
-  np->cwd = idup(myproc()->cwd);
+  np->cwd = myproc()->cwd;
   pid = np->pid;
   safestrcpy(np->name, myproc()->name, sizeof(myproc()->name));
   acquire(&myproc()->lock);
@@ -592,7 +590,7 @@ threadalloc(void (*fn)(void *), void *arg)
   p->context->r12 = (u64)fn;
   p->context->r13 = (u64)arg;
   p->parent = nullptr;
-  p->cwd = nullptr;
+  p->cwd.reset();
 
   proc_cleanup.dismiss();
   return p;

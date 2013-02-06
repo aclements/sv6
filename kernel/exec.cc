@@ -19,7 +19,7 @@
 #define BRK (USERTOP >> 1)
 
 static int
-dosegment(inode* ip, vmap* vmp, u64 off, u64 *load_addr)
+dosegment(sref<inode> ip, vmap* vmp, u64 off, u64 *load_addr)
 {
   struct proghdr ph;
   if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -54,7 +54,7 @@ dosegment(inode* ip, vmap* vmp, u64 off, u64 *load_addr)
       cprintf("ELF segment is not page-aligned\n");
       return -1;
     }
-    if (vmp->insert(vmdesc(sref<inode>::newref(ip), ph.vaddr - ph.offset),
+    if (vmp->insert(vmdesc(ip, ph.vaddr - ph.offset),
                     va_start, mapped_end - va_start) < 0)
       return -1;
   }
@@ -164,7 +164,7 @@ int
 exec(const char *path, const char * const *argv, void *ascopev)
 {
   ANON_REGION(__func__, &perfgroup);
-  struct inode *ip = nullptr;
+  sref<inode> ip;
   struct vmap *vmp = nullptr;
   const char *s, *last;
   char buf[1024];
@@ -181,9 +181,6 @@ exec(const char *path, const char * const *argv, void *ascopev)
 
   if((ip = namei(myproc()->cwd, path)) == 0)
     return -1;
-  auto cleanup = scoped_cleanup([&ip](){
-    iput(ip);
-  });
 
   gc_begin_epoch();
 
