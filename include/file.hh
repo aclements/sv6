@@ -53,8 +53,6 @@ protected:
 // in-core file system types
 struct inode : public referenced, public rcu_freed
 {
-  static sref<inode> alloc(u32 dev, u32 inum);
-
   void  init();
   void  link();
   void  unlink();
@@ -102,6 +100,10 @@ private:
   inode(u32 dev, u32 inum);
   ~inode();
   NEW_DELETE_OPS(inode)
+
+  static sref<inode> alloc(u32 dev, u32 inum);
+  friend void initinode();
+  friend sref<inode> iget(u32, u32);
 
 protected:
   void onzero() override;
