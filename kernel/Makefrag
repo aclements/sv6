@@ -2,7 +2,6 @@ OBJS = \
 	acpi.o \
 	acpidbg.o \
 	acpiosl.o \
-	async.o \
 	bio.o \
 	bootdata.o \
 	cga.o \

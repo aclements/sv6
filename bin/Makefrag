@@ -31,9 +31,7 @@ UPROGS_BIN= \
 	dirbench \
 	usertests \
 	lockstat \
-	preadtest \
 	scripttest \
-	ftest \
 	cp \
 	perf \
         xtime \
