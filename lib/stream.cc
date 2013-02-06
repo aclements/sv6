@@ -5,6 +5,13 @@
 #include "amd64.h"
 #include "ipc.hh"
 
+#include <stdio.h>
+
+static FILE stdout_s{ .fd = 1 };
+static FILE stderr_s{ .fd = 2 };
+FILE *stdout = &stdout_s;
+FILE *stderr = &stderr_s;
+
 static const size_t pstride = 4096*4;
 
 static ssize_t

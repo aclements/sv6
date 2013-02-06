@@ -1,3 +1,5 @@
+#pragma once
+
 #include <sys/stat.h>
 
 typedef struct fstream {
@@ -10,8 +12,12 @@ typedef struct fstream {
   int pfill:1;
 } FILE;
 
+BEGIN_DECLS
+
 FILE  *fdopen(int fd, const char *mode);
 int    fclose(FILE *fp);
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *fp);
 int    feof(FILE *fp);
 int    ferror(FILE *fp);
+
+END_DECLS

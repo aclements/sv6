@@ -1,9 +1,13 @@
 #pragma once
 #include "types.h"
 #include "user.h"
+#include "stream.h"
 
-typedef struct {} FILE;
+BEGIN_DECLS
 
 extern FILE* stdout;
+extern FILE* stderr;
 
 int fflush(FILE *stream);
+
+END_DECLS

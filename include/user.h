@@ -36,9 +36,13 @@ int forkt(void *sp, void *pc, void *arg, int forkflags);
 void forkt_setup(u64 pid);
 
 // printf.c
+typedef struct fstream FILE;
 void printf(const char*, ...)
   __attribute__((__format__(__printf__, 1, 2)));
-void fprintf(int, const char*, ...)
+void fprintf(FILE*, const char*, ...)
+  __attribute__((__format__(__printf__, 2, 3)));
+void vfprintf(FILE *, const char *fmt, va_list ap);
+void fdprintf(int, const char*, ...)
   __attribute__((__format__(__printf__, 2, 3)));
 void vfdprintf(int fd, const char *fmt, va_list ap);
 void snprintf(char *buf, unsigned int n, const char *fmt, ...)

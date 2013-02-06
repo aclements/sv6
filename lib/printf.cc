@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include "fmt.hh"
 #include "lib.h"
+#include <stdio.h>
 
 struct outbuf {
   char b[128];
@@ -38,31 +39,29 @@ writeoutbuf(int c, void *arg)
 }
 
 void
-fprintf(int fd, const char *fmt, ...)
+fprintf(FILE *f, const char *fmt, ...)
 {
-  struct outbuf b;
   va_list ap;
 
-  b.n = 0;
-  b.fd = fd;
   va_start(ap, fmt);
-  vprintfmt(writeoutbuf, (void*) &b, fmt, ap);
+  vfprintf(f, fmt, ap);
   va_end(ap);
-  flushoutbuf(&b);
 }
 
 void
-printf(const char *fmt, ...)
+vfprintf(FILE *f, const char *fmt, va_list ap)
 {
-  struct outbuf b;
+  vfdprintf(f->fd, fmt, ap);
+}
+
+void
+fdprintf(int fd, const char *fmt, ...)
+{
   va_list ap;
 
-  b.n = 0;
-  b.fd = 1;
   va_start(ap, fmt);
-  vprintfmt(writeoutbuf, (void*) &b, fmt, ap);
+  vfdprintf(fd, fmt, ap);
   va_end(ap);
-  flushoutbuf(&b);
 }
 
 void
@@ -74,6 +73,16 @@ vfdprintf(int fd, const char *fmt, va_list ap)
   b.fd = fd;
   vprintfmt(writeoutbuf, (void*) &b, fmt, ap);
   flushoutbuf(&b);
+}
+
+void
+printf(const char *fmt, ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt);
+  vfprintf(stdout, fmt, ap);
+  va_end(ap);
 }
 
 // Print to a buffer.
