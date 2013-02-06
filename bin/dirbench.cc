@@ -15,6 +15,7 @@
 #endif
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 
 static const bool pinit = true;

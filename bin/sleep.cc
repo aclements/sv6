@@ -2,6 +2,8 @@
 #include "user.h"
 #include "amd64.h"
 
+#include <stdlib.h>
+
 int
 main(int ac, char *av[])
 {

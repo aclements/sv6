@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -8,7 +9,6 @@
 
 #if defined(LINUX)
 #include <errno.h>
-#include <stdlib.h>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <sys/un.h>

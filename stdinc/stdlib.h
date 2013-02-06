@@ -21,4 +21,7 @@ void free(void*);
 void* calloc(size_t, size_t);
 void* realloc(void*, size_t);
 
+int atoi(const char*);
+long atol(const char*);
+
 END_DECLS

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "pthread.h"
 #include <atomic>
+#include <stdlib.h>
 #ifndef XV6_USER
 #include <string.h>
 #else

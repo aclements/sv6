@@ -5,8 +5,10 @@
 #include "futex.h"
 #include "errno.h"
 #include "mtrace.h"
+
 #include <atomic>
 #include <stdio.h>
+#include <stdlib.h>
 
 static volatile std::atomic<u64> waiting;
 static volatile std::atomic<u64> waking __attribute__((unused));

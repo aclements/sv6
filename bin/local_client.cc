@@ -1,7 +1,6 @@
 #if defined(LINUX)
 #include <errno.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #define die perror
@@ -16,6 +15,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MAXMSG  512

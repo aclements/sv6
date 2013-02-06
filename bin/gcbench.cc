@@ -2,10 +2,12 @@
 #include "user.h"
 #include "amd64.h"
 #include "lib.h"
+
 #include <fcntl.h>
 #include <uk/gcstat.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int cpu = 0;
