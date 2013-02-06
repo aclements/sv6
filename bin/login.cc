@@ -24,7 +24,7 @@ main(void)
 {
   const char *pw;
 
-  fprintf(1, "password: ");
+  printf("password: ");
   pw = readpw();
 
   if (pw && !strcmp(pw, "xv6")) {

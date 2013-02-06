@@ -3,7 +3,9 @@
 #include "types.h"
 #include "user.h"
 #include "libu.h"
+
 #include <stdarg.h>
+#include <stdio.h>
 
 void __attribute__((noreturn))
 die(const char* errstr, ...)
@@ -11,8 +13,8 @@ die(const char* errstr, ...)
   va_list ap;
 
   va_start(ap, errstr);
-  vfdprintf(2, errstr, ap);
+  vfprintf(stderr, errstr, ap);
   va_end(ap);
-  fprintf(2, "\n");
+  fprintf(stderr, "\n");
   exit();
 }

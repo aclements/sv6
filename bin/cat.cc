@@ -11,8 +11,7 @@ cat(int fd)
   while((n = read(fd, buf, sizeof(buf))) > 0)
     write(1, buf, n);
   if(n < 0){
-    fprintf(1, "cat: read error\n");
-    exit();
+    die("cat: read error");
   }
 }
 
@@ -28,8 +27,7 @@ main(int argc, char *argv[])
 
   for(i = 1; i < argc; i++){
     if((fd = open(argv[i], 0)) < 0){
-      fprintf(1, "cat: cannot open %s\n", argv[i]);
-      exit();
+      die("cat: cannot open %s", argv[i]);
     }
     cat(fd);
     close(fd);

@@ -9,18 +9,16 @@ main(int ac, const char *av[])
 
   int pid = fork(0);
   if (pid < 0) {
-    fprintf(1, "time: fork failed\n");
-    exit();
+    die("time: fork failed");
   }
 
   if (pid == 0) {
     exec(av[1], av+1);
-    fprintf(1, "time: exec failed\n");
-    exit();
+    die("time: exec failed");
   }
 
   wait(-1);
   u64 t1 = rdtsc();
-  fprintf(1, "%lu cycles\n", t1-t0);
+  printf("%lu cycles\n", t1-t0);
   exit();
 }

@@ -136,7 +136,7 @@ main(int ac, char **av)
   else if (ac == 2 && strcmp(av[1], "fs") == 0)
     op = fssharing;
   else
-    fprintf(1, "usage: %s vm|fs\n", av[0]);
+    die("usage: %s vm|fs", av[0]);
 
   if (op) {
     barrier = ncore + 1;

@@ -77,7 +77,7 @@ stats(int print)
       die("gct: unexpected read");
 
     if (print)
-      fprintf(1, "%d: ndelay %" PRId64 " nfree %" PRId64 " nrun %" PRId64 " ncycles %lu nop %lu cycles/op %lu\n",
+      printf("%d: ndelay %" PRId64 " nfree %" PRId64 " nrun %" PRId64 " ncycles %lu nop %lu cycles/op %lu\n",
             c++, gs.ndelay, gs.nfree, gs.nrun, gs.ncycles, gs.nop, 
               (gs.nop > 0) ? gs.ncycles/gs.nop : 0);
   }
@@ -93,8 +93,7 @@ void gctest(char *fn)
 {
   int fd;
   if((fd = open(fn, O_RDONLY)) < 0){
-    fprintf(1, "cat: cannot open %s\n", "cat");
-    exit();
+    die("cat: cannot open %s", "cat");
   }
   close(fd);
 

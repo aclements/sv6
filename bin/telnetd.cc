@@ -1,6 +1,7 @@
 #include "types.h"
 #include "user.h"
 #include "unet.h"
+#include <stdio.h>
 
 int
 dfork(void)
@@ -8,7 +9,7 @@ dfork(void)
   // First fork
   int pid = fork(0);
   if (pid < 0) {
-    fprintf(2, "telnetd fork 1: %d\n", pid);
+    fprintf(stderr, "telnetd fork 1: %d\n", pid);
     return pid;
   } else if (pid > 0) {
     // Wait for intermediate process
@@ -22,7 +23,7 @@ dfork(void)
     // Second child does the real work
     return 0;
   } else if (pid < 0) {
-    fprintf(2, "telnetd fork 2: %d\n", pid);
+    fprintf(stderr, "telnetd fork 2: %d\n", pid);
   }
   exit();
 }
@@ -49,7 +50,7 @@ main(void)
   if (r < 0)
     die("telnetd listen: %d\n", r);
 
-  fprintf(1, "telnetd: port 23\n");
+  fprintf(stderr, "telnetd: port 23\n");
 
   for (;;) {
     socklen_t socklen;
@@ -58,10 +59,10 @@ main(void)
     socklen = sizeof(sin);
     ss = accept(s, (struct sockaddr *)&sin, &socklen);
     if (ss < 0) {
-      fprintf(2, "telnetd accept: %d\n", ss);
+      fprintf(stderr, "telnetd accept: %d\n", ss);
       continue;
     }
-    fprintf(1, "telnetd: connection %s\n", ipaddr(&sin));
+    fprintf(stderr, "telnetd: connection %s\n", ipaddr(&sin));
 
     if (dfork() == 0) {
       static const char *argv[] = { "/login", 0 };
