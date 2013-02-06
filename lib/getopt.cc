@@ -1,5 +1,7 @@
 #include "types.h"
 #include "user.h"
+
+#include <string.h>
 #include <unistd.h>
 
 char *optarg;

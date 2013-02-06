@@ -4,6 +4,8 @@
 #include "user.h"
 #include "mtrace.h"
 
+#include <string.h>
+
 int
 main(int ac, char **av)
 {

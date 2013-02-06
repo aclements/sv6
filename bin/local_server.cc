@@ -15,6 +15,7 @@
 #endif
      
 #include <stdio.h>
+#include <string.h>
 
 #define MAXMSG  512
 #define MESSAGE "ni hao"

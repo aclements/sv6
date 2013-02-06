@@ -7,6 +7,7 @@
 #include "major.h"
 #include <time.h>
 #include <stdio.h>
+#include <string.h>
 
 static const char *sh_argv[] = { "sh", 0 };
 static const char *app_argv[][MAXARG] = {

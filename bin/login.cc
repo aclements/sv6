@@ -1,6 +1,8 @@
 #include "types.h"
 #include "user.h"
+
 #include <stdio.h>
+#include <string.h>
 
 static const char *
 readpw(void)

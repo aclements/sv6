@@ -5,6 +5,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
 
 static int
 du(int fd)

@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <string.h>
 
 #define VERSION "0.1"
 #define HTTP_VERSION "1.0"

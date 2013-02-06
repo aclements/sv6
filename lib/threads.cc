@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sched.h>
 #include <stdio.h>
+#include <string.h>
 
 enum { stack_size = 8192 };
 static std::atomic<int> nextkey;

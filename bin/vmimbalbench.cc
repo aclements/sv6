@@ -16,6 +16,7 @@
 #include "lib.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
 
 // That's ~1GB or so? Somewhere plenty high in the address space,
 // but a good bajillion bytes or so below USERTOP.

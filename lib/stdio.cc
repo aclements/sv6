@@ -5,6 +5,7 @@
 #include "ipc.hh"
 
 #include <stdio.h>
+#include <string.h>
 
 static FILE stdout_s{ .fd = 1 };
 static FILE stderr_s{ .fd = 2 };

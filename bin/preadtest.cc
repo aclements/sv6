@@ -5,7 +5,9 @@
 #include "lib.h"
 #include "amd64.h"
 #include "ipc.hh"
+
 #include <stdio.h>
+#include <string.h>
 
 #define FSIZE (64 << 10)
 #define BSIZE 4096
