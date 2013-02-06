@@ -1,0 +1,3 @@
+libu is the user-space utilities library.  It contains things that are
+not part of xv6's libc implementation and it should also build on
+Linux.
