@@ -23,10 +23,7 @@
 #define BUDDY_DEBUG   DEBUG
 #define REFCACHE_DEBUG DEBUG
 #define RADIX_DEBUG   DEBUG
-#define KSHAREDSIZE   (32 << 10)
-#define USERWQSIZE    (1 << 14)
 #define USTACKPAGES   8
-#define WQSHIFT       7
 #define EXECSWITCH    1
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
 #define GC_GLOBAL     true

@@ -116,7 +116,6 @@ struct vmap {
   static vmap* alloc();
 
   atomic<u64> ref;
-  char *const kshared;
 
   void decref();
   void incref();

@@ -115,25 +115,13 @@ vmap::alloc(void)
 }
 
 vmap::vmap() : 
-  ref(1), kshared((char*) ksalloc(slab_kshared)), brk_(0),
+  ref(1), brk_(0),
   brklock_("brk_lock", LOCKSTAT_VM)
 {
-  if (kshared == nullptr) {
-    cprintf("vmap::vmap: kshared out of memory\n");
-    goto err;
-  }
-  return;
-
- err:
-  if (kshared)
-    ksfree(slab_kshared, kshared);
-  throw_bad_alloc();
 }
 
 vmap::~vmap()
 {
-  if (kshared)
-    ksfree(slab_kshared, kshared);
 }
 
 void

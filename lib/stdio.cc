@@ -2,7 +2,6 @@
 #include "user.h"
 #include "lib.h"
 #include "amd64.h"
-#include "ipc.hh"
 
 #include <stdio.h>
 #include <stdlib.h>
