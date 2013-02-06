@@ -28,7 +28,7 @@ char* strncpy(char *s, const char *t, size_t n);
 #define mtdisable(name) mtrace_enable_set(mtrace_record_disable, name)
 
 // Log the number of operations 
-static inline void mtops(u64 n)
+static inline void mtops(uint64_t n)
 {
   struct mtrace_appdata_entry entry;
   entry.u64 = 0;

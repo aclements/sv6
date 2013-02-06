@@ -96,6 +96,7 @@
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_linux)
 #define NCPU          256
+#define MTRACE        0
 // No kernel, so other options aren't set
 #else
 #error "Unknown HW"

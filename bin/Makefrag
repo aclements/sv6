@@ -74,6 +74,7 @@ UPROGS_NATIVE := \
 	benchhdr \
 	mapbench \
 	tee \
+        fstest \
 
 FSEXTRA += \
 	bin/linkbench-tom \

@@ -49,7 +49,7 @@ COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 \
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
 LDFLAGS   = -m elf_x86_64
 else
-INCLUDES := -include param.h -iquote libutil/include
+INCLUDES := -include param.h -iquote libutil/include -I$(QEMUSRC)
 COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 # No mere mortal can call ld correctly on a real machine, so use gcc's
