@@ -1,6 +1,7 @@
 // To build on Linux:
-//  g++ -O3 -DLINUX -std=c++0x -Wall -g -I.. -pthread mapbench.cc -o mapbench
+//  make HW=linux
 
+#include <atomic>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -10,28 +11,20 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 
-#if defined(LINUX)
-#include "include/compiler.h"
-#define CACHELINE 64
-#define NCPU 256
+#include "libutil.h"
+#include "amd64.h"
+#include "rnd.hh"
+#include "xsys.h"
+
+#if !defined(XV6_USER)
 #include <pthread.h>
-#include "user/util.h"
-#include <assert.h>
 #include <sys/wait.h>
-#include <atomic>
-#include "include/xsys.h"
 #else
-#include "compiler.h"
 #include "types.h"
 #include "user.h"
-#include "amd64.h"
-#include "uspinlock.h"
-#include "mtrace.h"
 #include "pthread.h"
 #include "bits.hh"
-#include "rnd.hh"
 #include "kstats.hh"
-#include "xsys.h"
 #endif
 
 #define PGSIZE 4096
@@ -80,7 +73,7 @@ enum {
 #endif
 };
 
-#if !defined(LINUX) && !defined(HW_qemu)
+#if defined(XV6_USER) && !defined(HW_qemu)
 #define RECORD_PMC pmc_llc_misses
 #define PMCNO 0
 #endif
@@ -167,16 +160,6 @@ timer_thread(void *)
   stop = true;
   return NULL;
 }
-
-#ifdef LINUX
-static inline uint64_t
-rdpmc(uint32_t ecx)
-{
-  uint32_t hi, lo;
-  __asm volatile("rdpmc" : "=a" (lo), "=d" (hi) : "c" (ecx));
-  return ((uint64_t) lo) | (((uint64_t) hi) << 32);
-}
-#endif
 
 int
 xread(int fd, const void *buf, size_t n)

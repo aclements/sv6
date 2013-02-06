@@ -78,6 +78,12 @@ FSEXTRA += \
 	bin/lsocket \
 	bin/countbench-ben \
 
+ifeq ($(PLATFORM),native)
+# Build binaries that work on native
+ALL += $(O)/bin/mapbench \
+
+endif
+
 ifneq ($(PLATFORM),native)
 UPROGS_LIBS += $(ULIBA)
 endif
