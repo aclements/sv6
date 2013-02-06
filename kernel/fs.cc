@@ -180,7 +180,7 @@ initinode(void)
 
   ins = new nstbl<pair<u32, u32>, inode*, ino_hash>();
   the_root = inode::alloc(ROOTDEV, ROOTINO);
-  if (!ins->insert(make_pair(the_root->dev, the_root->inum), the_root.get()))
+  if (!ins->insert({the_root->dev, the_root->inum}, the_root.get()))
     panic("initinode: insert the_root failed");
   the_root->init();
 
@@ -478,13 +478,12 @@ iget(u32 dev, u32 inum)
   ip->busy = true;
   ip->readbusy = 1;
 
-  if (!ins->insert(make_pair(ip->dev, ip->inum), ip.get())) {
+  if (!ins->insert({ip->dev, ip->inum}, ip.get())) {
     iunlock(ip);
     // reference counting will clean up memory allocation.
     goto retry;
   }
 
-  ip->inc();  // keep it in the cache
   ip->init();
   iunlock(ip);
   return ip;
@@ -493,12 +492,9 @@ iget(u32 dev, u32 inum)
 sref<inode>
 inode::alloc(u32 dev, u32 inum)
 {
-  sref<inode> ip = sref<inode>::newref(new inode(dev, inum));
+  sref<inode> ip = sref<inode>::transfer(new inode(dev, inum));
   if (ip == nullptr)
     return sref<inode>();
-
-  // constructor gave one reference already
-  ip->dec();
 
   snprintf(ip->lockname, sizeof(ip->lockname), "cv:ino:%d", ip->inum);
   ip->lock = spinlock(ip->lockname+3, LOCKSTAT_FS);

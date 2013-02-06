@@ -50,7 +50,7 @@ COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1
 LDFLAGS   = -m elf_x86_64
 else
 INCLUDES := -include param.h -iquote libutil/include
-COMFLAGS := -pthread
+COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 # No mere mortal can call ld correctly on a real machine, so use gcc's
 # link driver instead.
