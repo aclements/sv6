@@ -71,15 +71,15 @@ define SYSCALLGEN
 	$(Q)cmp -s $@.tmp $@ || mv $@.tmp $@
 endef
 
+ifeq ($(PLATFORM),xv6)
+include net/Makefrag
+include kernel/Makefrag
+endif
 include lib/Makefrag
 include libutil/Makefrag
 include bin/Makefrag
 include tools/Makefrag
 include metis/Makefrag
-ifeq ($(PLATFORM),xv6)
-include net/Makefrag
-include kernel/Makefrag
-endif
 -include user/Makefrag.$(HW)
 
 $(O)/%.o: %.c $(O)/sysroot
