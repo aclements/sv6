@@ -1,4 +1,4 @@
-# -*-Makefile-*-
+# -*- makefile-gmake -*-
 $(O)/bin/%.o: CFLAGS:=$(CFLAGS)
 $(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -fno-exceptions -fno-rtti
 
@@ -71,6 +71,12 @@ UPROGS := $(UPROGS_BIN) \
 
 UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
 
+# Binaries that are known to build on PLATFORM=native
+UPROGS_NATIVE := \
+	benchhdr \
+	mapbench \
+	tee \
+
 FSEXTRA += \
 	bin/linkbench-tom \
 	bin/mapbench-ben \
@@ -79,11 +85,7 @@ FSEXTRA += \
 	bin/countbench-ben \
 
 ifeq ($(PLATFORM),native)
-# Build binaries that work on native
-ALL += $(O)/bin/mapbench \
-	$(O)/bin/tee \
-	$(O)/bin/benchhdr \
-
+ALL += $(addprefix $(O)/bin/, $(UPROGS_NATIVE))
 endif
 
 ifneq ($(PLATFORM),native)
