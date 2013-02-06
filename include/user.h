@@ -9,8 +9,6 @@ struct sockaddr;
 #include "sysstubs.h"
 
 // ulib.c
-int stat(char*, struct stat*);
-int fstatat(int dirfd, const char*, struct stat*);
 char* strcpy(char*, const char*);
 char* strncpy(char *s, const char *t, size_t n);
 void* memcpy(void *dst, const void *src, size_t n);
@@ -18,8 +16,6 @@ void* memmove(void*, const void*, size_t);
 char* strchr(const char*, int c);
 int strcmp(const char*, const char*);
 int strncmp(const char *p, const char *q, size_t n);
-int open(const char*, int, ...);
-int mkdir(const char*, mode_t);
 
 char* gets(char*, int max);
 size_t strlen(const char*);

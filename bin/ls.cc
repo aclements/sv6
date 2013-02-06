@@ -2,7 +2,10 @@
 #include <sys/stat.h>
 #include "user.h"
 #include "fs.h"
+
+#include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h>
 
 const char*
 fmtname(const char *path)
