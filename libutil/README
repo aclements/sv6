@@ -1,3 +1,2 @@
-libu is the user-space utilities library.  It contains things that are
-not part of xv6's libc implementation and it should also build on
-Linux.
+libutil is the user-space utilities library.  It contains code that is
+used both when building for xv6 and when building for Linux.
