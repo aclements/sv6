@@ -15,6 +15,7 @@
 #include "xsys.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
 

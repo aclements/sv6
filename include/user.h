@@ -10,12 +10,8 @@ struct sockaddr;
 
 // ulib.c
 char* gets(char*, int max);
-void* malloc(size_t);
-void free(void*);
 int atoi(const char*);
 long atol(const char*);
-void* calloc(size_t, size_t);
-void* realloc(void*, size_t);
 
 // uthread.S
 int forkt(void *sp, void *pc, void *arg, int forkflags);

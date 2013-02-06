@@ -11,6 +11,7 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 #endif
 
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 

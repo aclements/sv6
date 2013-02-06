@@ -2,9 +2,11 @@
 #include "user.h"
 #include "lib.h"
 #include "unet.h"
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define VERSION "0.1"
