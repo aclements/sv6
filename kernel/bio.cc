@@ -18,14 +18,13 @@ buf::get(u32 dev, u64 sector)
       return b;
     }
 
-    sref<buf> nb = sref<buf>::newref(new buf(dev, sector));
+    sref<buf> nb = sref<buf>::transfer(new buf(dev, sector));
     auto locked = nb->write();
     if (bufcache.insert(k, nb.get())) {
+      nb->inc();  // keep it in the cache
       ideread(dev, sector, locked->data);
       return nb;
     }
-
-    nb->dec();
   }
 }
 
