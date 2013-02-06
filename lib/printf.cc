@@ -51,21 +51,21 @@ fprintf(FILE *f, const char *fmt, ...)
 void
 vfprintf(FILE *f, const char *fmt, va_list ap)
 {
-  vfdprintf(f->fd, fmt, ap);
+  vdprintf(f->fd, fmt, ap);
 }
 
 void
-fdprintf(int fd, const char *fmt, ...)
+dprintf(int fd, const char *fmt, ...)
 {
   va_list ap;
 
   va_start(ap, fmt);
-  vfdprintf(fd, fmt, ap);
+  vdprintf(fd, fmt, ap);
   va_end(ap);
 }
 
 void
-vfdprintf(int fd, const char *fmt, va_list ap)
+vdprintf(int fd, const char *fmt, va_list ap)
 {
   struct outbuf b;
 

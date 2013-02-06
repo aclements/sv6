@@ -33,10 +33,8 @@ void vfprintf(FILE *, const char *fmt, va_list ap);
 void snprintf(char *buf, unsigned int n, const char *fmt, ...)
   __attribute__((__format__(__printf__, 3, 4)));
 void vsnprintf(char *buf, size_t n, const char *fmt, va_list ap);
-
-// Non-standard
-void fdprintf(int, const char*, ...)
+void dprintf(int, const char*, ...)
   __attribute__((__format__(__printf__, 2, 3)));
-void vfdprintf(int fd, const char *fmt, va_list ap);
+void vdprintf(int fd, const char *fmt, va_list ap);
 
 END_DECLS
