@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "include/types.h"
 #include "include/sampler.h"
@@ -36,6 +37,7 @@ edie(const char* errstr, ...)
 
 struct line_info
 {
+  uint64_t pc;
   std::string func, file;
   int line;
 };
@@ -47,7 +49,7 @@ private:
 public:
   explicit Addr2line(const char* path);
   ~Addr2line();
-  int lookup(uint64_t pc, line_info *out) const;
+  int lookup(uint64_t pc, std::vector<line_info> *out) const;
 };
 
 #ifdef __APPLE__
@@ -97,7 +99,7 @@ Addr2line::Addr2line(const char* path)
     
     for (i = 0; i < sizeof(addr2line_exe) / sizeof(addr2line_exe[0]); i++)
       r = execlp(addr2line_exe[i], addr2line_exe[i],
-                 "-C", "-f", "-s", "-e", path, NULL);
+                 "-C", "-f", "-s", "-i", "-e", path, NULL);
     r = 1;
     assert(sizeof(r) == write(check[1], &r, sizeof(r)));
     exit(0);
@@ -123,10 +125,15 @@ Addr2line::~Addr2line()
 }
 
 int
-Addr2line::lookup(uint64_t pc, line_info *out) const
+Addr2line::lookup(uint64_t pc, std::vector<line_info> *out) const
 {
   char buf[4096];
-  int n = snprintf(buf, sizeof(buf), "%#" PRIx64 "\n", pc);
+
+  // We add a dummy request so we can detect the end of the inline
+  // sequence.  The response will look like "??\n??:0\n".  If we ask
+  // for an unknown PC, we'll also get this response, but it will be
+  // the first response, so we know it's a real response.
+  int n = snprintf(buf, sizeof(buf), "%#" PRIx64 "\n\n", pc);
   if (n != write(_out, buf, n))
     edie("%s: write", __func__);
 
@@ -137,27 +144,34 @@ Addr2line::lookup(uint64_t pc, line_info *out) const
       edie("%s: read", __func__);
     n += r;
     buf[n] = 0;
-    
-    int nls = 0;
-    for (int i = 0; i < n; ++i)
-      if (buf[i] == '\n')
-        nls++;
-    if (nls >= 2)
+
+    // Have we seen the dummy response?
+    char *end = strstr(buf + 1, "??\n??:0\n");
+    if (end) {
+      *end = 0;
       break;
+    }
   }
-  
-  char* nl, *col, *end;
-  nl = strchr(buf, '\n');
-  out->func = std::string(buf, nl - buf);
-  col = strchr(nl, ':');
-  if (!col)
-    return -1;
-  out->file = std::string(nl + 1, col - nl - 1);
-  end = NULL;
-  out->line = strtol(col + 1, &end, 10);
-  if (!end || *end != '\n')
-    return -1;
-  
+
+  char *pos = buf;
+  while (*pos) {
+    char* nl, *col, *end;
+    line_info li;
+    li.pc = (pos == buf ? pc : 0);
+    nl = strchr(pos, '\n');
+    li.func = std::string(pos, nl - pos);
+    col = strchr(nl, ':');
+    if (!col)
+      return -1;
+    li.file = std::string(nl + 1, col - nl - 1);
+    end = NULL;
+    li.line = strtol(col + 1, &end, 10);
+    if (!end || *end != '\n')
+      return -1;
+    out->push_back(li);
+    pos = end + 1;
+  }
+
   return 0;
 }
 
@@ -194,21 +208,28 @@ struct pmuevent_ops {
 static void
 print_entry(Addr2line &addr2line, int count, int total, struct pmuevent *e)
 {
-  line_info li;
+  std::vector<line_info> li;
   addr2line.lookup(e->rip, &li);
-  printf("%2d%% %-7u %c %016" PRIx64 " %s:%u %s\n",
-         count * 100 / total, count, e->idle?'I':' ',
-         e->rip, li.file.c_str(), li.line, li.func.c_str());
+  if (stacktrace_mode) {
+    for (int i = 0; i < NTRACE; i++) {
+      if (e->trace[i] == 0)
+        break;
+      addr2line.lookup(e->trace[i], &li);
+    }
+  }
 
-  if (!stacktrace_mode)
-    return;
+  printf("%2d%% %-7u %c ",
+         count * 100 / total, count, e->idle?'I':' ');
 
-  for (int i = 0; i < NTRACE; i++) {
-    if (e->trace[i] == 0)
-      break;
-    addr2line.lookup(e->trace[i], &li);
-    printf("              %016" PRIx64 " %s:%u %s\n", 
-           e->trace[i], li.file.c_str(), li.line, li.func.c_str());
+  const char *indent = "";
+  for (auto &l : li) {
+    if (l.pc)
+      printf("%s%016" PRIx64, indent, l.pc);
+    else
+      printf("%s%-16s", indent, "(inline)");
+    printf(" %s:%u %s\n",
+           l.file.c_str(), l.line, l.func.c_str());
+    indent = "              ";
   }
 
   printf("\n");
