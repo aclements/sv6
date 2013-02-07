@@ -18,8 +18,6 @@ static inline void xwait()
 #define xpthread_join(tid) pthread_join(tid, nullptr);
 #define xthread_create(ptr, x, fn, arg) \
   pthread_create((ptr), 0, (fn), (arg))
-#define sendto(sock, message, n, x, name, size, client)\
-  sendto(sock, message, n, x, name, size) 
 
 #else // Must be xv6
 

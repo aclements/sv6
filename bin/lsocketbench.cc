@@ -3,28 +3,28 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "libutil.h"
+#include "amd64.h"
+#include "xsys.h"
 
 // To build on Linux:
-//  g++ -O3 -DLINUX -std=c++0x -g -I ../ -pthread lsocketbench.cc -o lsocketbench
+//  make HW=linux
 
-#if defined(LINUX)
+#if !defined(XV6_USER)
 #include <errno.h>
 #include <pthread.h>
+#include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include "user/util.h"
-#include "include/xsys.h"
 #define SERVER  "/tmp/serversocket"
 #define CLIENT  "/tmp/mysocket"
 #else
 #include "types.h"
 #include "user.h"
-#include "amd64.h"
-#include "unet.h"
 #include "pthread.h"
 #include "kstats.hh"
-#include "xsys.h"
 #include "sched.h"
+#include "unet.h"
 #define SERVER  "/serversocket"
 #define CLIENT  "/mysocket"
 #endif
@@ -219,7 +219,7 @@ thread(void* x)
     if (trace) printf("server %d: respond\n", (int) id);
 
     nbytes = sendto(sock, message, strlen(SMESSAGE)+1, 0,
-                     (struct sockaddr *) & name, size, 0);
+                    (struct sockaddr *) & name, size);
     if (nbytes < 0)
     {
       die ("sendto (server)");
@@ -255,7 +255,7 @@ client(int id)
     if (trace) printf("%d: client send\n", i);
 
     nbytes = sendto(sock, (void *) CMESSAGE, strlen (CMESSAGE) + 1, 0,
-                     (struct sockaddr *) & name, size, 1);
+                    (struct sockaddr *) & name, size);
     if (nbytes < 0) {
       die ("sendto (client) failed");
     }
@@ -281,7 +281,7 @@ client(int id)
   printf("client %d ncycles %lu for nmsg %d cycles/msg %lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
 
   nbytes = sendto(sock, (void *) DIE, strlen (DIE) + 1, 0,
-                  (struct sockaddr *) & name, size, 1);
+                  (struct sockaddr *) & name, size);
   if (nbytes < 0) {
     die ("sendto (client) failed");
   }
@@ -296,7 +296,7 @@ void server()
   pthread_t tid[MAXCPU];
 
   for (int i = 0; i < nthread; i++) {
-#if !defined(LINUX) && NOFDSHARE
+#if defined(XV6_USER) && NOFDSHARE
     pthread_createflags(&tid[i], 0, thread, (void*)(long)i, 0);
 #else
     printf("create thread %d\n", i);

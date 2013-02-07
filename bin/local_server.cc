@@ -71,7 +71,7 @@ thread(void* x)
     strcpy(message, MESSAGE);
 
     nbytes = sendto (sock, message, strlen(MESSAGE)+1, 0,
-                     (struct sockaddr *) & name, size, 0);
+                     (struct sockaddr *) & name, size);
     if (nbytes < 0)
     {
       die ("sendto (server)");
