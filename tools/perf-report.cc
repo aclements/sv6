@@ -194,14 +194,15 @@ struct pmuevent_ops {
 };
 
 static void
-print_entry(Addr2line &addr2line, int count, struct pmuevent *e)
+print_entry(Addr2line &addr2line, int count, int total, struct pmuevent *e)
 {
   char *func;
   char *file;
   int line;
   addr2line.lookup(e->rip, &func, &file, &line);
-  printf("%-8u %4s %016" PRIx64 " %s:%u %s\n", 
-         count, e->idle?"idle":"", e->rip, file, line, func);
+  printf("%2d%% %-7u %c %016" PRIx64 " %s:%u %s\n",
+         count * 100 / total, count, e->idle?'I':' ',
+         e->rip, file, line, func);
   free(func);
   free(file);
 
@@ -276,11 +277,14 @@ main(int ac, char **av)
   }
   
   std::map<int, struct pmuevent*, gt> sorted;
-  for (std::pair<struct pmuevent* const, int> &p : map)
+  int total = 0;
+  for (std::pair<struct pmuevent* const, int> &p : map) {
     sorted[p.second] = p.first;
+    total += p.second;
+  }
 
   for (std::pair<const int, struct pmuevent*> &p : sorted)
-    print_entry(addr2line, p.first, p.second);
+    print_entry(addr2line, p.first, total, p.second);
 
   return 0;
 }
