@@ -23,6 +23,7 @@ LIB_SRCS := lib/mr-sched.c		\
 	    lib/platform.c		\
 	    lib/cpumap.c		\
 	    lib/mergesort.c		\
+	    lib/umalloc.c               \
 	    lib/rbktsmgr.c
 
 LIB_OBJS := $(patsubst %.c, $(O)/%.o, $(LIB_SRCS))
