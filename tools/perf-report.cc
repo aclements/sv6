@@ -14,6 +14,7 @@
 
 #include <unordered_map>
 #include <map>
+#include <string>
 
 #include "include/types.h"
 #include "include/sampler.h"
@@ -33,6 +34,12 @@ edie(const char* errstr, ...)
   exit(EXIT_FAILURE);
 }
 
+struct line_info
+{
+  std::string func, file;
+  int line;
+};
+
 class Addr2line {
 private:
   int _out, _in;
@@ -40,7 +47,7 @@ private:
 public:
   explicit Addr2line(const char* path);
   ~Addr2line();
-  int lookup(uint64_t pc, char** func, char** file, int* line) const;
+  int lookup(uint64_t pc, line_info *out) const;
 };
 
 #ifdef __APPLE__
@@ -116,7 +123,7 @@ Addr2line::~Addr2line()
 }
 
 int
-Addr2line::lookup(uint64_t pc, char** func, char** file, int* line) const
+Addr2line::lookup(uint64_t pc, line_info *out) const
 {
   char buf[4096];
   int n = snprintf(buf, sizeof(buf), "%#" PRIx64 "\n", pc);
@@ -139,28 +146,19 @@ Addr2line::lookup(uint64_t pc, char** func, char** file, int* line) const
       break;
   }
   
-  *func = *file = NULL;
-  
   char* nl, *col, *end;
   nl = strchr(buf, '\n');
-  *func = xstrndup(buf, nl - buf);
+  out->func = std::string(buf, nl - buf);
   col = strchr(nl, ':');
   if (!col)
-    goto bad;
-  *file = xstrndup(nl + 1, col - nl - 1);
+    return -1;
+  out->file = std::string(nl + 1, col - nl - 1);
   end = NULL;
-  *line = strtol(col + 1, &end, 10);
+  out->line = strtol(col + 1, &end, 10);
   if (!end || *end != '\n')
-    goto bad;
+    return -1;
   
   return 0;
-  
-bad:
-  free(*func);
-  free(*file);
-  *func = *file = NULL;
-  *line = 0;
-  return -1;
 }
 
 struct gt
@@ -196,15 +194,11 @@ struct pmuevent_ops {
 static void
 print_entry(Addr2line &addr2line, int count, int total, struct pmuevent *e)
 {
-  char *func;
-  char *file;
-  int line;
-  addr2line.lookup(e->rip, &func, &file, &line);
+  line_info li;
+  addr2line.lookup(e->rip, &li);
   printf("%2d%% %-7u %c %016" PRIx64 " %s:%u %s\n",
          count * 100 / total, count, e->idle?'I':' ',
-         e->rip, file, line, func);
-  free(func);
-  free(file);
+         e->rip, li.file.c_str(), li.line, li.func.c_str());
 
   if (!stacktrace_mode)
     return;
@@ -212,11 +206,9 @@ print_entry(Addr2line &addr2line, int count, int total, struct pmuevent *e)
   for (int i = 0; i < NTRACE; i++) {
     if (e->trace[i] == 0)
       break;
-    addr2line.lookup(e->trace[i], &func, &file, &line);    
+    addr2line.lookup(e->trace[i], &li);
     printf("              %016" PRIx64 " %s:%u %s\n", 
-           e->trace[i], file, line, func);
-    free(func);
-    free(file);
+           e->trace[i], li.file.c_str(), li.line, li.func.c_str());
   }
 
   printf("\n");
