@@ -44,21 +44,18 @@
 #define NCPU          8   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_josmp)
 #define DEBUG         0
 #define NCPU          16  // maximum number of CPUs
 #define NSOCKET       4
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (128<<20ull)
 #define E1000_PORT    1   // use second E1000 port
 #elif defined(HW_ud0) || defined(HW_ud1)
 #define NCPU          4   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (128<<20ull)
 #define UART_BAUD     115200
 #elif defined(HW_tom)
@@ -66,7 +63,6 @@
 #define NCPU          48  // maximum number of CPUs
 #define NSOCKET       8
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (128<<20ull)
 // tom's IPMI SOL console looses sync if we don't delay
 #define UART_SEND_DELAY_USEC 1000
@@ -75,24 +71,20 @@
 #define NCPU          80  // maximum number of CPUs
 #define NSOCKET       8
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (128<<20ull)
 #define UART_BAUD     115200
 #elif defined(HW_user)
 #define NCPU          256
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_bench)
 #define NCPU          48
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_ugc)
 #define NCPU          256
 #define CACHELINE    64  // cache line size
 #define MTRACE        0
-#define CODEX         0
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_linux)
 #define NCPU          256
