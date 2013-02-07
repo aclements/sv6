@@ -69,7 +69,7 @@ static inline void
 locked(struct spinlock *lk, u64 retries)
 {
   mtacquired(lk);
-  
+
 #if SPINLOCK_DEBUG
   // Record info about lock acquisition for debugging.
   lk->cpu = mycpu();
@@ -128,7 +128,7 @@ LIST_HEAD(lockstat_list, klockstat);
 static struct lockstat_list lockstat_list = { (struct klockstat*) nullptr };
 static struct spinlock lockstat_lock("lockstat");
 
-klockstat::klockstat(const char *name) : 
+klockstat::klockstat(const char *name) :
   rcu_freed("klockstat")
 {
   magic = LOCKSTAT_MAGIC;
@@ -266,39 +266,48 @@ initlockstat(void)
 }
 #endif
 
-#if LOCKSTAT
 spinlock::spinlock(spinlock &&o)
-  : locked(o.locked),
+  : locked(o.locked.load())
 #if SPINLOCK_DEBUG
-    name(o.name), cpu(o.cpu),
+    , name(o.name)
+    , cpu(o.cpu)
 #endif
-    stat(o.stat)
+#if LOCKSTAT
+    , stat(o.stat)
+#endif
 {
+#if SPINLOCK_DEBUG
   memcpy(&pcs, &o.pcs, sizeof(pcs));
+#endif
+#if LOCKSTAT
   lockstat_stop(&o);
+#endif
 }
 
 spinlock &
 spinlock::operator=(spinlock &&o)
 {
+#if LOCKSTAT
   lockstat_stop(this);
-  locked = o.locked;
+#endif
+  locked = o.locked.load();
+#if SPINLOCK_DEBUG
   name = o.name;
   cpu = o.cpu;
   memcpy(&pcs, &o.pcs, sizeof(pcs));
+#endif
+#if LOCKSTAT
   stat = o.stat;
   o.stat = nullptr;
+#endif
   return *this;
 }
 
+#if LOCKSTAT
 spinlock::~spinlock()
 {
   lockstat_stop(this);
 }
-#else
-// Without lockstat, the default move methods are fine
-spinlock::spinlock(spinlock &&o) = default;
-spinlock &spinlock::operator=(spinlock &&o) = default;
 #endif
 
 bool
@@ -306,7 +315,7 @@ spinlock::try_acquire()
 {
   pushcli();
   locking(this);
-  if (xchg32(&locked, 1) != 0) {
+  if (locked.exchange(1) != 0) {
       popcli();
       return false;
   }
@@ -327,7 +336,7 @@ spinlock::acquire()
   locking(this);
 
   retries = 0;
-  while(xchg32(&locked, 1) != 0) {
+  while (locked.exchange(1) != 0) {
     retries++;
     nop_pause();
   }
@@ -349,7 +358,7 @@ spinlock::release()
   // after a store. So lock->locked = 0 would work here.
   // The xchg being asm volatile ensures gcc emits it after
   // the above assignments (and after the critical section).
-  xchg32(&locked, 0);
+  locked.exchange(0); // could just be locked.store(0)?
 
   popcli();
 }

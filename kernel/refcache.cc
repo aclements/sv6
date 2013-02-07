@@ -5,7 +5,11 @@
 #include <atomic>
 #include <iterator>
 
+#if CODEX
+#define TEST
+#else
 //#define TEST
+#endif
 
 #ifdef TEST
 static console_stream verbose(true);
@@ -302,6 +306,7 @@ public:
 static void
 test(void *)
 {
+  verbose.println("refcache: TEST STARTING");
   static reftest rt;
   refcache::weakref<reftest> wr(&rt);
   for (int i = 0; i < 100; i++) {
@@ -322,6 +327,12 @@ test(void *)
     microdelay(100000);
   }
   assert(!wr.get());
+  verbose.println("refcache: TEST PASSED");
+#if CODEX
+  codex_trace_end();
+  halt();
+  panic("halt returned");
+#endif
 }
 #endif
 

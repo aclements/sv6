@@ -4,8 +4,6 @@
 
 #include "atomic_std.h"
 
-#pragma message "codex"
-
 inline void
 std::atomic_thread_fence(std::memory_order order)
 {

@@ -96,13 +96,13 @@ idleloop(void)
   mtstart(idleloop, myproc());
 
   // XXX: hacky bench for now- figure out how to test more later
-#if CODEX
-  if (myid() != 0) {
-    benchcodex::ap(benchcodex::singleton_testcase());
-  } else {
-    benchcodex::main(benchcodex::singleton_testcase());
-  }
-#endif
+//#if CODEX
+//  if (myid() != 0) {
+//    benchcodex::ap(benchcodex::singleton_testcase());
+//  } else {
+//    benchcodex::main(benchcodex::singleton_testcase());
+//  }
+//#endif
 
   // The scheduler ensures that each idle loop always runs on the same CPU
   struct idle *myidle = idlem.get_unchecked();

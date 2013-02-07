@@ -3,6 +3,7 @@
 #include "lockstat.h"
 #include <assert.h>
 #ifdef __cplusplus
+#include <atomic>
 #include "cpputil.hh"           // For NEW_DELETE_OPS
 #endif
 
@@ -75,7 +76,11 @@ public:
 
 // Mutual exclusion lock.
 struct spinlock {
+#ifdef __cplusplus
+  std::atomic<u32> locked;
+#else
   u32 locked;       // Is the lock held?
+#endif
 
 #if SPINLOCK_DEBUG
   // For debugging:
