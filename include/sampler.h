@@ -10,6 +10,7 @@ struct sampconf {
 
 struct pmuevent {
   u8 idle:1;
+  u32 count;
   u64 rip;
   uptr trace[NTRACE];
 };

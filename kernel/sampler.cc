@@ -13,6 +13,7 @@
 #include "major.h"
 #include "apic.hh"
 #include "percpu.hh"
+#include "kstream.hh"
 
 #define LOGHEADER_SZ (sizeof(struct logheader) + \
                       sizeof(((struct logheader*)0)->cpu[0])*NCPU)
@@ -27,6 +28,8 @@
 #define LOG_SEGMENT_COUNT (LOG_SEGMENT_MAX / sizeof(struct pmuevent))
 // The byte size of a log segment
 #define LOG_SEGMENT_SZ (LOG_SEGMENT_COUNT * sizeof(struct pmuevent))
+
+#define LOG2_HASH_BUCKETS 12
 
 static volatile u64 selector;
 static volatile u64 period;
@@ -66,6 +69,7 @@ struct pmu pmu;
 struct pmulog {
   u64 count;
   struct pmuevent *segments[LOG_SEGMENTS_PER_CPU];
+  struct pmuevent *hash;
   __padout__;
 } __mpalign__;
 
@@ -165,24 +169,86 @@ sampstart(void)
   popcli();
 }
 
+static uintptr_t
+samphash(struct pmuevent *ev)
+{
+  uintptr_t h = ev->rip ^ ev->idle;
+  for (auto t : ev->trace)
+    h ^= t;
+  return h;
+}
+
+// Test if two events are the same except for their count.
+static bool
+sampequal(struct pmuevent *a, struct pmuevent *b)
+{
+  if (a->rip != b->rip || a->idle != b->idle)
+    return false;
+  for (int i = 0; i < NELEM(a->trace); ++i)
+    if (a->trace[i] != b->trace[i])
+      return false;
+  return true;
+}
+
+// Evict an event from the hash table.  Does *not* clear the hash
+// table entry.
+static int
+sampevict(struct pmulog *l, struct pmuevent *event, size_t reserve)
+{
+  if (l->count == LOG_SEGMENTS_PER_CPU * LOG_SEGMENT_COUNT - reserve)
+    return 0;
+  size_t segment = l->count / LOG_SEGMENT_COUNT;
+  assert(segment < LOG_SEGMENTS_PER_CPU);
+  l->segments[segment][l->count % LOG_SEGMENT_COUNT] = *event;
+  l->count++;
+  return 1;
+}
+
 static int
 samplog(struct trapframe *tf)
 {
-  struct pmulog *l;
-  struct pmuevent *e;
-  l = &pmulog[mycpu()->id];
+  struct pmuevent ev;
+  ev.idle = (myproc() == idleproc());
+  ev.rip = tf->rip;
+  getcallerpcs((void*)tf->rbp, ev.trace, NELEM(ev.trace));
 
-  size_t segment = l->count / LOG_SEGMENT_COUNT;
-  if (segment == LOG_SEGMENTS_PER_CPU)
-    return 0;
-
-  e = &l->segments[segment][l->count % LOG_SEGMENT_COUNT];
-
-  e->idle = (myproc() == idleproc());
-  e->rip = tf->rip;
-  getcallerpcs((void*)tf->rbp, e->trace, NELEM(e->trace));
-  l->count++;
+  // Put event in the hash table
+  auto l = &pmulog[mycpu()->id];
+  auto bucket = &l->hash[samphash(&ev) % (1 << LOG2_HASH_BUCKETS)];
+  if (bucket->count) {
+    // Bucket is in use.  Is it the same sample?
+    if (sampequal(&ev, bucket)) {
+      ++bucket->count;
+      return 1;
+    } else {
+      // Evict the sample currently in the hash table.  Reserve enough
+      // space in the log that we can flush the whole hash table when
+      // the sampler is disabled.
+      if (!sampevict(l, bucket, 1 << LOG2_HASH_BUCKETS))
+        return 0;
+    }
+  }
+  ev.count = 1;
+  *bucket = ev;
   return 1;
+}
+
+// Flush everything from the hash table in l.
+static void
+sampflush(struct pmulog *l)
+{
+  size_t failed = 0;
+  for (int i = 0; i < 1<<LOG2_HASH_BUCKETS; ++i) {
+    if (l->hash[i].count) {
+      if (!sampevict(l, &l->hash[i], 0))
+        ++failed;
+      l->hash[i].count = 0;
+    }
+  }
+  if (failed)
+    // This shouldn't happen because we reserved enough space for a
+    // full flush while we were running.
+    swarn.println("sampler: Failed to flush ", failed, " event(s)");
 }
 
 int
@@ -222,6 +288,7 @@ readlog(char *dst, u32 off, u32 n)
   u64 cur = 0;
 
   for (p = &pmulog[0]; p != q && n != 0; p++) {
+    sampflush(p);
     u64 len = p->count * sizeof(struct pmuevent);
     if (cur <= off && off < cur+len) {
       u64 boff = off-cur;
@@ -404,9 +471,15 @@ initsamp(void)
   lcr4(cr4 | CR4_PCE);
 
   for (int i = 0; i < LOG_SEGMENTS_PER_CPU; ++i) {
-    pmulog[myid()].segments[i] = (pmuevent*)kmalloc(LOG_SEGMENT_SZ, "perf");
-    if (!pmulog[myid()].segments[i])
+    auto l = &pmulog[myid()];
+    l->segments[i] = (pmuevent*)kmalloc(LOG_SEGMENT_SZ, "perf");
+    if (!l->segments[i])
       panic("initsamp: kalloc");
+    l->hash = (pmuevent*)kmalloc((1<<LOG2_HASH_BUCKETS) * sizeof(pmuevent),
+                                 "perfhash");
+    if (!l->hash)
+      panic("initsamp: kalloc hash");
+    memset(l->hash, 0, (1<<LOG2_HASH_BUCKETS) * sizeof(pmuevent));
   }
 
   if (pmu.config == intelpmu.config)

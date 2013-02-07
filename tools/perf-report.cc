@@ -270,9 +270,9 @@ main(int ac, char **av)
         continue;
       auto it = map.find(p);
       if (it == map.end())
-        map[p] = 1;
+        map[p] = p->count;
       else
-        it->second = it->second + 1;
+        it->second = it->second + p->count;
     }
   }
   
