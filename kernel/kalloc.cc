@@ -811,11 +811,13 @@ kfree(void *v, size_t size)
           assert(buddy < buddies.size());
           lock.release();
           lock = buddies[buddy].lock.guard();
-#if PRINT_STEAL
           if (buddy < mem->first_buddy ||
-              buddy >= mem->first_buddy + mem->nbuddies)
+              buddy >= mem->first_buddy + mem->nbuddies) {
+            kstats::inc(&kstats::kalloc_hot_list_remote_free_count);
+#if PRINT_STEAL
             cprintf("CPU %d returning hot list to buddy %lu\n", myid(), buddy);
 #endif
+          }
         }
         buddies[buddy].alloc.free(ptr, PGSIZE);
       }

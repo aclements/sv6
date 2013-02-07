@@ -44,6 +44,7 @@
   X(uint64_t, kalloc_hot_list_refill_count)     \
   X(uint64_t, kalloc_hot_list_flush_count)      \
   X(uint64_t, kalloc_hot_list_steal_count)      \
+  X(uint64_t, kalloc_hot_list_remote_free_count)        \
 
 #define KSTATS_REFCACHE(X)                      \
   X(uint64_t, refcache_review_count)            \
