@@ -199,13 +199,13 @@ sampintr(struct trapframe *tf)
   u64 overflow = pmu.get_overflow();
 
   if (overflow & (1<<0)) {
-    r = 1;
+    ++r;
     if (samplog(tf))
       pmuconfig(0, selector, period);
   }
 
   if (overflow & (1<<1)) {
-    r = 1;
+    ++r;
     wdcheck(tf);
     pmuconfig(1, wd_selector, wd_period);
   }
