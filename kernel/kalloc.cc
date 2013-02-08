@@ -567,7 +567,7 @@ kalloc(const char *name, size_t size)
       auto first = mem->first_buddy;
       auto lb = &buddies[first];
       auto l = lb->lock.guard();
-      for (int b = 0; mem->nhot < KALLOC_HOT_PAGES && b < buddies.size(); ) {
+      for (int b = 0; mem->nhot < KALLOC_HOT_PAGES / 2 && b < buddies.size(); ) {
         void *page = lb->alloc.alloc_nothrow(PGSIZE);
         if (!page) {
           // Move to the next allocator
