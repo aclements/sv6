@@ -24,8 +24,6 @@
 #include <algorithm>
 #include <iterator>
 
-// Use lb.hh
-#define LB  1
 // Print memory steal events
 #define PRINT_STEAL 0
 
@@ -539,7 +537,7 @@ kmemprint()
   }
 }
 
-#if LB
+#if KALLOC_LOAD_BALANCE
 char*
 kalloc(const char *name, size_t size)
 {
@@ -710,7 +708,7 @@ initkalloc(u64 mbaddr)
   // subdivide these and spread out CPUs within a node (but still
   // prefer stealing from the same node before others).
 
-#if LB
+#if KALLOC_LOAD_BALANCE
   void *base = p2v(mem.base());
   size_t sz = (size_t) p2v(mem.max()) - (size_t) base;
 #endif
@@ -730,7 +728,7 @@ initkalloc(u64 mbaddr)
     for (auto &reg : node_mem.get_regions()) {
       if (ALLOC_MEMSET)
         memset(p2v(reg.base), 1, reg.end - reg.base);
-#if LB
+#if KALLOC_LOAD_BALANCE
       // Make an allocator for [base, base+sz) but only mark [reg.base,
       // reg.end-reg.base) as free.  This allows us to move phys memory from one
       // buddy to another during balance_move_to().
@@ -774,7 +772,7 @@ initkalloc(u64 mbaddr)
   kinited = 1;
 }
 
-#if LB
+#if KALLOC_LOAD_BALANCE
 void
 kfree(void *v, size_t size)
 {

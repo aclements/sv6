@@ -38,6 +38,10 @@
 #define PAGE_REFCOUNT refcache::
 // The maximum number of recently freed pages to cache per core.
 #define KALLOC_HOT_PAGES 128
+// How to balance memory load.  If 1, dynamically load balance pages
+// between buddy allocators.  If 0, directly steal and return memory
+// from remote buddy allocators.
+#define KALLOC_LOAD_BALANCE 0
 
 #if defined(HW_qemu)
 #define DEBUG         1
