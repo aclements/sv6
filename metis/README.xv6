@@ -6,3 +6,5 @@ To change the units in which umalloc asks the OS for memory, modify morecore() i
 
 To compile for Linux, just type "make" in this directory.
 
+To run wrmem, see run.sh
+
