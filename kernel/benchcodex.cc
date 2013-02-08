@@ -69,6 +69,35 @@ private:
   std::atomic<unsigned int> ctr;
 };
 
+class correct_counter : public testcase {
+public:
+  static const uint64_t N = 5;
+
+  correct_counter() : ctr(0) {}
+
+  virtual void
+  do_work(void) override
+  {
+    for (int i = 0; i < N; i++) {
+      cprintf("do_work(cpu=%d)\n", mycpu()->id);
+      ctr++;
+    }
+  }
+
+  virtual void
+  validate_work(void) override
+  {
+    auto v = ctr.load();
+    cprintf("value=%llu\n", (unsigned long long) v);
+    assert(v == (ncpu * N));
+  }
+
+  NEW_DELETE_OPS(correct_counter);
+
+private:
+  std::atomic<uint64_t> ctr;
+};
+
 // taken from frost/codex/c++/incorrect-programs/buggy-cset.cc
 template <typename T>
 class concurrent_set {
@@ -192,7 +221,8 @@ static testcase *_testcase;
 void
 benchcodex::init(void)
 {
-  _testcase = new cset_test;
+  //_testcase = new cset_test;
+  _testcase = new correct_counter;
 }
 
 testcase *
@@ -204,9 +234,11 @@ benchcodex::singleton_testcase(void)
 void
 benchcodex::ap(testcase *t)
 {
+  cprintf("benchcodex::ap() called on cpu=%d\n", mycpu()->id);
   while (!_start)
     ;
 
+  cprintf("benchcodex::ap() doing work on cpu=%d\n", mycpu()->id);
   t->do_work();
 
   _latch->decr();
@@ -226,6 +258,8 @@ benchcodex::main(testcase *t)
   _latch->wait();
 
   t->validate_work();
+
+  cprintf("benchcodex::main() succeeded\n");
 
   codex_trace_end();
   halt();

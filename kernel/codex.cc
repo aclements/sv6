@@ -7,6 +7,12 @@ initcodex(void)
 {
   codex_trace_start();
   benchcodex::init();
+
+  for (int i = 0; i < ncpu; i++)
+    if (i == 0)
+      threadpin((void (*)(void *)) benchcodex::main, benchcodex::singleton_testcase(), "benchcodex::main", 0);
+    else
+      threadpin((void (*)(void *)) benchcodex::ap, benchcodex::singleton_testcase(), "benchcodex::ap", i);
 }
 
 unsigned int
