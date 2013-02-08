@@ -120,6 +120,12 @@ public:
     return (void*)limit;
   }
 
+  // Return if ptr is between the base and limit of this allocator.
+  bool contains(void *ptr) const
+  {
+    return get_base() <= ptr && ptr < get_limit();
+  }
+
   // Return statistics for this allocator.  This may be expensive.
   void get_stats(stats *out) const;
 
