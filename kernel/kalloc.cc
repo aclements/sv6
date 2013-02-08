@@ -945,24 +945,33 @@ kfree(void *v, size_t size)
       // allocator list, minimizing and batching our locks.
       kstats::inc(&kstats::kalloc_hot_list_flush_count);
       std::sort(mem->hot_pages, mem->hot_pages + (KALLOC_HOT_PAGES / 2));
-      size_t buddy = -1;
+      locked_buddy *lb = nullptr;
       lock_guard<spinlock> lock;
       for (size_t i = 0; i < KALLOC_HOT_PAGES / 2; ++i) {
         void *ptr = mem->hot_pages[i];
-        if (buddy == -1 || ptr >= buddies[buddy].alloc.get_limit()) {
-          // Find the allocator containing ptr.
-          for (++buddy; ptr >= buddies[buddy].alloc.get_limit(); ++buddy);
-          assert(buddy < buddies.size());
+        // Do we have the right buddy?
+        if (!lb || !lb->alloc.contains(ptr)) {
+          // Find the first buddy in steal order that contains ptr.
+          // We do it this way in case there are overlapping buddies.
           lock.release();
-          lock = buddies[buddy].lock.guard();
-          if (!mem->steal.is_local(buddy)) {
+          lb = nullptr;
+          for (auto buddyidx : mem->steal) {
+            if (buddies[buddyidx].alloc.contains(ptr)) {
+              lb = &buddies[buddyidx];
+              break;
+            }
+          }
+          assert(lb);
+          if (!mem->steal.is_local(lb - &buddies[0])) {
             kstats::inc(&kstats::kalloc_hot_list_remote_free_count);
 #if PRINT_STEAL
-            cprintf("CPU %d returning hot list to buddy %lu\n", myid(), buddy);
+            cprintf("CPU %d returning hot list to buddy %lu\n", myid(),
+                    lb - &buddies[0]);
 #endif
           }
+          lock = lb->lock.guard();
         }
-        buddies[buddy].alloc.free(ptr, PGSIZE);
+        lb->alloc.free(ptr, PGSIZE);
       }
       lock.release();
       // Shift hot page list down
@@ -976,27 +985,17 @@ kfree(void *v, size_t size)
     return;
   }
 
-  // Find the allocator to return v to.
-  locked_buddy *lb = nullptr;
-
-  // Fast path for allocations from our allocator.
-  auto first = *mem->steal.begin();
-  if (buddies[first].alloc.get_base() <= v &&
-      v < buddies[first].alloc.get_limit()) {
-    lb = &buddies[first];
-  } else {
-    // Find the allocator
-    lb = std::lower_bound(buddies.begin(), buddies.end(), v,
-                          [](locked_buddy &lb, void *v) {
-                            return lb.alloc.get_limit() < v;
-                          });
-    if (v < lb->alloc.get_base())
-      panic("kfree: pointer %p is not in an allocated region", v);
+  // Find the first allocator in steal order to return v to.  This
+  // will check our local allocators first and handle overlapping
+  // buddies.
+  for (auto buddyidx : mem->steal) {
+    if (buddies[buddyidx].alloc.contains(v)) {
+      auto l = buddies[buddyidx].lock.guard();
+      buddies[buddyidx].alloc.free(v, size);
+      return;
+    }
   }
-
-  assert(lb);
-  auto l = lb->lock.guard();
-  lb->alloc.free(v, size);
+  panic("kfree: pointer %p is not in an allocated region", v);
 }
 #endif
 
