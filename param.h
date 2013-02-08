@@ -42,6 +42,9 @@
 // between buddy allocators.  If 0, directly steal and return memory
 // from remote buddy allocators.
 #define KALLOC_LOAD_BALANCE 0
+// Buddy allocator granularity.  If 0, create a buddy per NUMA node.
+// If 1, create a buddy per CPU.
+#define KALLOC_BUDDY_PER_CPU 1
 
 #if defined(HW_qemu)
 #define DEBUG         1

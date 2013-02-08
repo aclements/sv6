@@ -218,8 +218,20 @@ public:
         low = seg.high;
       }
     }
-    if (low < high)
-      segments_.push_back(segment{low, high});
+    if (low >= high)
+      return;
+    // Try to merge with the last range, unless it's the local range
+    if (segments_.size() > 1) {
+      if (segments_.back().high == low) {
+        segments_.back().high = high;
+        return;
+      } else if (high == segments_.back().low) {
+        segments_.back().low = low;
+        return;
+      }
+    }
+    // Add a new segment
+    segments_.push_back(segment{low, high});
   }
 };
 
@@ -862,40 +874,76 @@ initkalloc(u64 mbaddr)
     if (ALLOC_MEMSET)
       console.println("kalloc: Clearing node ", node.id);
 
+    // Divide the node into at least subnodes buddy allocators
+#if KALLOC_BUDDY_PER_CPU
+    size_t subnodes = node.cpus.size();
+#else
+    size_t subnodes = 1;
+#endif
+    size_t size_limit = (node_mem.bytes() + subnodes - 1) / subnodes;
+
     // Create buddies
-    size_t first = buddies.size();
+    size_t node_low = buddies.size();
     for (auto &reg : node_mem.get_regions()) {
       if (ALLOC_MEMSET)
         memset(p2v(reg.base), 1, reg.end - reg.base);
+
+      // Subdivide region
+      auto remaining = reg;
+      while (remaining.base < remaining.end) {
+        size_t subsize = std::min(remaining.end - remaining.base, size_limit);
 #if KALLOC_LOAD_BALANCE
-      // Make an allocator for [base, base+sz) but only mark [reg.base,
-      // reg.end-reg.base) as free.  This allows us to move phys memory from one
-      // buddy to another during balance_move_to().
-      auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base, base, sz);
+        // Make an allocator for [base, base+sz) but only mark
+        // [reg.base, reg.base+size) as free.  This allows us to move
+        // phys memory from one buddy to another during
+        // balance_move_to().
+        auto buddy = buddy_allocator(p2v(remaining.base), subsize, base, sz);
 #else
-      auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base);
+        // The buddy allocator can manage any page within this node
+        auto buddy = buddy_allocator(p2v(remaining.base), subsize,
+                                     p2v(reg.base), reg.end - reg.base);
 #endif
-      if (!buddy.empty()) {
-        buddies.emplace_back(std::move(buddy));
-        allmem.add(buddies.size()-1, p2v(reg.base), reg.end - reg.base);
+        if (!buddy.empty()) {
+          buddies.emplace_back(std::move(buddy));
+          allmem.add(buddies.size()-1, p2v(remaining.base), subsize);
+        }
+        // XXX(Austin) It would be better if we knew what free_init
+        // has rounded the upper bound to.
+        remaining.base += subsize;
       }
     }
+    size_t node_buddies = buddies.size() - node_low;
 
     // Associate buddies with CPUs
+    size_t cpu_index = 0;
     for (auto &cpu : node.cpus) {
       cpu->mem = &cpu_mem[cpu->id];
-      cpu->mem->steal.add(first, buddies.size());
+      // Divvy up the subnodes between the CPUs in this node.  Assume
+      // at first that this is disjoint.
+      size_t cpu_low = node_low + cpu_index * node_buddies / node.cpus.size(),
+        cpu_high = node_low + (cpu_index + 1) * node_buddies / node.cpus.size();
+      // If we have more CPUs than subnodes, we need the assignments
+      // to overlap.
+      if (cpu_low == cpu_high)
+        ++cpu_high;
+      assert(cpu_high <= node_low + node_buddies);
+      // First allocate from the subnodes assigned to this CPU.
+      cpu->mem->steal.add(cpu_low, cpu_high);
+      // Then steal from the whole node (this will be a no-op if
+      // there's only one subnode).
+      cpu->mem->steal.add(node_low, node_low + node_buddies);
       cpu->mem->nhot = 0;
-      cpu->mem->mempool = first; 
+      cpu->mem->mempool = node_low;
+      ++cpu_index;
     }
   }
 
-  // Allow CPUs to steal from any buddy
+  // Finally, allow CPUs to steal from any buddy
   for (int cpu = 0; cpu < NCPU; ++cpu)
     cpus[cpu].mem->steal.add(0, buddies.size());
 
   if (0) {
-    console.println("kalloc: Steal order");
+    console.println("kalloc: Buddy steal order (<local> remote)");
     for (int cpu = 0; cpu < NCPU; ++cpu)
       console.println("  CPU ", cpu, ": ", cpus[cpu].mem->steal);
   }
