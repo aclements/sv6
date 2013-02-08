@@ -138,8 +138,10 @@ content(int s, int fd)
       return 0;
     }
     
-    if (xwrite(s, buf, n))
-      die("httpd content: write failed");
+    if (xwrite(s, buf, n) < 0) {
+      fprintf(stderr, "httpd content: write failed");
+      return -1;
+    }
   }
 }
 
