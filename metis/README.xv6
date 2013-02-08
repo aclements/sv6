@@ -2,5 +2,7 @@ This version of metis is straight from the Metis gitrepo, and works unmodified
 on xv6 using xv6's pthread library, etc.  
 
 For comparisons of metis on xv6 versus linux, we compile the linux version with lib/umalloc.c, so that they use both the same scalable malloc function.
+To change the units in which umalloc asks the OS for memory, modify morecore() in lib/umalloc.c.
 
 To compile for Linux, just type "make" in this directory.
+
