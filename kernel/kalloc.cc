@@ -112,6 +112,136 @@ struct mempool : public balance_pool<mempool> {
 
 static static_vector<mempool, MAX_BUDDIES> mempools;
 
+// A class that tracks the order a core should steal in.  This should
+// always start with a core's local buddy allocators and work out from
+// there.  In the simple case, the next strata is all of the buddies.
+class steal_order
+{
+public:
+  struct segment
+  {
+    // Steal from buddies [low, high)
+    size_t low, high;
+  };
+
+private:
+  // All up to three stealing strata (so five segments)
+  typedef static_vector<segment, 5> segment_vector;
+  segment_vector segments_;
+
+  friend void to_stream(print_stream *s, const steal_order &steal);
+
+public:
+  class iterator
+  {
+    const steal_order *order_;
+    segment_vector::const_iterator it_;
+    size_t pos_;
+
+  public:
+    iterator(const steal_order *order)
+      : order_(order), it_(order->segments_.begin()), pos_(it_->low) { }
+
+    constexpr iterator()
+      : order_(nullptr), it_(), pos_(0) { }
+
+    size_t operator*() const
+    {
+      return pos_;
+    }
+
+    iterator &operator++()
+    {
+      if (++pos_ == it_->high) {
+        if (++it_ == order_->segments_.end())
+          *this = iterator();
+        else
+          pos_ = it_->low;
+      }
+      return *this;
+    }
+
+    bool operator==(const iterator &o) const
+    {
+      // it_ == o.it_ implies order_ == o.order_
+      return (it_ == o.it_ && pos_ == o.pos_);
+    }
+
+    bool operator!=(const iterator &o) const
+    {
+      return !(*this == o);
+    }
+  };
+
+  iterator begin() const
+  {
+    return iterator(this);
+  }
+
+  static constexpr iterator end()
+  {
+    return iterator();
+  }
+
+  // Return the range of buddy allocators that are "local" to this
+  // steal_order.  By convention, this is the first range that was
+  // added to this steal_order.
+  const segment &get_local() const
+  {
+    return segments_.front();
+  }
+
+  bool is_local(size_t index) const
+  {
+    auto &s = get_local();
+    return s.low <= index && index < s.high;
+  }
+
+  // Add a range of buddy indexes to steal from.  This will
+  // automatically subtract out any ranges that have already been
+  // added.
+  void add(size_t low, size_t high)
+  {
+    for (auto &seg : segments_) {
+      if (low == seg.low && high == seg.high) {
+        return;
+      } else if (low < seg.low && high > seg.high) {
+        // Split in two.  Do the upper half first to desynchronize the
+        // stealing order of different cores.
+        add(seg.high, high);
+        high = seg.low;
+      } else if (low < seg.low && high > seg.low) {
+        // Straddles low boundary
+        high = seg.low;
+      } else if (low < seg.high && high > seg.high) {
+        // Straddles high boundary
+        low = seg.high;
+      }
+    }
+    if (low < high)
+      segments_.push_back(segment{low, high});
+  }
+};
+
+void
+to_stream(print_stream *s, const steal_order &steal)
+{
+  bool first = true;
+  for (auto &seg : steal.segments_) {
+    if (first)
+      s->print("<");
+    else
+      s->print(" ");
+    if (seg.low == seg.high - 1)
+      s->print(seg.low);
+    else
+      s->print(seg.low, "..", seg.high-1);
+    if (first)
+      s->print(">");
+    first = false;
+  }
+}
+
 // Our slabs aren't really slabs.  They're just pre-sized and
 // pre-named regions.
 struct slab {
@@ -130,7 +260,7 @@ paddr page_info_base;
 
 struct cpu_mem
 {
-  size_t first_buddy, nbuddies;
+  steal_order steal;
   int mempool;   // XXX cache align?
 
   // Hot page cache of recently freed pages
@@ -520,9 +650,9 @@ void
 kmemprint()
 {
   for (int cpu = 0; cpu < NCPU; ++cpu) {
-    size_t last = cpu_mem[cpu].first_buddy + cpu_mem[cpu].nbuddies;
+    auto &local = cpu_mem[cpu].steal.get_local();
     console.print("cpu ", cpu, ":");
-    for (auto buddy = cpu_mem[cpu].first_buddy; buddy < last; ++buddy) {
+    for (auto buddy = local.low; buddy < local.high; ++buddy) {
       buddy_allocator::stats stats;
       {
         auto l = buddies[buddy].lock.guard();
@@ -563,28 +693,28 @@ kalloc(const char *name, size_t size)
     if (mem->nhot == 0) {
       // No hot pages; fill half of the cache
       kstats::inc(&kstats::kalloc_hot_list_refill_count);
-      auto first = mem->first_buddy;
-      auto lb = &buddies[first];
+      auto buddyit = mem->steal.begin(), buddyend = mem->steal.end();
+      auto lb = &buddies[*buddyit];
       auto l = lb->lock.guard();
-      for (int b = 0; mem->nhot < KALLOC_HOT_PAGES / 2 && b < buddies.size(); ) {
+      while (mem->nhot < KALLOC_HOT_PAGES / 2 && buddyit != buddyend) {
         void *page = lb->alloc.alloc_nothrow(PGSIZE);
         if (!page) {
           // Move to the next allocator
-          if (++b == buddies.size() && mem->nhot == 0) {
+          if (++buddyit == buddyend && mem->nhot == 0) {
             // We couldn't allocate any pages; we're probably out of
             // memory, but drop through to the more aggressive
             // general-purpose allocator.
             goto general;
           }
-          lb = &buddies[(b + first) % buddies.size()];
+          lb = &buddies[*buddyit];
           l = lb->lock.guard();
-          if (b == mem->nbuddies)
+          if (!mem->steal.is_local(*buddyit)) {
             kstats::inc(&kstats::kalloc_hot_list_steal_count);
 #if PRINT_STEAL
-          if (b >= mem->nbuddies)
             cprintf("CPU %d stealing hot list from buddy %lu\n",
-                    myid(), (b + first) % buddies.size());
+                    myid(), *buddyit);
 #endif
+          }
         } else {
           mem->hot_pages[mem->nhot++] = page;
         }
@@ -599,17 +729,18 @@ kalloc(const char *name, size_t size)
     // General allocation path for non-PGSIZE allocations or if we
     // can't fill our hot page cache.
   general:
-    auto first = mycpu()->mem->first_buddy;
     // XXX(Austin) Would it be better to linear scan our local buddies
     // and then randomly traverse the others to avoid hot-spots?
-    for (int b = 0; !res && b < buddies.size(); b++) {
-      auto &lb = buddies[(b + first) % buddies.size()];
+    for (auto idx : mycpu()->mem->steal) {
+      auto &lb = buddies[idx];
       auto l = lb.lock.guard();
       res = lb.alloc.alloc_nothrow(size);
 #if PRINT_STEAL
-      if (res && b >= mycpu()->mem->nbuddies)
-        cprintf("CPU %d stole from buddy %lu\n", myid(), (b + first) % buddies.size());
+      if (res && mycpu()->mem.steal.is_local(idx))
+        cprintf("CPU %d stole from buddy %lu\n", myid(), idx);
 #endif
+      if (res)
+        break;
     }
     source = "buddy";
   }
@@ -753,11 +884,20 @@ initkalloc(u64 mbaddr)
     // Associate buddies with CPUs
     for (auto &cpu : node.cpus) {
       cpu->mem = &cpu_mem[cpu->id];
-      cpu->mem->first_buddy = first;
-      cpu->mem->nbuddies = buddies.size() - first;
+      cpu->mem->steal.add(first, buddies.size());
       cpu->mem->nhot = 0;
       cpu->mem->mempool = first; 
     }
+  }
+
+  // Allow CPUs to steal from any buddy
+  for (int cpu = 0; cpu < NCPU; ++cpu)
+    cpus[cpu].mem->steal.add(0, buddies.size());
+
+  if (0) {
+    console.println("kalloc: Steal order");
+    for (int cpu = 0; cpu < NCPU; ++cpu)
+      console.println("  CPU ", cpu, ": ", cpus[cpu].mem->steal);
   }
 
   if (!mem.get_regions().empty())
@@ -795,10 +935,10 @@ kfree(void *v, size_t size)
   if (kinited)
     mtunlabel(mtrace_label_block, v);
 
+  auto mem = mycpu()->mem;
   if (size == PGSIZE) {
     // Free to the hot list
     scoped_cli cli;
-    auto mem = mycpu()->mem;
     if (mem->nhot == KALLOC_HOT_PAGES) {
       // There's no more room in the hot pages list, so free half of
       // it.  We sort the list so we can merge it with the buddy
@@ -815,8 +955,7 @@ kfree(void *v, size_t size)
           assert(buddy < buddies.size());
           lock.release();
           lock = buddies[buddy].lock.guard();
-          if (buddy < mem->first_buddy ||
-              buddy >= mem->first_buddy + mem->nbuddies) {
+          if (!mem->steal.is_local(buddy)) {
             kstats::inc(&kstats::kalloc_hot_list_remote_free_count);
 #if PRINT_STEAL
             cprintf("CPU %d returning hot list to buddy %lu\n", myid(), buddy);
@@ -841,7 +980,7 @@ kfree(void *v, size_t size)
   locked_buddy *lb = nullptr;
 
   // Fast path for allocations from our allocator.
-  auto first = mycpu()->mem->first_buddy;
+  auto first = *mem->steal.begin();
   if (buddies[first].alloc.get_base() <= v &&
       v < buddies[first].alloc.get_limit()) {
     lb = &buddies[first];
