@@ -155,7 +155,7 @@ inituartcons(void)
 {
   // Acknowledge pre-existing interrupt conditions;
   // enable interrupts.
+  extpic->map_isa_irq(irq_com).enable();
   inb(com+COM_IN_IIR);
   inb(com+COM_IN_RECEIVE);
-  extpic->map_isa_irq(irq_com).enable();
 }
