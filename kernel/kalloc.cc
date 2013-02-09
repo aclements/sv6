@@ -740,16 +740,14 @@ initkalloc(u64 mbaddr)
       // Make an allocator for [base, base+sz) but only mark [reg.base,
       // reg.end-reg.base) as free.  This allows us to move phys memory from one
       // buddy to another during balance_move_to().
-      auto buddy = buddy_allocator(base, sz, 0);
-      buddy.free_init(p2v(reg.base), reg.end - reg.base);
+      auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base, base, sz);
 #else
-      auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base, 1);
+      auto buddy = buddy_allocator(p2v(reg.base), reg.end - reg.base);
 #endif
       if (!buddy.empty()) {
         buddies.emplace_back(std::move(buddy));
         allmem.add(buddies.size()-1, p2v(reg.base), reg.end - reg.base);
       }
-      
     }
 
     // Associate buddies with CPUs

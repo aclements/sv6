@@ -62,17 +62,18 @@ public:
   // conjunction with move assignment.
   buddy_allocator() : base(0), limit(0) { }
 
-  // Construct a buddy allocator that manages the given memory
-  // region.
-  buddy_allocator(void *base, std::size_t len, bool init);
+  // Construct a buddy allocator containing the memory from [base,
+  // base+len).  If track_len is not 0, then the buddy allocator will
+  // additionally be able to track any memory in the range
+  // [track_base, track_base+track_len).
+  buddy_allocator(void *base, std::size_t len,
+                  void *track_base = nullptr, std::size_t track_len = 0);
 
   // Move constructor.
   buddy_allocator(buddy_allocator &&o) = default;
 
   // Move assignment.
   buddy_allocator &operator=(buddy_allocator &&o) = default;
-
-  void free_init(void *base, std::size_t len);
 
   // Return true if this buddy allocator has no available memory.
   bool empty() const
@@ -130,6 +131,8 @@ public:
   void get_stats(stats *out) const;
 
 private:
+  // The address represented by the beginning of the tracking bitmaps
+  // and the address just beyond the end of the tracking bitmaps.
   uintptr_t base, limit;
 
   struct block

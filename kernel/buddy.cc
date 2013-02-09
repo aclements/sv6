@@ -11,21 +11,38 @@ using namespace std;
 
 #include "kernel.hh"
 
-buddy_allocator::buddy_allocator(void *base, size_t len, bool init)
+buddy_allocator::buddy_allocator(void *base, size_t len,
+                                 void *track_base, size_t track_len)
 {
-  uintptr_t end = (uintptr_t)base + len;
+  if (track_base == nullptr && track_len == 0) {
+    track_base = base;
+    track_len = len;
+  }
 
-  // Use a linear allocator to allocate buddy bitmaps.
+#if BUDDY_DEBUG
+  uintptr_t free_base = (uintptr_t)base;
+#endif
+  uintptr_t free_end = (uintptr_t)base + len;
+  uintptr_t track_end = (uintptr_t)track_base + track_len;
+  assert(track_base <= base && free_end <= track_end);
+
+  // Use a linear allocator to allocate buddy tracking bitmaps from
+  // the free space.
   // XXX(Austin) Should we check if we have more unaligned space at
   // the end?  Currently, we skip 16 megs between each buddy region.
-  size_t nBlocks = len / MIN_SIZE;
+  size_t nBlocks = track_len / MIN_SIZE;
   for (size_t i = 0; i < MAX_ORDER; ++i) {
     size_t bitmapSize = (nBlocks + 7) / 8;
     orders[i].bitmap = (unsigned char*)base;
+    if ((uintptr_t)base + bitmapSize >= free_end)
+      // Not enough room for the tracking bitmap
+      return;
     memset(orders[i].bitmap, 0, bitmapSize);
     base = (char*)base + bitmapSize;
 #if BUDDY_DEBUG
     orders[i].debug = (unsigned char*)base;
+    if ((uintptr_t)base + bitmapSize >= free_end)
+      return;
     memset(orders[i].debug, 0, bitmapSize);
     base = (char*)base + bitmapSize;
 #endif
@@ -39,32 +56,29 @@ buddy_allocator::buddy_allocator(void *base, size_t len, bool init)
   orders[MAX_ORDER].debug = nullptr;
 #endif
 
-  // Round both bounds to multiples of MIN_SIZE << MAX_ORDER.  Without
+  // Round bounds in to multiples of MIN_SIZE << MAX_ORDER.  Without
   // this, some blocks wouldn't have buddies, which would complicate
   // other logic.
-  this->base = ((uintptr_t)base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
-  limit = end & ~(MAX_SIZE - 1);
+  // XXX We could instead round *out* (which might require a slightly
+  // larger bitmap) and then simply treat the bitmap as allocated
+  // blocks, which would let us use this space.
+  this->base = ((uintptr_t)track_base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
+  limit = track_end & ~(MAX_SIZE - 1);
 
-  // Create block list
-  if (init) {
-    for (uintptr_t block = this->base; block < limit; block += MAX_SIZE)
-      orders[MAX_ORDER].blocks.push_back((struct block*)block);
-  }
+  // Create free block list.  We have to round these in, as well.
+  uintptr_t block_base = ((uintptr_t)base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
+  free_end = free_end & ~(MAX_SIZE - 1);
+  for (uintptr_t block = block_base; block < free_end; block += MAX_SIZE)
+    orders[MAX_ORDER].blocks.push_back((struct block*)block);
+
+#if BUDDY_DEBUG
+  if (0)
+    console.println("bitmap ", (void*)((uintptr_t)free_base), "\n"
+                    "     ..", (void*)((uintptr_t)base - 1), "\n",
+                    "block  ", (void*)block_base, "\n"
+                    "     ..", (void*)(free_end - 1));
+#endif
 }
-
-void
-buddy_allocator::free_init(void *base, std::size_t len)
-{
-  uintptr_t nbase = (uintptr_t) base;
-  if (nbase < this->base)   // skip memory allocated for bitmap?
-    nbase = this->base;
-  uintptr_t b = ((uintptr_t)nbase + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
-  uintptr_t l = ((uintptr_t)base + len) & ~(MAX_SIZE - 1);
-  for (uintptr_t block = b; block < l; block += MAX_SIZE) {
-    this->free((void *) block, MAX_SIZE);
-  }
-}
-
 
 void*
 buddy_allocator::alloc_order(size_t order)
