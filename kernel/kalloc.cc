@@ -940,7 +940,8 @@ initkalloc(u64 mbaddr)
 
   // Finally, allow CPUs to steal from any buddy
   for (int cpu = 0; cpu < NCPU; ++cpu)
-    cpus[cpu].mem->steal.add(0, buddies.size());
+    if (cpus[cpu].mem)
+      cpus[cpu].mem->steal.add(0, buddies.size());
 
   if (0) {
     console.println("kalloc: Buddy steal order (<local> remote)");
