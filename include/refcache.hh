@@ -189,7 +189,7 @@ namespace refcache {
     int64_t refcount_;
 
     // Seqlock for the refcount value.
-    seqcount<u32> refcount_seq_;
+    seqcount<uint32_t> refcount_seq_;
 
     // Link used to track this object in the per-core review list.
     islink<referenced> next_;
