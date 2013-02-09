@@ -947,8 +947,8 @@ u64
 namehash(const strbuf<DIRSIZ> &n)
 {
   u64 h = 0;
-  for (int i = 0; i < DIRSIZ && n._buf[i]; i++) {
-    u64 c = n._buf[i];
+  for (int i = 0; i < DIRSIZ && n.buf_[i]; i++) {
+    u64 c = n.buf_[i];
     // Lifted from dcache.h in Linux v3.3
     h = (h + (c << 4) + (c >> 4)) * 11;
     // XXX(sbw) this doesn't seem to do well with the names
@@ -1003,7 +1003,7 @@ dir_flush(sref<inode> dp)
   u32 off = 0;
   dp->dir.load()->enumerate([dp, &off](const strbuf<DIRSIZ> &name, const u32 &inum)->bool{
       struct dirent de;
-      strncpy(de.name, name._buf, DIRSIZ);
+      strncpy(de.name, name.buf_, DIRSIZ);
       de.inum = inum;
       if(writei(dp, (char*)&de, off, sizeof(de)) != sizeof(de))
         panic("dir_flush_cb");

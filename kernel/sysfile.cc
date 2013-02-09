@@ -264,9 +264,9 @@ isdirempty(sref<inode> dp)
   dir_init(dp);
   int empty = 1;
   dp->dir.load()->enumerate([&empty](const strbuf<DIRSIZ> &name, u64 ino)->bool{
-      if (!strcmp(name._buf, "."))
+      if (!strcmp(name.buf_, "."))
         return false;
-      if (!strcmp(name._buf, ".."))
+      if (!strcmp(name.buf_, ".."))
         return false;
       empty = 0;
       return true;

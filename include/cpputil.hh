@@ -12,14 +12,23 @@ using std::make_pair;
 template<int N>
 class strbuf {
  public:
-  char _buf[N];
+  char buf_[N];
 
-  strbuf(const char *s) {
-    strncpy(_buf, s, N);
+  strbuf() {
+    if (N > 0)
+      buf_[0] = '\0';
   }
 
-  bool operator==(const strbuf<N> &other) {
-    return !strncmp(_buf, other._buf, N);
+  strbuf(const char *s) {
+    strncpy(buf_, s, N);
+  }
+
+  bool operator==(const strbuf<N> &other) const {
+    return !strncmp(buf_, other.buf_, N);
+  }
+
+  bool operator!=(const strbuf<N> &other) const {
+    return !operator==(other);
   }
 };
 
