@@ -117,7 +117,7 @@ void to_stream(print_stream *s, const shexdump &f)
 {
   // Compute common prefix of all addresses
   uintptr_t addr = f.start_;
-  uintptr_t end_addr = f.start_ + f.len_;
+  uintptr_t end_addr = f.start_ + f.len_ - 1;
   int common = 0;
   while (addr != end_addr) {
     common += 4;
@@ -139,7 +139,7 @@ void to_stream(print_stream *s, const shexdump &f)
   const uint8_t *p = (const uint8_t*)f.base_ - (f.start_ - addr);
 
   // Round up ending address
-  end_addr = ((f.start_ + f.len_) | 15) + 1;
+  end_addr = ((f.start_ + f.len_ - 1) | 15) + 1;
 
   // Hex dump
   char ascii[16];
