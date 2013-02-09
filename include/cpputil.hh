@@ -30,6 +30,10 @@ class strbuf {
   bool operator!=(const strbuf<N> &other) const {
     return !operator==(other);
   }
+
+  bool operator<(const strbuf<N> &other) const {
+    return strncmp(buf_, other.buf_, N) < 0;
+  }
 };
 
 namespace std {

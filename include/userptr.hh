@@ -32,6 +32,11 @@ public:
     return ptr;
   }
 
+  bool null() const
+  {
+    return ptr == nullptr;
+  }
+
   // Allow implicit conversion to userptr<void> (mirroring C++'s
   // implicit casts to void*)
   operator userptr<void> () const
@@ -95,6 +100,11 @@ public:
   userptr_str(const userptr_str &o) = default;
   userptr_str(userptr_str &&o) = default;
   userptr_str& operator=(const userptr_str& o) = default;
+
+  bool null() const
+  {
+    return ptr.null();
+  }
 
   bool load(char *dst, std::size_t size)
   {

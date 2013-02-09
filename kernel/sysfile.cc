@@ -12,13 +12,16 @@
 #include "kmtrace.hh"
 #include "sperf.hh"
 #include "dirns.hh"
+#include "mfs.hh"
 #include <uk/fcntl.h>
 #include <uk/stat.h>
 
-bool
-getfile(int fd, sref<file> *f)
+sref<file>
+getfile(int fd)
 {
-  return myproc()->ftable->getfile(fd, f);
+  sref<file> f;
+  myproc()->ftable->getfile(fd, &f);
+  return f;
 }
 
 // Allocate a file descriptor for the given file.
@@ -33,27 +36,38 @@ fdalloc(file *f, int omode)
 int
 sys_dup(int ofd)
 {
-  sref<file> f;
-  int fd;
-  
-  if (!getfile(ofd, &f))
+  sref<file> f = getfile(ofd);
+  if (!f)
     return -1;
+
+  int fd = fdalloc(f.get(), 0);
+  if (fd < 0)
+    return -1;
+
   f->inc();
-  if ((fd = fdalloc(f.get(), 0)) < 0) {
-    f->dec();
-    return -1;
-  }
   return fd;
+}
+
+//SYSCALL
+int
+sys_close(int fd)
+{
+  sref<file> f = getfile(fd);
+  if (!f)
+    return -1;
+
+  myproc()->ftable->close(fd);
+  return 0;
 }
 
 //SYSCALL
 ssize_t
 sys_read(int fd, userptr<void> p, size_t n)
 {
-  sref<file> f;
-
-  if(!getfile(fd, &f))
+  sref<file> f = getfile(fd);
+  if (!f)
     return -1;
+
   char *b = kalloc("readbuf");
   if (!b)
     return -1;
@@ -73,20 +87,18 @@ sys_read(int fd, userptr<void> p, size_t n)
 ssize_t
 sys_pread(int fd, void *ubuf, size_t count, off_t offset)
 {
-  sref<file> f;
-  if (!getfile(fd, &f))
+  sref<file> f = getfile(fd);
+  if (!f)
     return -1;
 
   if (count > 4*1024*1024)
     count = 4*1024*1024;
 
-  ssize_t r;
-  char* b;
-  b = (char*)kmalloc(count, "preadbuf");
-  r = f->pread(b, count, offset);
+  char* b = (char*) kmalloc(count, "preadbuf");
+  auto cleanup = scoped_cleanup([&](){kmfree(b, count);});
+  ssize_t r = f->pread(b, count, offset);
   if (r > 0)
     putmem(ubuf, b, r);
-  kmfree(b, count);
   return r;
 }
 
@@ -94,9 +106,8 @@ sys_pread(int fd, void *ubuf, size_t count, off_t offset)
 ssize_t
 sys_write(int fd, userptr<const void> p, size_t n)
 {
-  sref<file> f;
-
-  if (!getfile(fd, &f))
+  sref<file> f = getfile(fd);
+  if (!f)
     return -1;
   char *b = kalloc("writebuf");
   if (!b)
@@ -114,32 +125,17 @@ sys_write(int fd, userptr<const void> p, size_t n)
 ssize_t
 sys_pwrite(int fd, const void *ubuf, size_t count, off_t offset)
 {
-  sref<file> f;
-  if (!getfile(fd, &f))
+  sref<file> f = getfile(fd);
+  if (!f)
     return -1;
 
   if (count > 4*1024*1024)
     count = 4*1024*1024;
 
-  ssize_t r;
-  char* b;
-  b = (char*)kmalloc(count, "pwritebuf");
+  char* b = (char*)kmalloc(count, "pwritebuf");
+  auto cleanup = scoped_cleanup([&](){kmfree(b, count);});
   fetchmem(b, ubuf, count);
-  r = f->pwrite(b, count, offset);
-  kmfree(b, count);
-  return r;
-}
-
-//SYSCALL
-int
-sys_close(int fd)
-{
-  sref<file> f;
-  
-  if (!getfile(fd, &f))
-    return -1;
-  myproc()->ftable->close(fd);
-  return 0;
+  return f->pwrite(b, count, offset);
 }
 
 //SYSCALL
@@ -147,9 +143,8 @@ int
 sys_fstat(int fd, userptr<struct stat> st)
 {
   struct stat st_buf;
-  sref<file> f;
-  
-  if (!getfile(fd, &f))
+  sref<file> f = getfile(fd);
+  if (!f)
     return -1;
   if (f->stat(&st_buf) < 0)
     return -1;
@@ -164,114 +159,99 @@ int
 sys_link(userptr_str old_name, userptr_str new_name)
 {
   char old[PATH_MAX], newn[PATH_MAX];
-  char name[DIRSIZ];
-  sref<inode> dp, ip;
-
   if (!old_name.load(old, sizeof old) || !new_name.load(newn, sizeof newn))
     return -1;
-  if((ip = namei(myproc()->cwd, old)) == 0)
-    return -1;
-  ilock(ip, 1);
-  if(ip->type == T_DIR){
-    iunlock(ip);
-    return -1;
-  }
-  ip->link();
-  iunlock(ip);
 
-  if((dp = nameiparent(myproc()->cwd, newn, name)) == 0)
-    goto bad;
-  if(dp->dev != ip->dev || dirlink(dp, name, ip->inum) < 0)
-    goto bad;
+  sref<mnode> mf = namei(myproc()->cwd_m, old);
+  if (!mf || mf->type() == mnode::types::dir)
+    return -1;
 
-  //nc_insert(dp, name, ip);
+  strbuf<DIRSIZ> name;
+  sref<mnode> md = nameiparent(myproc()->cwd_m, newn, &name);
+  if (!md)
+    return -1;
+
+  /* Should we mf->nlink_.inc() before inserting? */
+  if (!md->as_dir()->insert(name, mf->inum_))
+    return -1;
+
+  /*
+   * Race between link and unlink:
+   *   link finds mnode, gets sref<mnode>
+   *   unlink unlinks the last name, sets nlink_=0
+   *   2 refcache epochs happen, mnode::linkcount::onzero unpins from cache
+   *   stat can observe file with nlink_==0
+   *   link finally bumps nlink_ on the mnode, resuscitating it!
+   * Two resulting problems:
+   *   mild posix violation: saw a zero-nlink inode come back to life
+   *   mnode evicted courtesy of mnode::linkcount::onzero
+   *     need to get the dirty flag working!
+   * Two hopefully-not-a-problems:
+   *   file will not be deleted, since truncate will happen in mnode::onzero
+   *   refcache should be OK with reviving an object from zero refcount
+   */
+  mf->nlink_.inc();
   return 0;
-
-bad:
-  ilock(ip, 1);
-  ip->unlink();
-  iunlock(ip);
-  return -1;
 }
 
 //SYSCALL
 int
 sys_rename(userptr_str old_name, userptr_str new_name)
 {
-  scoped_gc_epoch e;
-
   char old[PATH_MAX], newn[PATH_MAX];
   if (!old_name.load(old, sizeof old) || !new_name.load(newn, sizeof newn))
     return -1;
 
-  char oldname[DIRSIZ];
-  sref<inode> dpold = nameiparent(myproc()->cwd, old, oldname);
-  if (!dpold)
-    return -1;
-  if (dpold->type != T_DIR)
+  strbuf<DIRSIZ> oldname;
+  sref<mnode> mdold = nameiparent(myproc()->cwd_m, old, &oldname);
+  if (!mdold)
     return -1;
 
-  sref<inode> ipold = dirlookup(dpold, oldname);
-  if (!ipold)
+  u64 inum;
+  if (!mdold->as_dir()->lookup(oldname, &inum))
     return -1;
-  if (ipold->dev != dpold->dev || ipold->type == T_DIR) {
+
+  sref<mnode> mf = mnode::get(inum);
+  if (!mf || mf->type() == mnode::types::dir)
     // Renaming directories not currently supported.
-    // Would require checking for loops and dealing with refcounts
-    // on the parent directories.
-    return -1;
-  }
-
-  char newname[DIRSIZ];
-  sref<inode> dpnew = nameiparent(myproc()->cwd, newn, newname);
-  if (!dpnew)
-    return -1;
-  if (dpnew->type != T_DIR || dpnew->dev != dpold->dev)
+    // Would require checking for loops.
     return -1;
 
-  if (dpold == dpnew && strbuf<DIRSIZ>(oldname) == strbuf<DIRSIZ>(newname))
+  strbuf<DIRSIZ> newname;
+  sref<mnode> mdnew = nameiparent(myproc()->cwd_m, newn, &newname);
+  if (!mdnew)
+    return -1;
+
+  if (mdold == mdnew && oldname == newname)
     return 0;
 
-  dir_init(dpold);
-  dir_init(dpnew);
-  sref<inode> ipnew = dirlookup(dpnew, newname);
-  if (ipnew) {
-    if (ipnew->type == T_DIR)
-      return -1;
+  for (;;) {
+    u64 iroadblock;
+    if (!mdnew->as_dir()->lookup(newname, &iroadblock)) {
+      /* Should we mf->nlink_.inc() before inserting? */
+      if (mdnew->as_dir()->insert(newname, inum)) {
+        /* See comment about race in sys_link() */
+        mdold->as_dir()->remove(oldname, inum);
+        return 0;
+      }
+    } else {
+      sref<mnode> mfroadblock = mnode::get(iroadblock);
+      if (!mfroadblock)
+        return -1;
+      if (mfroadblock->type() == mnode::types::dir) {
+        /* See comment in sys_unlink about unlinking a directory */
+        if (mfroadblock->as_dir()->nfiles_.get() != 0)
+          return -1;
+      }
 
-    if (!dpnew->dir.load()->replace(strbuf<DIRSIZ>(newname),
-                                    ipnew->inum, ipold->inum))
-      return -1;
-  } else {
-    if (!dpnew->dir.load()->insert(strbuf<DIRSIZ>(newname), ipold->inum))
-      return -1;
+      /* Should we mf->nlink_.inc() before inserting? */
+      if (mdnew->as_dir()->replace(newname, iroadblock, inum)) {
+        /* See comment about race in sys_link() */
+        mdold->as_dir()->remove(oldname, inum);
+        return 0;
+      }
+    }
   }
-
-  assert(dpold->dir.load()->remove(strbuf<DIRSIZ>(oldname), &ipold->inum));
-
-  if (ipnew) {
-    ilock(ipnew, 1);
-    ipnew->unlink();
-    iunlock(ipnew);
-  }
-
-  return 0;
-}
-
-// Is the directory dp empty except for "." and ".." ?
-static int
-isdirempty(sref<inode> dp)
-{
-  dir_init(dp);
-  int empty = 1;
-  dp->dir.load()->enumerate([&empty](const strbuf<DIRSIZ> &name, u64 ino)->bool{
-      if (!strcmp(name.buf_, "."))
-        return false;
-      if (!strcmp(name.buf_, ".."))
-        return false;
-      empty = 0;
-      return true;
-    });
-  return empty;
 }
 
 //SYSCALL
@@ -279,222 +259,152 @@ int
 sys_unlink(userptr_str path)
 {
   char path_copy[PATH_MAX];
-  sref<inode> ip, dp;
-  char name[DIRSIZ];
-
   if (!path.load(path_copy, sizeof path_copy))
     return -1;
 
-  scoped_gc_epoch e;
-  if((dp = nameiparent(myproc()->cwd, path_copy, name)) == 0)
-    return -1;
-  if(dp->type != T_DIR)
-    panic("sys_unlink");
-
-  // Cannot unlink "." or "..".
-  if(namecmp(name, ".") == 0 || namecmp(name, "..") == 0)
+  strbuf<DIRSIZ> name;
+  sref<mnode> md = nameiparent(myproc()->cwd_m, path_copy, &name);
+  if (!md)
     return -1;
 
- retry:
-  if((ip = dirlookup(dp, name)) == 0)
+  if (name == "." || name == "..")
     return -1;
-  ilock(ip, 1);
 
-  if(ip->nlink() < 1)
-    panic("unlink: nlink < 1");
-  if(ip->type == T_DIR && !isdirempty(ip)){
-    iunlock(ip);
+  u64 inum;
+  if (!md->as_dir()->lookup(name, &inum))
     return -1;
+
+  sref<mnode> mf = mnode::get(inum);
+  if (!mf)
+    return -1;
+
+  if (mf->type() == mnode::types::dir) {
+    /*
+     * Interesting non-commutativity:
+     *
+     * Remove a subdirectory only if it had zero files in it at the same time.
+     * New files can be subsequently created in the subdirectory, through
+     * openat() or a racing link() or open(), but the subdirectory should
+     * be GCed through mnode::linkcount::onzero() and then mnode::onzero().
+     */
+    if (mf->as_dir()->nfiles_.get() != 0)
+      return -1;
   }
 
-  dir_init(dp);
-  if (dp->dir.load()->remove(strbuf<DIRSIZ>(name), &ip->inum) == 0) {
-    iunlock(ip);
-    goto retry;
-  }
+  if (md->as_dir()->remove(name, mf->inum_))
+    mf->nlink_.dec();
 
-  if(ip->type == T_DIR){
-    ilock(dp, 1);
-    dp->unlink();
-    iunlock(dp);
-  }
-
-  ip->unlink();
-  iunlock(ip);
   return 0;
 }
 
-sref<inode>
-create(sref<inode> cwd, const char *path, short type, short major, short minor, bool excl)
+sref<mnode>
+create(sref<mnode> cwd, const char *path, short type, short major, short minor, bool excl)
 {
-  sref<inode> ip, dp;
-  char name[DIRSIZ];
+  for (;;) {
+    strbuf<DIRSIZ> name;
+    sref<mnode> md = nameiparent(cwd, path, &name);
+    if (!md)
+      return sref<mnode>();
 
-  mt_ascope ascope("%s(%d.%d,%s,%d,%d,%d)",
-                   __func__, cwd->dev, cwd->inum,
-                   path, type, major, minor);
+    for (;;) {
+      u64 iexist;
+      if (!md->as_dir()->lookup(name, &iexist))
+        break;
 
- retry:
-  {
-    scoped_gc_epoch e;
-    if((dp = nameiparent(cwd, path, name)) == 0)
-      return sref<inode>();
+      sref<mnode> mf = mnode::get(iexist);
+      if (!mf) {
+        /*
+         * Race: inode could have been unlinked, two refcache epochs
+         * may have passed, and then the mnode was GCed from memory.
+         * Retry the directory lookup, if so.
+         */
+        continue;
+      }
 
-    if(dp->type != T_DIR)
-      panic("create");
-
-    if((ip = dirlookup(dp, name)) != 0){
-      if(type != T_FILE || ip->type != T_FILE || excl)
-        return sref<inode>();
-
-      return ip;
-    }
-    
-    if((ip = ialloc(dp->dev, type)) == nullptr)
-      return sref<inode>();
-    
-    ip->major = major;
-    ip->minor = minor;
-    ip->link();
-    
-    mtwriteavar("inode:%x.%x", ip->dev, ip->inum);
-    
-    if(type == T_DIR){  // Create . and .. entries.
-      dp->link(); // for ".."
-      // No ip->nlink++ for ".": avoid cyclic ref count.
-      if(dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
-        panic("create dots");
-    }
-    
-    if(dirlink(dp, name, ip->inum) < 0) {
-      // create race
-      ip->unlink();
-      iunlock(ip);
-      goto retry;
+      if (type != T_FILE || mf->type() != mnode::types::file || excl)
+        return sref<mnode>();
+      return mf;
     }
 
-    iunlock(ip);
+    u8 mtype = 0;
+    switch (type) {
+    case T_DIR:  mtype = mnode::types::dir;  break;
+    case T_FILE: mtype = mnode::types::file; break;
+    case T_DEV:  mtype = mnode::types::dev;  break;
+    default:     cprintf("unhandled type %d\n", type);
+    }
+
+    sref<mnode> mf = mnode::alloc(mtype);
+    if (!mf)
+      return sref<mnode>();
+
+    switch (mtype) {
+    case mnode::types::dir:
+      mf->as_dir()->insert(".", mf->inum_);
+      mf->as_dir()->insert("..", md->inum_);
+      break;
+
+    case mnode::types::dev:
+      mf->as_dev()->init(major, minor);
+      break;
+    }
+
+    if (md->as_dir()->insert(name, mf->inum_)) {
+      mf->nlink_.inc();
+      return mf;
+    }
+
+    /* Failed to insert, retry */
   }
-
-  //nc_insert(dp, name, ip);
-  return ip;
 }
 
 //SYSCALL
 int
 sys_openat(int dirfd, userptr_str path, int omode, ...)
 {
-  char path_copy[PATH_MAX];
-  int fd;
-  struct file *f;
-  sref<inode> ip;
-  sref<inode> cwd;
-  int rwmode = omode & (O_RDONLY|O_WRONLY|O_RDWR);
-  bool iplocked = false;
-
+  sref<mnode> cwd;
   if (dirfd == AT_FDCWD) {
-    cwd = myproc()->cwd;
+    cwd = myproc()->cwd_m;
   } else {
-    // XXX(sbw) do we need the sref while we touch fdir->ip?
-    sref<file> fdir;
-    if (!getfile(dirfd, &fdir) || fdir->type != file::FD_INODE)
+    sref<file> fdir = getfile(dirfd);
+    if (!fdir || fdir->type != file::FD_INODE)
       return -1;
     cwd = fdir->ip;
   }
 
-  if (!path.load(path_copy, sizeof path_copy))
+  char path_copy[PATH_MAX];
+  if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
 
-  // Reads the dirfd FD, dirfd's inode, the inodes of all files in
-  // path; writes the returned FD
-  mt_ascope ascope("%s(%d,%s,%d)", __func__, dirfd, path_copy, omode);
-  mtreadavar("inode:%x.%x", cwd->dev, cwd->inum);
+  sref<mnode> m;
+  if (omode & O_CREAT)
+    m = create(cwd, path_copy, T_FILE, 0, 0, omode & O_EXCL);
+  else
+    m = namei(cwd, path_copy);
 
- retry:
-  if(omode & O_CREAT){
-    if((ip = create(cwd, path_copy, T_FILE, 0, 0, omode & O_EXCL)) == 0)
-      return -1;
-    if(omode & O_WAIT){
-      // XXX wake up any open(..., O_WAIT).
-      // there's a race here that's hard to fix because
-      // of how non-locking create() is.
-      char dummy[DIRSIZ];
-      sref<inode> pip = nameiparent(cwd, path_copy, dummy);
-      if(pip){
-        acquire(&pip->lock);
-        pip->cv.wake_all();
-        release(&pip->lock);
-      }
-    }
-    // XXX necessary because the mtwriteavar() to the same abstract variable
-    // does not propagate to our scope, since create() has its own inner scope.
-    mtwriteavar("inode:%x.%x", ip->dev, ip->inum);
-  } else {
-    if((ip = namei(cwd, path_copy)) == 0){
-      if(omode & O_WAIT){
-        char dummy[DIRSIZ];
-        sref<inode> pip = nameiparent(cwd, path_copy, dummy);
-        if(pip == 0)
-          return -1;
-        cprintf("O_WAIT waiting %s %p %d...\n", path_copy, &*pip, pip->inum);
-        // XXX wait for pip->cv.wake_all above
-        acquire(&pip->lock);
-        pip->cv.sleep(&pip->lock);
-        release(&pip->lock);
-        cprintf("O_WAIT done\n");
-        if(myproc()->killed == 0)
-          goto retry;
-      }
-      return -1;
-    }
-  }
-  iplocked = false;
+  if (!m)
+    return -1;
 
-  short itype = ip->type;
-  if (itype == 0) {
-    if (iplocked)
-      iunlock(ip);
-    goto retry;
-  }
+  int rwmode = omode & (O_RDONLY|O_WRONLY|O_RDWR);
+  if (m->type() == mnode::types::dir && (rwmode != O_RDONLY))
+    return -1;
 
-  if (itype == T_DIR) {
-    if (rwmode != O_RDONLY) {
-      if (iplocked)
-        iunlock(ip);
-      return -1;
-    }
+  if (m->type() == mnode::types::file && (omode & O_TRUNC))
+    if (*m->as_file()->read_size())
+      m->as_file()->write_size().resize_nogrow(0);
 
-    if (!iplocked) {
-      ilock(ip, 1);
-      iplocked = true;
-    }
+  file* f = file::alloc();
+  if (!f)
+    return -1;
 
-    dir_flush(ip);
-  }
-
-  if (omode & O_TRUNC && ip->size) {
-    if (!iplocked) {
-      ilock(ip, 1);
-      iplocked = true;
-    }
-
-    itrunc(ip.get());
-  }
-
-  if((f = file::alloc()) == 0 || (fd = fdalloc(f, omode)) < 0){
-    if(f)
-      f->dec();
-    if (iplocked)
-      iunlock(ip);
+  int fd = fdalloc(f, omode);
+  if (fd < 0) {
+    f->dec();
     return -1;
   }
-
-  if (iplocked)
-    iunlock(ip);
-  mtwriteavar("fd:%x.%x", myproc()->pid, fd);
 
   f->type = file::FD_INODE;
-  f->ip = ip;
+  f->ip = m;
   f->off = 0;
   f->readable = !(rwmode == O_WRONLY);
   f->writable = !(rwmode == O_RDONLY);
@@ -506,25 +416,23 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
 int
 sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
 {
-  char path_copy[PATH_MAX];
-  sref<inode> cwd;
-  sref<inode> ip;
-
+  sref<mnode> cwd;
   if (dirfd == AT_FDCWD) {
-    cwd = myproc()->cwd;
+    cwd = myproc()->cwd_m;
   } else {
-    // XXX(sbw) do we need the sref while we touch fdir->ip?
-    sref<file> fdir;
-    if (!getfile(dirfd, &fdir) || fdir->type != file::FD_INODE)
+    sref<file> fdir = getfile(dirfd);
+    if (!fdir || fdir->type != file::FD_INODE)
       return -1;
     cwd = fdir->ip;
   }
 
-  if (!path.load(path_copy, sizeof path_copy))
+  char path_copy[PATH_MAX];
+  if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
-  ip = create(cwd, path_copy, T_DIR, 0, 0, true);
-  if (ip == nullptr)
+
+  if (!create(cwd, path_copy, T_DIR, 0, 0, true))
     return -1;
+
   return 0;
 }
 
@@ -533,11 +441,12 @@ int
 sys_mknod(userptr_str path, int major, int minor)
 {
   char path_copy[PATH_MAX];
-  sref<inode> ip;
-  
-  if(!path.load(path_copy, sizeof path_copy) ||
-     (ip = create(myproc()->cwd, path_copy, T_DEV, major, minor, true)) == 0)
+  if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
+
+  if (!create(myproc()->cwd_m, path_copy, T_DEV, major, minor, true))
+    return -1;
+
   return 0;
 }
 
@@ -546,54 +455,48 @@ int
 sys_chdir(userptr_str path)
 {
   char path_copy[PATH_MAX];
-  sref<inode> ip;
+  if (!path.load(path_copy, sizeof(path_copy)))
+    return -1;
 
-  if(!path.load(path_copy, sizeof path_copy) ||
-     (ip = namei(myproc()->cwd, path_copy)) == 0)
+  sref<mnode> m = namei(myproc()->cwd_m, path_copy);
+  if (!m || m->type() != mnode::types::dir)
     return -1;
-  ilock(ip, 0);
-  if(ip->type != T_DIR){
-    iunlock(ip);
-    return -1;
-  }
-  iunlock(ip);
-  myproc()->cwd = ip;
+
+  myproc()->cwd_m = m;
   return 0;
 }
 
 int
-doexec(const char* upath, userptr<userptr<const char> > uargv)
+doexec(const char* upath, userptr<userptr<const char>> uargv)
 {
-  ANON_REGION(__func__, &perfgroup);
-  char *argv[MAXARG];
   char path[DIRSIZ+1];
-  long r = -1;
-  int i;
-
   if (fetchstr(path, upath, sizeof(path)) < 0)
     return -1;
 
-  mt_ascope ascope("%s(%s)", __func__, path);
-
+  char *argv[MAXARG];
   memset(argv, 0, sizeof(argv));
-  for(i=0;; i++){
-    u64 uarg;    
-    if(i >= NELEM(argv))
+
+  int r = -1;
+  int i;
+  for (i = 0; ; i++) {
+    if (i >= NELEM(argv))
       goto clean;
-    if(fetchint64(uargv+8*i, &uarg) < 0)
+    u64 uarg;
+    if (fetchint64(uargv+8*i, &uarg) < 0)
       goto clean;
-    if(uarg == 0)
+    if (uarg == 0)
       break;
 
     argv[i] = (char*) kmalloc(MAXARGLEN, "execbuf");
-    if (argv[i]==nullptr || fetchstr(argv[i], (char*)uarg, MAXARGLEN)<0)
+    if (!argv[i] || fetchstr(argv[i], (char*)uarg, MAXARGLEN) < 0)
       goto clean;
   }
 
   argv[i] = 0;
-  r = exec(path, argv, &ascope);
+  r = exec(path, argv);
+
 clean:
-  for (i=i-1; i >= 0; i--)
+  for (i = i-1; i >= 0; i--)
     kmfree(argv[i], MAXARGLEN);
   return r;
 }
@@ -619,23 +522,42 @@ int
 sys_pipe(userptr<int> fd)
 {
   struct file *rf, *wf;
-  int fd_buf[2];
+  if (pipealloc(&rf, &wf) < 0)
+    return -1;
 
-  if(pipealloc(&rf, &wf) < 0)
-    return -1;
-  fd_buf[0] = fd_buf[1] = -1;
-  if ((fd_buf[0] = fdalloc(rf, 0)) < 0 || (fd_buf[1] = fdalloc(wf, 0)) < 0 ||
-      !fd.store(fd_buf, 2)) {
-    if (fd_buf[0] >= 0)
-      myproc()->ftable->close(fd_buf[0]);
-    else
-      rf->dec();
-    if (fd_buf[1] >= 0)
-      myproc()->ftable->close(fd_buf[1]);
-    else
-      wf->dec();
-    return -1;
-  }
-  return 0;
+  int fd_buf[2] = { fdalloc(rf, 0), fdalloc(wf, 0) };
+  if (fd_buf[0] >= 0 && fd_buf[1] >= 0 && fd.store(fd_buf, 2))
+    return 0;
+
+  if (fd_buf[0] >= 0)
+    myproc()->ftable->close(fd_buf[0]);
+  else
+    rf->dec();
+  if (fd_buf[1] >= 0)
+    myproc()->ftable->close(fd_buf[1]);
+  else
+    wf->dec();
+  return -1;
 }
 
+//SYSCALL
+int
+sys_readdir(int dirfd, userptr<char> prevptr, userptr<char> nameptr)
+{
+  sref<file> df = getfile(dirfd);
+  if (!df || df->type != file::FD_INODE || df->ip->type() != mnode::types::dir)
+    return -1;
+
+  strbuf<DIRSIZ> prev;
+  if (!prevptr.null() && !prevptr.load(prev.buf_, sizeof(prev.buf_)))
+    return -1;
+
+  strbuf<DIRSIZ> name;
+  if (!df->ip->as_dir()->enumerate(prevptr.null() ? nullptr : &prev, &name))
+    return 0;
+
+  if (!nameptr.store(name.buf_, sizeof(name.buf_)))
+    return -1;
+
+  return 1;
+}

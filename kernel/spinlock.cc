@@ -186,7 +186,7 @@ lockstat_clear(void)
 }
 
 static int
-lockstat_read(sref<struct inode> ip, char *dst, u32 off, u32 n)
+lockstat_read(mdev*, char *dst, u32 off, u32 n)
 {
   static const u64 sz = sizeof(struct lockstat);
   static struct {
@@ -233,7 +233,7 @@ lockstat_read(sref<struct inode> ip, char *dst, u32 off, u32 n)
 }
 
 static int
-lockstat_write(sref<struct inode> ip, const char *buf, u32 off, u32 n)
+lockstat_write(mdev*, const char *buf, u32 off, u32 n)
 {
   int cmd = buf[0] - '0';
 

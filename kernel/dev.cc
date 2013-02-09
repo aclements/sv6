@@ -8,7 +8,7 @@
 extern const char *kconfig;
 
 static int
-kconfigread(sref<inode> inode, char *dst, u32 off, u32 n)
+kconfigread(mdev*, char *dst, u32 off, u32 n)
 {
   auto len = strlen(kconfig);
   if (off >= len)
@@ -20,7 +20,7 @@ kconfigread(sref<inode> inode, char *dst, u32 off, u32 n)
 }
 
 static int
-kstatsread(sref<inode> inode, char *dst, u32 off, u32 n)
+kstatsread(mdev*, char *dst, u32 off, u32 n)
 {
   kstats total{};
   if (off >= sizeof total)
@@ -36,9 +36,6 @@ kstatsread(sref<inode> inode, char *dst, u32 off, u32 n)
 void
 initdev(void)
 {
-  devsw[MAJ_KCONFIG].write = nullptr;
   devsw[MAJ_KCONFIG].read = kconfigread;
-
-  devsw[MAJ_KSTATS].write = nullptr;
   devsw[MAJ_KSTATS].read = kstatsread;
 }

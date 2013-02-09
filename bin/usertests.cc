@@ -665,10 +665,8 @@ concreate(void)
   char file[3];
   int i, pid, n, fd;
   char fa[40];
-  struct {
-    u16 inum;
-    char name[14];
-  } de;
+  char namebuf[14];
+  char *prev;
 
   printf("concreate test\n");
   file[0] = 'C';
@@ -698,17 +696,17 @@ concreate(void)
   memset(fa, 0, sizeof(fa));
   fd = open(".", 0);
   n = 0;
-  while(read(fd, &de, sizeof(de)) > 0){
-    if(de.inum == 0)
-      continue;
-    if(de.name[0] == 'C' && de.name[2] == '\0'){
-      i = de.name[1] - '0';
+  prev = 0;
+  while (readdir(fd, prev, namebuf) > 0) {
+    prev = namebuf;
+    if(namebuf[0] == 'C' && namebuf[2] == '\0'){
+      i = namebuf[1] - '0';
       if(i < 0 || i >= sizeof(fa)){
-        printf("concreate weird file %s\n", de.name);
+        printf("concreate weird file %s\n", namebuf);
         exit();
       }
       if(fa[i]){
-        printf("concreate duplicate file %s\n", de.name);
+        printf("concreate duplicate file %s\n", namebuf);
         exit();
       }
       fa[i] = 1;

@@ -11,7 +11,7 @@
 extern char cmdline[];
 
 static int
-cmdlineread(sref<inode> inode, char *dst, u32 off, u32 n)
+cmdlineread(mdev*, char *dst, u32 off, u32 n)
 {
   u32 cc;
 
@@ -29,6 +29,5 @@ initcmdline(void)
   if (VERBOSE)
     cprintf("cmdline: %s\n", cmdline);
 
-  devsw[MAJ_CMDLINE].write = nullptr;
   devsw[MAJ_CMDLINE].read = cmdlineread;
 }

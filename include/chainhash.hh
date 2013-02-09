@@ -64,7 +64,7 @@ public:
     return true;
   }
 
-  bool remove(const K& k, V* vptr) {
+  bool remove(const K& k, const V& v) {
     bucket* b = &buckets_[hash(k) % nbuckets_];
     scoped_acquire l(&b->lock);
 
@@ -75,13 +75,48 @@ public:
       ++i;
       if (i == end)
         return false;
-      if (i->key == k) {
+      if (i->key == k && i->val == v) {
         b->chain.erase_after(prev);
-        *vptr = i->val;
         gc_delayed(&*i);
         return true;
       }
     }
+  }
+
+  bool replace(const K& k, const V& vold, const V& vnew) {
+    bucket* b = &buckets_[hash(k) % nbuckets_];
+    scoped_acquire l(&b->lock);
+
+    for (item& i: b->chain) {
+      if (i.key == k) {
+        if (i.val != vold)
+          return false;
+        auto w = i.seq.write_begin(); 
+        i.val = vnew;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool enumerate(const K* prev, K* out) const {
+    bool prevbucket = (prev != nullptr);
+    for (u64 i = prev ? hash(*prev) % nbuckets_ : 0; i < nbuckets_; i++) {
+      bucket* b = &buckets_[i];
+      bool found = false;
+      for (const item& i: b->chain) {
+        if ((!prevbucket || *prev < i.key) && (!found || i.key < *out)) {
+          *out = i.key;
+          found = true;
+        }
+      }
+      if (found)
+        return true;
+      prevbucket = false;
+    }
+
+    return false;
   }
 
   bool lookup(const K& k, V* vptr) const {

@@ -44,44 +44,49 @@ file::do_gc(void)
   delete this;
 }
 
-file*
-file::dup(void)
-{
-  inc();
-  return this;
-}
-
 int
 file::stat(struct stat *st)
 {
-  if(type == file::FD_INODE){
-    ilock(ip, 0);
-    if(ip->type == 0)
-      panic("filestat");
-    stati(ip, st);
-    iunlock(ip);
+  if (type == file::FD_INODE) {
+    u8 stattype = 0;
+    switch (ip->type()) {
+    case mnode::types::dir:  stattype = T_DIR;  break;
+    case mnode::types::file: stattype = T_FILE; break;
+    case mnode::types::dev:  stattype = T_DEV;  break;
+    default:                 cprintf("Unknown type %d\n", ip->type());
+    }
+
+    st->st_mode = stattype << __S_IFMT_SHIFT;
+    st->st_dev = 1;
+    st->st_ino = ip->inum_;
+    st->st_nlink = ip->nlink_.get();
+    st->st_size = 0;
+    if (ip->type() == mnode::types::file)
+      st->st_size = *ip->as_file()->read_size();
+    if (ip->type() == mnode::types::dev &&
+        ip->as_dev()->major() < NDEV &&
+        devsw[ip->as_dev()->major()].stat)
+      devsw[ip->as_dev()->major()].stat(ip->as_dev(), st);
     return 0;
   }
   return -1;
 }
 
-int
-file::read(char *addr, int n)
+ssize_t
+file::read(char *addr, size_t n)
 {
   if(readable == 0)
     return -1;
   if(type == file::FD_PIPE)
     return piperead(pipe, addr, n);
   if(type == file::FD_INODE){
-    int r;
-
-    for (;;) {
-      auto rs = ip->seq.read_begin();
-      r = readi(ip, addr, off, n);
-      if (!rs.need_retry())
-        break;
+    if (ip->type() == mnode::types::dev) {
+      if (ip->as_dev()->major() >= NDEV || !devsw[ip->as_dev()->major()].read)
+        return -1;
+      return devsw[ip->as_dev()->major()].read(ip->as_dev(), addr, off, n);
     }
 
+    s64 r = readi(ip, addr, off, n);
     if (r > 0)
       off += r;
     return r;
@@ -96,37 +101,40 @@ file::read(char *addr, int n)
 ssize_t
 file::pread(char *addr, size_t n, off_t off)
 {
-  if(type == file::FD_INODE){
-    int r;
-    if(ip->type == 0)
-      panic("file::pread");
-    r = readi(ip, addr, off, n);
-    return r;
-  }
+  if (type == file::FD_INODE)
+    return readi(ip, addr, off, n);
   return -1;
 }
 
-int
-file::write(const char *addr, int n)
+ssize_t
+file::write(const char *addr, size_t n)
 {
-  int r;
-
-  if(writable == 0)
+  if (writable == 0)
     return -1;
-  if(type == file::FD_PIPE)
+  if (type == file::FD_PIPE)
     return pipewrite(pipe, addr, n);
-  if(type == file::FD_INODE){
-    ilock(ip, 1);
-    if (append)
-      off = ip->size;
-    if(ip->type == 0 || ip->type == T_DIR)
-      panic("filewrite but 0 or T_DIR");
-    if((r = writei(ip, addr, off, n)) > 0)
+  if (type == file::FD_INODE) {
+    if (ip->type() == mnode::types::dev) {
+      if (ip->as_dev()->major() >= NDEV || !devsw[ip->as_dev()->major()].write)
+        return -1;
+      return devsw[ip->as_dev()->major()].write(ip->as_dev(), addr, off, n);
+    }
+
+    if (ip->type() != mnode::types::file)
+      return -1;
+
+    mfile::resizer resize;
+    if (append) {
+      resize = ip->as_file()->write_size();
+      off = resize.read_size();
+    }
+
+    ssize_t r = writei(ip, addr, off, n, append ? &resize : nullptr);
+    if (r > 0)
       off += r;
-    iunlock(ip);
     return r;
   }
-  if(type == file::FD_SOCKET) {
+  if (type == file::FD_SOCKET) {
     auto l = wsem.guard();
     return netwrite(socket, addr, n);
   }
@@ -136,25 +144,7 @@ file::write(const char *addr, int n)
 ssize_t
 file::pwrite(const char *addr, size_t n, off_t off)
 {
-  if(type == file::FD_INODE){
-    bool unlock;
-    int r;
-
-    if(ip->type == 0 || ip->type == T_DIR)
-      panic("filewrite but 0 or T_DIR");
-
-    unlock = false;
-    if (n+off > ip->size) {
-      ilock(ip, 1);
-      unlock = true;
-    }
-
-    r = writei(ip, addr, off, n);
-
-    if (unlock)
-      iunlock(ip);
-
-    return r;
-  }
+  if (type == file::FD_INODE)
+    return writei(ip, addr, off, n);
   return -1;
 }

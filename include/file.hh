@@ -8,6 +8,7 @@
 #include "condvar.h"
 #include "semaphore.h"
 #include "seqlock.hh"
+#include "mfs.hh"
 
 class dirns;
 
@@ -15,12 +16,11 @@ u64 namehash(const strbuf<DIRSIZ>&);
 
 struct file : public refcache::referenced, public rcu_freed {
   static file* alloc();
-  file*        dup();
   int          stat(struct stat*);
-  int          read(char *addr, int n);
+  ssize_t      read(char *addr, size_t n);
   ssize_t      pread(char *addr, size_t n, off_t offset);
   ssize_t      pwrite(const char *addr, size_t n, off_t offset);
-  int          write(const char *addr, int n);
+  ssize_t      write(const char *addr, size_t n);
 
   enum { FD_NONE, FD_PIPE, FD_INODE, FD_SOCKET } type;  
 
@@ -31,7 +31,7 @@ struct file : public refcache::referenced, public rcu_freed {
   int socket;
   struct pipe *pipe;
   struct localsock *localsock;
-  sref<inode> ip;
+  sref<mnode> ip;
   u32 off;
 
   // Used for sockets (XXX could be just a mutex)
@@ -112,10 +112,12 @@ protected:
 
 // device implementations
 
+class mdev;
+
 struct devsw {
-  int (*read)(sref<inode>, char*, u32, u32);
-  int (*write)(sref<inode>, const char*, u32, u32);
-  void (*stat)(sref<inode>, struct stat*);
+  int (*read)(mdev*, char*, u32, u32);
+  int (*write)(mdev*, const char*, u32, u32);
+  void (*stat)(mdev*, struct stat*);
 };
 
 extern struct devsw devsw[];

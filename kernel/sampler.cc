@@ -313,7 +313,7 @@ readlog(char *dst, u32 off, u32 n)
 }
 
 static void
-sampstat(sref<inode> ip, struct stat *st)
+sampstat(mdev*, struct stat *st)
 {
   struct pmulog *q = &pmulog[NCPU];
   struct pmulog *p;
@@ -323,15 +323,11 @@ sampstat(sref<inode> ip, struct stat *st)
   for (p = &pmulog[0]; p != q; p++)
     sz += p->count * sizeof(struct pmuevent);
 
-  st->st_dev = ip->dev;
-  st->st_ino = ip->inum;
-  st->st_mode = ip->type << __S_IFMT_SHIFT;
-  st->st_nlink = ip->nlink();
   st->st_size = sz;
 }
 
 static int
-sampread(sref<inode> ip, char *dst, u32 off, u32 n)
+sampread(mdev*, char *dst, u32 off, u32 n)
 {
   struct pmulog *q = &pmulog[NCPU];
   struct pmulog *p;
@@ -373,7 +369,7 @@ sampread(sref<inode> ip, char *dst, u32 off, u32 n)
 }
 
 static int
-sampwrite(sref<inode> ip, const char *buf, u32 off, u32 n)
+sampwrite(mdev*, const char *buf, u32 off, u32 n)
 {
   struct sampconf *conf;
 

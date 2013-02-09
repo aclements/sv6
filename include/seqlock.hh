@@ -84,6 +84,7 @@ public:
 
   public:
     constexpr writer(seqcount *sc, T val) : sc_(sc), val_(val) { }
+    constexpr writer() : sc_(nullptr) {}
 
     writer(writer &&o)
       : sc_(o.sc_), val_(o.val_)
@@ -95,7 +96,8 @@ public:
     {
       sc_ = o.sc_;
       val_ = o.val_;
-      o._sc = nullptr;
+      o.sc_ = nullptr;
+      return *this;
     }
 
     writer(const writer &o) = delete;

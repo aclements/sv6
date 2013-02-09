@@ -836,25 +836,6 @@ itrunc(struct inode *ip)
   ip->size = 0;
 }
 
-// Copy stat information from inode.
-void
-stati(sref<inode> ip, struct stat *st)
-{
-  if(ip->type == T_DEV){
-    if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].stat)
-      memset(st, 0, sizeof(*st));
-    else
-      devsw[ip->major].stat(ip, st);
-    return;
-  }
-
-  st->st_dev = ip->dev;
-  st->st_ino = ip->inum;
-  st->st_mode = ip->type << __S_IFMT_SHIFT;
-  st->st_nlink = ip->nlink();
-  st->st_size = ip->size;
-}
-
 //PAGEBREAK!
 // Read data from inode.
 int
@@ -865,11 +846,8 @@ readi(sref<inode> ip, char *dst, u32 off, u32 n)
   u32 tot, m;
   sref<buf> bp;
 
-  if(ip->type == T_DEV){
-    if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
-      return -1;
-    return devsw[ip->major].read(ip, dst, off, n);
-  }
+  if(ip->type == T_DEV)
+    return -1;
 
   if(off > ip->size || off + n < off)
     return -1;
@@ -901,11 +879,8 @@ writei(sref<inode> ip, const char *src, u32 off, u32 n)
   int tot, m;
   sref<buf> bp;
 
-  if(ip->type == T_DEV){
-    if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].write)
-      return -1;
-    return devsw[ip->major].write(ip, src, off, n);
-  }
+  if(ip->type == T_DEV)
+    return -1;
 
   if(off > ip->size || off + n < off)
     return -1;

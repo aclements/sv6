@@ -15,11 +15,12 @@
 #include "wq.hh"
 #include "sperf.hh"
 #include "kmtrace.hh"
+#include "mfs.hh"
 
 #define BRK (USERTOP >> 1)
 
 static int
-dosegment(sref<inode> ip, vmap* vmp, u64 off, u64 *load_addr)
+dosegment(sref<mnode> ip, vmap* vmp, u64 off, u64 *load_addr)
 {
   struct proghdr ph;
   if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
@@ -161,10 +162,10 @@ struct cleanup_work : public work
 };
 
 int
-exec(const char *path, const char * const *argv, void *ascopev)
+exec(const char *path, const char * const *argv)
 {
   ANON_REGION(__func__, &perfgroup);
-  sref<inode> ip;
+  sref<mnode> ip;
   struct vmap *vmp = nullptr;
   const char *s, *last;
   char buf[1024];
@@ -179,13 +180,13 @@ exec(const char *path, const char * const *argv, void *ascopev)
   u64 load_addr = -1;
   u64 phdr = 0;
 
-  if((ip = namei(myproc()->cwd, path)) == 0)
+  if((ip = namei(myproc()->cwd_m, path)) == 0)
     return -1;
 
   gc_begin_epoch();
 
   // Check header
-  if(ip->type != T_FILE)
+  if (ip->type() != mnode::types::file)
     goto bad;
   sz = readi(ip, buf, 0, sizeof(buf));
   if (sz < 0)
@@ -203,7 +204,7 @@ exec(const char *path, const char * const *argv, void *ascopev)
       goto bad;
     const char *argv[] = {&buf[2], path, NULL};
     gc_end_epoch();
-    return exec(argv[0], argv, ascopev);
+    return exec(argv[0], argv);
   }
 
   // ELF?

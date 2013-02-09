@@ -260,16 +260,14 @@ panic(const char *fmt, ...)
 }
 
 static int
-consolewrite(sref<inode> ip, const char *buf, u32 off, u32 n)
+consolewrite(mdev*, const char *buf, u32 off, u32 n)
 {
   int i;
 
-  iunlock(ip);
   acquire(&cons.lock);
   for(i = 0; i < n; i++)
     consputc(buf[i] & 0xff);
   release(&cons.lock);
-  ilock(ip, 1);
 
   return n;
 }
@@ -348,7 +346,7 @@ consoleintr(int (*getc)(void))
 }
 
 static int
-consoleread(sref<inode> ip, char *dst, u32 off, u32 n)
+consoleread(mdev*, char *dst, u32 off, u32 n)
 {
   int target;
   int c;

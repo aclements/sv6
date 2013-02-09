@@ -49,6 +49,7 @@ class seq_writer
 {
 public:
   seq_writer(seqcount<u32>* seq) : w_(seq->write_begin()) {}
+  seq_writer() {}
 
 private:
   seqcount<u32>::writer w_;

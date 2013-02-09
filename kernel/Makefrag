@@ -71,6 +71,9 @@ OBJS = \
 	iommu.o \
 	rtc.o \
 	timemath.o \
+	mnode.o \
+	mfs.o \
+	mfsload.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 

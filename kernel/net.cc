@@ -140,7 +140,7 @@ tcpip_init_done(void *arg)
 }
 
 static int
-netifread(sref<struct inode> inode, char *dst, u32 off, u32 n)
+netifread(mdev*, char *dst, u32 off, u32 n)
 {
   u32 ip, nm, gw;
   char buf[512];
@@ -250,7 +250,6 @@ initnet(void)
 {
   struct proc *t;
 
-  devsw[MAJ_NETIF].write = nullptr;
   devsw[MAJ_NETIF].read = netifread;
 
   t = threadalloc(initnet_worker, nullptr);

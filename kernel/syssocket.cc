@@ -241,17 +241,13 @@ freesocket(int fd)
   myproc()->ftable->close(fd);
 }
 
-static bool
-getsocket(int fd, sref<file> *f)
+static sref<file>
+getsocket(int fd)
 {
-  if (!getfile(fd, f))
-    return false;
-  if ((*f)->type != file::FD_SOCKET) {
-    f->reset();
-    return false;
-  }
-  // cprintf("%d: fd %d ref %p\n", myproc()->pid, fd, (void *) f->get());
-  return true;
+  sref<file> f = getfile(fd);
+  if (f && f->type != file::FD_SOCKET)
+    f.reset();
+  return f;
 }
 
 static int
@@ -312,23 +308,26 @@ int
 sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
 {
   extern long netbind(int, const struct sockaddr*, int);
-  sref<file> f;
   int r;
 
-  if (!getsocket(xsock, &f))
+  sref<file> f = getsocket(xsock);
+  if (!f)
     return -1;
 
   if (f->socket == PF_LOCAL) {
-    sref<inode> ip;
+    sref<mnode> ip;
     struct sockaddr_un uaddr;
 
     if (fetchmem(&uaddr, xaddr, sizeof(sockaddr_un)) < 0) 
       return -1;
-    if((ip = create(myproc()->cwd, uaddr.sun_path, T_SOCKET, 0, 0, true)) == 0)
+    if ((ip = create(myproc()->cwd_m, uaddr.sun_path, T_SOCKET, 0, 0, true)) == 0)
       return -1;
-    ip->localsock = f->localsock;
+
+    // XXX this does not seem quite right..
+    ip->as_sock()->init(f->localsock);
     f->ip = ip;
-    strncpy(ip->socketpath, uaddr.sun_path, UNIX_PATH_MAX);
+    // XXX what is socketpath needed for?
+    // strncpy(ip->socketpath, uaddr.sun_path, UNIX_PATH_MAX);
     return 0;
   }  else {
     r = netbind(f->socket, xaddr, xaddrlen);
@@ -341,9 +340,9 @@ int
 sys_listen(int xsock, int backlog)
 {
   extern long netlisten(int, int);
-  sref<file> f;
+  sref<file> f = getsocket(xsock);
 
-  if (!getsocket(xsock, &f))
+  if (!f)
     return -1;
 
   return netlisten(f->socket, backlog);
@@ -355,11 +354,11 @@ sys_accept(int xsock, struct sockaddr* xaddr, u32* xaddrlen)
 {
   extern long netaccept(int, struct sockaddr*, u32*);
   file *cf;
-  sref<file> f;
   int cfd;
   int ss;
 
-  if (!getsocket(xsock, &f))
+  sref<file> f = getsocket(xsock);
+  if (!f)
     return -1;
 
   if (allocsocket(&cf, &cfd))
@@ -380,13 +379,13 @@ int
 sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,  
              struct sockaddr *src_addr, u32 *addrlen)
 {
-  sref<file> f;
   int r = -1;
 
   kstats::timer timer_fill(&kstats::socket_local_recvfrom_cycles);
   kstats::inc(&kstats::socket_local_recvfrom_cnt);
 
-  if (!getsocket(sockfd, &f))
+  sref<file> f = getsocket(sockfd);
+  if (!f)
     return -1;
 
   msghdr *m = f->localsock->read();
@@ -416,7 +415,6 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
            const struct sockaddr *dest_addr, u32 addrlen)
 {
   sref<inode> ip;
-  sref<file> f;
   struct sockaddr_un uaddr;
 
 #ifdef XV6_KERNEL
@@ -424,7 +422,8 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   kstats::inc(&kstats::socket_local_sendto_cnt);
 #endif
 
-  if (!getsocket(sockfd, &f))
+  sref<file> f = getsocket(sockfd);
+  if (!f)
     return -1;
 
   if (fetchmem(&uaddr, dest_addr, sizeof(sockaddr_un)) < 0) 
@@ -452,7 +451,7 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   m->data = b;
   m->len = len;
   if (f->ip)
-    strncpy(m->uaddr.sun_path, f->ip->socketpath, UNIX_PATH_MAX);
+    strncpy(m->uaddr.sun_path, "XXX" /* f->ip->socketpath */, UNIX_PATH_MAX);
   strncpy(m->data, b, len);
 
   int r = ip->localsock->write(m);

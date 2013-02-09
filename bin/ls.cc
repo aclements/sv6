@@ -8,6 +8,18 @@
 #include <string.h>
 #include <unistd.h>
 
+char
+filetype(mode_t m)
+{
+  int type = (m & S_IFMT) >> __S_IFMT_SHIFT;
+  switch (type) {
+  case T_DIR:  return 'd';
+  case T_FILE: return '-';
+  case T_DEV:  return 'c';
+  default:     return '?';
+  }
+}
+
 const char*
 fmtname(const char *path)
 {
@@ -27,12 +39,19 @@ fmtname(const char *path)
   return buf;
 }
 
+static void
+printout(struct stat* st, const char* path)
+{
+  printf("%c %s %8lx %7zu %3d\n",
+         filetype(st->st_mode), fmtname(path),
+         st->st_ino, st->st_size, st->st_nlink);
+}
+
 void
 ls(const char *path)
 {
   char buf[512], *p;
   int fd;
-  struct dirent de;
   struct stat st;
   
   if((fd = open(path, 0)) < 0){
@@ -48,7 +67,7 @@ ls(const char *path)
   
   switch(st.st_mode & S_IFMT){
   case S_IFREG:
-    printf("- %s %d %zu\n", fmtname(path), st.st_ino, st.st_size);
+    printout(&st, path);
     break;
   
   case S_IFDIR:
@@ -59,16 +78,18 @@ ls(const char *path)
     strcpy(buf, path);
     p = buf+strlen(buf);
     *p++ = '/';
-    while(read(fd, &de, sizeof(de)) == sizeof(de)){
-      if(de.inum == 0)
-        continue;
-      memmove(p, de.name, DIRSIZ);
+
+    char namebuf[DIRSIZ];
+    char *prev = nullptr;
+    while(readdir(fd, prev, namebuf) > 0) {
+      prev = namebuf;
+      memmove(p, namebuf, DIRSIZ);
       p[DIRSIZ] = 0;
-      if(stat(buf, &st) < 0){
+      if (stat(buf, &st) < 0){
         fprintf(stderr, "ls: cannot stat %s\n", buf);
         continue;
       }
-      printf("d %s %d %zu\n", fmtname(buf), st.st_ino, st.st_size);
+      printout(&st, buf);
     }
     break;
   }

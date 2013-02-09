@@ -17,10 +17,12 @@ public:
     for(int cpu = 0; cpu < NCPU; cpu++) {
       for(int fd = 0; fd < NOFILE; fd++) {
         sref<file> f;
-        if (getfile((cpu << cpushift) | fd, &f))
-          t->ofile_[cpu][fd].store(f->dup());
-        else
+        if (getfile((cpu << cpushift) | fd, &f)) {
+          f->inc();
+          t->ofile_[cpu][fd].store(f.get());
+        } else {
           t->ofile_[cpu][fd].store(nullptr);
+        }
       }
     }
     return t;

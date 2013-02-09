@@ -138,6 +138,9 @@ forkret(void)
     mtstop(myproc());
   }
 
+  if (myproc()->cwd_m == nullptr)
+    myproc()->cwd_m = namei(myproc()->cwd_m, "/");
+
   // Return to "caller", actually trapret (see allocproc).
 }
 
@@ -470,6 +473,7 @@ fork(int flags)
   }
 
   np->cwd = myproc()->cwd;
+  np->cwd_m = myproc()->cwd_m;
   pid = np->pid;
   safestrcpy(np->name, myproc()->name, sizeof(myproc()->name));
   acquire(&myproc()->lock);
