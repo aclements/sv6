@@ -334,7 +334,7 @@ struct memory {
       }
     }
     if (res) {
-      if (ALLOC_MEMSET && size <= 16384) {
+      if (ALLOC_MEMSET) {
         char* chk = (char*)res;
         for (int i = 0; i < size - 2*sizeof(void*); i++) {
           // Ignore buddy allocator list links at the beginning of each
@@ -386,7 +386,7 @@ struct memory {
   void kfree(void *v, size_t size)
   {
     // Fill with junk to catch dangling refs.
-    if (ALLOC_MEMSET && kinited && size <= 16384)
+    if (ALLOC_MEMSET && kinited)
       memset(v, 1, size);
 
     if (kinited)
@@ -757,7 +757,7 @@ kalloc(const char *name, size_t size)
     source = "buddy";
   }
   if (res) {
-    if (ALLOC_MEMSET && size <= 16384) {
+    if (ALLOC_MEMSET) {
       char* chk = (char*)res;
       for (int i = 0; i < size - 2*sizeof(void*); i++) {
         // Ignore buddy allocator list links at the beginning of each
@@ -978,7 +978,7 @@ void
 kfree(void *v, size_t size)
 {
   // Fill with junk to catch dangling refs.
-  if (ALLOC_MEMSET && kinited && size <= 16384)
+  if (ALLOC_MEMSET && kinited)
     memset(v, 1, size);
 
   if (kinited)
