@@ -150,6 +150,7 @@
 #include "ilist.hh"
 #include "percpu.hh"
 #include "kstats.hh"
+#include "seqlock.hh"
 #include "condvar.h"
 
 #include <stdexcept>
@@ -186,6 +187,9 @@ namespace refcache {
     //
     // Since the global count can go negative, this must be signed.
     int64_t refcount_;
+
+    // Seqlock for the refcount value.
+    seqcount<u32> refcount_seq_;
 
     // Link used to track this object in the per-core review list.
     islink<referenced> next_;
@@ -383,12 +387,8 @@ namespace refcache {
     struct way
     {
       referenced *obj;
-      // XXX Deltas could be much smaller (say int8_t).  There are
-      // several advantages to this, especially if we have higher
-      // associativity, because we can pack more of them into a cache
-      // line and find used or unused slots faster.  If the delta
-      // overflows or underflows, we can simply evict it.
-      int64_t delta;
+      seqcount<uint32_t> seq;
+      int32_t delta;
 
       constexpr way() : obj(), delta() { }
     };
@@ -437,6 +437,9 @@ namespace refcache {
         // Take this entry
         way->obj = obj;
       }
+      // If the delta is getting close to overflowing, evict.
+      if (way->delta == __INT32_MAX__ || way->delta == -__INT32_MAX__-1)
+        evict(way, false);
       return way;
     }
 
@@ -485,14 +488,18 @@ namespace refcache {
     // Disable interrupts to prevent review from running on this core
     // in the middle of us updating the local reference cache.
     scoped_cli cli;
-    ++mycache->get_way(this)->delta;
+    auto way = mycache->get_way(this);
+    auto writer = way->seq.write_begin();
+    ++way->delta;
   }
 
   inline void
   referenced::dec()
   {
     scoped_cli cli;
-    --mycache->get_way(this)->delta;
+    auto way = mycache->get_way(this);
+    auto writer = way->seq.write_begin();
+    --way->delta;
   }
 
   template<class T>

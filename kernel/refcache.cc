@@ -47,6 +47,8 @@ refcache::cache::evict(struct refcache::cache::way *way,
     assert(delta);
   }
   scoped_acquire l(&obj->lock_);
+  auto writer_global = obj->refcount_seq_.write_begin();
+  auto writer_way = way->seq.write_begin();
   way->delta = 0;
   if ((obj->refcount_ += delta) == 0) {
     // The global count has dropped to zero.  Does this object have a
