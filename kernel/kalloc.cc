@@ -554,6 +554,7 @@ kalloc(const char *name, size_t size)
   }
 
   void *res = nullptr;
+  const char *source = nullptr;
 
   if (size == PGSIZE) {
     // Go to the hot list
@@ -588,9 +589,12 @@ kalloc(const char *name, size_t size)
           mem->hot_pages[mem->nhot++] = page;
         }
       }
+      source = "refilled hot list";
     }
     res = mem->hot_pages[--mem->nhot];
     kstats::inc(&kstats::kalloc_page_alloc_count);
+    if (!source)
+      source = "hot list";
   } else {
     // General allocation path for non-PGSIZE allocations or if we
     // can't fill our hot page cache.
@@ -607,6 +611,7 @@ kalloc(const char *name, size_t size)
         cprintf("CPU %d stole from buddy %lu\n", myid(), (b + first) % buddies.size());
 #endif
     }
+    source = "buddy";
   }
   if (res) {
     if (ALLOC_MEMSET && size <= 16384) {
@@ -618,8 +623,8 @@ kalloc(const char *name, size_t size)
           continue;
         if (chk[i] != 1)
           spanic.println(shexdump(chk, size),
-                         "kalloc: free memory was overwritten ",
-                         (void*)chk, "+", i);
+                         "kalloc: free memory from ", source,
+                         " was overwritten ", (void*)chk, "+", shex(i));
       }
       memset(res, 2, size);
     }
@@ -722,6 +727,9 @@ initkalloc(u64 mbaddr)
     // Remove this node from the physical memory map, just in case
     // there are overlaps between nodes
     mem.remove(node_mem);
+
+    if (ALLOC_MEMSET)
+      console.println("kalloc: Clearing node ", node.id);
 
     // Create buddies
     size_t first = buddies.size();
