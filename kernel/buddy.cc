@@ -127,7 +127,10 @@ void
 buddy_allocator::free_order(void *ptr, size_t order)
 {
   assert(base <= (uintptr_t)ptr && (uintptr_t)ptr < limit);
-#if BUDDY_DEBUG
+#if BUDDY_DEBUG && !KALLOC_BUDDY_PER_CPU
+  /*
+   * Per-CPU buddy allocators cannot answer is_allocated() correctly.
+   */
   if (order < MAX_ORDER)
     if (!is_allocated(ptr, order))
       spanic.println("double free or too-small free of ", ptr,
@@ -169,7 +172,7 @@ buddy_allocator::is_allocated(void *ptr, size_t order)
   size_t bit = (((uintptr_t)ptr - base) / MIN_SIZE) >> (order + 1);
   unsigned char mask = 1 << (bit % 8);
   uintptr_t parent = (uintptr_t)ptr & ~((uintptr_t)MIN_SIZE << order);
-  bool debug = orders[order].debug[bit / 8] & mask;
+  bool debug = !!(orders[order].debug[bit / 8] & mask);
   if ((uintptr_t)ptr == parent)
     // First of buddy pair
     return debug;
