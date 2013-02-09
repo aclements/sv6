@@ -120,9 +120,9 @@ void to_stream(print_stream *s, const shexdump &f)
   uintptr_t end_addr = f.start_ + f.len_;
   int common = 0;
   while (addr != end_addr) {
-    common += 8;
-    addr >>= 8;
-    end_addr >>= 8;
+    common += 4;
+    addr >>= 4;
+    end_addr >>= 4;
   }
 
   // Print the prefix just once (otherwise 64-bit addresses cause
