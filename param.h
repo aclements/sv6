@@ -40,7 +40,7 @@
 #define KALLOC_HOT_PAGES 128
 
 #if defined(HW_qemu)
-#define DEBUG         0
+#define DEBUG         1
 #define NCPU          8   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        0
