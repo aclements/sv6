@@ -399,7 +399,7 @@ gc_end_epoch(void)
 void
 gc_wakeup(void)
 {
-  cprintf("%d: wakeup gcc thread\n", mycpu()->id);
+  // cprintf("%d: wakeup gcc thread\n", mycpu()->id);
   for (int i = 0; i < NCPU; i++) {
     gc_states[i].cv.wake_all();
   }
