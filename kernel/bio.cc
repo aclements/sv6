@@ -3,7 +3,7 @@
 #include "buf.hh"
 #include "weakcache.hh"
 
-static weakcache<buf::key_t, buf, &buf::keyhash, 257> bufcache;
+static weakcache<buf::key_t, buf, 257> bufcache;
 
 sref<buf>
 buf::get(u32 dev, u64 sector)

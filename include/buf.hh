@@ -6,6 +6,7 @@
 #include "fs.h"
 #include "atomic_util.hh"
 #include "lockwrap.hh"
+#include "weakcache.hh"
 
 class buf : public refcache::weak_referenced {
 public:
@@ -14,9 +15,6 @@ public:
   };
 
   typedef pair<u32, u64> key_t;
-  static u64 keyhash(const key_t& k) {
-    return k.first ^ k.second;
-  }
 
   static sref<buf> get(u32 dev, u64 sector);
   void writeback();
@@ -80,3 +78,10 @@ private:
       dec();
   }
 };
+
+template<>
+inline u64
+hash(const buf::key_t& k)
+{
+  return k.first ^ k.second;
+}

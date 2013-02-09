@@ -3,8 +3,9 @@
 #include "gc.hh"
 #include "spinlock.h"
 #include "refcache.hh"
+#include "hash.hh"
 
-template<class K, class V, u64 (*Hash)(const K&), size_t Buckets>
+template<class K, class V, size_t Buckets>
 class weakcache
 {
 private:
@@ -80,13 +81,13 @@ public:
   sref<V>
   lookup(const K& k) const
   {
-    return buckets_[Hash(k) % Buckets].lookup(k);
+    return buckets_[hash(k) % Buckets].lookup(k);
   }
 
   bool
   insert(const K& k, V* v)
   {
-    return buckets_[Hash(k) % Buckets].insert(k, v);
+    return buckets_[hash(k) % Buckets].insert(k, v);
   }
 
   void
