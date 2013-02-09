@@ -67,7 +67,7 @@ outl(uint16_t port, uint32_t data)
 }
 
 static inline void
-stosb(void *addr, int data, int cnt)
+stosb(void *addr, int data, size_t cnt)
 {
   __asm volatile("cld; rep stosb" :
                  "=D" (addr), "=c" (cnt) :
