@@ -23,10 +23,11 @@ public:
    */
   class reader
   {
-    const seqcount * const sc_;
+    const seqcount *sc_;
     T init_;
 
   public:
+    constexpr reader() { }
     constexpr reader(const seqcount *sc, T init) : sc_(sc), init_(init) { }
     reader(reader &&o) = default;
     reader &operator=(reader &&o) = default;

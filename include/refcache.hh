@@ -224,6 +224,7 @@ namespace refcache {
 
     void inc();
     void dec();
+    u64 get();
 
   protected:
     // We could eliminate these virtual methods and the vtable
@@ -413,9 +414,8 @@ namespace refcache {
     // The last global epoch number observed by this core.
     uint64_t local_epoch;
 
-    // Place obj in the cache if necessary and return its assigned
-    // way.  Interrupts must be disabled.
-    way *get_way(referenced *obj)
+    // Return the way in which a particular object's delta could be stored.
+    way *hash_way(referenced *obj)
     {
       // XXX Hash pointer better?  This isn't bad: it's very fast and
       // shouldn't suffer from small alignments.
@@ -424,7 +424,16 @@ namespace refcache {
       struct way *way = &ways_[wayno];
       // XXX More associativity.  Since this is in the critical path
       // of every reference operation, perhaps we should do something
-      // like hash-rehash caching?
+      // like hash-rehash caching?  Would require returning multiple
+      // candidate ways.
+      return way;
+    }
+
+    // Place obj in the cache if necessary and return its assigned
+    // way.  Interrupts must be disabled.
+    way *get_way(referenced *obj)
+    {
+      struct way *way = hash_way(obj);
       if (way->obj != obj) {
         // This object is not in the cache
         if (way->delta) {
