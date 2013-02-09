@@ -24,7 +24,7 @@ template<typename T>
 class seq_reader
 {
 public:
-  seq_reader(T* v, seqcount<u32>* seq) {
+  seq_reader(const T* v, const seqcount<u32>* seq) {
     for (;;) {
       auto r = seq->read_begin();
       state_ = *v;
