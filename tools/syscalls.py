@@ -43,6 +43,16 @@ def main():
                 print "  (u64(*)(u64,u64,u64,u64,u64,u64))%s," % bynum[num].kname
         print "};"
         print
+
+        print 'const char* syscall_names[] = {'
+        for num in range(max(bynum.keys()) + 1):
+            if num not in bynum:
+                print '  nullptr,'
+            else:
+                print '  "%s",' % bynum[num].kname
+        print '};'
+        print
+
         print "extern const int nsyscalls = %d;" % (max(bynum.keys()) + 1)
 
     if options.ustubs:

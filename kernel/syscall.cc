@@ -65,6 +65,7 @@ fetchint64(uptr addr, u64 *ip)
 }
 
 extern u64 (*syscalls[])(u64, u64, u64, u64, u64, u64);
+extern const char* syscall_names[];
 extern const int nsyscalls;
 
 u64
