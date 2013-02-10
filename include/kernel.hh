@@ -227,11 +227,11 @@ extern  "C" int  memcmp(const void*, const void*, size_t);
 extern "C" void* memmove(void*, const void*, size_t);
 extern "C" void* memset(void*, int, size_t);
 extern "C" void* memcpy(void*, const void *, size_t);
-char*           safestrcpy(char*, const char*, size_t);
+char*            safestrcpy(char*, const char*, size_t);
 extern "C" unsigned int strlen(const char*);
-int             strncmp(const char*, const char*, size_t);
-char*           strncpy(char*, const char*, size_t);
-extern "C" int  strcmp(const char *p, const char *q);
+extern "C" int   strncmp(const char*, const char*, size_t);
+extern "C" char* strncpy(char*, const char*, size_t);
+extern "C" int   strcmp(const char *p, const char *q);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

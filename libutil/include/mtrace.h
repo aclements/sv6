@@ -1,8 +1,14 @@
 #if MTRACE
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void* memcpy(void *dst, const void *src, size_t n);
 char* strncpy(char *s, const char *t, size_t n);
+#ifdef __cplusplus
+}
+#endif
 
 #define RET_IP() ((unsigned long)__builtin_return_address(0))
 
