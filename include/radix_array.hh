@@ -308,7 +308,7 @@ public:
     /**
      * Reset the cached node to the root.
      */
-    void reset_node()
+    void reset_node() const
     {
       node_ = r_->get_root_ptr();
       node_level_ = LEVELS;
@@ -351,6 +351,9 @@ public:
       // iterators.
 
       bool unset = !x.is_set();
+
+      if (node_level_ < level)
+        reset_node();
 
       // Expand the tree downward if necessary, propagating locks.
       // This must handle concurrent updates because we might overlap
