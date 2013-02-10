@@ -338,8 +338,55 @@ gettoken(char **ps, char *es, char **q, char **eq)
     break;
   default:
     ret = 'a';
-    while(s < es && !strchr(whitespace, *s) && !strchr(symbols, *s))
-      s++;
+    {
+      char *out = s;
+      enum
+      {
+        WORD, SINGLE, DOUBLE, DONE
+      } state = WORD;
+      while(s < es && state != DONE) {
+        switch (state) {
+        case WORD:
+          if (strchr(whitespace, *s) || strchr(symbols, *s))
+            state = DONE;
+          else if (*s == '\'')
+            state = SINGLE;
+          else if (*s == '\"')
+            state = DOUBLE;
+          else if (*s == '\\' && *(s+1) == '\n')
+            s += 2;
+          else if (*s == '\\')
+            *out++ = *++s;
+          else
+            *out++ = *s;
+          break;
+        case SINGLE:
+          if (*s == '\'')
+            state = WORD;
+          else
+            *out++ = *s;
+          break;
+        case DOUBLE:
+          if (*s == '\"')
+            state = WORD;
+          else if (*s == '\\' && *(s+1) == '\n')
+            s += 2;
+          else if (*s == '\\' && strchr("$`\"\\", *(s+1)))
+            *out++ = *++s;
+          else
+            *out++ = *s;
+          break;
+        case DONE:
+          panic("unreachable");
+        }
+        s++;
+      }
+      if (s < es && state != DONE)
+        panic("unterminated");
+      if (eq)
+        *eq = out;
+      eq = nullptr;
+    }
     break;
   }
   if(eq)
@@ -377,7 +424,7 @@ parsecmd(char *s)
   es = s + strlen(s);
   cmd = parseline(&s, es);
   peek(&s, es, "");
-  if(s != es){
+  if(*s){
     fprintf(stderr, "leftovers: %s\n", s);
     panic("syntax");
   }
