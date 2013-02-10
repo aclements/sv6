@@ -375,7 +375,7 @@ main (int argc, char *argv[])
   unlink (SERVER);
   sock = make_named_socket (SERVER);
 
-  struct kstats kstats_before, kstats_after;
+  struct kstats kstats_before;
   read_kstats(&kstats_before);
      
   int pid = xfork();
@@ -390,6 +390,7 @@ main (int argc, char *argv[])
   }
 
 #ifdef XV6_USER
+  struct kstats kstats_after;
   read_kstats(&kstats_after);
   struct kstats kstats = kstats_after - kstats_before;
   printf("%d %lu # recv msg through lb\n", nclient, kstats.socket_load_balance);
