@@ -27,6 +27,7 @@ setaffinity(int cpu)
 
 static bool verbose = false;
 static bool check_commutativity = false;
+static bool check_threads = true;
 
 static std::atomic<int> waiters;
 static std::atomic<int> ready;
@@ -80,6 +81,9 @@ main(int ac, char** av)
                   fstests[i].call0name, rb0, fstests[i].call1name, rb1);
       }
     }
+
+    if (!check_threads)
+      continue;
 
     fstests[i].setup();
 
