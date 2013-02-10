@@ -138,6 +138,10 @@ trap(struct trapframe *tf)
 
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
+    // for now, just care about timer interrupts
+#if CODEX
+    codex_magic_action_run_async_event(T_IRQ0 + IRQ_TIMER);
+#endif
     if (mycpu()->timer_printpc) {
       cprintf("cpu%d: proc %s rip %lx rsp %lx cs %x\n",
               mycpu()->id,
@@ -194,7 +198,7 @@ trap(struct trapframe *tf)
   }
   case T_SAMPCONF:
     lapiceoi();
-    sampconf();  
+    sampconf();
     break;
   case T_IPICALL: {
     extern void on_ipicall();
@@ -242,7 +246,7 @@ trap(struct trapframe *tf)
 
     if (tf->trapno == T_PGFLT && do_pagefault(tf) == 0)
       return;
-      
+
     if (myproc() == 0 || (tf->cs&3) == 0)
       kerneltrap(tf);
 
@@ -256,14 +260,14 @@ trap(struct trapframe *tf)
   }
 
   // Force process exit if it has been killed and is in user space.
-  // (If it is still executing in the kernel, let it keep running 
+  // (If it is still executing in the kernel, let it keep running
   // until it gets to the regular system call return.)
   if(myproc() && myproc()->killed && (tf->cs&3) == 0x3)
     exit();
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
-  if(myproc() && myproc()->get_state() == RUNNING && 
+  if(myproc() && myproc()->get_state() == RUNNING &&
      (tf->trapno == T_IRQ0+IRQ_TIMER || myproc()->yield_)) {
     yield();
   }
@@ -286,7 +290,7 @@ inittrap(void)
   u64 entry;
   u8 bits;
   int i;
-  
+
   bits = INT_P | SEG_INTR64;  // present, interrupt gate
   for(i=0; i<256; i++) {
     entry = trapentry[i];

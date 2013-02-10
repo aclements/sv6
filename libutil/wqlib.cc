@@ -6,6 +6,7 @@
 #error "WQ not supported"
 #endif
 #include "wq.hh"
+#include "rnd.hh"
 
 //
 // wq
@@ -164,7 +165,11 @@ wq::trywork(bool dosteal)
   u64 i, k;
 
   // A "random" victim CPU
+#if CODEX
+  k = rnd();
+#else
   k = rdtsc();
+#endif
 
   w = pop(myid());
   if (w != nullptr) {
@@ -180,7 +185,7 @@ wq::trywork(bool dosteal)
 
     if (j == myid())
         continue;
-    
+
     w = steal(j);
     if (w != nullptr) {
       w->run();
@@ -197,7 +202,7 @@ wq::trywork(bool dosteal)
 void
 cwork::run(void)
 {
-  void (*fn)(void*, void*, void*, void*, void*) = 
+  void (*fn)(void*, void*, void*, void*, void*) =
     (void(*)(void*,void*,void*,void*,void*))rip;
   fn(arg0, arg1, arg2, arg3, arg4);
   delete this;

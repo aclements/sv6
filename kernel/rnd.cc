@@ -14,7 +14,11 @@ u64
 rnd(void)
 {
   if (rstate->seed == 0) {
+#if CODEX
+    rstate->seed = 0xdeadbeef;
+#else
     rstate->seed = rdtsc();
+#endif
   }
   rstate->seed = rstate->seed *  6364136223846793005 + 1442695040888963407;
   return rstate->seed;

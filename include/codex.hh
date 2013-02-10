@@ -146,6 +146,9 @@ enum class action_type
   NOP = 0x30,
   LOG = 0x40,
   ANNO_STATE = 0x50,
+  ANNO_CRIT_BEGIN = 0x55,
+  ANNO_CRIT_END = 0x56,
+  ASYNC_EVENT = 0x60,
 };
 
 enum action_flags
@@ -262,6 +265,18 @@ codex_magic_action_run_thread_create(tid_t tid)
       (uint64_t) codex::current_tid(),
       codex_encode_action_with_flags(action_type::THREAD_CREATE),
       (uint64_t) tid,
+      0, 0);
+}
+
+inline ALWAYS_INLINE void
+codex_magic_action_run_async_event(uint32_t intno)
+{
+  if (codex::g_codex_trace_start)
+    codex_magic(
+      (uint64_t) codex_call_type::ACTION_RUN,
+      (uint64_t) codex::current_tid(),
+      codex_encode_action_with_flags(action_type::ASYNC_EVENT),
+      (uint64_t) intno,
       0, 0);
 }
 

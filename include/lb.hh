@@ -1,6 +1,8 @@
 #pragma once
 #define NCPU_PER_SOCKET (NCPU/NSOCKET)
 
+#include "rnd.hh"
+
 template<int N>
 struct random_permutation {
  public:
@@ -15,7 +17,11 @@ struct random_permutation {
   }
 
   int next() {
+#if CODEX
+    int r = rnd() % (N - i_);
+#else
     int r = rdtsc() % (N - i_);
+#endif
     std::swap(x_[i_], x_[r]);
     return x_[i_++];
   }

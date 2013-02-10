@@ -11,6 +11,7 @@
 #include "cpu.hh"
 #include "kstream.hh"
 #include "log2.hh"
+#include "rnd.hh"
 
 // allocate in power-of-two sizes up to 2^KMMAX (PGSIZE)
 #define KMMAX 12
@@ -46,11 +47,15 @@ morecore(int c, int b)
   if (ALLOC_MEMSET)
     memset(p, 3, PGSIZE);
 
-  u8 rnd = rdtsc() % 11;
+#if CODEX
+  u8 r = rnd() % 11;
+#else
+  u8 r = rdtsc() % 11;
+#endif
 
   int sz = 1 << b;
   assert(sz >= sizeof(header));
-  for(char *q = p + CACHELINE * rnd; q + sz <= p + PGSIZE; q += sz){
+  for(char *q = p + CACHELINE * r; q + sz <= p + PGSIZE; q += sz){
     struct header *h = (struct header *) q;
     for (;;) {
       auto headptr = freelists[c].buckets[b].load();
@@ -160,7 +165,7 @@ kmalign(void **p, int align, u64 size, const char *name)
   amem += align - ((uptr)amem & (align - 1));
   ((void**)amem)[-1] = mem;
   *p = amem;
-  return 0;   
+  return 0;
 }
 
 void kmalignfree(void *mem, int align, u64 size)
