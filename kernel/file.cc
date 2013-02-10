@@ -80,13 +80,14 @@ file::read(char *addr, size_t n)
   if(type == file::FD_PIPE)
     return piperead(pipe, addr, n);
   if(type == file::FD_INODE){
+    ssize_t r;
     if (ip->type() == mnode::types::dev) {
       if (ip->as_dev()->major() >= NDEV || !devsw[ip->as_dev()->major()].read)
         return -1;
-      return devsw[ip->as_dev()->major()].read(ip->as_dev(), addr, off, n);
+      r = devsw[ip->as_dev()->major()].read(ip->as_dev(), addr, off, n);
+    } else {
+      r = readi(ip, addr, off, n);
     }
-
-    s64 r = readi(ip, addr, off, n);
     if (r > 0)
       off += r;
     return r;
@@ -114,22 +115,23 @@ file::write(const char *addr, size_t n)
   if (type == file::FD_PIPE)
     return pipewrite(pipe, addr, n);
   if (type == file::FD_INODE) {
+    ssize_t r;
     if (ip->type() == mnode::types::dev) {
       if (ip->as_dev()->major() >= NDEV || !devsw[ip->as_dev()->major()].write)
         return -1;
-      return devsw[ip->as_dev()->major()].write(ip->as_dev(), addr, off, n);
-    }
+      r = devsw[ip->as_dev()->major()].write(ip->as_dev(), addr, off, n);
+    } else if (ip->type() == mnode::types::file) {
+      mfile::resizer resize;
+      if (append) {
+        resize = ip->as_file()->write_size();
+        off = resize.read_size();
+      }
 
-    if (ip->type() != mnode::types::file)
+      r = writei(ip, addr, off, n, append ? &resize : nullptr);
+    } else {
       return -1;
-
-    mfile::resizer resize;
-    if (append) {
-      resize = ip->as_file()->write_size();
-      off = resize.read_size();
     }
 
-    ssize_t r = writei(ip, addr, off, n, append ? &resize : nullptr);
     if (r > 0)
       off += r;
     return r;
