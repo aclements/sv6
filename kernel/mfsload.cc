@@ -20,8 +20,10 @@ load_dir(sref<inode> i, sref<mnode> m)
       continue;
 
     sref<mnode> mf = load_inum(de.inum);
-    m->as_dir()->insert(strbuf<DIRSIZ>(de.name), mf->inum_);
-    mf->nlink_.inc();
+    strbuf<DIRSIZ> name(de.name);
+    m->as_dir()->insert(name, mf->inum_);
+    if (name != "." && name != "..")
+      mf->nlink_.inc();
   }
 }
 
@@ -83,5 +85,6 @@ mfsload()
 {
   inum_to_mnode = new linearhash<u64, sref<mnode>>(4099);
   root_inum = load_inum(1)->inum_;
+  mnode::get(root_inum)->nlink_.inc();
   delete inum_to_mnode;
 }
