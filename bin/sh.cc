@@ -205,8 +205,6 @@ main(int ac, char** av)
       continue;
     } else if(!strcmp(buf, "exit\n") || !strcmp(buf, "exit\r")){
       exit(0);
-    } else if(buf[0] == '#'){
-      continue;
     }
     if(fork1() == 0)
       runcmd(parsecmd(buf));
@@ -335,6 +333,10 @@ gettoken(char **ps, char *es, char **q, char **eq)
       ret = '+';
       s++;
     }
+    break;
+  case '#':
+    ret = 0;
+    *s = 0;
     break;
   default:
     ret = 'a';
