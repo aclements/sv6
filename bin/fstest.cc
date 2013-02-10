@@ -2,9 +2,9 @@
 #include "pthread.h"
 #include <atomic>
 #include <stdlib.h>
-#ifndef XV6_USER
 #include <string.h>
-#else
+#include <unistd.h>
+#ifdef XV6_USER
 #include "types.h"
 #include "user.h"
 #endif
@@ -27,7 +27,7 @@ setaffinity(int cpu)
 
 static bool verbose = false;
 static bool check_commutativity = false;
-static bool check_threads = true;
+static bool run_threads = false;
 
 static std::atomic<int> waiters;
 static std::atomic<int> ready;
@@ -50,16 +50,77 @@ callthread(void* arg)
   return 0;
 }
 
+static void
+usage(const char* prog)
+{
+  fprintf(stderr, "Usage: %s [-v] [-c] [-t] [min[-max]]\n", prog);
+}
+
 int
 main(int ac, char** av)
 {
   setaffinity(0);
 
-  int max = 0;
-  if (ac > 1)
-    max = atoi(av[1]);
+  uint32_t min = 0;
+  uint32_t max = __UINT32_MAX__;
 
-  for (int i = 0; (max == 0 || i < max) && fstests[i].setup; i++) {
+  for (;;) {
+    int opt = getopt(ac, av, "vct");
+    if (opt == -1)
+      break;
+
+    switch (opt) {
+    case 'v':
+      verbose = true;
+      break;
+
+    case 'c':
+      check_commutativity = true;
+      break;
+
+    case 't':
+      run_threads = true;
+      break;
+
+    default:
+      usage(av[0]);
+      return -1;
+    }
+  }
+
+  if (optind < ac) {
+    char* dash = strchr(av[optind], '-');
+    if (!dash) {
+      min = max = atoi(av[optind]);
+    } else {
+      *dash = '\0';
+      min = atoi(av[optind]);
+      max = atoi(dash + 1);
+    }
+  }
+
+  if (!check_commutativity && !run_threads) {
+    fprintf(stderr, "Must specify one of -c or -t\n");
+    usage(av[0]);
+    return -1;
+  }
+
+  printf("fstest:");
+  if (verbose)
+    printf(" verbose");
+  if (check_commutativity)
+    printf(" check");
+  if (run_threads)
+    printf(" threads");
+  if (min == 0 && max == __UINT32_MAX__)
+    printf(" all");
+  else if (min == max)
+    printf(" %d", min);
+  else
+    printf(" %d-%d", min, max);
+  printf("\n");
+
+  for (uint32_t i = min; i <= max && fstests[i].setup; i++) {
     if (check_commutativity) {
       fstests[i].setup();
       int ra0 = fstests[i].call0();
@@ -82,7 +143,7 @@ main(int ac, char** av)
       }
     }
 
-    if (!check_threads)
+    if (!run_threads)
       continue;
 
     fstests[i].setup();
