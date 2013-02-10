@@ -3,7 +3,6 @@
 #include <sys/wait.h>
 
 #define xfork() fork()
-#define xexit() exit(EXIT_SUCCESS)
 static inline void xwait()
 {
   int status;
@@ -22,7 +21,6 @@ static inline void xwait()
 #else // Must be xv6
 
 #define xfork() fork(0)
-#define xexit() exit()
 #define xwait() wait(-1)
 #define xpthread_join(tid) wait(tid)
 
