@@ -15,7 +15,7 @@ forktree(void)
  next_level:
   //printf(1, "pid %d, depth %d\n", getpid(), depth);
   if (depth >= NDEPTH)
-    exit();
+    exit(0);
 
   for (int i = 0; i < NCHILD; i++) {
     int pid = fork(0);
@@ -40,7 +40,7 @@ forktree(void)
   }
 
   if (depth > 0)
-    exit();
+    exit(0);
 
   printf("%d: fork tree OK\n", getpid());
   // halt();
@@ -50,5 +50,5 @@ int
 main(void)
 {
   forktree();
-  exit();
+  return 0;
 }

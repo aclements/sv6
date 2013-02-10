@@ -5,5 +5,5 @@ int
 main(int argc, char *argv[])
 {
   halt();
-  exit();
+  return 0;
 }

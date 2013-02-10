@@ -58,5 +58,5 @@ main(int ac, char **av)
   wq_start();
 
   printf("%d\n", size);
-  exit();
+  return 0;
 }

@@ -220,7 +220,7 @@ extern void __cxa_pure_virtual(void);
 void __cxa_pure_virtual(void)
 { 
   fprintf(stderr, "__cxa_pure_virtual");
-  exit();
+  exit(-1);
 }
 
 struct proghdr *_dl_phdr;

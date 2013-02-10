@@ -25,7 +25,7 @@ dfork(void)
   } else if (pid < 0) {
     fprintf(stderr, "telnetd fork 2: %d\n", pid);
   }
-  exit();
+  exit(0);
 }
 
 int
@@ -73,7 +73,7 @@ main(void)
       dup(ss);
       dup(ss);
       exec(argv[0], argv);
-      exit();
+      exit(0);
     }
     close(ss);
   }

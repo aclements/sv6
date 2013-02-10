@@ -20,7 +20,7 @@ worker0(void)
 static void
 worker1(void)
 {
-  exit();
+  exit(0);
 }
 
 static void

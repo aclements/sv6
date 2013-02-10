@@ -34,5 +34,5 @@ main(void)
     static const char *argv[] = { "/sh", 0 };
     exec(argv[0], argv);
   }
-  exit();
+  return 0;
 }

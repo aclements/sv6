@@ -192,9 +192,9 @@ main(int argc, char * argv[])
         xpthread_join(tids[j]);
 #endif
       }
-      xexit();
+      exit(0);
     }
   }
   xwait();
-  xexit();
+  return 0;
 }

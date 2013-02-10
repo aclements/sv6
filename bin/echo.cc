@@ -10,5 +10,5 @@ main(int argc, char *argv[])
   for(i = 1; i < argc; i++)
     printf("%s%s", argv[i], i+1 < argc ? " " : "");
   printf("\n");
-  exit();
+  return 0;
 }

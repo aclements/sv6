@@ -63,7 +63,7 @@ bench(u32 tid, int nloop, const char* path)
     }
   }
 
-  xexit();
+  exit(0);
 }
 
 int

@@ -13,5 +13,5 @@ main(int ac, char *av[])
 
   u64 x = atoi(av[1])*1000000000ull;
   nsleep(x);
-  exit();
+  return 0;
 }

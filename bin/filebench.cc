@@ -50,7 +50,7 @@ bench(int tid, int nloop, const char* path)
   }
 
   close(fd);
-  xexit();
+  exit(0);
 }
 
 int

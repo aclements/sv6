@@ -15,7 +15,7 @@ forktree(int depth)
   }
 
   if (depth >= NDEPTH)
-    exit();
+    exit(0);
 
   for (int i = 0; i < NCHILD; i++) {
     int pid = fork(0);
@@ -44,7 +44,7 @@ forktree(int depth)
   }
 
   if (depth > 0)
-    exit();
+    exit(0);
 
   printf("%d: forkexectree OK\n", getpid());
   // halt();
@@ -58,5 +58,5 @@ main(int ac, char **av)
   } else {
     forktree(atoi(av[1]));
   }
-  exit();
+  return 0;
 }

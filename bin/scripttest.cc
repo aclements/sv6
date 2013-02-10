@@ -19,10 +19,8 @@ main(int ac, char **av)
     u64 x = len - (q - p);
     if(x > chunk)
       x = chunk;
-    if(map(q, x) < 0){
-      fprintf(1, "map failed\n");
-      exit();
-    }
+    if(map(q, x) < 0)
+      die("map failed");
     q += x;
   }
 #else
@@ -31,5 +29,5 @@ main(int ac, char **av)
 
   memset(p, 1, len);
 
-  exit();
+  return 0;
 }

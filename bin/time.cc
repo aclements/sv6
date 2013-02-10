@@ -21,5 +21,5 @@ main(int ac, const char *av[])
   wait(-1);
   u64 t1 = rdtsc();
   printf("%lu cycles\n", t1-t0);
-  exit();
+  return 0;
 }

@@ -56,7 +56,7 @@ bench(int me, int nloop)
   }
 
   printf("%d: done\n", me);
-  xexit();
+  exit(0);
 }
 
 int
@@ -73,11 +73,8 @@ main(int ac, char** av)
   if (ac > 3)
     nloop = atoi(av[3]);
 
-  if (pipe(fds) < 0) {
-    printf("pipe failed\n");
-    xexit();
-  }
-
+  if (pipe(fds) < 0)
+    die("pipe failed");
 
   uint64_t t0 = rdtsc();
   for(int i = 0; i < nproc; i++) {

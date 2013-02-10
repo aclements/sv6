@@ -35,7 +35,7 @@ int
 main(int ac, char **av)
 {
   if (ac == 2)
-    exit();
+    exit(0);
   execbench();
-  exit();
+  return 0;
 }

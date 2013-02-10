@@ -17,11 +17,7 @@ vdie(const char* errstr, va_list ap)
 {
   vfprintf(stderr, errstr, ap);
   fprintf(stderr, "\n");
-#if defined(XV6_USER)
-  exit();
-#else
   exit(1);
-#endif
 }
 
 void __attribute__((noreturn))

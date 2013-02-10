@@ -64,6 +64,5 @@ main(int ac, char **av)
 
   for(int i = 0; i < nthread; i++)
     xpthread_join(tid[i]);
-
-  xexit();
+  return 0;
 }

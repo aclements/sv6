@@ -75,5 +75,5 @@ main(int ac, const char *av[])
 
   u64 tot = s2->busy() + s2->idle();
   printf(".%lu idle\n", (s2->idle()*100)/tot);
-  exit();
+  return 0;
 }

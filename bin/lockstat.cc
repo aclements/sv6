@@ -84,5 +84,5 @@ main(int ac, const char *av[])
   xwrite(fd, '2');
   stats();
   xwrite(fd, '3');
-  exit();
+  return 0;
 }

@@ -94,7 +94,7 @@ xthread_create(pthread_t* tid, int flags,
 void
 pthread_exit(void* retval)
 {
-  exit();
+  exit(0);
 }
 
 int

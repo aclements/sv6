@@ -14,5 +14,5 @@ main(int argc, char *argv[])
       die("rm: %s failed to delete\n", argv[i]);
   }
 
-  exit();
+  return 0;
 }

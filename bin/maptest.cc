@@ -41,7 +41,7 @@ thr(void*)
 
       acquire(&l);
       printf("still alive after unmap write\n");
-      exit();
+      exit(0);
     }
     release(&l);
     spin();
@@ -87,5 +87,5 @@ main(void)
   }
 
   printf("maptest done\n");
-  exit();
+  return 0;
 }

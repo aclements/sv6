@@ -24,4 +24,7 @@ void* realloc(void*, size_t);
 int atoi(const char*);
 long atol(const char*);
 
+void exit(int status)
+  __attribute__((__noreturn__));
+
 END_DECLS

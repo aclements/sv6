@@ -71,7 +71,7 @@ runcmd(struct cmd *cmd)
   struct redircmd *rcmd;
 
   if(cmd == 0)
-    exit();
+    exit(0);
   
   switch(cmd->type){
   default:
@@ -80,7 +80,7 @@ runcmd(struct cmd *cmd)
   case EXEC:
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
-      exit();
+      exit(0);
     exec(ecmd->argv[0], ecmd->argv);
     fprintf(stderr, "exec %s failed\n", ecmd->argv[0]);
     break;
@@ -90,7 +90,7 @@ runcmd(struct cmd *cmd)
     close(rcmd->fd);
     if(open(rcmd->file, rcmd->mode, 0666) < 0){
       fprintf(stderr, "open %s failed\n", rcmd->file);
-      exit();
+      exit(1);
     }
     runcmd(rcmd->cmd);
     break;
@@ -133,7 +133,7 @@ runcmd(struct cmd *cmd)
       runcmd(bcmd->cmd);
     break;
   }
-  exit();
+  exit(0);
 }
 
 int
@@ -183,7 +183,7 @@ main(int ac, char** av)
     if(fork1() == 0)
       runcmd(parsecmd(buf));
     wait(-1);
-    exit();
+    exit(0);
   } else if (ac > 1) {
     // Shell script
     interactive = false;
@@ -204,7 +204,7 @@ main(int ac, char** av)
         fprintf(stderr, "cannot cd %s\n", buf+3);
       continue;
     } else if(!strcmp(buf, "exit\n") || !strcmp(buf, "exit\r")){
-      exit();
+      exit(0);
     } else if(buf[0] == '#'){
       continue;
     }
@@ -212,14 +212,14 @@ main(int ac, char** av)
       runcmd(parsecmd(buf));
     wait(-1);
   }
-  exit();
+  return 0;
 }
 
 void
 panic(const char *s)
 {
   fprintf(stderr, "%s\n", s);
-  exit();
+  exit(1);
 }
 
 int

@@ -25,8 +25,8 @@ sys_fork(int flags)
 }
 
 //SYSCALL NORET
-int
-sys_exit(void)
+void
+sys_exit(int status)
 {
   exit();
   panic("exit() returned");

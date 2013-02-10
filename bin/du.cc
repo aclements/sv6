@@ -45,5 +45,5 @@ int
 main(int ac, char **av)
 {
   printf("%d\n", du(open(".", 0)));
-  exit();
+  return 0;
 }

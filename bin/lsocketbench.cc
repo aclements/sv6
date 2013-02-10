@@ -155,7 +155,7 @@ ok(char *message, int n)
   if (pid == 0) {
     close(fd[1]);
     check(fd[0]);   // XXX exec()
-    xexit();
+    exit(0);
   } else {
     close(fd[0]);
     if (write(fd[1], message, n) < 0) {
@@ -307,7 +307,7 @@ void server()
   for (int i = 0; i < nthread; i++)
     pthread_join(tid[i], NULL);
 
-  xexit();
+  exit(0);
 }
 
 
@@ -321,8 +321,7 @@ client_thread(void* x)
     die("setaffinity err");
 #endif
   client(id);
-  xexit();
- 
+  exit(0);
 }
 
 void clients()

@@ -169,7 +169,7 @@ main(int argc, char *argv[])
       die("time_this: fork failed %s", argv[0]);
     if (pid == 0) {
       child();
-      exit();
+      exit(0);
     } else {
       cpu++;
     }
@@ -177,5 +177,5 @@ main(int argc, char *argv[])
   for (int i = 0; i < nproc; i++)
     wait(-1);
   printf("done %d %s\n", getpid(), argv[0]);
-  exit();
+  return 0;
 }

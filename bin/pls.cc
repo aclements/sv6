@@ -109,5 +109,5 @@ main(int argc, char *argv[])
   // start workers; terminate when all workers have no work
   wq_start();
 
-  exit();
+  return 0;
 }
