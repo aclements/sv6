@@ -5,27 +5,24 @@
 #include <unistd.h>
 
 char *optarg;
+int optind = 1;
 
 int
 getopt(int argc, char** argv, const char *optstring)
 {
   static char UNKNOWN_OPTION[] = { '?', '\0' };
-  static int argIndex = 0;
 
   size_t optIndex;
   size_t optLen;
 
-  while (argIndex < argc) {
-    if (!argv[argIndex]) {
-      argIndex++;
+  while (optind < argc) {
+    if (!argv[optind]) {
+      optind++;
       continue;
     }
 
-    if (argv[argIndex][0] != '-' || argv[argIndex][1] == 0 || argv[argIndex][2] != 0) {
-      optarg = UNKNOWN_OPTION;
-      argIndex++;
-      continue;
-    }
+    if (argv[optind][0] != '-' || argv[optind][1] == 0 || argv[optind][2] != 0)
+      return -1;
 
     optIndex = 0;
     optLen = strlen(optstring);
@@ -34,23 +31,23 @@ getopt(int argc, char** argv, const char *optstring)
       if (!(((c > 'a' - 1) && (c < 'z' + 1)) || ((c > 'A' - 1) && (c < 'Z' + 1))))
         continue;
 
-      if (argv[argIndex][1] == c) {
+      if (argv[optind][1] == c) {
         if (optIndex + 1 < optLen && optstring[optIndex + 1] == ':') {
-          if (argIndex + 1 < argc) {
-            argIndex++;
-            optarg = argv[argIndex];
+          if (optind + 1 < argc) {
+            optind++;
+            optarg = argv[optind];
           } else {
             optarg = UNKNOWN_OPTION;
           }
-          argIndex++;
+          optind++;
           return c;
         }
-        argIndex++;
+        optind++;
         return c;
       }
     }
     optarg = UNKNOWN_OPTION;
-    argIndex++;
+    optind++;
     continue;
   }
 

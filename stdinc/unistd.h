@@ -18,6 +18,7 @@ unsigned sleep(unsigned);
 pid_t getpid(void);
 
 extern char* optarg;
+extern int optind;
 int getopt(int ac, char** av, const char* optstring);
 
 int stat(char*, struct stat*);
