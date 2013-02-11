@@ -26,6 +26,15 @@ typedef struct header header;
 
 static __thread header* freelist[64];
 
+// Minimum allocation unit in multiples of sizeof(header)
+static size_t min_alloc_units = (256*1024) / sizeof(header);
+
+extern "C" void
+malloc_set_alloc_unit(size_t bytes)
+{
+  min_alloc_units = bytes / sizeof(header);
+}
+
 static int
 floor_log2(u64 x)
 {
@@ -91,7 +100,7 @@ morecore(u32 nu)
   u32 bidx = floor_log2(nu);
 
   // enum { min_alloc_units = 1024*1024 };
-  enum { min_alloc_units = 16384 };   // 256Kbyte units * sizeof(header)
+//  enum { min_alloc_units = 16384 };   // 256Kbyte units * sizeof(header)
   // enum { min_alloc_units = 4096 };
   if (nu < min_alloc_units)
     nu = min_alloc_units;

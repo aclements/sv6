@@ -27,6 +27,15 @@ typedef struct header header;
 static __thread header* freelist[64];
 int nmmap;
 
+// Minimum allocation unit in multiples of sizeof(header)
+static size_t min_alloc_units = (256*1024) / sizeof(header);
+
+void
+malloc_set_alloc_unit(size_t bytes)
+{
+  min_alloc_units = bytes / sizeof(header);
+}
+
 static int
 floor_log2(u64 x)
 {
@@ -94,7 +103,7 @@ morecore(u32 nu)
 
   // enum { min_alloc_units = 1024 * 1024 };   // 16M
   // enum { min_alloc_units = 512 * 1024 };   // 8M
-  enum { min_alloc_units = 16384 };      // 256K
+  // enum { min_alloc_units = 16384 };      // 256K
   // enum { min_alloc_units = 4096 };      // 64K
   // enum { min_alloc_units = 67108864 };   // 1G
   if (nu < min_alloc_units)
