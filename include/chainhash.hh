@@ -53,6 +53,9 @@ public:
   NEW_DELETE_OPS(chainhash);
 
   bool insert(const K& k, const V& v) {
+    if (lookup(k))
+      return false;
+
     bucket* b = &buckets_[hash(k) % nbuckets_];
     scoped_acquire l(&b->lock);
 
@@ -65,6 +68,9 @@ public:
   }
 
   bool remove(const K& k, const V& v) {
+    if (!lookup(k))
+      return false;
+
     bucket* b = &buckets_[hash(k) % nbuckets_];
     scoped_acquire l(&b->lock);
 
@@ -84,6 +90,9 @@ public:
   }
 
   bool replace(const K& k, const V& vold, const V& vnew) {
+    if (!lookup(k))
+      return false;
+
     bucket* b = &buckets_[hash(k) % nbuckets_];
     scoped_acquire l(&b->lock);
 
@@ -121,14 +130,15 @@ public:
     return false;
   }
 
-  bool lookup(const K& k, V* vptr) const {
+  bool lookup(const K& k, V* vptr = nullptr) const {
     scoped_gc_epoch rcu_read;
 
     bucket* b = &buckets_[hash(k) % nbuckets_];
     for (const item& i: b->chain) {
       if (i.key != k)
         continue;
-      *vptr = *seq_reader<V>(&i.val, &i.seq);
+      if (vptr)
+        *vptr = *seq_reader<V>(&i.val, &i.seq);
       return true;
     }
     return false;

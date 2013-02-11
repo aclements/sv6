@@ -207,7 +207,7 @@ sys_rename(userptr_str old_name, userptr_str new_name)
   if (!mdold)
     return -1;
 
-  u64 inum;
+  u64 inum = 0;   // initialize to avoid gcc warning
   if (!mdold->as_dir()->lookup(oldname, &inum))
     return -1;
 
@@ -226,7 +226,7 @@ sys_rename(userptr_str old_name, userptr_str new_name)
     return 0;
 
   for (;;) {
-    u64 iroadblock;
+    u64 iroadblock = 0;   // initialize to avoid gcc warning
     if (!mdnew->as_dir()->lookup(newname, &iroadblock)) {
       /* Should we mf->nlink_.inc() before inserting? */
       if (mdnew->as_dir()->insert(newname, inum)) {
