@@ -27,6 +27,17 @@ echo
 ./metis_wrmem -s 4000 -p 70 -a 262144
 ./metis_wrmem -s 4000 -p 80 -a 262144
 
+# 1M
+./metis_wrmem -s 4000 -p 1 -a 1048567
+./metis_wrmem -s 4000 -p 10 -a 1048567
+./metis_wrmem -s 4000 -p 20 -a 1048567
+./metis_wrmem -s 4000 -p 30 -a 1048567
+./metis_wrmem -s 4000 -p 40 -a 1048567
+./metis_wrmem -s 4000 -p 50 -a 1048567
+./metis_wrmem -s 4000 -p 60 -a 1048567
+./metis_wrmem -s 4000 -p 70 -a 1048567
+./metis_wrmem -s 4000 -p 80 -a 1048567
+
 # 4M
 ./metis_wrmem -s 4000 -p 1 -a 4194304
 ./metis_wrmem -s 4000 -p 10 -a 4194304
