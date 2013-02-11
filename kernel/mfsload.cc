@@ -21,9 +21,9 @@ load_dir(sref<inode> i, sref<mnode> m)
 
     sref<mnode> mf = load_inum(de.inum);
     strbuf<DIRSIZ> name(de.name);
-    m->as_dir()->insert(name, mf->inum_);
-    if (name != "." && name != "..")
-      mf->nlink_.inc();
+    mlinkref ilink(mf);
+    ilink.acquire();
+    m->as_dir()->insert(name, &ilink);
   }
 }
 

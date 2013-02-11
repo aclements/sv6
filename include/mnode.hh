@@ -40,26 +40,75 @@ public:
   msock* as_sock();
   const msock* as_sock() const;
 
-protected:
-  mnode(u64 inum);
-
-private:
-  void onzero() override;
-
   class linkcount : public refcache::referenced {
   public:
     linkcount() : refcache::referenced(0) {};
     void onzero() override;
   };
 
-public:
   const u64 inum_;
   linkcount nlink_;
 
+protected:
+  mnode(u64 inum);
+
 private:
+  void onzero() override;
+
   std::atomic<bool> cache_pin_;
   std::atomic<bool> dirty_;
   std::atomic<bool> valid_;
+};
+
+/*
+ * An mlinkref represents a link count reference on an mnode.
+ * The caller must ensure that mlinkref::acquire() is not called
+ * after mnode::nlink_ reaches stable zero, perhaps by blocking
+ * refcache epochs using cli when looking up the inode number in
+ * a directory.
+ *
+ * Each mlinkref holds a reference to the mnode as well, to ensure
+ * that the memory used to store the nlink_ count is not evicted
+ * before all of the refcache deltas are flushed.  Otherwise this
+ * would just be an sref<linkcount>.
+ */
+class mlinkref {
+public:
+  mlinkref() {}
+  mlinkref(sref<mnode> mref) : m_(mref) {}
+
+  sref<mnode> mn() {
+    return m_;
+  }
+
+  bool held() {
+    return !!l_;
+  }
+
+  /*
+   * Increment the link count on the mnode.
+   */
+  void acquire() {
+    assert(m_ && !l_);
+    l_ = sref<mnode::linkcount>::newref(&m_->nlink_);
+  }
+
+  /*
+   * Transfer an existing link count on the mnode to this mlinkref.
+   */
+  void transfer() {
+    assert(m_ && !l_);
+    l_ = sref<mnode::linkcount>::transfer(&m_->nlink_);
+  }
+
+private:
+  /*
+   * The order is important due to C++ constructor/destructor
+   * rules: we must hold the mnode reference while manipulating
+   * the linkcount reference.
+   */
+  sref<mnode> m_;
+  sref<mnode::linkcount> l_;
 };
 
 
@@ -78,26 +127,101 @@ private:
   chainhash<strbuf<DIRSIZ>, u64> map_;
 
 public:
-  bool insert(const strbuf<DIRSIZ>& name, u64 inum) {
-    bool r = map_.insert(name, inum);
-    if (r && name != "." && name != "..")
+  bool insert(const strbuf<DIRSIZ>& name, mlinkref* ilink) {
+    assert(ilink->held());
+    bool r = map_.insert(name, ilink->mn()->inum_);
+    if (r && name != "." && name != "..") {
       nfiles_.inc();
+      ilink->mn()->nlink_.inc();
+    }
     return r;
   }
 
-  bool remove(const strbuf<DIRSIZ>& name, u64 inum) {
-    bool r = map_.remove(name, inum);
-    if (r && name != "." && name != "..")
+  bool remove(const strbuf<DIRSIZ>& name, mlinkref* ilink) {
+    bool r = map_.remove(name, ilink->mn()->inum_);
+    if (r && name != "." && name != "..") {
       nfiles_.dec();
+      ilink->transfer();      /* Caller cleans up link count */
+    }
     return r;
   }
 
-  bool replace(const strbuf<DIRSIZ>& name, u64 iold, u64 inew) {
-    return map_.replace(name, iold, inew);
+  bool replace(const strbuf<DIRSIZ>& name,
+               mlinkref* ilinkold,
+               mlinkref* ilinknew) {
+    assert(ilinknew->held());
+    bool r = map_.replace(name, ilinkold->mn()->inum_,
+                                ilinknew->mn()->inum_);
+    if (r) {
+      ilinknew->mn()->nlink_.inc();
+      ilinkold->transfer();   /* Caller cleans up link count */
+    }
+    return r;
   }
 
-  bool lookup(const strbuf<DIRSIZ>& name, u64* inump) const {
-    return map_.lookup(name, inump);
+  sref<mnode> lookup(const strbuf<DIRSIZ>& name) const {
+    for (;;) {
+      u64 inum;
+      if (!map_.lookup(name, &inum))
+        return sref<mnode>();
+
+      sref<mnode> m = mnode::get(inum);
+      if (m)
+        return m;
+
+      /*
+       * The inode was GCed between the lookup and mnode::get().
+       * Retry the lookup.
+       */
+    }
+  }
+
+  mlinkref lookup_link(const strbuf<DIRSIZ>& name) const {
+    for (;;) {
+      sref<mnode> m = lookup(name);
+      if (!m)
+        return mlinkref();
+
+      scoped_cli cli;
+      /*
+       * Retry the lookup, now that we have an sref<mnode>, since
+       * we don't want to do lookup's mnode::get() under cli.
+       */
+      u64 inum;
+      if (!map_.lookup(name, &inum) || inum != m->inum_)
+        /*
+         * The name has either been unlinked or changed to point
+         * to another inode.  Retry.
+         */
+        continue;
+
+      mlinkref ilink(m);
+
+      /*
+       * At this point, we know the inode had a non-zero link
+       * count prior to the second lookup.  Since we are holding
+       * cli, refcache cannot advance its epoch, and will not
+       * garbage-collect the inode until after we release cli.
+       *
+       * Mild POSIX violation: an inode can appear to have a
+       * zero link count, according to fstat, but get a positive
+       * link counter later, because the fstat occurs after the
+       * last name has been unlinked, but before we increment
+       * the link count here.
+       */
+
+      ilink.acquire();
+
+      /*
+       * Mild POSIX violation: an inode can appear to have a
+       * link count, according to fstat, that is higher than
+       * the number of all its names.  For instance, sys_link()
+       * first grabs a mlinkref on the existing name, and then
+       * drops it if the new name already exists.
+       */
+
+      return ilink;
+    }
   }
 
   bool enumerate(const strbuf<DIRSIZ>* prev, strbuf<DIRSIZ>* name) const {

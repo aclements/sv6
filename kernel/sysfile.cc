@@ -156,14 +156,19 @@ sys_fstat(int fd, userptr<struct stat> st)
 // Create the path new as a link to the same inode as old.
 //SYSCALL
 int
-sys_link(userptr_str old_name, userptr_str new_name)
+sys_link(userptr_str old_path, userptr_str new_path)
 {
   char old[PATH_MAX], newn[PATH_MAX];
-  if (!old_name.load(old, sizeof old) || !new_name.load(newn, sizeof newn))
+  if (!old_path.load(old, sizeof old) || !new_path.load(newn, sizeof newn))
     return -1;
 
-  sref<mnode> mf = namei(myproc()->cwd_m, old);
-  if (!mf || mf->type() == mnode::types::dir)
+  strbuf<DIRSIZ> oldname;
+  sref<mnode> olddir = nameiparent(myproc()->cwd_m, old, &oldname);
+  if (!olddir)
+    return -1;
+
+  mlinkref mflink = olddir->as_dir()->lookup_link(oldname);
+  if (!mflink.mn() || mflink.mn()->type() == mnode::types::dir)
     return -1;
 
   strbuf<DIRSIZ> name;
@@ -171,36 +176,18 @@ sys_link(userptr_str old_name, userptr_str new_name)
   if (!md)
     return -1;
 
-  /*
-   * Race between link and unlink:
-   *   link finds mnode, gets sref<mnode>
-   *   unlink unlinks the last name, sets nlink_=0
-   *   2 refcache epochs happen, mnode::linkcount::onzero unpins from cache
-   *   stat can observe file with nlink_==0
-   *   link finally bumps nlink_ on the mnode, resuscitating it!
-   * Two resulting problems:
-   *   mild posix violation: saw a zero-nlink inode come back to life
-   *   mnode evicted courtesy of mnode::linkcount::onzero
-   *     need to get the dirty flag working!
-   * Two hopefully-not-a-problems:
-   *   file will not be deleted, since truncate will happen in mnode::onzero
-   *   refcache should be OK with reviving an object from zero refcount
-   */
-  mf->nlink_.inc();
+  if (!md->as_dir()->insert(name, &mflink))
+    return -1;
 
-  if (md->as_dir()->insert(name, mf->inum_))
-    return 0;
-
-  mf->nlink_.dec();
-  return -1;
+  return 0;
 }
 
 //SYSCALL
 int
-sys_rename(userptr_str old_name, userptr_str new_name)
+sys_rename(userptr_str old_path, userptr_str new_path)
 {
   char old[PATH_MAX], newn[PATH_MAX];
-  if (!old_name.load(old, sizeof old) || !new_name.load(newn, sizeof newn))
+  if (!old_path.load(old, sizeof old) || !new_path.load(newn, sizeof newn))
     return -1;
 
   strbuf<DIRSIZ> oldname;
@@ -208,14 +195,16 @@ sys_rename(userptr_str old_name, userptr_str new_name)
   if (!mdold)
     return -1;
 
-  u64 inum = 0;   // initialize to avoid gcc warning
-  if (!mdold->as_dir()->lookup(oldname, &inum))
-    return -1;
-
-  sref<mnode> mf = mnode::get(inum);
-  if (!mf || mf->type() == mnode::types::dir)
-    // Renaming directories not currently supported.
-    // Would require checking for loops.
+  mlinkref mflink = mdold->as_dir()->lookup_link(oldname);
+  if (!mflink.mn() || mflink.mn()->type() == mnode::types::dir)
+    /*
+     * Renaming directories not currently supported.
+     * Would require checking for loops.  This can be
+     * complicated by concurrent renames of the same
+     * source directory when one of the renames has
+     * already added a new name for the directory,
+     * but not removed the previous name yet.
+     */
     return -1;
 
   strbuf<DIRSIZ> newname;
@@ -227,42 +216,25 @@ sys_rename(userptr_str old_name, userptr_str new_name)
     return 0;
 
   for (;;) {
-    u64 iroadblock = 0;   // initialize to avoid gcc warning
-    if (!mdnew->as_dir()->lookup(newname, &iroadblock)) {
-      /* See race condition comment in sys_link */
-      mf->nlink_.inc();
-      if (mdnew->as_dir()->insert(newname, inum)) {
-        /* See comment about race in sys_link() */
-        if (mdold->as_dir()->remove(oldname, inum))
-          mf->nlink_.dec();
+    sref<mnode> mroadblock = mdnew->as_dir()->lookup(newname);
+    if (!mroadblock) {
+      if (mdnew->as_dir()->insert(newname, &mflink)) {
+        mlinkref oldlink(mflink.mn());
+        mdold->as_dir()->remove(oldname, &oldlink);
         return 0;
-      } else {
-        mf->nlink_.dec();
       }
     } else {
-      sref<mnode> mfroadblock = mnode::get(iroadblock);
-      if (!mfroadblock)
-        /*
-         * The inode was GCed between the lookup and mnode::get().
-         * Retry the lookup.
-         */
-        continue;
-
-      if (mfroadblock->type() == mnode::types::dir) {
+      if (mroadblock->type() == mnode::types::dir) {
         /* See comment in sys_unlink about unlinking a directory */
-        if (mfroadblock->as_dir()->nfiles_.get_consistent() != 0)
+        if (mroadblock->as_dir()->nfiles_.get_consistent() != 0)
           return -1;
       }
 
-      /* See race condition comment in sys_link */
-      mf->nlink_.inc();
-      if (mdnew->as_dir()->replace(newname, iroadblock, inum)) {
-        mfroadblock->nlink_.dec();
-        if (mdold->as_dir()->remove(oldname, inum))
-          mf->nlink_.dec();
+      mlinkref mrlink(mroadblock);
+      if (mdnew->as_dir()->replace(newname, &mrlink, &mflink)) {
+        mlinkref oldlink(mflink.mn());
+        mdold->as_dir()->remove(oldname, &oldlink);
         return 0;
-      } else {
-        mf->nlink_.dec();
       }
     }
   }
@@ -284,11 +256,7 @@ sys_unlink(userptr_str path)
   if (name == "." || name == "..")
     return -1;
 
-  u64 inum;
-  if (!md->as_dir()->lookup(name, &inum))
-    return -1;
-
-  sref<mnode> mf = mnode::get(inum);
+  sref<mnode> mf = md->as_dir()->lookup(name);
   if (!mf)
     return -1;
 
@@ -305,8 +273,9 @@ sys_unlink(userptr_str path)
       return -1;
   }
 
-  if (md->as_dir()->remove(name, mf->inum_))
-    mf->nlink_.dec();
+  mlinkref oldlink(mf);
+  if (!md->as_dir()->remove(name, &oldlink))
+    return -1;
 
   return 0;
 }
@@ -320,21 +289,8 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
     if (!md)
       return sref<mnode>();
 
-    for (;;) {
-      u64 iexist;
-      if (!md->as_dir()->lookup(name, &iexist))
-        break;
-
-      sref<mnode> mf = mnode::get(iexist);
-      if (!mf) {
-        /*
-         * Race: inode could have been unlinked, two refcache epochs
-         * may have passed, and then the mnode was GCed from memory.
-         * Retry the directory lookup, if so.
-         */
-        continue;
-      }
-
+    sref<mnode> mf = md->as_dir()->lookup(name);
+    if (mf) {
       if (type != T_FILE || mf->type() != mnode::types::file || excl)
         return sref<mnode>();
       return mf;
@@ -348,14 +304,18 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
     default:     cprintf("unhandled type %d\n", type);
     }
 
-    sref<mnode> mf = mnode::alloc(mtype);
+    mf = mnode::alloc(mtype);
     if (!mf)
       return sref<mnode>();
 
+    /* Safe to increment nlink_ because this file has just been created */
+    mlinkref ilink(mf);
+    ilink.acquire();
+
     switch (mtype) {
     case mnode::types::dir:
-      mf->as_dir()->insert(".", mf->inum_);
-      mf->as_dir()->insert("..", md->inum_);
+      mf->as_dir()->insert(".",  &ilink);
+      mf->as_dir()->insert("..", &ilink);
       break;
 
     case mnode::types::dev:
@@ -363,13 +323,10 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
       break;
     }
 
-    /* Safe to increment nlink_ because this file has just been created */
-    mf->nlink_.inc();
-    if (md->as_dir()->insert(name, mf->inum_))
+    if (md->as_dir()->insert(name, &ilink))
       return mf;
 
     /* Failed to insert, retry */
-    mf->nlink_.dec();
   }
 }
 

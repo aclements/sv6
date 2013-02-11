@@ -69,11 +69,7 @@ namex(sref<mnode> cwd, const char* path, bool nameiparent, strbuf<DIRSIZ>* name)
       return m;
     }
 
-    u64 nexti;
-    if (!m->as_dir()->lookup(*name, &nexti))
-      return sref<mnode>();
-
-    sref<mnode> next = mnode::get(nexti);
+    sref<mnode> next = m->as_dir()->lookup(*name);
     if (!next)
       return sref<mnode>();
 
