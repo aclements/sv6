@@ -224,7 +224,7 @@ namespace refcache {
 
     void inc();
     void dec();
-    u64 get();
+    u64 get_consistent();
 
   protected:
     // We could eliminate these virtual methods and the vtable

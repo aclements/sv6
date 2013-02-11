@@ -240,7 +240,7 @@ sys_rename(userptr_str old_name, userptr_str new_name)
         return -1;
       if (mfroadblock->type() == mnode::types::dir) {
         /* See comment in sys_unlink about unlinking a directory */
-        if (mfroadblock->as_dir()->nfiles_.get() != 0)
+        if (mfroadblock->as_dir()->nfiles_.get_consistent() != 0)
           return -1;
       }
 
@@ -287,7 +287,7 @@ sys_unlink(userptr_str path)
      * openat() or a racing link() or open(), but the subdirectory should
      * be GCed through mnode::linkcount::onzero() and then mnode::onzero().
      */
-    if (mf->as_dir()->nfiles_.get() != 0)
+    if (mf->as_dir()->nfiles_.get_consistent() != 0)
       return -1;
   }
 

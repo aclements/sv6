@@ -59,7 +59,7 @@ file::stat(struct stat *st)
     st->st_mode = stattype << __S_IFMT_SHIFT;
     st->st_dev = 1;
     st->st_ino = ip->inum_;
-    st->st_nlink = ip->nlink_.get();
+    st->st_nlink = ip->nlink_.get_consistent();
     st->st_size = 0;
     if (ip->type() == mnode::types::file)
       st->st_size = *ip->as_file()->read_size();

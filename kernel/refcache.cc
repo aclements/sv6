@@ -296,7 +296,7 @@ refcache::cache::reaper()
 }
 
 uint64_t
-refcache::referenced::get()
+refcache::referenced::get_consistent()
 {
   for (;;) {
     uint64_t count = 0;
