@@ -142,6 +142,13 @@ mfile::get_page(u64 pageidx)
     return sref<page_info>();
   }
 
-  auto lock = pages_.acquire(it);
-  return it->pg;
+  /*
+   * Ensure the page_info object is not garbage-collected by refcache,
+   * by preventing the local core from going through a refcache epoch.
+   * Here, we assume that all stores to sref::ptr_ are atomic, and we
+   * will either see a valid pointer or nullptr.
+   */
+  scoped_cli cli;
+  page_info* pi = it->pg.get();
+  return sref<page_info>::newref(pi);
 }
