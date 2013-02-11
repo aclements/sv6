@@ -207,6 +207,11 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   inituser();      // first user process
   initnmi();
+
+  // XXX hack until mnodes can load from disk
+  extern void mfsload();
+  mfsload();
+
 #if CODEX
   initcodex();
 #endif
@@ -214,10 +219,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   cleanuppg();             // Requires bootothers
   initcpprt();
   initwd();                // Requires initnmi
-
-  // XXX hack until mnodes can load from disk
-  extern void mfsload();
-  mfsload();
 
   idleloop();
 
