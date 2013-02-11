@@ -171,10 +171,6 @@ sys_link(userptr_str old_name, userptr_str new_name)
   if (!md)
     return -1;
 
-  /* Should we mf->nlink_.inc() before inserting? */
-  if (!md->as_dir()->insert(name, mf->inum_))
-    return -1;
-
   /*
    * Race between link and unlink:
    *   link finds mnode, gets sref<mnode>
@@ -191,7 +187,12 @@ sys_link(userptr_str old_name, userptr_str new_name)
    *   refcache should be OK with reviving an object from zero refcount
    */
   mf->nlink_.inc();
-  return 0;
+
+  if (md->as_dir()->insert(name, mf->inum_))
+    return 0;
+
+  mf->nlink_.dec();
+  return -1;
 }
 
 //SYSCALL
@@ -228,11 +229,15 @@ sys_rename(userptr_str old_name, userptr_str new_name)
   for (;;) {
     u64 iroadblock = 0;   // initialize to avoid gcc warning
     if (!mdnew->as_dir()->lookup(newname, &iroadblock)) {
-      /* Should we mf->nlink_.inc() before inserting? */
+      /* See race condition comment in sys_link */
+      mf->nlink_.inc();
       if (mdnew->as_dir()->insert(newname, inum)) {
         /* See comment about race in sys_link() */
-        mdold->as_dir()->remove(oldname, inum);
+        if (mdold->as_dir()->remove(oldname, inum))
+          mf->nlink_.dec();
         return 0;
+      } else {
+        mf->nlink_.dec();
       }
     } else {
       sref<mnode> mfroadblock = mnode::get(iroadblock);
@@ -249,11 +254,15 @@ sys_rename(userptr_str old_name, userptr_str new_name)
           return -1;
       }
 
-      /* Should we mf->nlink_.inc() before inserting? */
+      /* See race condition comment in sys_link */
+      mf->nlink_.inc();
       if (mdnew->as_dir()->replace(newname, iroadblock, inum)) {
-        /* See comment about race in sys_link() */
-        mdold->as_dir()->remove(oldname, inum);
+        mfroadblock->nlink_.dec();
+        if (mdold->as_dir()->remove(oldname, inum))
+          mf->nlink_.dec();
         return 0;
+      } else {
+        mf->nlink_.dec();
       }
     }
   }
@@ -354,12 +363,13 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
       break;
     }
 
-    if (md->as_dir()->insert(name, mf->inum_)) {
-      mf->nlink_.inc();
+    /* Safe to increment nlink_ because this file has just been created */
+    mf->nlink_.inc();
+    if (md->as_dir()->insert(name, mf->inum_))
       return mf;
-    }
 
     /* Failed to insert, retry */
+    mf->nlink_.dec();
   }
 }
 
