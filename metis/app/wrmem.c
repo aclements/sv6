@@ -200,6 +200,16 @@ wr_usage(char *prog)
     exit(EXIT_FAILURE);
 }
 
+static char*
+pretty_size(size_t size, char *out, size_t len)
+{
+    const char *suffixes = "\0KMGTPEZY", *suffix;
+    for (suffix = suffixes; (size % 1024 == 0) && *(suffix+1); ++suffix)
+	size /= 1024;
+    snprintf(out, len, "%zu%c", size, *suffix);
+    return out;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -207,11 +217,13 @@ main(int argc, char *argv[])
     final_data_kvs_len_t wr_val;
     int nprocs = 0, map_tasks = 0, ndisp = 5, reduce_tasks = 0, quiet = 0;
     uint64_t inputsize = 0x80000000;
+    char buf[128];
     int c;
     while ((c = getopt(argc, argv, "p:l:m:r:qs:")) != -1) {
 	switch (c) {
 	case 'p':
 	    nprocs = atoi(optarg);
+	    printf("# --cores=%d\n", nprocs);
 	    break;
 	case 'l':
 	    ndisp = atoi(optarg);
@@ -224,6 +236,7 @@ main(int argc, char *argv[])
 	    break;
 	case 's':
 	    inputsize = atol(optarg) * 1024 * 1024;
+	    printf("# --size=%s\n", pretty_size(inputsize, buf, sizeof buf));
 	    break;
 	case 'q':
 	    quiet = 1;
@@ -234,6 +247,8 @@ main(int argc, char *argv[])
 		void malloc_set_alloc_unit(size_t bytes);
 		malloc_set_alloc_unit(atoi(optarg));
 	    }
+	    printf("# --malloc=%s\n",
+		   pretty_size(atoi(optarg), buf, sizeof buf));
 	    break;
 	default:
 	    wr_usage(argv[0]);
