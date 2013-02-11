@@ -137,24 +137,24 @@ public:
     return r;
   }
 
-  bool remove(const strbuf<DIRSIZ>& name, mlinkref* ilink) {
-    bool r = map_.remove(name, ilink->mn()->inum_);
+  bool remove(const strbuf<DIRSIZ>& name, sref<mnode> m) {
+    bool r = map_.remove(name, m->inum_);
     if (r && name != "." && name != "..") {
       nfiles_.dec();
-      ilink->transfer();      /* Caller cleans up link count */
+      m->nlink_.dec();
     }
     return r;
   }
 
   bool replace(const strbuf<DIRSIZ>& name,
-               mlinkref* ilinkold,
+               sref<mnode> mold,
                mlinkref* ilinknew) {
     assert(ilinknew->held());
-    bool r = map_.replace(name, ilinkold->mn()->inum_,
+    bool r = map_.replace(name, mold->inum_,
                                 ilinknew->mn()->inum_);
     if (r) {
       ilinknew->mn()->nlink_.inc();
-      ilinkold->transfer();   /* Caller cleans up link count */
+      mold->nlink_.dec();
     }
     return r;
   }

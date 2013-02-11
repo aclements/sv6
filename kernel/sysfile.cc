@@ -219,8 +219,7 @@ sys_rename(userptr_str old_path, userptr_str new_path)
     sref<mnode> mroadblock = mdnew->as_dir()->lookup(newname);
     if (!mroadblock) {
       if (mdnew->as_dir()->insert(newname, &mflink)) {
-        mlinkref oldlink(mflink.mn());
-        mdold->as_dir()->remove(oldname, &oldlink);
+        mdold->as_dir()->remove(oldname, mflink.mn());
         return 0;
       }
     } else {
@@ -230,10 +229,8 @@ sys_rename(userptr_str old_path, userptr_str new_path)
           return -1;
       }
 
-      mlinkref mrlink(mroadblock);
-      if (mdnew->as_dir()->replace(newname, &mrlink, &mflink)) {
-        mlinkref oldlink(mflink.mn());
-        mdold->as_dir()->remove(oldname, &oldlink);
+      if (mdnew->as_dir()->replace(newname, mroadblock, &mflink)) {
+        mdold->as_dir()->remove(oldname, mflink.mn());
         return 0;
       }
     }
@@ -273,8 +270,7 @@ sys_unlink(userptr_str path)
       return -1;
   }
 
-  mlinkref oldlink(mf);
-  if (!md->as_dir()->remove(name, &oldlink))
+  if (!md->as_dir()->remove(name, mf))
     return -1;
 
   return 0;
