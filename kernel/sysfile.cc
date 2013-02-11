@@ -309,10 +309,12 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
     ilink.acquire();
 
     switch (mtype) {
-    case mnode::types::dir:
+    case mnode::types::dir: {
+      mlinkref parentlink(md);  // Not actually going to bump nlink_
       mf->as_dir()->insert(".",  &ilink);
-      mf->as_dir()->insert("..", &ilink);
+      mf->as_dir()->insert("..", &parentlink);
       break;
+    }
 
     case mnode::types::dev:
       mf->as_dev()->init(major, minor);

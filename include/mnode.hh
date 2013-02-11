@@ -128,10 +128,10 @@ private:
 
 public:
   bool insert(const strbuf<DIRSIZ>& name, mlinkref* ilink) {
-    assert(ilink->held());
     bool r = map_.insert(name, ilink->mn()->inum_);
     if (r && name != "." && name != "..") {
       nfiles_.inc();
+      assert(ilink->held());
       ilink->mn()->nlink_.inc();
     }
     return r;
