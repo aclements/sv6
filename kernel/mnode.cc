@@ -53,6 +53,10 @@ mnode::get(u64 inum)
       m = sref<mnode>::transfer(new mdev(inum));
       break;
 
+    case types::sock:
+      m = sref<mnode>::transfer(new msock(inum));
+      break;
+
     default:
       panic("unknown type in inum 0x%lx", inum);
     }
