@@ -171,25 +171,9 @@ public:
   public:
     resizer() : mf_(nullptr) {}
     explicit operator bool () const { return !!mf_; }
-
     u64 read_size() { return mf_->size_; }
-
-    void resize_nogrow(u64 size) {
-      assert(PGROUNDUP(size) <= PGROUNDUP(mf_->size_));
-      mf_->size_ = size;
-      auto begin = mf_->pages_.find(PGROUNDUP(mf_->size_) / PGSIZE);
-      auto end = mf_->pages_.find(maxidx);
-      auto lock = mf_->pages_.acquire(begin, end);
-      mf_->pages_.unset(begin, end);
-    }
-
-    void resize_append(u64 size, sref<page_info> pi) {
-      assert(PGROUNDUP(mf_->size_) / PGSIZE + 1 == PGROUNDUP(size) / PGSIZE);
-      auto it = mf_->pages_.find(PGROUNDUP(mf_->size_) / PGSIZE);
-      auto lock = mf_->pages_.acquire(it);
-      mf_->pages_.fill(it, page_state(pi));
-      mf_->size_ = size;
-    }
+    void resize_nogrow(u64 size);
+    void resize_append(u64 size, sref<page_info> pi);
   };
 
   resizer write_size() {
@@ -200,19 +184,7 @@ public:
     return seq_reader<u64>(&size_, &size_seq_);
   }
 
-  sref<page_info> get_page(u64 pageidx) {
-    auto it = pages_.find(pageidx);
-    if (!it.is_set()) {
-      if (pageidx < PGROUNDUP(size_) / PGSIZE) {
-        // XXX read from disk
-      }
-
-      return sref<page_info>();
-    }
-
-    auto lock = pages_.acquire(it);
-    return it->pg;
-  }
+  sref<page_info> get_page(u64 pageidx);
 };
 
 inline mfile*

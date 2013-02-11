@@ -108,3 +108,40 @@ mnode::linkcount::onzero()
   mnode* m = container_from_member(this, &mnode::nlink_);
   m->cache_pin(false);
 }
+
+void
+mfile::resizer::resize_nogrow(u64 size)
+{
+  assert(PGROUNDUP(size) <= PGROUNDUP(mf_->size_));
+  mf_->size_ = size;
+  auto begin = mf_->pages_.find(PGROUNDUP(mf_->size_) / PGSIZE);
+  auto end = mf_->pages_.find(maxidx);
+  auto lock = mf_->pages_.acquire(begin, end);
+  mf_->pages_.unset(begin, end);
+}
+
+void
+mfile::resizer::resize_append(u64 size, sref<page_info> pi)
+{
+  assert(PGROUNDUP(mf_->size_) / PGSIZE + 1 == PGROUNDUP(size) / PGSIZE);
+  auto it = mf_->pages_.find(PGROUNDUP(mf_->size_) / PGSIZE);
+  auto lock = mf_->pages_.acquire(it);
+  mf_->pages_.fill(it, page_state(pi));
+  mf_->size_ = size;
+}
+
+sref<page_info>
+mfile::get_page(u64 pageidx)
+{
+  auto it = pages_.find(pageidx);
+  if (!it.is_set()) {
+    if (pageidx < PGROUNDUP(size_) / PGSIZE) {
+      // XXX read from disk
+    }
+
+    return sref<page_info>();
+  }
+
+  auto lock = pages_.acquire(it);
+  return it->pg;
+}
