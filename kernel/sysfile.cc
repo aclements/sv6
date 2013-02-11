@@ -237,7 +237,12 @@ sys_rename(userptr_str old_name, userptr_str new_name)
     } else {
       sref<mnode> mfroadblock = mnode::get(iroadblock);
       if (!mfroadblock)
-        return -1;
+        /*
+         * The inode was GCed between the lookup and mnode::get().
+         * Retry the lookup.
+         */
+        continue;
+
       if (mfroadblock->type() == mnode::types::dir) {
         /* See comment in sys_unlink about unlinking a directory */
         if (mfroadblock->as_dir()->nfiles_.get_consistent() != 0)
