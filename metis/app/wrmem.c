@@ -228,6 +228,13 @@ main(int argc, char *argv[])
 	case 'q':
 	    quiet = 1;
 	    break;
+	case 'a':
+	    // xv6 malloc
+	    {
+		void malloc_set_alloc_unit(size_t bytes);
+		malloc_set_alloc_unit(atoi(optarg));
+	    }
+	    break;
 	default:
 	    wr_usage(argv[0]);
 	    exit(EXIT_FAILURE);
