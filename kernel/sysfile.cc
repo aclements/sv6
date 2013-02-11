@@ -203,7 +203,8 @@ sys_rename(userptr_str old_path, userptr_str new_path)
      * complicated by concurrent renames of the same
      * source directory when one of the renames has
      * already added a new name for the directory,
-     * but not removed the previous name yet.
+     * but not removed the previous name yet.  Would
+     * also require changing ".." in the subdirectory.
      */
     return -1;
 
