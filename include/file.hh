@@ -14,40 +14,94 @@ class dirns;
 
 u64 namehash(const strbuf<DIRSIZ>&);
 
-struct file : public refcache::referenced, public rcu_freed {
-  static file* alloc();
-  int          stat(struct stat*);
-  ssize_t      read(char *addr, size_t n);
-  ssize_t      pread(char *addr, size_t n, off_t offset);
-  ssize_t      pwrite(const char *addr, size_t n, off_t offset);
-  ssize_t      write(const char *addr, size_t n);
+struct file : public rcu_freed {
+  virtual int stat(struct stat*) { return -1; }
+  virtual ssize_t read(char *addr, size_t n) { return -1; }
+  virtual ssize_t write(const char *addr, size_t n) { return -1; }
+  virtual ssize_t pread(char *addr, size_t n, off_t offset) { return -1; }
+  virtual ssize_t pwrite(const char *addr, size_t n, off_t offset) { return -1; }
 
-  enum { FD_NONE, FD_PIPE, FD_INODE, FD_SOCKET } type;  
-
-  char readable;
-  char writable;
-  char append;
-
-  int socket;
-  struct pipe *pipe;
-  struct localsock *localsock;
-  sref<mnode> ip;
-  u32 off;
-
-  // Used for sockets (XXX could be just a mutex)
-  // XXX This locking should be handled in net, not here.
-  semaphore wsem, rsem;
-
-  void do_gc(void) override;
-
-private:
-  file();
-  file& operator=(const file&);
-  file(const file& x);
-  NEW_DELETE_OPS(file);
+  virtual void inc() = 0;
+  virtual void dec() = 0;
 
 protected:
+  file() : rcu_freed("file") {}
+
+  void do_gc(void) override { delete this; }
+};
+
+struct file_inode : public refcache::referenced, public file {
+public:
+  file_inode(sref<mnode> i, bool r, bool w, bool a)
+    : ip(i), readable(r), writable(w), append(a), off(0) {}
+  NEW_DELETE_OPS(file_inode);
+
+  void inc() override { refcache::referenced::inc(); }
+  void dec() override { refcache::referenced::dec(); }
+
+  sref<mnode> ip;
+  const bool readable;
+  const bool writable;
+  const bool append;
+  u32 off;
+
+  int stat(struct stat*) override;
+  ssize_t read(char *addr, size_t n) override;
+  ssize_t write(const char *addr, size_t n) override;
+  ssize_t pread(char* addr, size_t n, off_t off) override;
+  ssize_t pwrite(const char *addr, size_t n, off_t offset) override;
   void onzero() override;
+};
+
+struct file_socket : public referenced, public file {
+public:
+  file_socket() : socket(0), localsock(nullptr),
+                  wsem("file::wsem", 1), rsem("file::rsem", 1) {}
+  NEW_DELETE_OPS(file_socket);
+
+  void inc() override { referenced::inc(); }
+  void dec() override { referenced::dec(); }
+
+  int socket;
+  struct localsock *localsock;
+
+  ssize_t read(char *addr, size_t n) override;
+  ssize_t write(const char *addr, size_t n) override;
+  void onzero() override;
+
+private:
+  // XXX This locking should be handled in net, not here.
+  semaphore wsem, rsem;
+};
+
+struct file_pipe_reader : public refcache::referenced, public file {
+public:
+  file_pipe_reader(pipe* p) : pipe(p) {}
+  NEW_DELETE_OPS(file_pipe_reader);
+
+  void inc() override { refcache::referenced::inc(); }
+  void dec() override { refcache::referenced::dec(); }
+
+  ssize_t read(char *addr, size_t n) override;
+  void onzero() override;
+
+private:
+  struct pipe* const pipe;
+};
+
+struct file_pipe_writer : public referenced, public file {
+public:
+  file_pipe_writer(pipe* p) : pipe(p) {}
+  NEW_DELETE_OPS(file_pipe_writer);
+
+  void inc() override { referenced::inc(); }
+  void dec() override { referenced::dec(); }
+
+  ssize_t write(const char *addr, size_t n) override;
+  void onzero() override;
+
+private:
+  struct pipe* const pipe;
 };
 
 // in-core file system types

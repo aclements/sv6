@@ -109,6 +109,10 @@ mnode::onzero()
 void
 mnode::linkcount::onzero()
 {
+  /*
+   * This might fire several times, because the link count of a zero-nlink
+   * parent directory can be temporarily revived by mkdir (see create).
+   */
   mnode* m = container_from_member(this, &mnode::nlink_);
   m->cache_pin(false);
 }

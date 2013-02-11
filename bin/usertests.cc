@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <utility>
 
@@ -790,6 +791,134 @@ subdir(void)
     die("unlink dd failed");
 
   printf("subdir ok\n");
+}
+
+void
+renametest(void)
+{
+  int fd, ino;
+  struct stat st;
+
+  printf("rename test\n");
+
+  if (mkdir("dd", 0777) < 0)
+    die("mkdir dd failed");
+  fd = open("dd/ff", O_WRONLY | O_CREAT, 0666);
+  if (fd < 0)
+    die("open dd/ff failed");
+  write(fd, "xx", 2);
+  if (fstat(fd, &st) < 0)
+    die("stat dd/ff failed");
+  if (st.st_nlink != 1)
+    die("wrong st_nlink after create ff");
+  ino = st.st_ino;
+  close(fd);
+
+  if (link("dd/ff", "dd/f0") < 0)
+    die("link dd/f0 failed");
+  if (link("dd/ff", "dd/f1") < 0)
+    die("link dd/f1 failed");
+
+  fd = open("dd/gg", O_WRONLY | O_CREAT, 0666);
+  if (fd < 0)
+    die("open dd/gg failed");
+  write(fd, "yy", 2);
+
+  if (link("dd/gg", "dd/g0") < 0)
+    die("link dd/g0 failed");
+  if (link("dd/gg", "dd/g1") < 0)
+    die("link dd/g1 failed");
+  if (link("dd/gg", "dd/g2") < 0)
+    die("link dd/g2 failed");
+
+  if (fstat(fd, &st) < 0)
+    die("stat dd/gg failed");
+  if (st.st_nlink != 4)
+    die("wrong st_nlink after create gg");
+  if (st.st_ino == ino)
+    die("reused inode for gg");
+  close(fd);
+
+  if (rename("dd/f1", "dd/f2") < 0)
+    die("rename f1-f2 failed");
+  if (rename("dd/f1", "dd/f2") >= 0)
+    die("rename f1-f2 succeeded again");
+
+  if (stat("dd/f2", &st) < 0)
+    die("stat f2 failed");
+  if (st.st_ino != ino)
+    die("wrong inode after f1-f2 rename");
+  if (st.st_nlink != 3)
+    die("wrong nlink after f1-f2 rename");
+
+  if (rename("dd/f2", "dd/f2") < 0)
+    die("self-rename failed");
+
+  if (stat("dd/f2", &st) < 0)
+    die("stat f2 failed");
+  if (st.st_ino != ino)
+    die("wrong inode after self-rename");
+  if (st.st_nlink != 3)
+    die("wrong nlink after self-rename");
+
+  if (unlink("dd/g1") < 0)
+    die("unlink g1 failed");
+  if (stat("dd/gg", &st) < 0)
+    die("stat gg failed");
+  if (st.st_ino == ino)
+    die("dup inode after unlink g1");
+  if (st.st_nlink != 3)
+    die("wrong nlink after unlink g1");
+
+  if (rename("dd/g2", "dd/f2") < 0)
+    die("rename g2-f2 failed");
+  if (rename("dd/g2", "dd/f2") >= 0)
+    die("rename g2-f2 succeeded again");
+  if (stat("dd/f2", &st) < 0)
+    die("stat f2(gg) failed");
+  if (st.st_ino == ino)
+    die("dup inode after rename g2-f2");
+  if (st.st_nlink != 3)
+    die("wrong nlink after rename g2-f2");
+
+  if (stat("dd/ff", &st) < 0)
+    die("stat ff failed");
+  if (st.st_ino != ino)
+    die("wrong inode after rename g2-f2");
+  if (st.st_nlink != 2)
+    die("wrong nlink after rename g2-f2");
+
+  if (unlink("dd/ff") < 0)
+    die("unlink dd/ff failed");
+  if (stat("dd/f0", &st) < 0)
+    die("stat dd/f0 failed");
+  if (st.st_ino != ino)
+    die("wrong inode after unlink ff");
+  if (st.st_nlink != 1)
+    die("wrong nlink after unlink ff");
+
+  if (unlink("dd/f0") < 0)
+    die("unlink dd/f0 failed");
+  if (unlink("dd/f2") < 0)
+    die("unlink dd/f2 failed");
+
+  if (stat("dd/gg", &st) < 0)
+    die("stat gg failed");
+  if (st.st_ino == ino)
+    die("dup inode after unlink f2");
+  if (st.st_nlink != 2)
+    die("wrong nlink after unlink f2");
+
+  if (unlink("dd/gg") < 0)
+    die("unlink gg failed");
+  if (unlink("dd") >= 0)
+    die("unlink dd succeeded early");
+  if (unlink("dd/g0") < 0)
+    die("unlink g0 failed");
+  if (unlink("dd") < 0)
+    die("unlink dd failed");
+
+  printf("rename ok\n");
 }
 
 void
@@ -1754,6 +1883,7 @@ main(int argc, char *argv[])
   TEST(tls_test);
   TEST(thrtest);
   TEST(ftabletest);
+  TEST(renametest);
 
   TEST(floattest);
 

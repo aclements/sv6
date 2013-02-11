@@ -27,6 +27,15 @@ typedef struct header header;
 static __thread header* freelist[64];
 int nmmap;
 
+// Minimum allocation unit in multiples of sizeof(header)
+static size_t min_alloc_units = (256*1024) / sizeof(header);
+
+void
+malloc_set_alloc_unit(size_t bytes)
+{
+  min_alloc_units = bytes / sizeof(header);
+}
+
 static int
 floor_log2(u64 x)
 {
@@ -90,24 +99,14 @@ static int
 morecore(u32 nu)
 {
   u32 bidx = floor_log2(nu);
-  static int printed;
 
   // enum { min_alloc_units = 1024 * 1024 };   // 16M
   // enum { min_alloc_units = 512 * 1024 };   // 8M
-  enum { min_alloc_units = 16384 };      // 256K
+  // enum { min_alloc_units = 16384 };      // 256K
   // enum { min_alloc_units = 4096 };      // 64K
   // enum { min_alloc_units = 67108864 };   // 1G
   if (nu < min_alloc_units)
     nu = min_alloc_units;
-
-  if (!printed) {
-    const char *suffixes = " KMG", *suffix;
-    int bytes = 16 * min_alloc_units;
-    printed = 1;
-    for (suffix = suffixes; (bytes % 1024 == 0) && *(suffix+1); ++suffix)
-      bytes /= 1024;
-    printf("# --malloc=%d%c\n", bytes, *suffix);
-  }
 
 #if 0
   __sync_fetch_and_add(&nmmap, 1);

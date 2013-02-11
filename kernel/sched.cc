@@ -219,6 +219,8 @@ public:
   }
 
   void steal() {
+    if (!SCHED_LOAD_BALANCE)
+      return;
     pushcli();
     b_.balance();
     popcli();

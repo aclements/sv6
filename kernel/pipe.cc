@@ -97,21 +97,12 @@ struct ordered : pipe {
 int
 pipealloc(struct file **f0, struct file **f1)
 {
-  struct pipe *p;
-
-  p = 0;
   *f0 = *f1 = 0;
-  if((*f0 = file::alloc()) == 0 || (*f1 = file::alloc()) == 0)
+  struct pipe *p = new ordered();
+  if (!p)
     goto bad;
-  p = new ordered();
-  (*f0)->type = file::FD_PIPE;
-  (*f0)->readable = 1;
-  (*f0)->writable = 0;
-  (*f0)->pipe = p;
-  (*f1)->type = file::FD_PIPE;
-  (*f1)->readable = 0;
-  (*f1)->writable = 1;
-  (*f1)->pipe = p;
+  if((*f0 = new file_pipe_reader(p)) == 0 || (*f1 = new file_pipe_writer(p)) == 0)
+    goto bad;
   return 0;
 
  bad:

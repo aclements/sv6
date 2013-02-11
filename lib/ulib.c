@@ -91,7 +91,7 @@ gets(char *buf, int max)
 }
 
 int
-stat(char *n, struct stat *st)
+stat(const char *n, struct stat *st)
 {
   int fd;
   int r;

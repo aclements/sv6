@@ -56,6 +56,7 @@ UPROGS_BIN= \
         fstest \
 	base64 \
 	tee \
+        ln \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
@@ -82,6 +83,7 @@ FSEXTRA += \
 	bin/linkbench-tom \
 	bin/mapbench-ben \
 	bin/metis_wrmem-josmp \
+	bin/metis_wrmem-ben \
 	bin/lsocket \
 	bin/countbench-ben \
 
