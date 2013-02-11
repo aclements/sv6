@@ -1,0 +1,63 @@
+#!/sh
+
+# On Linux, this requires renaming wrmem to metis_wrmem
+
+./benchhdr bench=wrmem
+echo
+
+echo \# --cores=1 --size=4000
+./metis_wrmem -s 4000 -p 1
+echo \# --cores=10 --size=4000
+./metis_wrmem -s 4000 -p 10
+echo \# --cores=20 --size=4000
+./metis_wrmem -s 4000 -p 20
+echo \# --cores=30 --size=4000
+./metis_wrmem -s 4000 -p 30
+echo \# --cores=40 --size=4000
+./metis_wrmem -s 4000 -p 40
+echo \# --cores=50 --size=4000
+./metis_wrmem -s 4000 -p 50
+echo \# --cores=60 --size=4000
+./metis_wrmem -s 4000 -p 60
+echo \# --cores=70 --size=4000
+./metis_wrmem -s 4000 -p 70
+echo \# --cores=80 --size=4000
+./metis_wrmem -s 4000 -p 80
+
+echo \# --cores=1 --size=4000
+./metis_wrmem -s 4000 -p 1
+echo \# --cores=10 --size=4000
+./metis_wrmem -s 4000 -p 10
+echo \# --cores=20 --size=4000
+./metis_wrmem -s 4000 -p 20
+echo \# --cores=30 --size=4000
+./metis_wrmem -s 4000 -p 30
+echo \# --cores=40 --size=4000
+./metis_wrmem -s 4000 -p 40
+echo \# --cores=50 --size=4000
+./metis_wrmem -s 4000 -p 50
+echo \# --cores=60 --size=4000
+./metis_wrmem -s 4000 -p 60
+echo \# --cores=70 --size=4000
+./metis_wrmem -s 4000 -p 70
+echo \# --cores=80 --size=4000
+./metis_wrmem -s 4000 -p 80
+
+echo \# --cores=1 --size=4000
+./metis_wrmem -s 4000 -p 1
+echo \# --cores=10 --size=4000
+./metis_wrmem -s 4000 -p 10
+echo \# --cores=20 --size=4000
+./metis_wrmem -s 4000 -p 20
+echo \# --cores=30 --size=4000
+./metis_wrmem -s 4000 -p 30
+echo \# --cores=40 --size=4000
+./metis_wrmem -s 4000 -p 40
+echo \# --cores=50 --size=4000
+./metis_wrmem -s 4000 -p 50
+echo \# --cores=60 --size=4000
+./metis_wrmem -s 4000 -p 60
+echo \# --cores=70 --size=4000
+./metis_wrmem -s 4000 -p 70
+echo \# --cores=80 --size=4000
+./metis_wrmem -s 4000 -p 80

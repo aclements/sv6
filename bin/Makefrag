@@ -82,6 +82,7 @@ FSEXTRA += \
 	bin/linkbench-tom \
 	bin/mapbench-ben \
 	bin/metis_wrmem-josmp \
+	bin/metis_wrmem-ben \
 	bin/lsocket \
 	bin/countbench-ben \
 
