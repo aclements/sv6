@@ -5,32 +5,46 @@
 ./benchhdr bench=wrmem
 echo
 
-./metis_wrmem -s 4000 -p 1
-./metis_wrmem -s 4000 -p 10
-./metis_wrmem -s 4000 -p 20
-./metis_wrmem -s 4000 -p 30
-./metis_wrmem -s 4000 -p 40
-./metis_wrmem -s 4000 -p 50
-./metis_wrmem -s 4000 -p 60
-./metis_wrmem -s 4000 -p 70
-./metis_wrmem -s 4000 -p 80
+# 64K
+./metis_wrmem -s 4000 -p 1 -a 65536
+./metis_wrmem -s 4000 -p 10 -a 65536
+./metis_wrmem -s 4000 -p 20 -a 65536
+./metis_wrmem -s 4000 -p 30 -a 65536
+./metis_wrmem -s 4000 -p 40 -a 65536
+./metis_wrmem -s 4000 -p 50 -a 65536
+./metis_wrmem -s 4000 -p 60 -a 65536
+./metis_wrmem -s 4000 -p 70 -a 65536
+./metis_wrmem -s 4000 -p 80 -a 65536
 
-./metis_wrmem -s 4000 -p 1
-./metis_wrmem -s 4000 -p 10
-./metis_wrmem -s 4000 -p 20
-./metis_wrmem -s 4000 -p 30
-./metis_wrmem -s 4000 -p 40
-./metis_wrmem -s 4000 -p 50
-./metis_wrmem -s 4000 -p 60
-./metis_wrmem -s 4000 -p 70
-./metis_wrmem -s 4000 -p 80
+# 256K
+./metis_wrmem -s 4000 -p 1 -a 262144
+./metis_wrmem -s 4000 -p 10 -a 262144
+./metis_wrmem -s 4000 -p 20 -a 262144
+./metis_wrmem -s 4000 -p 30 -a 262144
+./metis_wrmem -s 4000 -p 40 -a 262144
+./metis_wrmem -s 4000 -p 50 -a 262144
+./metis_wrmem -s 4000 -p 60 -a 262144
+./metis_wrmem -s 4000 -p 70 -a 262144
+./metis_wrmem -s 4000 -p 80 -a 262144
 
-./metis_wrmem -s 4000 -p 1
-./metis_wrmem -s 4000 -p 10
-./metis_wrmem -s 4000 -p 20
-./metis_wrmem -s 4000 -p 30
-./metis_wrmem -s 4000 -p 40
-./metis_wrmem -s 4000 -p 50
-./metis_wrmem -s 4000 -p 60
-./metis_wrmem -s 4000 -p 70
-./metis_wrmem -s 4000 -p 80
+# 4M
+./metis_wrmem -s 4000 -p 1 -a 4194304
+./metis_wrmem -s 4000 -p 10 -a 4194304
+./metis_wrmem -s 4000 -p 20 -a 4194304
+./metis_wrmem -s 4000 -p 30 -a 4194304
+./metis_wrmem -s 4000 -p 40 -a 4194304
+./metis_wrmem -s 4000 -p 50 -a 4194304
+./metis_wrmem -s 4000 -p 60 -a 4194304
+./metis_wrmem -s 4000 -p 70 -a 4194304
+./metis_wrmem -s 4000 -p 80 -a 4194304
+
+# 8M
+./metis_wrmem -s 4000 -p 1 -a 8388608
+./metis_wrmem -s 4000 -p 10 -a 8388608
+./metis_wrmem -s 4000 -p 20 -a 8388608
+./metis_wrmem -s 4000 -p 30 -a 8388608
+./metis_wrmem -s 4000 -p 40 -a 8388608
+./metis_wrmem -s 4000 -p 50 -a 8388608
+./metis_wrmem -s 4000 -p 60 -a 8388608
+./metis_wrmem -s 4000 -p 70 -a 8388608
+./metis_wrmem -s 4000 -p 80 -a 8388608
