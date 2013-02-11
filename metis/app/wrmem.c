@@ -219,7 +219,7 @@ main(int argc, char *argv[])
     uint64_t inputsize = 0x80000000;
     char buf[128];
     int c;
-    while ((c = getopt(argc, argv, "p:l:m:r:qs:")) != -1) {
+    while ((c = getopt(argc, argv, "p:l:m:r:qs:a:")) != -1) {
 	switch (c) {
 	case 'p':
 	    nprocs = atoi(optarg);
