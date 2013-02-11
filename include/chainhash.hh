@@ -101,6 +101,8 @@ public:
   }
 
   bool enumerate(const K* prev, K* out) const {
+    scoped_gc_epoch rcu_read;
+
     bool prevbucket = (prev != nullptr);
     for (u64 i = prev ? hash(*prev) % nbuckets_ : 0; i < nbuckets_; i++) {
       bucket* b = &buckets_[i];
@@ -120,6 +122,8 @@ public:
   }
 
   bool lookup(const K& k, V* vptr) const {
+    scoped_gc_epoch rcu_read;
+
     bucket* b = &buckets_[hash(k) % nbuckets_];
     for (const item& i: b->chain) {
       if (i.key != k)
