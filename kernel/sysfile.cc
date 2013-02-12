@@ -315,10 +315,10 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
 
     u8 mtype = 0;
     switch (type) {
-    case T_DIR:  mtype = mnode::types::dir;  break;
-    case T_FILE: mtype = mnode::types::file; break;
-    case T_DEV:  mtype = mnode::types::dev;  break;
-    case T_SOCKET:  mtype = mnode::types::sock;  break;
+    case T_DIR:    mtype = mnode::types::dir;  break;
+    case T_FILE:   mtype = mnode::types::file; break;
+    case T_DEV:    mtype = mnode::types::dev;  break;
+    case T_SOCKET: mtype = mnode::types::sock; break;
     default:     cprintf("unhandled type %d\n", type);
     }
 
