@@ -349,9 +349,10 @@ gettoken(char **ps, char *es, char **q, char **eq)
       while(s < es && state != DONE) {
         switch (state) {
         case WORD:
-          if (strchr(whitespace, *s) || strchr(symbols, *s))
+          if (strchr(whitespace, *s) || strchr(symbols, *s)) {
             state = DONE;
-          else if (*s == '\'')
+            continue;
+          } else if (*s == '\'')
             state = SINGLE;
           else if (*s == '\"')
             state = DOUBLE;
