@@ -248,8 +248,11 @@ getsocket(int fd)
   if (!f)
     return sref<file_socket>();
 
-  file_socket* fs = dynamic_cast<file_socket*>(f.get());
-  return sref<file_socket>::newref(fs);
+  file* ff = f.get();
+  if (&typeid(*ff) != &typeid(file_socket))
+    return sref<file_socket>();
+
+  return sref<file_socket>::newref(static_cast<file_socket*>(ff));
 }
 
 static int

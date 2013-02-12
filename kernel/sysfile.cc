@@ -365,9 +365,10 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     sref<file> fdir = getfile(dirfd);
     if (!fdir)
       return -1;
-    file_inode* fdiri = dynamic_cast<file_inode*>(fdir.get());
-    if (!fdiri)
+    file* ff = fdir.get();
+    if (&typeid(*ff) != &typeid(file_inode))
       return -1;
+    file_inode* fdiri = static_cast<file_inode*>(ff);
     cwd = fdiri->ip;
   }
 
@@ -419,9 +420,10 @@ sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
     sref<file> fdir = getfile(dirfd);
     if (!fdir)
       return -1;
-    file_inode* fdiri = dynamic_cast<file_inode*>(fdir.get());
-    if (!fdiri)
+    file* ff = fdir.get();
+    if (&typeid(*ff) != &typeid(file_inode))
       return -1;
+    file_inode* fdiri = static_cast<file_inode*>(ff);
     cwd = fdiri->ip;
   }
 
@@ -547,10 +549,11 @@ sys_readdir(int dirfd, userptr<char> prevptr, userptr<char> nameptr)
   if (!df)
     return -1;
 
-  file_inode* dfi = dynamic_cast<file_inode*>(df.get());
-  if (!dfi)
+  file* dff = df.get();
+  if (&typeid(*dff) != &typeid(file_inode))
     return -1;
 
+  file_inode* dfi = static_cast<file_inode*>(dff);
   if (dfi->ip->type() != mnode::types::dir)
     return -1;
 
