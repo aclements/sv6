@@ -178,6 +178,13 @@ public:
   }
 
   mlinkref lookup_link(const strbuf<DIRSIZ>& name) const {
+    if (name == ".")
+      /*
+       * We cannot convert the name "." to a link count on the mnode,
+       * because "." does not hold a link count of its own.
+       */
+      return mlinkref();
+
     for (;;) {
       sref<mnode> m = lookup(name);
       if (!m)
@@ -243,6 +250,10 @@ public:
 
     parent->nlink_.dec();
     return true;
+  }
+
+  bool killed() const {
+    return map_.killed();
   }
 };
 

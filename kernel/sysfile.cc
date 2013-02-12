@@ -292,7 +292,7 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
   for (;;) {
     strbuf<DIRSIZ> name;
     sref<mnode> md = nameiparent(cwd, path, &name);
-    if (!md)
+    if (!md || md->as_dir()->killed())
       return sref<mnode>();
 
     sref<mnode> mf = md->as_dir()->lookup(name);

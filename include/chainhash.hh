@@ -180,4 +180,8 @@ public:
 
     return killed;
   }
+
+  bool killed() const {
+    return dead_;
+  }
 };
