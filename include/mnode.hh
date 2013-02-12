@@ -149,6 +149,13 @@ public:
     return true;
   }
 
+  bool exists(const strbuf<DIRSIZ>& name) const {
+    if (name == ".")
+      return true;
+
+    return map_.lookup(name);
+  }
+
   sref<mnode> lookup(const strbuf<DIRSIZ>& name) const {
     if (name == ".")
       return mnode::get(inum_);

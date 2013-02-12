@@ -176,7 +176,7 @@ sys_link(userptr_str old_path, userptr_str new_path)
    * First check if the target name already exists; if so,
    * no need to grab a link count on the old name.
    */
-  if (md->as_dir()->lookup(name))
+  if (md->as_dir()->exists(name))
     return -1;
 
   mlinkref mflink = olddir->as_dir()->lookup_link(oldname);
