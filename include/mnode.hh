@@ -139,6 +139,8 @@ public:
   }
 
   bool replace(const strbuf<DIRSIZ>& name, sref<mnode> mold, mlinkref* ilinknew) {
+    if (mold->inum_ == ilinknew->mn()->inum_)
+      return true;
     if (!map_.replace(name, mold->inum_, ilinknew->mn()->inum_))
       return false;
     assert(ilinknew->held());
