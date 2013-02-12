@@ -118,12 +118,6 @@ private:
   NEW_DELETE_OPS(mdir);
   friend sref<mnode> mnode::get(u64);
 
-  class filecount : public refcache::referenced {
-  public:
-    filecount() : refcache::referenced(0) {};
-    void onzero() override {};
-  };
-
   chainhash<strbuf<DIRSIZ>, u64> map_;
 
 public:
