@@ -204,7 +204,9 @@ sys_rename(userptr_str old_path, userptr_str new_path)
      * source directory when one of the renames has
      * already added a new name for the directory,
      * but not removed the previous name yet.  Would
-     * also require changing ".." in the subdirectory.
+     * also require changing ".." in the subdirectory,
+     * dealing with a possible rmdir / rename race, and
+     * checking for "." and "..".
      */
     return -1;
 
@@ -224,11 +226,13 @@ sys_rename(userptr_str old_path, userptr_str new_path)
         return 0;
       }
     } else {
-      if (mroadblock->type() == mnode::types::dir) {
-        /* See comment in sys_unlink about unlinking a directory */
-        if (mroadblock->as_dir()->nfiles_.get_consistent() != 0)
-          return -1;
-      }
+      if (mroadblock->type() == mnode::types::dir)
+        /*
+         * POSIX says rename should replace a directory only with another
+         * directory, and we currently don't support directory rename (see
+         * above).
+         */
+        return -1;
 
       if (mdnew->as_dir()->replace(newname, mroadblock, &mflink)) {
         mdold->as_dir()->remove(oldname, mflink.mn());
@@ -260,15 +264,20 @@ sys_unlink(userptr_str path)
 
   if (mf->type() == mnode::types::dir) {
     /*
-     * Interesting non-commutativity:
-     *
-     * Remove a subdirectory only if it had zero files in it at the same time.
-     * New files can be subsequently created in the subdirectory, through
-     * openat() or a racing link() or open(), but the subdirectory should
-     * be GCed through mnode::linkcount::onzero() and then mnode::onzero().
+     * Remove a subdirectory only if it has zero files in it.  No files
+     * or sub-directories can be subsequently created in that directory.
      */
-    if (mf->as_dir()->nfiles_.get_consistent() != 0)
+    if (!mf->as_dir()->kill(md))
       return -1;
+
+    /*
+     * We killed the directory, so we must succeed at removing it from
+     * the parent.  The only way to remove a directory name is to unlink
+     * it (we do not support directory rename), and the only way to unlink
+     * a directory is to kill it, as we did above.
+     */
+    assert(md->as_dir()->remove(name, mf));
+    return 0;
   }
 
   if (!md->as_dir()->remove(name, mf))
@@ -309,18 +318,34 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
     mlinkref ilink(mf);
     ilink.acquire();
 
-    switch (mtype) {
-    case mnode::types::dir: {
-      mlinkref parentlink(md);  // Not actually going to bump nlink_
-      mf->as_dir()->insert(".",  &ilink);
-      mf->as_dir()->insert("..", &parentlink);
-      break;
+    if (mtype == mnode::types::dir) {
+      /*
+       * We need to bump the refcount on the parent directory (md)
+       * to create ".." in the new subdirectory (mf), but only if
+       * the parent directory had a non-zero link count already.
+       * We serialize on whether md was killed: its link count drops
+       * only after a successful kill (see unlink), and insert into
+       * md succeeds iff md's kill fails.
+       *
+       * Mild POSIX violation: this may temporarily raise md's link
+       * count (as observed by fstat) from zero to positive.
+       */
+      mlinkref parentlink(md);
+      parentlink.acquire();
+      assert(mf->as_dir()->insert("..", &parentlink));
+      if (md->as_dir()->insert(name, &ilink))
+        return mf;
+
+      /*
+       * Didn't work, clean up and retry.  The expectation is that the
+       * parent directory (md) was removed, and nameiparent will fail.
+       */
+      assert(mf->as_dir()->remove("..", md));
+      continue;
     }
 
-    case mnode::types::dev:
+    if (mtype == mnode::types::dev)
       mf->as_dev()->init(major, minor);
-      break;
-    }
 
     if (md->as_dir()->insert(name, &ilink))
       return mf;

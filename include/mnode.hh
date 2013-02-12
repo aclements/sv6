@@ -128,32 +128,25 @@ private:
 
 public:
   bool insert(const strbuf<DIRSIZ>& name, mlinkref* ilink) {
+    if (name == ".")
+      return false;
     if (!map_.insert(name, ilink->mn()->inum_))
       return false;
-
-    if (name != "." && name != "..") {
-      nfiles_.inc();
-      assert(ilink->held());
-      ilink->mn()->nlink_.inc();
-    }
+    assert(ilink->held());
+    ilink->mn()->nlink_.inc();
     return true;
   }
 
   bool remove(const strbuf<DIRSIZ>& name, sref<mnode> m) {
     if (!map_.remove(name, m->inum_))
       return false;
-
-    if (name != "." && name != "..") {
-      nfiles_.dec();
-      m->nlink_.dec();
-    }
+    m->nlink_.dec();
     return true;
   }
 
   bool replace(const strbuf<DIRSIZ>& name, sref<mnode> mold, mlinkref* ilinknew) {
     if (!map_.replace(name, mold->inum_, ilinknew->mn()->inum_))
       return false;
-
     assert(ilinknew->held());
     ilinknew->mn()->nlink_.inc();
     mold->nlink_.dec();
@@ -161,8 +154,10 @@ public:
   }
 
   sref<mnode> lookup(const strbuf<DIRSIZ>& name) const {
-    u64 iprev = -1;
+    if (name == ".")
+      return mnode::get(inum_);
 
+    u64 iprev = -1;
     for (;;) {
       u64 inum;
       if (!map_.lookup(name, &inum))
@@ -231,10 +226,24 @@ public:
   }
 
   bool enumerate(const strbuf<DIRSIZ>* prev, strbuf<DIRSIZ>* name) const {
+    if (!prev) {
+      *name = ".";
+      return true;
+    }
+
+    if (*prev == ".")
+      prev = nullptr;
+
     return map_.enumerate(prev, name);
   }
 
-  filecount nfiles_;
+  bool kill(sref<mnode> parent) {
+    if (!map_.remove_and_kill("..", parent->inum_))
+      return false;
+
+    parent->nlink_.dec();
+    return true;
+  }
 };
 
 inline mdir*

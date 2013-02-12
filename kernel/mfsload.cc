@@ -21,6 +21,9 @@ load_dir(sref<inode> i, sref<mnode> m)
 
     sref<mnode> mf = load_inum(de.inum);
     strbuf<DIRSIZ> name(de.name);
+    if (name == ".")
+      continue;
+
     mlinkref ilink(mf);
     ilink.acquire();
     m->as_dir()->insert(name, &ilink);
@@ -85,6 +88,6 @@ mfsload()
 {
   inum_to_mnode = new linearhash<u64, sref<mnode>>(4099);
   root_inum = load_inum(1)->inum_;
-  mnode::get(root_inum)->nlink_.inc();
+  /* the root inode gets an extra reference because of its own ".." */
   delete inum_to_mnode;
 }
