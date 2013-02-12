@@ -14,25 +14,30 @@ class dirns;
 
 u64 namehash(const strbuf<DIRSIZ>&);
 
-struct file : public refcache::referenced, public rcu_freed {
+struct file : public rcu_freed {
   virtual int stat(struct stat*) { return -1; }
   virtual ssize_t read(char *addr, size_t n) { return -1; }
   virtual ssize_t write(const char *addr, size_t n) { return -1; }
   virtual ssize_t pread(char *addr, size_t n, off_t offset) { return -1; }
   virtual ssize_t pwrite(const char *addr, size_t n, off_t offset) { return -1; }
 
+  virtual void inc() = 0;
+  virtual void dec() = 0;
+
 protected:
   file() : rcu_freed("file") {}
 
-  void onzero() override = 0;
   void do_gc(void) override { delete this; }
 };
 
-struct file_inode : public file {
+struct file_inode : public refcache::referenced, public file {
 public:
   file_inode(sref<mnode> i, bool r, bool w, bool a)
     : ip(i), readable(r), writable(w), append(a), off(0) {}
   NEW_DELETE_OPS(file_inode);
+
+  void inc() override { refcache::referenced::inc(); }
+  void dec() override { refcache::referenced::dec(); }
 
   sref<mnode> ip;
   const bool readable;
@@ -48,11 +53,14 @@ public:
   void onzero() override;
 };
 
-struct file_socket : public file {
+struct file_socket : public referenced, public file {
 public:
   file_socket() : socket(0), localsock(nullptr),
                   wsem("file::wsem", 1), rsem("file::rsem", 1) {}
   NEW_DELETE_OPS(file_socket);
+
+  void inc() override { referenced::inc(); }
+  void dec() override { referenced::dec(); }
 
   int socket;
   struct localsock *localsock;
@@ -66,10 +74,13 @@ private:
   semaphore wsem, rsem;
 };
 
-struct file_pipe_reader : public file {
+struct file_pipe_reader : public refcache::referenced, public file {
 public:
   file_pipe_reader(pipe* p) : pipe(p) {}
   NEW_DELETE_OPS(file_pipe_reader);
+
+  void inc() override { refcache::referenced::inc(); }
+  void dec() override { refcache::referenced::dec(); }
 
   ssize_t read(char *addr, size_t n) override;
   void onzero() override;
@@ -78,10 +89,13 @@ private:
   struct pipe* const pipe;
 };
 
-struct file_pipe_writer : public file {
+struct file_pipe_writer : public referenced, public file {
 public:
   file_pipe_writer(pipe* p) : pipe(p) {}
   NEW_DELETE_OPS(file_pipe_writer);
+
+  void inc() override { referenced::inc(); }
+  void dec() override { referenced::dec(); }
 
   ssize_t write(const char *addr, size_t n) override;
   void onzero() override;
