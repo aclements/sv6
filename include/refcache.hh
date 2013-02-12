@@ -419,7 +419,7 @@ namespace refcache {
     {
       // XXX Hash pointer better?  This isn't bad: it's very fast and
       // shouldn't suffer from small alignments.
-      std::size_t wayno = (((uintptr_t)obj) | ((uintptr_t)obj / CACHE_SLOTS))
+      std::size_t wayno = (((uintptr_t)obj) ^ ((uintptr_t)obj / CACHE_SLOTS))
         % CACHE_SLOTS;
       struct way *way = &ways_[wayno];
       // XXX More associativity.  Since this is in the critical path
