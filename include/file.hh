@@ -26,8 +26,6 @@ struct file : public rcu_freed {
 
 protected:
   file() : rcu_freed("file") {}
-
-  void do_gc(void) override { delete this; }
 };
 
 struct file_inode : public refcache::referenced, public file {
@@ -51,6 +49,9 @@ public:
   ssize_t pread(char* addr, size_t n, off_t off) override;
   ssize_t pwrite(const char *addr, size_t n, off_t offset) override;
   void onzero() override;
+
+protected:
+  void do_gc(void) override { delete this; }
 };
 
 struct file_socket : public referenced, public file {
@@ -70,6 +71,9 @@ public:
   ssize_t write(const char *addr, size_t n) override;
   void onzero() override;
 
+protected:
+  void do_gc(void) override { delete this; }
+
 private:
   // XXX This locking should be handled in net, not here.
   semaphore wsem, rsem;
@@ -86,6 +90,9 @@ public:
   ssize_t read(char *addr, size_t n) override;
   void onzero() override;
 
+protected:
+  void do_gc(void) override { delete this; }
+
 private:
   struct pipe* const pipe;
 };
@@ -100,6 +107,9 @@ public:
 
   ssize_t write(const char *addr, size_t n) override;
   void onzero() override;
+
+protected:
+  void do_gc(void) override { delete this; }
 
 private:
   struct pipe* const pipe;
