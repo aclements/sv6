@@ -12,4 +12,6 @@ link("1", "1") vs rename("0", "1") when "0" and "1" are different inodes
   ade49ec3b9fe054c7c1b395d0766535de8432128
 rename("0", "1") vs stat("1") when "0" and "1" point at same inode
   c6e251eb28b58bc984ad78e0de3c9c255890b6d2
+link("1", "2") vs rename("2", "0") when "1" does not exist and "2" does
+  3164153c3755817a5909aabbf9cf037b41f3aac1
 
