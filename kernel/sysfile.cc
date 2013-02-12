@@ -167,13 +167,17 @@ sys_link(userptr_str old_path, userptr_str new_path)
   if (!olddir)
     return -1;
 
+  /* Check if the old name exists; if not, abort right away */
+  if (!olddir->as_dir()->exists(oldname))
+    return -1;
+
   strbuf<DIRSIZ> name;
   sref<mnode> md = nameiparent(myproc()->cwd_m, newn, &name);
   if (!md)
     return -1;
 
   /*
-   * First check if the target name already exists; if so,
+   * Check if the target name already exists; if so,
    * no need to grab a link count on the old name.
    */
   if (md->as_dir()->exists(name))
