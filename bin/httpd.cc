@@ -139,7 +139,7 @@ content(int s, int fd)
     }
     
     if (xwrite(s, buf, n) < 0) {
-      fprintf(stderr, "httpd content: write failed");
+      fprintf(stderr, "httpd content: write failed\n");
       return -1;
     }
   }
