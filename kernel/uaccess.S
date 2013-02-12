@@ -71,6 +71,24 @@ zpage:
         mov     $4096/0x40, %rcx
         mov     $0, %rax
 1:
+        mov     %rax, (%rdi)
+        mov     %rax, 0x8(%rdi)
+        mov     %rax, 0x10(%rdi)
+        mov     %rax, 0x18(%rdi)
+        mov     %rax, 0x20(%rdi)
+        mov     %rax, 0x28(%rdi)
+        mov     %rax, 0x30(%rdi)
+        mov     %rax, 0x38(%rdi)
+        lea     0x40(%rdi), %rdi
+        loop    1b
+        ret
+
+.globl zpage_nc
+.align 8
+zpage_nc:
+        mov     $4096/0x40, %rcx
+        mov     $0, %rax
+1:
         movnti  %rax, (%rdi)
         movnti  %rax, 0x8(%rdi)
         movnti  %rax, 0x10(%rdi)
