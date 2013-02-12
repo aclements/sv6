@@ -226,7 +226,7 @@ print_entry(Addr2line &addr2line, int count, int total, struct pmuevent *e)
     if (l.pc)
       printf("%s%016" PRIx64, indent, l.pc);
     else
-      printf("%s%-16s", indent, "(inline)");
+      printf("%s%-16s", indent, "(inlined by)");
     printf(" %s:%u %s\n",
            l.file.c_str(), l.line, l.func.c_str());
     indent = "              ";
