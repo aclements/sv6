@@ -363,9 +363,12 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     cwd = myproc()->cwd_m;
   } else {
     sref<file> fdir = getfile(dirfd);
-    if (!fdir || fdir->type != file::FD_INODE)
+    if (!fdir)
       return -1;
-    cwd = fdir->ip;
+    file_inode* fdiri = dynamic_cast<file_inode*>(fdir.get());
+    if (!fdiri)
+      return -1;
+    cwd = fdiri->ip;
   }
 
   char path_copy[PATH_MAX];
@@ -389,7 +392,10 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     if (*m->as_file()->read_size())
       m->as_file()->write_size().resize_nogrow(0);
 
-  file* f = file::alloc();
+  file* f = new file_inode(m,
+                           !(rwmode == O_WRONLY),
+                           !(rwmode == O_RDONLY),
+                           !!(omode & O_APPEND));
   if (!f)
     return -1;
 
@@ -399,12 +405,6 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     return -1;
   }
 
-  f->type = file::FD_INODE;
-  f->ip = m;
-  f->off = 0;
-  f->readable = !(rwmode == O_WRONLY);
-  f->writable = !(rwmode == O_RDONLY);
-  f->append = !!(omode & O_APPEND);
   return fd;
 }
 
@@ -417,9 +417,12 @@ sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
     cwd = myproc()->cwd_m;
   } else {
     sref<file> fdir = getfile(dirfd);
-    if (!fdir || fdir->type != file::FD_INODE)
+    if (!fdir)
       return -1;
-    cwd = fdir->ip;
+    file_inode* fdiri = dynamic_cast<file_inode*>(fdir.get());
+    if (!fdiri)
+      return -1;
+    cwd = fdiri->ip;
   }
 
   char path_copy[PATH_MAX];
@@ -541,7 +544,14 @@ int
 sys_readdir(int dirfd, userptr<char> prevptr, userptr<char> nameptr)
 {
   sref<file> df = getfile(dirfd);
-  if (!df || df->type != file::FD_INODE || df->ip->type() != mnode::types::dir)
+  if (!df)
+    return -1;
+
+  file_inode* dfi = dynamic_cast<file_inode*>(df.get());
+  if (!dfi)
+    return -1;
+
+  if (dfi->ip->type() != mnode::types::dir)
     return -1;
 
   strbuf<DIRSIZ> prev;
@@ -549,7 +559,7 @@ sys_readdir(int dirfd, userptr<char> prevptr, userptr<char> nameptr)
     return -1;
 
   strbuf<DIRSIZ> name;
-  if (!df->ip->as_dir()->enumerate(prevptr.null() ? nullptr : &prev, &name))
+  if (!dfi->ip->as_dir()->enumerate(prevptr.null() ? nullptr : &prev, &name))
     return 0;
 
   if (!nameptr.store(name.buf_, sizeof(name.buf_)))

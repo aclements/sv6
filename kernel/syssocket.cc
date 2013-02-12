@@ -226,7 +226,7 @@ localsockclose(struct localsock *p)
 }
 
 void 
-sockclose(const struct file *f)
+sockclose(const struct file_socket *f)
 {
   if (f->socket == PF_LOCAL) {
     localsockclose(f->localsock);
@@ -241,36 +241,30 @@ freesocket(int fd)
   myproc()->ftable->close(fd);
 }
 
-static sref<file>
+static sref<file_socket>
 getsocket(int fd)
 {
   sref<file> f = getfile(fd);
-  if (f && f->type != file::FD_SOCKET)
-    f.reset();
-  return f;
+  if (!f)
+    return sref<file_socket>();
+
+  file_socket* fs = dynamic_cast<file_socket*>(f.get());
+  return sref<file_socket>::newref(fs);
 }
 
 static int
-allocsocket(struct file **rf, int *rfd)
+allocsocket(struct file_socket **rf, int *rfd)
 {
-  struct file *f;
-  int fd;
-
-  f = file::alloc();
+  struct file_socket *f = new file_socket();
   if (f == nullptr)
     return -1;
 
-  fd = fdalloc(f, 0);
+  int fd = fdalloc(f, 0);
   if (fd < 0) {
     f->dec();
     return fd;
   }
 
-  f->type = file::FD_SOCKET;
-  f->off = 0;
-  f->readable = 1;
-  f->writable = 1;
- 
   *rf = f;
   *rfd = fd;
   return 0;
@@ -281,7 +275,7 @@ int
 sys_socket(int domain, int type, int protocol)
 {
   extern long netsocket(int domain, int type, int protocol);
-  struct file *f;
+  struct file_socket *f;
   int fd;
   int s;
 
@@ -310,7 +304,7 @@ sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
   extern long netbind(int, const struct sockaddr*, int);
   int r;
 
-  sref<file> f = getsocket(xsock);
+  sref<file_socket> f = getsocket(xsock);
   if (!f)
     return -1;
 
@@ -325,7 +319,7 @@ sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
 
     // XXX this does not seem quite right..
     ip->as_sock()->init(f->localsock);
-    f->ip = ip;
+    // XXX: f->ip = ip;
     // XXX what is socketpath needed for?
     // strncpy(ip->socketpath, uaddr.sun_path, UNIX_PATH_MAX);
     return 0;
@@ -340,7 +334,7 @@ int
 sys_listen(int xsock, int backlog)
 {
   extern long netlisten(int, int);
-  sref<file> f = getsocket(xsock);
+  sref<file_socket> f = getsocket(xsock);
 
   if (!f)
     return -1;
@@ -353,11 +347,11 @@ int
 sys_accept(int xsock, struct sockaddr* xaddr, u32* xaddrlen)
 {
   extern long netaccept(int, struct sockaddr*, u32*);
-  file *cf;
+  file_socket *cf;
   int cfd;
   int ss;
 
-  sref<file> f = getsocket(xsock);
+  sref<file_socket> f = getsocket(xsock);
   if (!f)
     return -1;
 
@@ -384,7 +378,7 @@ sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,
   kstats::timer timer_fill(&kstats::socket_local_recvfrom_cycles);
   kstats::inc(&kstats::socket_local_recvfrom_cnt);
 
-  sref<file> f = getsocket(sockfd);
+  sref<file_socket> f = getsocket(sockfd);
   if (!f)
     return -1;
 
@@ -422,7 +416,7 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   kstats::inc(&kstats::socket_local_sendto_cnt);
 #endif
 
-  sref<file> f = getsocket(sockfd);
+  sref<file_socket> f = getsocket(sockfd);
   if (!f)
     return -1;
 
@@ -450,8 +444,10 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   msghdr *m = new msghdr();
   m->data = b;
   m->len = len;
+/* XXX
   if (f->ip)
-    strncpy(m->uaddr.sun_path, "XXX" /* f->ip->socketpath */, UNIX_PATH_MAX);
+    strncpy(m->uaddr.sun_path, f->ip->socketpath, UNIX_PATH_MAX);
+*/
   strncpy(m->data, b, len);
 
   int r = ip->localsock->write(m);

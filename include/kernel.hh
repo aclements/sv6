@@ -220,7 +220,7 @@ int             doexec(const char* upath,
 int             fdalloc(file *f, int omode);
 sref<file>      getfile(int fd);
 sref<mnode>     create(sref<mnode>, const char *, short, short, short, bool);
-void            sockclose(const struct file *);
+void            sockclose(const struct file_socket *);
 
 // string.c
 extern  "C" int  memcmp(const void*, const void*, size_t);
