@@ -31,7 +31,6 @@ typedef u32 socklen_t;
 
 #define PF_LOCAL      -2
 #define AF_LOCAL      (PF_LOCAL)
-#define UNIX_PATH_MAX 128
 
 #define SUN_LEN(su) \
   (sizeof(*(su)) - sizeof((su)->sun_path) + strlen((su)->sun_path))

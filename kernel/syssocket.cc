@@ -317,14 +317,13 @@ sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
 
     if (fetchmem(&uaddr, xaddr, sizeof(sockaddr_un)) < 0) 
       return -1;
+
     if ((ip = create(myproc()->cwd_m, uaddr.sun_path, T_SOCKET, 0, 0, true)) == 0)
       return -1;
 
-    // XXX this does not seem quite right..
     ip->as_sock()->init(f->localsock);
-    // XXX: f->ip = ip;
-    // XXX what is socketpath needed for?
-    // strncpy(ip->socketpath, uaddr.sun_path, UNIX_PATH_MAX);
+    strncpy(f->socketpath, uaddr.sun_path, UNIX_PATH_MAX);
+
     return 0;
   }  else {
     r = netbind(f->socket, xaddr, xaddrlen);
@@ -411,7 +410,7 @@ int
 sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags, 
            const struct sockaddr *dest_addr, u32 addrlen)
 {
-  sref<inode> ip;
+  sref<mnode> ip;
   struct sockaddr_un uaddr;
 
 #ifdef XV6_KERNEL
@@ -426,11 +425,11 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   if (fetchmem(&uaddr, dest_addr, sizeof(sockaddr_un)) < 0) 
     return -1;
 
-  ip = namei(myproc()->cwd, uaddr.sun_path);
+  ip = namei(myproc()->cwd_m, uaddr.sun_path);
   if (ip == 0)
     return -1;
 
-  if (ip->type != T_SOCKET)
+  if (ip->type() != mnode::types::sock)
     return -1;
 
   char *b = kalloc("writebuf");
@@ -447,13 +446,10 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   msghdr *m = new msghdr();
   m->data = b;
   m->len = len;
-/* XXX
-  if (f->ip)
-    strncpy(m->uaddr.sun_path, f->ip->socketpath, UNIX_PATH_MAX);
-*/
+  strncpy(m->uaddr.sun_path, f->socketpath, UNIX_PATH_MAX);
   strncpy(m->data, b, len);
 
-  int r = ip->localsock->write(m);
+  int r = ip->as_sock()->get_sock()->write(m);
   if (r < 0) {
     kfree(b);
     delete m;

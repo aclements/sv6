@@ -10,6 +10,7 @@
 #define MAXARG       32  // max exec arguments
 #define MAXARGLEN    64  // max exec argument length
 #define MAXNAME      16  // max string names
+#define UNIX_PATH_MAX 128
 #define NEPOCH        4
 #define CACHELINE    64  // cache line size
 #define CPUKSTACKS   (NPROC + NCPU*2)

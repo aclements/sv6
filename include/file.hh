@@ -64,6 +64,7 @@ public:
 
   int socket;
   struct localsock *localsock;
+  char socketpath[UNIX_PATH_MAX];
 
   ssize_t read(char *addr, size_t n) override;
   ssize_t write(const char *addr, size_t n) override;
