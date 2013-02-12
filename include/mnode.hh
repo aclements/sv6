@@ -128,38 +128,41 @@ private:
 
 public:
   bool insert(const strbuf<DIRSIZ>& name, mlinkref* ilink) {
-    bool r = map_.insert(name, ilink->mn()->inum_);
-    if (r && name != "." && name != "..") {
+    if (!map_.insert(name, ilink->mn()->inum_))
+      return false;
+
+    if (name != "." && name != "..") {
       nfiles_.inc();
       assert(ilink->held());
       ilink->mn()->nlink_.inc();
     }
-    return r;
+    return true;
   }
 
   bool remove(const strbuf<DIRSIZ>& name, sref<mnode> m) {
-    bool r = map_.remove(name, m->inum_);
-    if (r && name != "." && name != "..") {
+    if (!map_.remove(name, m->inum_))
+      return false;
+
+    if (name != "." && name != "..") {
       nfiles_.dec();
       m->nlink_.dec();
     }
-    return r;
+    return true;
   }
 
-  bool replace(const strbuf<DIRSIZ>& name,
-               sref<mnode> mold,
-               mlinkref* ilinknew) {
+  bool replace(const strbuf<DIRSIZ>& name, sref<mnode> mold, mlinkref* ilinknew) {
+    if (!map_.replace(name, mold->inum_, ilinknew->mn()->inum_))
+      return false;
+
     assert(ilinknew->held());
-    bool r = map_.replace(name, mold->inum_,
-                                ilinknew->mn()->inum_);
-    if (r) {
-      ilinknew->mn()->nlink_.inc();
-      mold->nlink_.dec();
-    }
-    return r;
+    ilinknew->mn()->nlink_.inc();
+    mold->nlink_.dec();
+    return true;
   }
 
   sref<mnode> lookup(const strbuf<DIRSIZ>& name) const {
+    u64 iprev = -1;
+
     for (;;) {
       u64 inum;
       if (!map_.lookup(name, &inum))
@@ -171,8 +174,11 @@ public:
 
       /*
        * The inode was GCed between the lookup and mnode::get().
-       * Retry the lookup.
+       * Retry the lookup.  Crash if we repeatedly can't find
+       * the same inode (to make such bugs easier to track down).
        */
+      assert(inum != iprev);
+      iprev = inum;
     }
   }
 
