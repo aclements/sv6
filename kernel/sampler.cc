@@ -85,6 +85,14 @@ class amd_pmu : public pmu
     MAX_PERIOD = (1ull << 47) - 1,
   };
 
+  struct local
+  {
+    // Canonicalized selectors.  Only selector and period are used.
+    perf_selector sel[MAX_PMCS];
+  };
+
+  percpu<struct local, percpu_safety::internal> local;
+
 public:
   bool
   try_init() override
@@ -107,6 +115,9 @@ public:
       sel |= PERF_SEL_INT;
     if (selector.enable)
       sel |= PERF_SEL_ENABLE;
+    local->sel[ctr].selector = sel;
+    local->sel[ctr].period = val;
+
     writemsr(MSR_AMD_PERF_SEL0 + ctr, 0);
     if (!selector.enable)
       return;
@@ -143,6 +154,14 @@ class intel_pmu : public pmu
 
   int num_pmcs;
 
+  struct local
+  {
+    // Canonicalized selectors.  Only selector and period are used.
+    perf_selector sel[MAX_PMCS];
+  };
+
+  percpu<struct local, percpu_safety::internal> local;
+
 public:
   bool
   try_init() override
@@ -174,6 +193,9 @@ public:
       sel |= PERF_SEL_INT;
     if (selector.enable)
       sel |= PERF_SEL_ENABLE;
+    local->sel[ctr].selector = sel;
+    local->sel[ctr].period = val;
+
     writemsr(MSR_INTEL_PERF_SEL0 + ctr, 0);
     if (!selector.enable)
       return;
