@@ -33,11 +33,18 @@
 
 #define LOG2_HASH_BUCKETS 12
 
-static void enable_nehalem_workaround(void);
-static void wdcheck(struct trapframe*);
+#define MAX_PMCS 2
 
-static perf_selector selector;
-static perf_selector wd_selector;
+static void enable_nehalem_workaround(void);
+
+struct selector_state : public perf_selector
+{
+  // Called on counter overflow.
+  void (*on_overflow)(int pmc, struct trapframe *tf);
+};
+
+// Selector state, indexed by PMC.
+static selector_state selectors[MAX_PMCS];
 
 class pmu
 {
@@ -305,9 +312,9 @@ void
 sampconf(void)
 {
   pushcli();
-  if (selector.period)
+  if (selectors[0].period)
     pmulog[myid()].count = 0;
-  pmu->configure(0, selector);
+  pmu->configure(0, selectors[0]);
   popcli();
 }
 
@@ -337,19 +344,22 @@ sampintr(struct trapframe *tf)
 
   u64 overflow = pmu->get_overflow();
 
-  if (overflow & (1<<0)) {
-    ++r;
-    if (pmulog->log(tf))
-      pmu->configure(0, selector);
-  }
-
-  if (overflow & (1<<1)) {
-    ++r;
-    wdcheck(tf);
-    pmu->configure(1, wd_selector);
+  for (size_t i = 0; i < MAX_PMCS; ++i) {
+    if (overflow & (1ull << i)) {
+      ++r;
+      selectors[i].on_overflow(i, tf);
+      pmu->configure(i, selectors[i]);
+    }
   }
 
   return r;
+}
+
+static void
+samplog(int pmc, struct trapframe *tf)
+{
+  if (!pmulog->log(tf))
+    selectors[pmc].enable = false;
 }
 
 static int
@@ -448,7 +458,8 @@ sampwrite(mdev*, const char *buf, u32 off, u32 n)
 {
   if (n != sizeof(perf_selector))
     return -1;
-  selector = *(struct perf_selector*)buf;
+  *static_cast<perf_selector*>(&selectors[0]) = *(struct perf_selector*)buf;
+  selectors[0].on_overflow = samplog;
   sampstart();
   return n;
 }
@@ -554,7 +565,7 @@ static percpu<int> wd_count;
 static spinlock wdlock("wdlock");
 
 static void
-wdcheck(struct trapframe* tf)
+wdcheck(int pmc, struct trapframe* tf)
 {
   if (*wd_count == 1) {
     auto l = wdlock.guard();
@@ -577,6 +588,8 @@ wdpoke(void)
 void
 initwd(void)
 {
+  selector_state &wd_selector = selectors[1];
+
   // We go through here on CPU 1 first since CPU 0 is still
   // bootstrapping.
   static bool configured;
@@ -594,6 +607,7 @@ initwd(void)
     }
     wd_selector.enable = true;
     wd_selector.period = cpuhz;
+    wd_selector.on_overflow = wdcheck;
     console.println("wd: Enabled");
   } else if (!wd_selector.enable) {
     return;
@@ -601,6 +615,6 @@ initwd(void)
 
   wdpoke();
   pushcli();
-  pmu->configure(1, wd_selector);
+  pmu->configure(&wd_selector - selectors, wd_selector);
   popcli();
 }
