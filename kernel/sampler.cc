@@ -458,7 +458,16 @@ sampwrite(mdev*, const char *buf, u32 off, u32 n)
 {
   if (n != sizeof(perf_selector))
     return -1;
-  *static_cast<perf_selector*>(&selectors[0]) = *(struct perf_selector*)buf;
+  auto ps = (struct perf_selector*)buf;
+  if (ps->enable && selectors[0].enable) {
+    // We disallow this to avoid races with reconfiguring counters
+    // during sampler interrupts.  We could first disable and quiesce
+    // the counter, but right now we don't want for sampconf to
+    // finish.
+    console.println("sampler: Cannot re-enable enabled counter");
+    return -1;
+  }
+  *static_cast<perf_selector*>(&selectors[0]) = *ps;
   selectors[0].on_overflow = samplog;
   sampstart();
   return n;
