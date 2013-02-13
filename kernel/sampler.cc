@@ -42,16 +42,10 @@ static const perf_selector wd_selector =
   {
 #if defined(HW_josmp) || defined(HW_tom)
     true,
-    1 << 24 |
-    1 << 17 |
-    1 << 16 |
-    0x76,
+    0x76 | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT),
 #elif defined(HW_ben)
     true,
-    1 << 24 |
-    1 << 17 |
-    1 << 16 |
-    0x3c,
+    0x3c | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT),
 #else
     false,
     0,

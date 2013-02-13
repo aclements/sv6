@@ -2,17 +2,14 @@
 #include "user.h"
 #include <fcntl.h>
 #include "sampler.h"
+#include "bits.hh"
 
 #if defined(HW_josmp) || defined(HW_tom)
 static u64 selector = 
-  0UL << 32 |
-  1 << 24 | 
-  1 << 17 | 
-  1 << 16 | 
-  0x00 << 8 | 
-  0x76;
+  0x76 | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT);
 #elif defined(HW_ben) || defined(HW_ud1)
-static u64 selector = 0x3003c;
+static u64 selector =
+  0x3c | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT);
 #else
 static u64 selector = 0;
 #endif
