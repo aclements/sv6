@@ -96,6 +96,11 @@ public:
   bool
   try_init() override
   {
+    uint32_t eax;
+    cpuid(CPUID_FEATURES, &eax, 0, 0, 0);
+    if (FEATURE_EAX_FAMILY(eax) < 0x10)
+      return false;
+    // 4 counters are supported
     return true;
   }
 
