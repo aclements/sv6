@@ -394,8 +394,10 @@ sampstat(mdev*, struct stat *st)
   u64 sz = 0;
   
   sz += LOGHEADER_SZ;
-  for (p = &pmulog[0]; p != q; p++)
+  for (p = &pmulog[0]; p != q; p++) {
+    p->flush();
     sz += p->count * sizeof(struct pmuevent);
+  }
 
   st->st_size = sz;
 }
