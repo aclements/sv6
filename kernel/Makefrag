@@ -52,7 +52,6 @@ OBJS = \
 	trapasm.o \
         wqkern.o \
 	wqlib.o \
-	script.o \
 	xapic.o \
 	x2apic.o \
         zalloc.o \
