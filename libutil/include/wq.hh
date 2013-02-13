@@ -7,7 +7,6 @@ struct uwq_ipcbuf;
 struct work;
 
 int             wq_trywork(void);
-int             wq_push(work *w);
 void            wq_dump(void);
 size_t          wq_size(void);
 void            initwq(void);

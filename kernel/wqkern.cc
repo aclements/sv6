@@ -6,7 +6,6 @@
 #include "kalloc.hh"
 #include "wq.hh"
 
-static wq *wq_;
 static wq *wqcrit_;
 
 void*
@@ -25,13 +24,6 @@ size_t
 wq_size(void)
 {
   return sizeof(wq);
-}
-
-int
-wq_push(work *w)
-{
-  assert(wq_);
-  return wq_->push(w, myid());
 }
 
 void
@@ -54,22 +46,21 @@ wqcrit_push(work *w, int c)
 int
 wq_trywork(void)
 {
-  assert(wq_ && wqcrit_);
-  return wqcrit_->trywork(false) || wq_->trywork(true);
+  assert(wqcrit_);
+  return wqcrit_->trywork(false);
 }
 
 void
 wq_dump(void)
 {
-  if (wq_)
-    return wq_->dump();
+  if (wqcrit_)
+    return wqcrit_->dump();
 }
 
 void
 initwq(void)
 {
-  wq_ = new wq();
   wqcrit_ = new wq();
-  if (wq_ == nullptr || wqcrit_ == nullptr)
+  if (wqcrit_ == nullptr)
     panic("initwq");
 }
