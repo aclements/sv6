@@ -135,7 +135,9 @@ public:
   get_overflow() override
   {
     uint64_t ovf = 0;
-    for (int pmc = 0; pmc < 2; ++pmc) {
+    for (int pmc = 0; pmc < MAX_PMCS; ++pmc) {
+      if (!(local->sel[pmc].selector & PERF_SEL_INT))
+        continue;
       uint64_t cnt = rdpmc(pmc);
       if ((cnt & (1ull << (COUNTER_BITS - 1))) == 0)
         ovf |= 1 << pmc;
@@ -238,7 +240,11 @@ public:
   uint64_t
   get_overflow() override
   {
-    return readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
+    uint64_t mask = 0;
+    for (size_t i = 0; i < MAX_PMCS; ++i)
+      if (local->sel[i].selector & PERF_SEL_INT)
+        mask |= 1ull << i;
+    return readmsr(MSR_INTEL_PERF_GLOBAL_STATUS) & mask;
   }
 
   void
@@ -255,7 +261,7 @@ public:
       if (mask & (1ull << i))
         writemsr(MSR_INTEL_PERF_CNT0 + i, -local->sel[i].period);
     // Clear overflow status
-    writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, mask & 0xffffffff);
+    writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, mask);
   }
 
   void
