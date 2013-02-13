@@ -1,9 +1,17 @@
-typedef enum { SAMP_ENABLE, SAMP_DISABLE } sampop_t;
+#include <stdint.h>
+#include <stdbool.h>
 
-struct sampconf {
-  sampop_t op;
-  u64 selector;
-  u64 period;
+// An event selector
+struct perf_selector
+{
+  bool enable : 1;
+  // The event selector code.  This is architecture-specific, but
+  // generally includes an event number, a unit mask, and various
+  // other flags.  Any interrupt flag is ignored.
+  uint64_t selector;
+  // If non-zero, record the current instruction pointer every
+  // 'period' events.
+  uint64_t period;
 };
 
 #define NTRACE 4

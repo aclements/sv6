@@ -6,12 +6,12 @@
 static int perf_fd = -1;
 
 static void
-conf(int fd, sampop_t op, u64 selector = 0, u64 period = 0)
+conf(int fd, bool enable, u64 selector = 0, u64 period = 0)
 {
-  struct sampconf c = { 
-    op: op,
-    selector: selector,
-    period: period,
+  struct perf_selector c = {
+  enable: enable,
+  selector: selector,
+  period: period,
   };
 
   if (write(fd, &c, sizeof(c)) != sizeof(c))
@@ -22,7 +22,7 @@ void
 perf_stop(void)
 {
   assert(perf_fd >= 0);
-  conf(perf_fd, SAMP_DISABLE);
+  conf(perf_fd, false);
 }
 
 void
@@ -34,5 +34,5 @@ perf_start(u64 selector, u64 period)
       die("perf: open failed");
   }
 
-  conf(perf_fd, SAMP_ENABLE, selector, period);
+  conf(perf_fd, true, selector, period);
 }

@@ -15,6 +15,8 @@
 #include "percpu.hh"
 #include "kstream.hh"
 
+#include <algorithm>
+
 #define LOGHEADER_SZ (sizeof(struct logheader) + \
                       sizeof(((struct logheader*)0)->cpu[0])*NCPU)
 
@@ -31,33 +33,31 @@
 
 #define LOG2_HASH_BUCKETS 12
 
-static volatile u64 selector;
-static volatile u64 period;
-
-static const u64 wd_period = 24000000000ul;
-
-#if defined(HW_josmp) || defined(HW_tom)
-static const u64 wd_selector =
-  1 << 24 | 
-  1 << 22 |
-  1 << 20 |
-  1 << 17 | 
-  1 << 16 | 
-  0x76;
-#elif defined(HW_ben)
-static const u64 wd_selector =
-  1 << 24 | 
-  1 << 22 |
-  1 << 20 |
-  1 << 17 | 
-  1 << 16 | 
-  0x3c;
-#else
-static const u64 wd_selector = 0;
-#endif
-
 static void enable_nehalem_workaround(void);
 static void wdcheck(struct trapframe*);
+
+static perf_selector selector;
+
+static const perf_selector wd_selector =
+  {
+#if defined(HW_josmp) || defined(HW_tom)
+    true,
+    1 << 24 |
+    1 << 17 |
+    1 << 16 |
+    0x76,
+#elif defined(HW_ben)
+    true,
+    1 << 24 |
+    1 << 17 |
+    1 << 16 |
+    0x3c,
+#else
+    false,
+    0,
+#endif
+    24000000000
+  };
 
 class pmu
 {
@@ -66,7 +66,7 @@ public:
 
   virtual bool try_init() = 0;
   virtual void initcore() { }
-  virtual void configure(int counter, uint64_t selector, uint64_t value) = 0;
+  virtual void configure(int counter, const perf_selector &selector) = 0;
   virtual uint64_t get_overflow() = 0;
 };
 
@@ -106,11 +106,18 @@ public:
   }
 
   void
-  configure(int ctr, uint64_t sel, uint64_t val) override
+  configure(int ctr, const perf_selector &selector) override
   {
-    if (val > MAX_PERIOD)
-      val = MAX_PERIOD;
+    uint64_t sel =
+      (selector.selector & ~(uint64_t)(PERF_SEL_INT | PERF_SEL_ENABLE));
+    uint64_t val = std::min(selector.period, (uint64_t)MAX_PERIOD);
+    if (val)
+      sel |= PERF_SEL_INT;
+    if (selector.enable)
+      sel |= PERF_SEL_ENABLE;
     writemsr(MSR_AMD_PERF_SEL0 + ctr, 0);
+    if (!selector.enable)
+      return;
     writemsr(MSR_AMD_PERF_CNT0 + ctr, -val);
     writemsr(MSR_AMD_PERF_SEL0 + ctr, sel);
   }
@@ -166,11 +173,18 @@ public:
   }
 
   void
-  configure(int ctr, uint64_t sel, uint64_t val) override
+  configure(int ctr, const perf_selector &selector) override
   {
-    if (val > MAX_PERIOD)
-      val = MAX_PERIOD;
+    uint64_t sel =
+      (selector.selector & ~(uint64_t)(PERF_SEL_INT | PERF_SEL_ENABLE));
+    uint64_t val = std::min(selector.period, (uint64_t)MAX_PERIOD);
+    if (val)
+      sel |= PERF_SEL_INT;
+    if (selector.enable)
+      sel |= PERF_SEL_ENABLE;
     writemsr(MSR_INTEL_PERF_SEL0 + ctr, 0);
+    if (!selector.enable)
+      return;
     // Clear the overflow indicator
     writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, 1<<ctr);
     writemsr(MSR_INTEL_PERF_CNT0 + ctr, -val);
@@ -199,7 +213,7 @@ class no_pmu : public pmu
   }
 
   void 
-  configure(int ctr, uint64_t sel, uint64_t val) override
+  configure(int ctr, const perf_selector &selector) override
   {
   }
 
@@ -306,9 +320,9 @@ void
 sampconf(void)
 {
   pushcli();
-  if (selector & PERF_SEL_INT)
+  if (selector.period)
     pmulog[myid()].count = 0;
-  pmu->configure(0, selector, period);
+  pmu->configure(0, selector);
   popcli();
 }
 
@@ -341,13 +355,13 @@ sampintr(struct trapframe *tf)
   if (overflow & (1<<0)) {
     ++r;
     if (pmulog->log(tf))
-      pmu->configure(0, selector, period);
+      pmu->configure(0, selector);
   }
 
   if (overflow & (1<<1)) {
     ++r;
     wdcheck(tf);
-    pmu->configure(1, wd_selector, wd_period);
+    pmu->configure(1, wd_selector);
   }
 
   return r;
@@ -447,25 +461,10 @@ sampread(mdev*, char *dst, u32 off, u32 n)
 static int
 sampwrite(mdev*, const char *buf, u32 off, u32 n)
 {
-  struct sampconf *conf;
-
-  if (n != sizeof(*conf))
+  if (n != sizeof(perf_selector))
     return -1;
-  conf = (struct sampconf*)buf;
-
-  switch(conf->op) {
-  case SAMP_ENABLE:
-    selector = conf->selector;
-    period = conf->period;
-    sampstart();
-    break;
-  case SAMP_DISABLE:
-    selector = 0;
-    period = 0;
-    sampstart();
-    break;
-  }
-
+  selector = *(struct perf_selector*)buf;
+  sampstart();
   return n;
 }
 
@@ -595,7 +594,7 @@ initwd(void)
 {
   wdpoke();
   pushcli();
-  if (wd_selector)
-    pmu->configure(1, wd_selector, wd_period);
+  if (wd_selector.enable)
+    pmu->configure(1, wd_selector);
   popcli();
 }
