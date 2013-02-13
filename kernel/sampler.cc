@@ -55,6 +55,12 @@ public:
   virtual void initcore() { }
   virtual void configure(int counter, const perf_selector &selector) = 0;
   virtual uint64_t get_overflow() = 0;
+  // Pause all counters
+  virtual void pause() = 0;
+  // Re-arm the counters in mask (after they've overflowed)
+  virtual void rearm(uint64_t mask) = 0;
+  // Enable all enabled counters
+  virtual void resume() = 0;
 };
 
 class pmu *pmu;
@@ -136,6 +142,30 @@ public:
     }
     return ovf;
   }
+
+  void
+  pause() override
+  {
+    for (size_t i = 0; i < MAX_PMCS; ++i)
+      writemsr(MSR_AMD_PERF_SEL0 + i,
+               local->sel[i].selector & ~(uint64_t)PERF_SEL_ENABLE);
+  }
+
+  void
+  rearm(uint64_t mask) override
+  {
+    for (size_t i = 0; i < MAX_PMCS; ++i)
+      if (mask & (1ull << i) && (local->sel[i].selector & PERF_SEL_ENABLE))
+        writemsr(MSR_AMD_PERF_CNT0 + i, -local->sel[i].period);
+  }
+
+  void
+  resume() override
+  {
+    for (size_t i = 0; i < MAX_PMCS; ++i)
+      if (local->sel[i].selector & PERF_SEL_ENABLE)
+        writemsr(MSR_AMD_PERF_SEL0 + i, local->sel[i].selector);
+  }
 };
 
 //
@@ -208,9 +238,34 @@ public:
   uint64_t
   get_overflow() override
   {
-    auto ovf = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
-    writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, ovf & 0xffffffff);
-    return ovf;
+    return readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
+  }
+
+  void
+  pause() override
+  {
+    writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, 0);
+  }
+
+  void
+  rearm(uint64_t mask) override
+  {
+    // Reset counter values
+    for (size_t i = 0; i < MAX_PMCS; ++i)
+      if (mask & (1ull << i))
+        writemsr(MSR_INTEL_PERF_CNT0 + i, -local->sel[i].period);
+    // Clear overflow status
+    writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, mask & 0xffffffff);
+  }
+
+  void
+  resume() override
+  {
+    uint64_t mask = 0;
+    for (size_t i = 0; i < MAX_PMCS; ++i)
+      if (local->sel[i].selector & PERF_SEL_ENABLE)
+        mask |= 1ull << i;
+    writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, mask);
   }
 };
 
@@ -235,6 +290,21 @@ class no_pmu : public pmu
   get_overflow() override
   {
     return 0;
+  }
+
+  void
+  pause() override
+  {
+  }
+
+  void
+  rearm(uint64_t mask) override
+  {
+  }
+
+  void
+  resume() override
+  {
   }
 };
 
@@ -361,7 +431,11 @@ sampintr(struct trapframe *tf)
   // Acquire locks that we only acquire during NMI.
   // NMIs are disabled until the next iret.
 
-  // Linux unmasks LAPIC.PC after every interrupt (perf_event.c)
+  // Pause overflow events so overflows don't change under us and so
+  // we don't sample the sampler.
+  pmu->pause();
+
+  // Performance events mask LAPIC.PC.  Unmask it.
   lapic->mask_pc(false);
 
   u64 overflow = pmu->get_overflow();
@@ -370,9 +444,13 @@ sampintr(struct trapframe *tf)
     if (overflow & (1ull << i)) {
       ++r;
       selectors[i].on_overflow(i, tf);
-      pmu->configure(i, selectors[i]);
     }
   }
+
+  // Re-arm overflowed counters
+  pmu->rearm(overflow);
+
+  pmu->resume();
 
   return r;
 }
@@ -380,8 +458,10 @@ sampintr(struct trapframe *tf)
 static void
 samplog(int pmc, struct trapframe *tf)
 {
-  if (!pmulog->log(tf))
+  if (!pmulog->log(tf)) {
     selectors[pmc].enable = false;
+    pmu->configure(pmc, selectors[pmc]);
+  }
 }
 
 static int
