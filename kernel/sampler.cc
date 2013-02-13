@@ -74,7 +74,7 @@ private:
   bool evict(struct pmuevent *event, size_t reserve);
 
 public:
-  bool log(struct trapframe *tf);
+  bool log(const struct pmuevent &ev);
   void flush();
 } __mpalign__;
 
@@ -319,7 +319,7 @@ class no_pmu : public pmu
 //
 
 static uintptr_t
-samphash(struct pmuevent *ev)
+samphash(const struct pmuevent *ev)
 {
   uintptr_t h = ev->rip ^ ev->idle;
   for (auto t : ev->trace)
@@ -329,7 +329,7 @@ samphash(struct pmuevent *ev)
 
 // Test if two events are the same except for their count.
 static bool
-sampequal(struct pmuevent *a, struct pmuevent *b)
+sampequal(const struct pmuevent *a, const struct pmuevent *b)
 {
   if (a->rip != b->rip || a->idle != b->idle)
     return false;
@@ -357,19 +357,14 @@ pmulog::evict(struct pmuevent *event, size_t reserve)
 // Record tf in the log.  Returns true if there is still room in the
 // log, or false if the log is full.
 bool
-pmulog::log(struct trapframe *tf)
+pmulog::log(const struct pmuevent &ev)
 {
-  struct pmuevent ev;
-  ev.idle = (myproc() == idleproc());
-  ev.rip = tf->rip;
-  getcallerpcs((void*)tf->rbp, ev.trace, NELEM(ev.trace));
-
   // Put event in the hash table
   auto bucket = &hash[samphash(&ev) % (1 << LOG2_HASH_BUCKETS)];
   if (bucket->count) {
     // Bucket is in use.  Is it the same sample?
     if (sampequal(&ev, bucket)) {
-      ++bucket->count;
+      bucket->count += ev.count;
       return true;
     } else {
       // Evict the sample currently in the hash table.  Reserve enough
@@ -379,7 +374,6 @@ pmulog::log(struct trapframe *tf)
         return false;
     }
   }
-  ev.count = 1;
   *bucket = ev;
   return true;
 }
@@ -464,7 +458,13 @@ sampintr(struct trapframe *tf)
 static void
 samplog(int pmc, struct trapframe *tf)
 {
-  if (!pmulog->log(tf)) {
+  struct pmuevent ev;
+  ev.idle = (myproc() == idleproc());
+  ev.count = 1;
+  ev.rip = tf->rip;
+  getcallerpcs((void*)tf->rbp, ev.trace, NELEM(ev.trace));
+
+  if (!pmulog->log(ev)) {
     selectors[pmc].enable = false;
     pmu->configure(pmc, selectors[pmc]);
   }
