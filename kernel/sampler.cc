@@ -37,21 +37,7 @@ static void enable_nehalem_workaround(void);
 static void wdcheck(struct trapframe*);
 
 static perf_selector selector;
-
-static const perf_selector wd_selector =
-  {
-#if defined(HW_josmp) || defined(HW_tom)
-    true,
-    0x76 | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT),
-#elif defined(HW_ben)
-    true,
-    0x3c | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT),
-#else
-    false,
-    0,
-#endif
-    24000000000
-  };
+static perf_selector wd_selector;
 
 class pmu
 {
@@ -591,9 +577,30 @@ wdpoke(void)
 void
 initwd(void)
 {
+  // We go through here on CPU 1 first since CPU 0 is still
+  // bootstrapping.
+  static bool configured;
+  if (!configured) {
+    extern uint64_t cpuhz;
+    configured = true;
+    if (dynamic_cast<intel_pmu*>(pmu)) {
+      wd_selector.selector =
+        0x3c | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT);
+    } else if (dynamic_cast<amd_pmu*>(pmu)) {
+      wd_selector.selector =
+        0x76 | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT);
+    } else {
+      return;
+    }
+    wd_selector.enable = true;
+    wd_selector.period = cpuhz;
+    console.println("wd: Enabled");
+  } else if (!wd_selector.enable) {
+    return;
+  }
+
   wdpoke();
   pushcli();
-  if (wd_selector.enable)
-    pmu->configure(1, wd_selector);
+  pmu->configure(1, wd_selector);
   popcli();
 }
