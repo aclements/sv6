@@ -56,118 +56,163 @@ static const u64 wd_selector =
 static const u64 wd_selector = 0;
 #endif
 
+static void enable_nehalem_workaround(void);
 static void wdcheck(struct trapframe*);
 
-struct pmu {
-  void (*config)(u64 ctr, u64 sel, u64 val);  
-  u64 (*get_overflow)(void);
-  u64 cntval_bits;
-  u64 max_period;
+class pmu
+{
+public:
+  virtual ~pmu() { };
+
+  virtual bool try_init() = 0;
+  virtual void initcore() { }
+  virtual void configure(int counter, uint64_t selector, uint64_t value) = 0;
+  virtual uint64_t get_overflow() = 0;
 };
-struct pmu pmu;
+
+class pmu *pmu;
 
 struct pmulog {
   u64 count;
   struct pmuevent *segments[LOG_SEGMENTS_PER_CPU];
   struct pmuevent *hash;
-  __padout__;
+
+private:
+  bool evict(struct pmuevent *event, size_t reserve);
+
+public:
+  bool log(struct trapframe *tf);
+  void flush();
 } __mpalign__;
 
-struct pmulog pmulog[NCPU] __mpalign__;
+percpu<struct pmulog, percpu_safety::internal> pmulog;
 
 //
-// AMD stuff
+// AMD PMU
 //
-static void
-amdconfig(u64 ctr, u64 sel, u64 val)
-{
-  writemsr(MSR_AMD_PERF_SEL0 + ctr, 0);
-  writemsr(MSR_AMD_PERF_CNT0 + ctr, val);
-  writemsr(MSR_AMD_PERF_SEL0 + ctr, sel);
-}
 
-static u64
-amd_get_overflow(void)
+class amd_pmu : public pmu
 {
-  u64 ovf = 0;
-  for (int pmc = 0; pmc < 2; ++pmc) {
-    u64 cnt = rdpmc(pmc);
-    if ((cnt & (1ull << (pmu.cntval_bits - 1))) == 0)
-      ovf |= 1 << pmc;
+  enum {
+    COUNTER_BITS = 48,
+    MAX_PERIOD = (1ull << 47) - 1,
+  };
+
+public:
+  bool
+  try_init() override
+  {
+    return true;
   }
-  return ovf;
-}
 
-struct pmu amdpmu = { amdconfig, amd_get_overflow, 48, (1ull << 47) - 1 };
+  void
+  configure(int ctr, uint64_t sel, uint64_t val) override
+  {
+    if (val > MAX_PERIOD)
+      val = MAX_PERIOD;
+    writemsr(MSR_AMD_PERF_SEL0 + ctr, 0);
+    writemsr(MSR_AMD_PERF_CNT0 + ctr, -val);
+    writemsr(MSR_AMD_PERF_SEL0 + ctr, sel);
+  }
+
+  uint64_t
+  get_overflow() override
+  {
+    uint64_t ovf = 0;
+    for (int pmc = 0; pmc < 2; ++pmc) {
+      uint64_t cnt = rdpmc(pmc);
+      if ((cnt & (1ull << (COUNTER_BITS - 1))) == 0)
+        ovf |= 1 << pmc;
+    }
+    return ovf;
+  }
+};
 
 //
-// Intel stuff
+// Intel PMU
 //
-static void
-intelconfig(u64 ctr, u64 sel, u64 val)
-{
-  writemsr(MSR_INTEL_PERF_SEL0 + ctr, 0);
-  // Clear the overflow indicator
-  writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, 1<<ctr);
-  writemsr(MSR_INTEL_PERF_CNT0 + ctr, val);
-  writemsr(MSR_INTEL_PERF_SEL0 + ctr, sel);
-}
 
-static u64
-intel_get_overflow(void)
+class intel_pmu : public pmu
 {
-  auto ovf = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
-  writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, ovf & 0xffffffff);
-  return ovf;
-}
+  enum {
+    // From Intel Arch. Vol 3b:
+    //   "On write operations, the lower 32-bits of the MSR may be
+    //   written with any value, and the high-order bits are
+    //   sign-extended from the value of bit 31."
+    MAX_PERIOD = (1ull << 31) - 1,
+  };
 
-// We fill in cntval_bits at boot.
-// From Intel Arch. Vol 3b:
-//   "On write operations, the lower 32-bits of the MSR may be written
-//   with any value, and the high-order bits are sign-extended from
-//   the value of bit 31."
-struct pmu intelpmu = { intelconfig, intel_get_overflow, 0, (1ull << 31) - 1 };
+  int num_pmcs;
+
+public:
+  bool
+  try_init() override
+  {
+    uint32_t eax;
+    cpuid(CPUID_PERFMON, &eax, 0, 0, 0);
+    if (PERFMON_EAX_VERSION(eax) < 2) {
+      cprintf("initsamp: Unsupported performance monitor version %d\n",
+              PERFMON_EAX_VERSION(eax));
+      return false;
+    }
+    num_pmcs = PERFMON_EAX_NUM_COUNTERS(eax);
+    return true;
+  }
+
+  void
+  initcore() override
+  {
+    enable_nehalem_workaround();
+  }
+
+  void
+  configure(int ctr, uint64_t sel, uint64_t val) override
+  {
+    if (val > MAX_PERIOD)
+      val = MAX_PERIOD;
+    writemsr(MSR_INTEL_PERF_SEL0 + ctr, 0);
+    // Clear the overflow indicator
+    writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, 1<<ctr);
+    writemsr(MSR_INTEL_PERF_CNT0 + ctr, -val);
+    writemsr(MSR_INTEL_PERF_SEL0 + ctr, sel);
+  }
+
+  uint64_t
+  get_overflow() override
+  {
+    auto ovf = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS);
+    writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, ovf & 0xffffffff);
+    return ovf;
+  }
+};
 
 //
 // No PMU
 //
-static void
-nopmuconfig(u64 ctr, u64 sel, u64 val)
-{
-}
 
-struct pmu nopmu = { nopmuconfig, 0, (1ull << 31) - 1 };
-
-static void
-pmuconfig(u64 ctr, u64 sel, u64 val)
+class no_pmu : public pmu
 {
-  if (val > pmu.max_period)
-    val = pmu.max_period;
-  pmu.config(ctr, sel, -val);
-}
-
-void
-sampconf(void)
-{
-  pushcli();
-  if (selector & PERF_SEL_INT)
-    pmulog[myid()].count = 0;
-  pmuconfig(0, selector, period);
-  popcli();
-}
-
-void
-sampstart(void)
-{
-  pushcli();
-  for(struct cpu *c = cpus; c < cpus+ncpu; c++) {
-    if(c == cpus+mycpu()->id)
-      continue;
-    lapic->send_sampconf(c);
+  bool
+  try_init() override
+  {
+    return true;
   }
-  sampconf();
-  popcli();
-}
+
+  void 
+  configure(int ctr, uint64_t sel, uint64_t val) override
+  {
+  }
+
+  uint64_t
+  get_overflow() override
+  {
+    return 0;
+  }
+};
+
+//
+// Event log
+//
 
 static uintptr_t
 samphash(struct pmuevent *ev)
@@ -191,21 +236,24 @@ sampequal(struct pmuevent *a, struct pmuevent *b)
 }
 
 // Evict an event from the hash table.  Does *not* clear the hash
-// table entry.
-static int
-sampevict(struct pmulog *l, struct pmuevent *event, size_t reserve)
+// table entry.  Returns true if there is still room in the log, or
+// false if the log is full.
+bool
+pmulog::evict(struct pmuevent *event, size_t reserve)
 {
-  if (l->count == LOG_SEGMENTS_PER_CPU * LOG_SEGMENT_COUNT - reserve)
-    return 0;
-  size_t segment = l->count / LOG_SEGMENT_COUNT;
+  if (count == LOG_SEGMENTS_PER_CPU * LOG_SEGMENT_COUNT - reserve)
+    return false;
+  size_t segment = count / LOG_SEGMENT_COUNT;
   assert(segment < LOG_SEGMENTS_PER_CPU);
-  l->segments[segment][l->count % LOG_SEGMENT_COUNT] = *event;
-  l->count++;
-  return 1;
+  segments[segment][count % LOG_SEGMENT_COUNT] = *event;
+  count++;
+  return true;
 }
 
-static int
-samplog(struct trapframe *tf)
+// Record tf in the log.  Returns true if there is still room in the
+// log, or false if the log is full.
+bool
+pmulog::log(struct trapframe *tf)
 {
   struct pmuevent ev;
   ev.idle = (myproc() == idleproc());
@@ -213,42 +261,68 @@ samplog(struct trapframe *tf)
   getcallerpcs((void*)tf->rbp, ev.trace, NELEM(ev.trace));
 
   // Put event in the hash table
-  auto l = &pmulog[mycpu()->id];
-  auto bucket = &l->hash[samphash(&ev) % (1 << LOG2_HASH_BUCKETS)];
+  auto bucket = &hash[samphash(&ev) % (1 << LOG2_HASH_BUCKETS)];
   if (bucket->count) {
     // Bucket is in use.  Is it the same sample?
     if (sampequal(&ev, bucket)) {
       ++bucket->count;
-      return 1;
+      return true;
     } else {
       // Evict the sample currently in the hash table.  Reserve enough
       // space in the log that we can flush the whole hash table when
       // the sampler is disabled.
-      if (!sampevict(l, bucket, 1 << LOG2_HASH_BUCKETS))
-        return 0;
+      if (!evict(bucket, 1 << LOG2_HASH_BUCKETS))
+        return false;
     }
   }
   ev.count = 1;
   *bucket = ev;
-  return 1;
+  return true;
 }
 
 // Flush everything from the hash table in l.
-static void
-sampflush(struct pmulog *l)
+void
+pmulog::flush()
 {
   size_t failed = 0;
   for (int i = 0; i < 1<<LOG2_HASH_BUCKETS; ++i) {
-    if (l->hash[i].count) {
-      if (!sampevict(l, &l->hash[i], 0))
+    if (hash[i].count) {
+      if (!evict(&hash[i], 0))
         ++failed;
-      l->hash[i].count = 0;
+      hash[i].count = 0;
     }
   }
   if (failed)
     // This shouldn't happen because we reserved enough space for a
     // full flush while we were running.
     swarn.println("sampler: Failed to flush ", failed, " event(s)");
+}
+
+//
+// Configuration and interrupt handling
+//
+
+void
+sampconf(void)
+{
+  pushcli();
+  if (selector & PERF_SEL_INT)
+    pmulog[myid()].count = 0;
+  pmu->configure(0, selector, period);
+  popcli();
+}
+
+void
+sampstart(void)
+{
+  pushcli();
+  for(struct cpu *c = cpus; c < cpus+ncpu; c++) {
+    if(c == cpus+mycpu()->id)
+      continue;
+    lapic->send_sampconf(c);
+  }
+  sampconf();
+  popcli();
 }
 
 int
@@ -262,18 +336,18 @@ sampintr(struct trapframe *tf)
   // Linux unmasks LAPIC.PC after every interrupt (perf_event.c)
   lapic->mask_pc(false);
 
-  u64 overflow = pmu.get_overflow();
+  u64 overflow = pmu->get_overflow();
 
   if (overflow & (1<<0)) {
     ++r;
-    if (samplog(tf))
-      pmuconfig(0, selector, period);
+    if (pmulog->log(tf))
+      pmu->configure(0, selector, period);
   }
 
   if (overflow & (1<<1)) {
     ++r;
     wdcheck(tf);
-    pmuconfig(1, wd_selector, wd_period);
+    pmu->configure(1, wd_selector, wd_period);
   }
 
   return r;
@@ -288,7 +362,7 @@ readlog(char *dst, u32 off, u32 n)
   u64 cur = 0;
 
   for (p = &pmulog[0]; p != q && n != 0; p++) {
-    sampflush(p);
+    p->flush();
     u64 len = p->count * sizeof(struct pmuevent);
     if (cur <= off && off < cur+len) {
       u64 boff = off-cur;
@@ -437,6 +511,10 @@ enable_nehalem_workaround(void)
 void
 initsamp(void)
 {
+  static class amd_pmu amd_pmu;
+  static class intel_pmu intel_pmu;
+  static class no_pmu no_pmu;
+
   if (myid() == 0) {
     u32 name[4];
     char *s = (char *)name;
@@ -445,22 +523,19 @@ initsamp(void)
     cpuid(0, 0, &name[0], &name[2], &name[1]);
     if (VERBOSE)
       cprintf("%s\n", s);
-    pmu = nopmu;
-    if (!strcmp(s, "AuthenticAMD"))
-      pmu = amdpmu;
-    else if (!strcmp(s, "GenuineIntel")) {
-      u32 eax;
-      cpuid(CPUID_PERFMON, &eax, 0, 0, 0);
-      if (PERFMON_EAX_VERSION(eax) < 2) {
-        cprintf("initsamp: Unsupported performance monitor version %d\n",
-                PERFMON_EAX_VERSION(eax));
-      } else {
-        pmu = intelpmu;
-        pmu.cntval_bits = PERFMON_EAX_NUM_COUNTERS(eax);
-      }
-    } else
-      cprintf("initsamp: Unknown Manufacturer\n");
+    if (strcmp(s, "AuthenticAMD") == 0 && amd_pmu.try_init())
+      pmu = &amd_pmu;
+    else if (strcmp(s, "GenuineIntel") == 0 && intel_pmu.try_init())
+      pmu = &intel_pmu;
+    else {
+      cprintf("initsamp: Unknown manufacturer\n");
+      pmu = &no_pmu;
+      return;
+    }
   }
+
+  if (pmu == &no_pmu)
+    return;
 
   // enable RDPMC at CPL > 0
   u64 cr4 = rcr4();
@@ -478,8 +553,7 @@ initsamp(void)
     memset(l->hash, 0, (1<<LOG2_HASH_BUCKETS) * sizeof(pmuevent));
   }
 
-  if (pmu.config == intelpmu.config)
-    enable_nehalem_workaround();
+  pmu->initcore();
 
   devsw[MAJ_SAMPLER].write = sampwrite;
   devsw[MAJ_SAMPLER].read = sampread;
@@ -520,6 +594,6 @@ initwd(void)
   wdpoke();
   pushcli();
   if (wd_selector)
-    pmuconfig(1, wd_selector, wd_period);
+    pmu->configure(1, wd_selector, wd_period);
   popcli();
 }
