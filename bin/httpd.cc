@@ -39,6 +39,7 @@ error(int s, int code)
   } errors[] = {
     { 400, "Bad Request" },
     { 404, "Page Not Found" },
+    { 500, "Internal Server Error" },
   };
   
   char buf[512];
@@ -195,7 +196,7 @@ resp_get(int s, const char *url)
 
 error:
   close(fd);
-  error(s, -r);
+  error(s, 500);
 }
 
 static void
@@ -243,7 +244,7 @@ resp_put(int s, const char *url, int content_length)
 
  error:
   close(fd);
-  error(s, -r);
+  error(s, 500);
 }
 
 static int
