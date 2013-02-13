@@ -271,6 +271,7 @@ main(int ac, char **av)
   }
   header = (struct logheader*)x;
 
+  uint64_t samples = 0, idle_samples = 0;
   std::unordered_map<struct pmuevent*, int, pmuevent_ops, pmuevent_ops> map;
   for (u32 i = 0; i < header->ncpus; i++) {
     struct pmuevent *p;
@@ -279,6 +280,9 @@ main(int ac, char **av)
     p = (struct pmuevent*)(x + header->cpu[i].offset);
     q = (struct pmuevent*)(x + header->cpu[i].offset + header->cpu[i].size);
     for (; p < q; p++) {
+      if (p->idle)
+        idle_samples += p->count;
+      samples += p->count;
       if (ignoreidle_mode && p->idle)
         continue;
       auto it = map.find(p);
@@ -295,6 +299,9 @@ main(int ac, char **av)
     sorted[p.second] = p.first;
     total += p.second;
   }
+
+  printf("total samples: %" PRIu64 "  idle samples: %" PRIu64 " (%d%%)\n\n",
+         samples, idle_samples, (int)(idle_samples * 100 / samples));
 
   for (std::pair<const int, struct pmuevent*> &p : sorted)
     print_entry(addr2line, p.first, total, p.second);
