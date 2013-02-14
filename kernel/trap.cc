@@ -102,15 +102,30 @@ trap(struct trapframe *tf)
 {
   if (tf->trapno == T_NMI) {
     static percpu<uintptr_t> lastpc;
-    static percpu<bool> swallow;
+    static percpu<int> swallow;
 
     // The only locks that we can acquire during NMI are ones
     // we acquire only during NMI.
 
-    // Is this the second or more NMI we've received in a row?  If so,
-    // we might have handled all of the NMI sources the first time.
+    // NMIs are tricky.  On the one hand, they're edge triggered,
+    // which means we're not guaranteed to get an NMI interrupt for
+    // every NMI event, so we have to proactively handle all of the
+    // NMI sources we can.  On the other hand, they're also racy,
+    // since an NMI source may successfully queue an NMI behind an
+    // existing NMI, but we may detect that source when handling the
+    // first NMI.  Our solution is to detect back-to-back NMIs and
+    // keep track of how many NMI sources we've handled: as long as
+    // the number of back-to-back NMIs in a row never exceeds the
+    // number of NMI sources we've handled across these back-to-back
+    // NMIs, we're not concerned, even if an individual NMI doesn't
+    // detect any active sources.
+
+    // Is this a back-to-back NMI?  If so, we might have handled all
+    // of the NMI sources already.
     bool repeat = (*lastpc == tf->rip);
     *lastpc = tf->rip;
+    if (!repeat)
+      *swallow = 0;
 
     // Handle NMIs
     int handled = 0;
@@ -120,12 +135,13 @@ trap(struct trapframe *tf)
     // be EOI'd (and fixed mode interrupts can't be programmed to
     // produce an NMI vector).
 
-    if (handled == 0 && !(repeat && *swallow))
+    if (handled == 0 && !*swallow)
       panic("NMI");
 
-    // If we handled more than one NMI source, we might still have an
-    // NMI pending from the second source.
-    *swallow = (handled > 1);
+    // This NMI accounts for one handled event, so we can swallow up
+    // to handled - 1 more back-to-back NMIs after this one.
+    *swallow += handled - 1;
+
     return;
   }
 
