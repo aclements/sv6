@@ -116,7 +116,7 @@ idleloop(void)
     finishzombies();
 
     if (steal() == 0) {
-      int worked;
+      int worked, did_work = 0;
       do {
         assert(mycpu()->ncli == 0);
 
@@ -135,12 +135,19 @@ idleloop(void)
         }
 
         worked = wq_trywork();
+        did_work += worked;
         // If we are no longer the idle thread, exit
         if (worked && myidle->cur != myproc())
           exit();
       } while(worked);
       sti();
-      nop_pause();
+      if (did_work)
+        nop_pause();
+      else
+        // XXX(Austin) This will prevent us from immediately picking
+        // up work that's trying to push itself to this core (pinned
+        // thread or wqcrit).  Use an IPI to poke idle cores.
+        asm volatile("hlt");
     }
   }
 }
