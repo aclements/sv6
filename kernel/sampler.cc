@@ -475,22 +475,22 @@ class no_pmu : public pmu
 static uintptr_t
 samphash(const struct pmuevent *ev)
 {
-  uintptr_t h = ev->rip ^ ev->idle;
-  for (auto t : ev->trace)
-    h ^= t;
-  return h;
+  struct pmuevent ev2 = *ev;
+  ev2.count = 0;
+  uintptr_t h = 0;
+  for (uintptr_t *word = (uintptr_t*)&ev2, *end = (uintptr_t*)(&ev2 + 1);
+       word < end; ++word)
+    h ^= *word;
+  return h ^ (h >> 32);
 }
 
 // Test if two events are the same except for their count.
 static bool
 sampequal(const struct pmuevent *a, const struct pmuevent *b)
 {
-  if (a->rip != b->rip || a->idle != b->idle)
-    return false;
-  for (int i = 0; i < NELEM(a->trace); ++i)
-    if (a->trace[i] != b->trace[i])
-      return false;
-  return true;
+  struct pmuevent b2 = *b;
+  b2.count = a->count;
+  return memcmp(a, &b2, sizeof *a) == 0;
 }
 
 // Evict an event from the hash table.  Does *not* clear the hash
@@ -612,7 +612,7 @@ sampintr(struct trapframe *tf)
 static void
 samplog(int pmc, struct trapframe *tf)
 {
-  struct pmuevent ev;
+  struct pmuevent ev{};
   ev.idle = (myproc() == idleproc());
   ev.count = 1;
   ev.rip = tf->rip;
