@@ -11,6 +11,7 @@ conf(int fd, bool enable, u64 selector = 0, u64 period = 0)
   struct perf_selector c = {
   enable: enable,
   precise: false,
+  load_latency: 0,
   selector: selector,
   period: period,
   };

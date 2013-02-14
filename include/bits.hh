@@ -76,8 +76,9 @@
 #define MSR_INTEL_PERF_GLOBAL_CTRL     0x38f
 #define MSR_INTEL_PERF_GLOBAL_OVF_CTRL 0x390
 
-#define MSR_INTEL_PEBS_ENABLE       0x3f1
 #define MSR_INTEL_PERF_CAPABILITIES 0x345 // RO
+#define MSR_INTEL_PEBS_ENABLE       0x3f1
+#define MSR_INTEL_PEBS_LD_LAT       0x3f6
 #define MSR_INTEL_DS_AREA           0x600
 
 // Common event-select bits

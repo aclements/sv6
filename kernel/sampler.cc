@@ -222,8 +222,8 @@ class intel_pmu : public pmu
 
   struct local
   {
-    // Canonicalized selectors.  Only selector, period, and precise
-    // are used.
+    // Canonicalized selectors.  Only selector, period, precise, and
+    // load_latency are used.
     perf_selector sel[MAX_PMCS];
     // Debug store area for PEBS
     struct ds_area ds_area;
@@ -285,38 +285,48 @@ public:
       (selector.selector & ~(uint64_t)(PERF_SEL_INT | PERF_SEL_ENABLE));
     uint64_t val = std::min(selector.period, (uint64_t)MAX_PERIOD);
     bool precise = selector.precise && have_pebs && val;
+    uint16_t load_latency = selector.load_latency;
     if (val && !precise)
       sel |= PERF_SEL_INT;
     if (selector.enable)
       sel |= PERF_SEL_ENABLE;
+    if (!precise || pebs_version < 1 || (sel & 0xFF80FFFF) != 0x100b)
+      load_latency = 0;
+    else if (load_latency)
+      load_latency = std::max((int)load_latency, 4);
+
+    if (load_latency != selector.load_latency)
+      console.println("sampler: Requested ", selector.load_latency,
+                      " got ", selector.load_latency);
 
     local->sel[ctr].selector = sel;
     local->sel[ctr].period = val;
     local->sel[ctr].precise = precise;
+    local->sel[ctr].load_latency = load_latency;
 
     writemsr(MSR_INTEL_PERF_SEL0 + ctr, 0);
     if (!selector.enable)
       return;
+    pause();
     // Configure PEBS
     if (have_pebs) {
       if (precise) {
         if (!local->ds_area.pebs_base)
           pebs_init();
-        // Enable PEBS
-        writemsr(MSR_INTEL_PEBS_ENABLE,
-                 readmsr(MSR_INTEL_PEBS_ENABLE) | (1 << ctr));
+        if (load_latency)
+          // The CPU will record loads > what we set in the MSR, but
+          // load_latency is the more natural >=.
+          writemsr(MSR_INTEL_PEBS_LD_LAT, load_latency - 1);
         // Set automatic reset value
         local->ds_area.pebs_reset[ctr] = -val;
-      } else {
-        // Disable PEBS
-        writemsr(MSR_INTEL_PEBS_ENABLE,
-                 readmsr(MSR_INTEL_PEBS_ENABLE) & ~(1 << ctr));
       }
     }
     // Clear the overflow indicator
     writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, 1<<ctr);
     writemsr(MSR_INTEL_PERF_CNT0 + ctr, -val);
     writemsr(MSR_INTEL_PERF_SEL0 + ctr, sel);
+    // Enable appropriate counters, PEBS, and LL
+    resume();
   }
 
   uint64_t
@@ -365,6 +375,8 @@ public:
         mask |= 1ull << i;
       if (local->sel[i].precise)
         pebs_mask |= 1ull << i;
+      if (local->sel[i].load_latency)
+        pebs_mask |= 1ull << (32 + i);
     }
     if (pebs_mask)
       writemsr(MSR_INTEL_PEBS_ENABLE, pebs_mask);
@@ -385,10 +397,12 @@ public:
     if (have_pebs) {
       console.println(
         "  PEBSEN ", shex(readmsr(MSR_INTEL_PEBS_ENABLE)), "\n",
-        "  PEBS base ", (void*)local->ds_area.pebs_base,
-        " index ", (void*)local->ds_area.pebs_index,
-        " limit ", (void*)local->ds_area.pebs_limit,
-        " thr ", (void*)local->ds_area.pebs_threshold);
+        "  PEBS base  ", (void*)local->ds_area.pebs_base,
+        " index  ", (void*)local->ds_area.pebs_index, "\n"
+        "       limit ", (void*)local->ds_area.pebs_limit,
+        " thresh ", (void*)local->ds_area.pebs_threshold);
+      if (pebs_version >= 1)
+        console.println("  PEBS_LD_LAT ", readmsr(MSR_INTEL_PEBS_LD_LAT));
     }
   }
 
@@ -420,6 +434,11 @@ private:
     while (pos < ds->pebs_index) {
       auto record = (pebs_record_v1*)pos;
       ev.rip = record->rip;
+      if (pebs_version >= 1) {
+        ev.latency = record->latency;
+        ev.data_source = record->data_source;
+        ev.load_address = record->data_linear_address;
+      }
       pmulog->log(ev);
       pos += pebs_record_size;
     }
