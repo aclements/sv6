@@ -5,6 +5,9 @@
 struct perf_selector
 {
   bool enable : 1;
+  // Enable precise sampling, if possible.  This is incompatible with
+  // recording stack traces.
+  bool precise : 1;
   // The event selector code.  This is architecture-specific, but
   // generally includes an event number, a unit mask, and various
   // other flags.  Any interrupt flag is ignored.

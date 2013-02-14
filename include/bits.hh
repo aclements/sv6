@@ -53,6 +53,9 @@
 #define MSR_CSTAR       0xc0000083
 #define MSR_SFMASK      0xc0000084
 
+#define MSR_INTEL_MISC_ENABLE 0x1a0
+#define MISC_ENABLE_PEBS_UNAVAILABLE (1<<12) // Read-only
+
 // AMD performance event-select registers
 #define MSR_AMD_PERF_SEL0  0xC0010000
 #define MSR_AMD_PERF_SEL1  0xC0010001
@@ -69,8 +72,13 @@
 // Intel performance event-count registers
 #define MSR_INTEL_PERF_CNT0 0x000000c1
 #define MSR_INTEL_PERF_GLOBAL_STATUS   0x38e
+#define PERF_GLOBAL_STATUS_PEBS        (1ull << 62)
 #define MSR_INTEL_PERF_GLOBAL_CTRL     0x38f
 #define MSR_INTEL_PERF_GLOBAL_OVF_CTRL 0x390
+
+#define MSR_INTEL_PEBS_ENABLE       0x3f1
+#define MSR_INTEL_PERF_CAPABILITIES 0x345 // RO
+#define MSR_INTEL_DS_AREA           0x600
 
 // Common event-select bits
 #define PERF_SEL_USR        (1ULL << 16)
@@ -86,9 +94,11 @@
 #define FEATURE_EAX_FAMILY(x) \
   ((((x) >> 8) & 0xF) + (((x) & 0xf00) == 0xf00 ? (((x) >> 20) & 0xFF) : 0))
 #define FEATURE_ECX_MWAIT   (1 << 3)
+#define FEATURE_ECX_PDCM    (1 << 15) // Perfmon and debug
 #define FEATURE_ECX_X2APIC  (1 << 21)
 #define FEATURE_EBX_APIC(x) (((x) >> 24) & 0xff)
 #define FEATURE_EDX_APIC    (1 << 9) // "APIC on chip"
+#define FEATURE_EDX_DS      (1 << 21) // Debug store
 
 // CPUID function 0x00000005
 #define CPUID_MWAIT         0x00000005

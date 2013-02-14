@@ -54,7 +54,11 @@ public:
   virtual bool try_init() = 0;
   virtual void initcore() { }
   virtual void configure(int counter, const perf_selector &selector) = 0;
-  virtual uint64_t get_overflow() = 0;
+  // Return the bit mask of overflowed interrupting counters.  This
+  // may also handle other overflow conditions internally; if these
+  // cause NMI's, this should increment *handled for each
+  // NMI-producing event this handles.
+  virtual uint64_t get_overflow(int *handled) = 0;
   // Pause all counters
   virtual void pause() = 0;
   // Re-arm the counters in mask (after they've overflowed)
@@ -132,7 +136,7 @@ public:
   }
 
   uint64_t
-  get_overflow() override
+  get_overflow(int *handled) override
   {
     uint64_t ovf = 0;
     for (int pmc = 0; pmc < MAX_PMCS; ++pmc) {
@@ -184,15 +188,50 @@ class intel_pmu : public pmu
     MAX_PERIOD = (1ull << 31) - 1,
   };
 
+  struct ds_area
+  {
+    char *bts_base;
+    char *bts_index;
+    char *bts_limit;
+    char *bts_threshold;
+
+    char *pebs_base;
+    char *pebs_index;
+    char *pebs_limit;
+    char *pebs_threshold;
+    uint64_t pebs_reset[4];
+
+    uint64_t reserved;
+  };
+
+  struct pebs_record_v0
+  {
+    uint64_t rflags, rip, rax, rbx, rcx, rdx, rsi, rdi, ebp, esp;
+    uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+  };
+
+  struct pebs_record_v1 : public pebs_record_v0
+  {
+    uint64_t perf_global_status, data_linear_address, data_source;
+    uint64_t latency;
+  };
+
   int num_pmcs;
 
   struct local
   {
-    // Canonicalized selectors.  Only selector and period are used.
+    // Canonicalized selectors.  Only selector, period, and precise
+    // are used.
     perf_selector sel[MAX_PMCS];
+    // Debug store area for PEBS
+    struct ds_area ds_area;
   };
 
   percpu<struct local, percpu_safety::internal> local;
+
+  bool have_pebs;
+  int pebs_version;
+  size_t pebs_record_size;
 
 public:
   bool
@@ -206,6 +245,25 @@ public:
       return false;
     }
     num_pmcs = PERFMON_EAX_NUM_COUNTERS(eax);
+    uint32_t ecx, edx;
+    cpuid(CPUID_FEATURES, 0, 0, &ecx, &edx);
+    if ((ecx & FEATURE_ECX_PDCM) &&
+        (edx & FEATURE_EDX_DS) &&
+        !(readmsr(MSR_INTEL_MISC_ENABLE) & MISC_ENABLE_PEBS_UNAVAILABLE)) {
+      // Get PEBS version
+      auto perfcap = readmsr(MSR_INTEL_PERF_CAPABILITIES);
+      pebs_version = (perfcap >> 8) & 0xF;
+      if (pebs_version > 1) {
+        console.println("sampler: Unknown PEBS version ", pebs_version);
+      } else {
+        if (pebs_version == 0)
+          pebs_record_size = sizeof(pebs_record_v0);
+        else if (pebs_version == 1)
+          pebs_record_size = sizeof(pebs_record_v1);
+        console.println("sampler: PEBS version ", pebs_version, " enabled");
+        have_pebs = true;
+      }
+    }
     return true;
   }
 
@@ -213,6 +271,8 @@ public:
   initcore() override
   {
     enable_nehalem_workaround();
+    if (have_pebs)
+      writemsr(MSR_INTEL_DS_AREA, (uintptr_t)&local->ds_area);
   }
 
   void
@@ -221,16 +281,35 @@ public:
     uint64_t sel =
       (selector.selector & ~(uint64_t)(PERF_SEL_INT | PERF_SEL_ENABLE));
     uint64_t val = std::min(selector.period, (uint64_t)MAX_PERIOD);
-    if (val)
+    bool precise = selector.precise && have_pebs && val;
+    if (val && !precise)
       sel |= PERF_SEL_INT;
     if (selector.enable)
       sel |= PERF_SEL_ENABLE;
+
     local->sel[ctr].selector = sel;
     local->sel[ctr].period = val;
+    local->sel[ctr].precise = precise;
 
     writemsr(MSR_INTEL_PERF_SEL0 + ctr, 0);
     if (!selector.enable)
       return;
+    // Configure PEBS
+    if (have_pebs) {
+      if (precise) {
+        if (!local->ds_area.pebs_base)
+          pebs_init();
+        // Enable PEBS
+        writemsr(MSR_INTEL_PEBS_ENABLE,
+                 readmsr(MSR_INTEL_PEBS_ENABLE) | (1 << ctr));
+        // Set automatic reset value
+        local->ds_area.pebs_reset[ctr] = -val;
+      } else {
+        // Disable PEBS
+        writemsr(MSR_INTEL_PEBS_ENABLE,
+                 readmsr(MSR_INTEL_PEBS_ENABLE) & ~(1 << ctr));
+      }
+    }
     // Clear the overflow indicator
     writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, 1<<ctr);
     writemsr(MSR_INTEL_PERF_CNT0 + ctr, -val);
@@ -238,19 +317,29 @@ public:
   }
 
   uint64_t
-  get_overflow() override
+  get_overflow(int *handled) override
   {
     uint64_t mask = 0;
     for (size_t i = 0; i < MAX_PMCS; ++i)
       if (local->sel[i].selector & PERF_SEL_INT)
         mask |= 1ull << i;
-    return readmsr(MSR_INTEL_PERF_GLOBAL_STATUS) & mask;
+    if (have_pebs)
+      mask |= PERF_GLOBAL_STATUS_PEBS;
+    auto status = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS) & mask;
+    if (status & PERF_GLOBAL_STATUS_PEBS) {
+      // PEBS buffer reached threshold
+      pebs_drain();
+      ++*handled;
+    }
+    return status;
   }
 
   void
   pause() override
   {
     writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, 0);
+    if (have_pebs)
+      writemsr(MSR_INTEL_PEBS_ENABLE, 0);
   }
 
   void
@@ -267,11 +356,52 @@ public:
   void
   resume() override
   {
-    uint64_t mask = 0;
-    for (size_t i = 0; i < MAX_PMCS; ++i)
+    uint64_t mask = 0, pebs_mask = 0;
+    for (size_t i = 0; i < MAX_PMCS; ++i) {
       if (local->sel[i].selector & PERF_SEL_ENABLE)
         mask |= 1ull << i;
+      if (local->sel[i].precise)
+        pebs_mask |= 1ull << i;
+    }
+    if (pebs_mask)
+      writemsr(MSR_INTEL_PEBS_ENABLE, pebs_mask);
     writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, mask);
+  }
+
+private:
+  void
+  pebs_init()
+  {
+    // Lazy debug store initialization
+    char *pebs_buf = (char*)kalloc("pebs_buf", PGSIZE);
+    if (!pebs_buf)
+      panic("sampler: Out of memory");
+    auto ds = &local->ds_area;
+    ds->pebs_base = ds->pebs_index = pebs_buf;
+    size_t nrecords = PGSIZE / pebs_record_size;
+    ds->pebs_limit = pebs_buf + nrecords * pebs_record_size;
+    // Take an interrupt after each record
+    // XXX This is sort of lame.  It would be nice to use a bigger
+    // buffer and force-flush it when we're done.
+    ds->pebs_threshold = pebs_buf + pebs_record_size;
+  }
+
+  void
+  pebs_drain()
+  {
+    pmuevent ev{};
+    auto ds = &local->ds_area;
+    char *pos = ds->pebs_base;
+    ev.count = 1;
+    while (pos < ds->pebs_index) {
+      auto record = (pebs_record_v1*)pos;
+      ev.rip = record->rip;
+      pmulog->log(ev);
+      pos += pebs_record_size;
+    }
+
+    // Reset PEBS buffer
+    ds->pebs_index = ds->pebs_base;
   }
 };
 
@@ -293,7 +423,7 @@ class no_pmu : public pmu
   }
 
   uint64_t
-  get_overflow() override
+  get_overflow(int *handled) override
   {
     return 0;
   }
@@ -438,7 +568,7 @@ sampintr(struct trapframe *tf)
   // Performance events mask LAPIC.PC.  Unmask it.
   lapic->mask_pc(false);
 
-  u64 overflow = pmu->get_overflow();
+  u64 overflow = pmu->get_overflow(&r);
 
   for (size_t i = 0; i < MAX_PMCS; ++i) {
     if (overflow & (1ull << i)) {

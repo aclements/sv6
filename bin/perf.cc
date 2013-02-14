@@ -20,6 +20,7 @@ conf(int fd, bool enable)
 {
   struct perf_selector c = {
   enable: enable,
+  precise: false,
   selector: selector,
   period: period,
   };
