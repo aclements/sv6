@@ -65,6 +65,7 @@ public:
   virtual void rearm(uint64_t mask) = 0;
   // Enable all enabled counters
   virtual void resume() = 0;
+  virtual void dump() { }
 };
 
 class pmu *pmu;
@@ -112,6 +113,7 @@ public:
     if (FEATURE_EAX_FAMILY(eax) < 0x10)
       return false;
     // 4 counters are supported
+    console.println("sampler: Enabling AMD support");
     return true;
   }
 
@@ -244,6 +246,7 @@ public:
               PERFMON_EAX_VERSION(eax));
       return false;
     }
+    console.println("sampler: Enabling Intel support");
     num_pmcs = PERFMON_EAX_NUM_COUNTERS(eax);
     uint32_t ecx, edx;
     cpuid(CPUID_FEATURES, 0, 0, &ecx, &edx);
@@ -366,6 +369,27 @@ public:
     if (pebs_mask)
       writemsr(MSR_INTEL_PEBS_ENABLE, pebs_mask);
     writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, mask);
+  }
+
+  void
+  dump() override
+  {
+    console.println(
+      "Intel PMU CPU ", myid(), "\n",
+      "  0: SEL ", shex(readmsr(MSR_INTEL_PERF_SEL0)),
+      " CNT ", shex(readmsr(MSR_INTEL_PERF_CNT0)), "\n",
+      "  1: SEL ", shex(readmsr(MSR_INTEL_PERF_SEL0+1)),
+      " CNT ", shex(readmsr(MSR_INTEL_PERF_CNT0+1)), "\n",
+      "  STATUS ", shex(readmsr(MSR_INTEL_PERF_GLOBAL_STATUS)), "\n",
+      "  CTRL   ", shex(readmsr(MSR_INTEL_PERF_GLOBAL_CTRL)));
+    if (have_pebs) {
+      console.println(
+        "  PEBSEN ", shex(readmsr(MSR_INTEL_PEBS_ENABLE)), "\n",
+        "  PEBS base ", (void*)local->ds_area.pebs_base,
+        " index ", (void*)local->ds_area.pebs_index,
+        " limit ", (void*)local->ds_area.pebs_limit,
+        " thr ", (void*)local->ds_area.pebs_threshold);
+    }
   }
 
 private:
