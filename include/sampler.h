@@ -38,7 +38,7 @@ struct pmuevent {
 };
 
 struct logheader {
-  u32 ncpus;
+  u64 ncpus;
   struct {
     u64 offset;
     u64 size;
