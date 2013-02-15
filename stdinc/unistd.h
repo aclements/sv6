@@ -19,7 +19,7 @@ pid_t getpid(void);
 
 extern char* optarg;
 extern int optind;
-int getopt(int ac, char** av, const char* optstring);
+int getopt(int ac, char* const av[], const char* optstring);
 
 int stat(const char*, struct stat*);
 

@@ -164,7 +164,7 @@ void
 exectest(void)
 {
   fprintf(stdout, "exec test\n");
-  if(exec("echo", echoargv) < 0)
+  if(exec("echo", const_cast<char * const *>(echoargv)) < 0)
     die("exec echo failed");
 }
 
@@ -1342,7 +1342,7 @@ bigargtest(void)
       args[i] = "bigargs test: failed\n                                                                                                                     ";
     args[32] = 0;
     fprintf(stdout, "bigarg test\n");
-    exec("echo", args);
+    exec("echo", const_cast<char * const *>(args));
     fprintf(stdout, "bigarg test ok\n");
     exit(0);
   } else if(pid < 0)

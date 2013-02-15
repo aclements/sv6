@@ -38,9 +38,9 @@ valstr(u64 val)
 }
 
 int
-main(int ac, const char *av[])
+main(int ac, char * const av[])
 {
-  const char **xav;
+  char * const *xav;
   int pmci = 0;
 
   xav = &av[1];

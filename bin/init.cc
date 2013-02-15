@@ -32,7 +32,7 @@ static struct {
 };
 
 static int
-startone(const char **argv)
+startone(const char * const *argv)
 {
   int pid;
 
@@ -41,7 +41,7 @@ startone(const char **argv)
     die("init: fork failed");
   }
   if(pid == 0){
-    exec(argv[0], argv);
+    exec(argv[0], const_cast<char * const *>(argv));
     die("init: exec %s failed", argv[0]);
   }
   return pid;

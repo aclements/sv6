@@ -96,7 +96,7 @@ struct proc : public rcu_freed, public sched_link {
   int uaccess_;
   bool yield_;                 // yield cpu up when returning to user space
   const char *upath;
-  userptr<userptr<const char> > uargv;
+  userptr<userptr<char> const> uargv;
 
   u8 __cxa_eh_global[16];
 

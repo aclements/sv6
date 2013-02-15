@@ -32,7 +32,7 @@ conf(int fd, bool enable)
 }
 
 int
-main(int ac, const char *av[])
+main(int ac, char *av[])
 {
   if (selector == 0)
     die("perf: unknown hardware");

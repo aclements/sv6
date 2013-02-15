@@ -19,7 +19,7 @@ read_kstats(kstats *out)
 }
 
 int
-main(int ac, const char *av[])
+main(int ac, char * const av[])
 {
   struct kstats kstats_before, kstats_after;
 

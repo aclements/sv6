@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 int
-main(int ac, const char *av[])
+main(int ac, char * const av[])
 {
   u64 t0 = rdtsc();
 

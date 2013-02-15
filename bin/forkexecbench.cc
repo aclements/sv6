@@ -18,7 +18,7 @@ execbench(void)
     }
     if (pid == 0) {
       const char *av[] = { "forkexecbench", "x", 0 };
-      exec("forkexecbench", av);
+      exec("forkexecbench", const_cast<char * const *>(av));
       die("exec failed\n");
     } else {
       wait(-1);

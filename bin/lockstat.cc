@@ -62,7 +62,7 @@ stats(void)
 }
 
 int
-main(int ac, const char *av[])
+main(int ac, char * const av[])
 {
   int fd = open("/dev/lockstat", O_RDWR);
   if (fd < 0)

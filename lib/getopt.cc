@@ -8,7 +8,7 @@ char *optarg;
 int optind = 1;
 
 int
-getopt(int argc, char** argv, const char *optstring)
+getopt(int argc, char* const argv[], const char *optstring)
 {
   static char UNKNOWN_OPTION[] = { '?', '\0' };
 

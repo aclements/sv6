@@ -479,7 +479,7 @@ sys_chdir(userptr_str path)
 }
 
 int
-doexec(const char* upath, userptr<userptr<const char>> uargv)
+doexec(const char* upath, userptr<userptr<char> const> uargv)
 {
   char path[DIRSIZ+1];
   if (fetchstr(path, upath, sizeof(path)) < 0)
@@ -515,7 +515,7 @@ clean:
 
 //SYSCALL
 int
-sys_exec(const char *upath, userptr<userptr<const char> > uargv)
+sys_exec(const char *upath, userptr<userptr<char> const> uargv)
 {
   myproc()->data_cpuid = myid();
 #if EXECSWITCH

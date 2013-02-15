@@ -13,7 +13,7 @@ static void
 worker0(void)
 {
   const char* av[] = { "exechack", "w", 0 };
-  exec(av[0], av);
+  exec(av[0], const_cast<char * const *>(av));
   die("worker exec");
 }
 
