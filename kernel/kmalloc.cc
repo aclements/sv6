@@ -25,7 +25,7 @@ struct freelist {
   char name[MAXNAME];
 };
 
-struct freelist freelists[NCPU];
+percpu<struct freelist> freelists;
 
 void
 kminit(void)
