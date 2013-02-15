@@ -76,6 +76,7 @@ struct pmulog {
   struct pmuevent *hash;
 
 private:
+  bool dirty;
   bool evict(struct pmuevent *event, size_t reserve);
 
 public:
@@ -548,6 +549,7 @@ pmulog::log(const struct pmuevent &ev)
     }
   }
   *bucket = ev;
+  dirty = true;
   return true;
 }
 
@@ -555,6 +557,8 @@ pmulog::log(const struct pmuevent &ev)
 void
 pmulog::flush()
 {
+  if (!dirty)
+    return;
   size_t failed = 0;
   for (int i = 0; i < 1<<LOG2_HASH_BUCKETS; ++i) {
     if (hash[i].count) {
@@ -567,6 +571,7 @@ pmulog::flush()
     // This shouldn't happen because we reserved enough space for a
     // full flush while we were running.
     swarn.println("sampler: Failed to flush ", failed, " event(s)");
+  dirty = false;
 }
 
 //
