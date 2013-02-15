@@ -12,7 +12,6 @@
 #include "vm.hh"
 #include "gc.hh"
 #include "cpputil.hh"
-#include "sperf.hh"
 #include "kmtrace.hh"
 #include "kstream.hh"
 #include "page_info.hh"
@@ -187,8 +186,6 @@ vmap::copy()
 long
 vmap::insert(const vmdesc &desc, uptr start, uptr len, bool dotlb)
 {
-  ANON_REGION("vmap::insert", &perfgroup);
-
   kstats::inc(&kstats::mmap_count);
   kstats::timer timer(&kstats::mmap_cycles);
 

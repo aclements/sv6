@@ -9,7 +9,6 @@
 #include "cpu.hh"
 #include "percpu.hh"
 #include "kmtrace.hh"
-#include "sperf.hh"
 
 //
 // futexkey
@@ -171,8 +170,6 @@ futexaddr::onzero(void)
 long
 futexwait(futexkey_t key, u64 val, u64 timer)
 {
-  ANON_REGION(__func__, &perfgroup);
-
   futexaddr* fa;
 
   mtreadavar("futex:ns:%p", key);
@@ -229,8 +226,6 @@ futexwait(futexkey_t key, u64 val, u64 timer)
 long
 futexwake(futexkey_t key, u64 nwake)
 {
-  ANON_REGION(__func__, &perfgroup);
-
   futexaddr* fa;
   u64 nwoke = 0;
 

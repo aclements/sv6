@@ -8,7 +8,6 @@
 #include "proc.hh"
 #include "cpu.hh"
 #include "vm.hh"
-#include "sperf.hh"
 #include "kmtrace.hh"
 #include "futex.h"
 #include "version.hh"
@@ -20,7 +19,6 @@
 int
 sys_fork(int flags)
 {
-  ANON_REGION(__func__, &perfgroup);
   return fork(flags);
 }
 
@@ -36,7 +34,6 @@ sys_exit(int status)
 int
 sys_wait(int pid)
 {
-  ANON_REGION(__func__, &perfgroup);
   return wait(pid);
 }
 
@@ -97,8 +94,6 @@ void *
 sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
          off_t offset)
 {
-  ANON_REGION(__func__, &perfgroup);
-
   mt_ascope ascope("%s(%p,%lu,%#x,%#x,%d,%#lx)",
                    __func__, addr.unsafe_get(), len, prot, flags, fd, offset);
 
@@ -139,8 +134,6 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
 int
 sys_munmap(userptr<void> addr, size_t len)
 {
-  ANON_REGION(__func__, &perfgroup);
-
 #if MTRACE
   mt_ascope ascope("%s(%p,%#lx)", __func__, addr.unsafe_get(), len);
   for (uptr i = addr / PGSIZE; i < PGROUNDUP(addr + len) / PGSIZE; i++)

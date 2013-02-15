@@ -10,7 +10,6 @@
 #include "cpu.hh"
 #include "net.hh"
 #include "kmtrace.hh"
-#include "sperf.hh"
 #include "dirns.hh"
 #include "mfs.hh"
 #include <uk/fcntl.h>

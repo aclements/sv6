@@ -11,7 +11,6 @@
 #include "kmtrace.hh"
 #include "vm.hh"
 #include "wq.hh"
-#include "sperf.hh"
 #include "major.h"
 #include "rnd.hh"
 #include "lb.hh"
@@ -89,7 +88,6 @@ schedule::balance_move_to(schedule* target)
   if (!cansteal_ || !tryacquire(&lock_))
     return;
 
-  ANON_REGION(__func__, &perfgroup);
   for (sched_link* ptr = head_.next; ptr != &head_; ptr = ptr->next)
     if (cansteal((proc*)ptr, true)) {
       ptr->next->prev = ptr->prev;
@@ -154,7 +152,6 @@ schedule::deq(void)
 {   
   if (head_.next == &head_)
     return nullptr;
-  ANON_REGION(__func__, &perfgroup);
   // Remove from head
   scoped_acquire x(&lock_);
   sched_link* entry = head_.next;

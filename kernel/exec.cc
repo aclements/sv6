@@ -13,7 +13,6 @@
 #include "elf.hh"
 #include "cpu.hh"
 #include "wq.hh"
-#include "sperf.hh"
 #include "kmtrace.hh"
 #include "mfs.hh"
 
@@ -164,7 +163,6 @@ struct cleanup_work : public work
 int
 exec(const char *path, const char * const *argv)
 {
-  ANON_REGION(__func__, &perfgroup);
   sref<mnode> ip;
   struct vmap *vmp = nullptr;
   const char *s, *last;

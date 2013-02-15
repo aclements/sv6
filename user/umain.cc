@@ -9,15 +9,8 @@
 #include "radix.hh"
 #include "atomic_util.hh"
 #include "ns.hh"
-#include "uscopedperf.hh"
-#include "intelctr.hh"
 #include "arc4.hh"
 #include "amd64.h"
-
-static auto perfgroup = ctrgroup(&intelctr::tsc
-                                // ,&intelctr::l2_refs
-                                // ,&intelctr::l2_miss
-                                );
 
 u64
 proc_hash(const u32 &pid)
@@ -31,13 +24,9 @@ u32 ncpu;
 u64 ticks;
 xns<u32, proc*, proc_hash> *xnspid;
 
-static auto rnd_perfsum = scopedperf::perfsum("arc4 rnd", &perfgroup);
-
 template<class T>
 T rnd()
 {
-  auto __PERF_ANON = scopedperf::perf_region(&rnd_perfsum);
-
   arc4 *a = (arc4*) pthread_getspecific(arc4_key);
   if (!a) {
     struct seed { u64 a, b; } s = { rdtsc(), pthread_self() };
@@ -104,15 +93,12 @@ worker_crange(void *arg)
   crange *cr = (crange*) arg;
 
   for (u32 i = 0; i < iter_total / ncpu; i++) {
-    ANON_REGION("worker op", &perfgroup);
     u64 rval = random_keys ? rnd<u32>() : myproc()->cpuid;
     u64 k = 1 + rval % (crange_items * 2);
     auto span = cr->search_lock(k, 1);
     if (rnd<u8>() & 1) {
-      ANON_REGION("worker del", &perfgroup);
       span.replace(0);
     } else {
-      ANON_REGION("worker add", &perfgroup);
       span.replace(new my_crange_range(cr, k, 1));
     }
   }
@@ -135,15 +121,12 @@ worker_radix(void *arg)
   radix *cr = (radix*) arg;
 
   for (u32 i = 0; i < iter_total / ncpu; i++) {
-    ANON_REGION("worker op", &perfgroup);
     u64 rval = random_keys ? rnd<u32>() : myproc()->cpuid;
     u64 k = 1 + rval % (crange_items * 2);
     auto span = cr->search_lock(k, 1);
     if (rnd<u8>() & 1) {
-      ANON_REGION("worker del", &perfgroup);
       span.replace(k, 1, 0);
     } else {
-      ANON_REGION("worker add", &perfgroup);
       span.replace(k, 1, new my_radix_range(cr, k, 1));
     }
   }
@@ -250,6 +233,4 @@ main(int ac, char **av)
       threadpin(worker_radix, &rr, buf, i);
   }
   pthread_barrier_wait(&worker_b);
-
-  scopedperf::perfsum_base::printall();
 }
