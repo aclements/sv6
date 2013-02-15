@@ -296,10 +296,9 @@ public:
     else if (load_latency)
       load_latency = std::max((int)load_latency, 4);
 
-    if (load_latency != selector.load_latency)
-      console.println("sampler: Requested ", selector.load_latency,
-                      " got ", selector.load_latency);
-
+    // XXX Should this fail if we can't provide the requested record
+    // fields?  It would be pretty annoying to ask for load latency
+    // data and not get it, for example.
     local->sel[ctr].selector = sel;
     local->sel[ctr].period = val;
     local->sel[ctr].precise = precise;
