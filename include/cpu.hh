@@ -16,19 +16,24 @@ struct cpu {
   struct context *scheduler;   // swtch() here to enter scheduler
 
   int timer_printpc;
+  __mpalign__
   atomic<u64> tlbflush_done;   // last tlb flush req done on this cpu
+  __padout__;
   atomic<u64> tlb_cr3;         // current value of cr3 on this cpu
   struct proc *prev;           // The previously-running process
   atomic<struct proc*> fpu_owner; // The proc with the current FPU state
   struct numa_node *node;
 
   // The list of IPI calls to this CPU
+  __mpalign__
   atomic<struct ipi_call *> ipi __mpalign__;
   atomic<struct ipi_call *> *ipi_tail;
   // The lock protecting updates to ipi and ipi_tail.
   spinlock ipi_lock;
+  __padout__;
 
   hwid_t hwid __mpalign__;     // Local APIC ID, accessed by other CPUs
+  __padout__;
 
   // Cpu-local storage variables; see below
   struct cpu *cpu;
