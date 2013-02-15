@@ -449,6 +449,10 @@ main(int argc, char **argv)
 
   read_kstats(&kstats_after);
 
+#ifdef RECORD_PMC
+  perf_stop();
+#endif
+
   // Summarize
   uint64_t start_avg = summarize_tsc("start", start_tscs, nthread);
   uint64_t stop_avg = summarize_tsc("stop", stop_tscs, nthread);
