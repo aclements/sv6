@@ -437,8 +437,13 @@ main(int argc, char **argv)
 
   pthread_barrier_init(&bar, 0, nthread);
 
-  for(int i = 0; i < nthread; i++)
+  for(int i = 0; i < nthread; i++) {
+    if (setaffinity(get_cpu_order(i)) < 0)
+      die("setaffinity err");
     xthread_create(&tid[i], 0, thr, (void*)(uintptr_t) i);
+  }
+  if (setaffinity(get_cpu_order(0)) < 0)
+    die("setaffinity err");
 
   struct kstats kstats_before, kstats_after;
   read_kstats(&kstats_before);
