@@ -1807,6 +1807,60 @@ floattest(void)
   printf("floattest ok\n");
 }
 
+void
+writeprotecttest(void)
+{
+  printf("writeprotecttest\n");
+  char *buffer = (char *)0x1000;
+  void *res = mmap(buffer, 2*4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0);
+  if (res == MAP_FAILED)
+    die("writeprotecttest: mmap failed");
+  res = mmap(buffer + 2*4096, 2*4096, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0);
+  if (res == MAP_FAILED)
+    die("writeprotecttest: mmap failed");
+
+  int pid = fork(0);
+  if (pid == 0)
+  {
+    buffer[1]++;
+    buffer[5000]++;
+    printf("Current values %d %d\n", buffer[1], buffer[5000]);
+    printf("reading from read-only #1: %d\n", buffer[2*4096]);
+    printf("writing to read-only #1\n");
+    buffer[2*4096] = 1;
+    printf("done writing to read-only ?!\n");
+    munmap(buffer, 4 * 4096);
+    exit(0);
+  }
+  else if (pid > 0)
+  {
+    wait(-1);
+    int pid = fork(0);
+    if (pid == 0)
+    {
+      buffer[1]++;
+      buffer[5000]++;
+      printf("Current values %d %d\n", buffer[1], buffer[5000]);
+      //printf("reading from read-only #2: %d\n", buffer[3*4096+3]);
+      printf("writing to read-only #2\n");
+      buffer[3*4096+3] = 1;
+      printf("done writing to read-only ?!\n");
+      munmap(buffer, 4 * 4096);
+      exit(0);
+    }
+    else if (pid > 0)
+    {
+      wait(-1);
+      printf("writeprotecttest ok\n");
+    }
+    else
+      die("writeprotecttest: fork failed");
+  }
+  else
+    die("writeprotecttest: fork failed");
+  munmap(buffer, 4 * 4096);
+}
+
 static int nenabled;
 static char **enabled;
 
@@ -1886,6 +1940,7 @@ main(int argc, char *argv[])
   TEST(renametest);
 
   TEST(floattest);
+  TEST(writeprotecttest);
 
   TEST(exectest);               // Must be last
 

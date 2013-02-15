@@ -36,6 +36,9 @@ struct vmdesc : public mmu::tracker
     // Set if this page frame maps anonymous memory.  Cleared if this
     // page frame maps a file (in which case ip and start are used).
     FLAG_ANON = 1<<3,
+
+    // Set if the page is writeable
+    FLAG_WRITE = 1<<4,
   };
 
   // Flags
@@ -72,6 +75,8 @@ struct vmdesc : public mmu::tracker
 
   // The anonymous memory descriptor.
   static struct vmdesc anon_desc;
+  // The anonymous read-only memory descriptor.
+  static struct vmdesc anon_desc_readonly;
 
   // Radix_array element methods
 
@@ -153,6 +158,9 @@ struct vmap {
   // Slowly by carefully read @c n bytes from virtual address @c src
   // into @c dst.
   size_t safe_read(void *dst, uintptr_t src, size_t n);
+
+  // Set write permission bit in vmdesc
+  int set_write_permission(uptr start, uptr len, bool is_readonly = false);
 
   uptr brk_;                    // Top of heap
 

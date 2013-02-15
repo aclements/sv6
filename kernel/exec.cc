@@ -57,6 +57,10 @@ dosegment(sref<mnode> ip, vmap* vmp, u64 off, u64 *load_addr)
     if (vmp->insert(vmdesc(ip, ph.vaddr - ph.offset),
                     va_start, mapped_end - va_start) < 0)
       return -1;
+
+    // set the text segment to read-only
+    if (vmp->set_write_permission(va_start, mapped_end - va_start, true) < 0)
+      return -1;
   }
 
   if (mapped_end != backed_end) {
