@@ -18,9 +18,15 @@
 
 using namespace std;
 
-static atomic<u64> tlbflush_req;
+// Ensure tlbflush_req lives on a cache line by itself since we hit
+// this from all cores in batched_shootdown mode.
+static atomic<u64> tlbflush_req __mpalign__;
+static __padout__ __attribute__((used));
 
-bool have_kbase_mapping;
+// Ensure have_kbase_mapping lives on a cache line by itself since we
+// read this from all cores all the time.
+bool have_kbase_mapping __mpalign__;
+static __padout__ __attribute__((used));
 
 static const char *levelnames[] = {
   "PT", "PD", "PDP", "PML4"
