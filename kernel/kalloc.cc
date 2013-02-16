@@ -24,6 +24,8 @@
 #include <algorithm>
 #include <iterator>
 
+static console_stream verbose(false);
+
 // Print memory steal events
 #define PRINT_STEAL 0
 
@@ -266,9 +268,9 @@ struct slab slabmem[slab_type_max];
 extern char end[]; // first address after kernel loaded from ELF file
 char *newend;
 
-page_info *page_info_array;
-std::size_t page_info_len;
-paddr page_info_base;
+page_info_map_entry page_info_map[512];
+size_t page_info_map_shift;
+page_info_map_entry *page_info_map_end;
 
 struct cpu_mem
 {
@@ -789,6 +791,104 @@ ksalloc(int slab)
   return kalloc(slabmem[slab].name, 1 << slabmem[slab].order);
 }
 
+// Get the usable physical memory in a NUMA node by intersecting the
+// node's memory map with the e820 map.
+static phys_map
+node_usable_map(const numa_node &node)
+{
+  phys_map node_mem;
+  for (auto &mem : node.mems)
+    node_mem.add(mem.base, mem.base + mem.length);
+  node_mem.intersect(mem);
+  return node_mem;
+}
+
+// Initialize the page_info arrays and page_info_map
+static void
+initpageinfo(void)
+{
+  struct page_info_area
+  {
+    // The physical region spanned by this page_info array.  The
+    // page_info array itself starts at base.
+    paddr base, end;
+    // The physical address following the end of the array.
+    paddr phys_base;
+  };
+  static_vector<page_info_area, MAX_NUMA_NODES * 2> page_info_areas;
+
+  // Reserve space for a page metadata array for each NUMA node within
+  // that NUMA node.
+  for (auto &node : numa_nodes) {
+    // Find the first region of this node that will fit a page_info
+    // array.  We'll just dump any regions we have to skip over since
+    // 1) this is very likely to fit in the first region anyway (which
+    //    is often the only region)
+    // 2) if it doesn't fit in a region, that region was probably too
+    //    small to matter.
+    // You could imagine instead allocating a page_info array at the
+    // beginning of each region, since that's guaranteed to work, but
+    // that can lead to a really messy page_info_map.
+    phys_map node_mem = node_usable_map(node);
+    for (auto &reg : node_mem.get_regions()) {
+      // Size this page_info array to track all pages in this node
+      // except the pages containing the page_info array itself.
+      paddr base = PGROUNDUP(reg.base), end = PGROUNDDOWN(node_mem.max());
+      size_t count = 1 + (end - base) / (sizeof(page_info) + PGSIZE);
+      size_t bytes = PGROUNDUP(count * sizeof(page_info));
+      if (base + bytes < PGROUNDDOWN(reg.end)) {
+        page_info_areas.push_back(page_info_area{base, end, base + bytes});
+        verbose.println("kalloc: page_info ", p2v(base),
+                        "..", p2v(base+bytes-1), " => ", p2v(base+bytes),
+                        "..", p2v(end-1));
+        // Reserve this memory in the physical memory map
+        mem.remove(reg.base, base + bytes);
+        // We found our area
+        break;
+      } else {
+        swarn.println("kalloc: Memory at ", shex(reg.base), "..",
+                      shex(reg.end-1), " is too small to track");
+        mem.remove(reg.base, reg.end);
+      }
+    }
+  }
+
+  // Find the largest shift (minimum remaining bits) that
+  // distinguishes all page_info areas.  XXX On ben, there's an
+  // *additive* shift of 2GB (because of a NUMA hole between 2GB and
+  // 4GB) that forces this table to 2GB increments instead of 32GB
+  // increments.
+  bool good = false;
+  int shift;
+  for (shift = sizeof(uintptr_t) * 8 - 1; shift >= 0 && !good; --shift) {
+    good = true;
+    for (size_t i = 0; i < page_info_areas.size() - 1 && good; ++i) {
+      if (((page_info_areas[i].end - 1) >> shift) >=
+          (page_info_areas[i+1].base >> shift))
+        good = false;
+    }
+  }
+  if (!good)
+    panic("failed to find page_info_map shift");
+
+  // Construct the map from physical address to page_info array.
+  size_t map_size = ((page_info_areas.back().end - 1) >> shift) + 1;
+  if (map_size >= NELEM(page_info_map))
+    panic("page_info map is too large (%zu entries, %d shift)",
+          map_size, shift);
+  console.println("kalloc: page_info map has ", map_size,
+                  " entries starting at bit ", shift);
+  for (auto &area : page_info_areas) {
+    for (size_t i = area.base >> shift; i <= (area.end - 1) >> shift; ++i) {
+      assert(!page_info_map[i].array);
+      page_info_map[i].phys_base = area.phys_base;
+      page_info_map[i].array = (page_info*)p2v(area.base);
+    }
+  }
+  page_info_map_shift = shift;
+  page_info_map_end = page_info_map + map_size;
+}
+
 // Initialize free list of physical pages.
 void
 initkalloc(u64 mbaddr)
@@ -808,45 +908,12 @@ initkalloc(u64 mbaddr)
   // Round newend up to a page boundary so allocations are aligned.
   newend = PGROUNDUP(newend);
 
-  // Allocate the page metadata array.  Try allocating it at the
-  // current beginning of free memory.  If this succeeds, then we only
-  // need to size it to track the pages *after* the metadata array
-  // (since there's no point in tracking the pages that store the page
-  // metadata array itself).
-  page_info_len = 1 + (mem.max() - v2p(newend)) / (sizeof(page_info) + PGSIZE);
-  auto page_info_bytes = page_info_len * sizeof(page_info);
-  page_info_array = (page_info*)mem.alloc(newend, page_info_bytes);
-
-  if ((char*)page_info_array == newend) {
-    // We were able to allocate it at newend, so we only have to track
-    // physical pages following the array.
-    newend = PGROUNDUP((char*)page_info_array + page_info_bytes);
-    page_info_base = v2p(newend);
-  } else {
-    // We weren't able to allocate it at the beginning of free memory,
-    // so re-allocate it and size it to track all of memory.
-    console.println("First memory hole too small for page metadata array");
-    page_info_len = 1 + mem.max() / PGSIZE;
-    page_info_bytes = page_info_len * sizeof(page_info);
-    page_info_array = (page_info*)mem.alloc(newend, page_info_bytes);
-    page_info_base = 0;
-    // Mark this as a hole in the memory map so we don't use it to
-    // initialize the physical allocator below.
-    mem.remove(v2p(page_info_array), v2p(page_info_array) + page_info_bytes);
-  }
-
   // Remove memory before newend from the memory map
   mem.remove(0, v2p(newend));
+  // After this point, do not use newend!
 
-  // XXX(Austin) This handling of page_info_array is somewhat
-  // unfortunate, given how sparse physical memory can be.  We could
-  // break it up into chunks with a fast lookup table.  We could
-  // virtually map it (probably with global large pages), though that
-  // would increase TLB pressure.
-
-  // XXX(Austin) Spread page_info_array across the NUMA nodes, both to
-  // limit the impact on node 0's space and to co-locate it with the
-  // pages it stores metadata for.
+  // Reserve the page_info arrays
+  initpageinfo();
 
   if (VERBOSE)
     cprintf("%lu mbytes\n", mem.bytes() / (1<<20));
@@ -861,12 +928,7 @@ initkalloc(u64 mbaddr)
   size_t sz = (size_t) p2v(mem.max()) - (size_t) base;
 #endif
   for (auto &node : numa_nodes) {
-    phys_map node_mem;
-    // Intersect node memory region with physical memory map to get
-    // the available physical memory in the node
-    for (auto &mem : node.mems)
-      node_mem.add(mem.base, mem.base + mem.length);
-    node_mem.intersect(mem);
+    phys_map node_mem = node_usable_map(node);
     // Remove this node from the physical memory map, just in case
     // there are overlaps between nodes
     mem.remove(node_mem);
