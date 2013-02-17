@@ -18,7 +18,8 @@
 #include <algorithm>
 #include "kstats.hh"
 
-static console_stream verbose(false);
+enum { SDEBUG = false };
+static console_stream sdebug(SDEBUG);
 
 enum { vm_debug = 0 };
 
@@ -139,7 +140,8 @@ vmap::incref()
 vmap*
 vmap::copy()
 {
-  verbose.println("vm: copy pid ", myproc()->pid);
+  if (SDEBUG)
+    sdebug.println("vm: copy pid ", myproc()->pid);
 
   vmap *nm = new vmap();
   mmu::shootdown shootdown;
@@ -157,12 +159,14 @@ vmap::copy()
         it += it.base_span();
         continue;
       }
-      verbose.println("vm: dup ", *it, " at ", shex(it.index() * PGSIZE));
+      if (SDEBUG)
+        sdebug.println("vm: dup ", *it, " at ", shex(it.index() * PGSIZE));
 
       // If the original vmdesc isn't COW, mark it so and fix the page
       // table.
       if (it->page && !(it->flags & vmdesc::FLAG_COW)) {
-        verbose.println("vm: mark COW");
+        if (SDEBUG)
+          sdebug.println("vm: mark COW");
         it->flags |= vmdesc::FLAG_COW;
         // XXX(Austin) Should we try to invalidate in larger chunks?
         cache.invalidate(it.index() * PGSIZE, PGSIZE, it, &shootdown);
@@ -189,8 +193,9 @@ vmap::insert(const vmdesc &desc, uptr start, uptr len, bool dotlb)
   kstats::inc(&kstats::mmap_count);
   kstats::timer timer(&kstats::mmap_cycles);
 
-  verbose.println("vm: insert(", desc, ",", shex(start), ",", shex(len),
-                  ",", dotlb, ")");
+  if (SDEBUG)
+    sdebug.println("vm: insert(", desc, ",", shex(start), ",", shex(len),
+                   ",", dotlb, ")");
 
   assert(start % PGSIZE == 0);
   assert(len % PGSIZE == 0);
@@ -240,7 +245,8 @@ vmap::remove(uptr start, uptr len)
   kstats::inc(&kstats::munmap_count);
   kstats::timer timer(&kstats::munmap_cycles);
 
-  verbose.println("vm: remove(", start, ",", len, ")");
+  if (SDEBUG)
+    sdebug.println("vm: remove(", start, ",", len, ")");
 
   mmu::shootdown shootdown;
   page_holder pages;
@@ -319,8 +325,9 @@ vmap::pagefault(uptr va, u32 err)
     auto lock = vpfs_.acquire(it);
     if (!it.is_set())
       return -1;
-    verbose.println("vm: pagefault err ", shex(err), " va ", shex(va),
-                    " desc ", *it, " pid ", myproc()->pid);
+    if (SDEBUG)
+      sdebug.println("vm: pagefault err ", shex(err), " va ", shex(va),
+                     " desc ", *it, " pid ", myproc()->pid);
 
     // If this is a COW fault, we need to hold a reference to the old
     // physical page until we've cleared the PTE and done TLB shoot
@@ -452,7 +459,8 @@ vmap::copyout(uptr va, const void *p, u64 len)
 int
 vmap::sbrk(ssize_t n, uptr *addr)
 {
-  verbose.println("vm: sbrk(", n, ") pid ", myproc()->pid);
+  if (SDEBUG)
+    sdebug.println("vm: sbrk(", n, ") pid ", myproc()->pid);
 
   scoped_acquire xlock(&brklock_);
   auto curbrk = brk_;
@@ -475,7 +483,9 @@ vmap::sbrk(ssize_t n, uptr *addr)
   uptr newstart = PGROUNDUP(curbrk);
   uptr newend = PGROUNDUP(curbrk + n);
 
-  verbose.println("vm: curbrk ", shex(curbrk), " newstart ", shex(newstart), " newend ", shex(newend));
+  if (SDEBUG)
+    sdebug.println("vm: curbrk ", shex(curbrk), " newstart ", shex(newstart),
+                   " newend ", shex(newend));
 
   if (newend < newstart) {
     // Adjust break down by freeing pages
@@ -548,8 +558,9 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
 
   if (need_copy) {
     // This is a COW fault; copy in to the new page
-    verbose.println("vm: COW copy to ", (void*)p, " from ", desc.page->va(),
-                    ' ', desc.page.get());
+    if (SDEBUG)
+      sdebug.println("vm: COW copy to ", (void*)p, " from ", desc.page->va(),
+                     ' ', desc.page.get());
     assert(desc.page);
     memmove(p, desc.page->va(), PGSIZE);
   } else if (!(desc.flags & vmdesc::FLAG_ANON)) {

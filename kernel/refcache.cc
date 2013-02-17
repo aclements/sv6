@@ -12,10 +12,11 @@
 #endif
 
 #ifdef TEST
-static console_stream verbose(true);
+enum { SDEBUG = true };
 #else
-static console_stream verbose(false);
+enum { SDEBUG = false };
 #endif
+static console_stream sdebug(SDEBUG);
 
 percpu<refcache::cache> refcache::mycache;
 
@@ -55,8 +56,9 @@ refcache::cache::evict(struct refcache::cache::way *way,
     // reviewer?
     if (obj->review_epoch_ == 0) {
       // It does not have a reviewer, so put it in our review list.
-      verbose.println("refcache: CPU ", myid(), " owning obj ", obj,
-                      " with delta ", delta);
+      if (SDEBUG)
+        sdebug.println("refcache: CPU ", myid(), " owning obj ", obj,
+                       " with delta ", delta);
       // We have to ensure that all cores flush their refcache between
       // now and when we review this object, so we can review this
       // object as of epoch global_epoch + 2.  Why?  Suppose there are
@@ -84,14 +86,16 @@ refcache::cache::evict(struct refcache::cache::way *way,
       // The object has a reviewer, which means the reviewer needs
       // to know that, even though it's zero again now, it was
       // non-zero during the round and hence unstable.
-      verbose.println("refcache: CPU ", myid(), " dirtying obj ", obj,
-                      " with delta ", delta);
+      if (SDEBUG)
+        sdebug.println("refcache: CPU ", myid(), " dirtying obj ", obj,
+                       " with delta ", delta);
       obj->dirty_ = true;
       kstats::inc(&kstats::refcache_dirtied_count);
     }
   } else {
-    verbose.println("refcache: CPU ", myid(), " evicting obj ", obj,
-                    " with delta ", delta);
+    if (SDEBUG)
+      sdebug.println("refcache: CPU ", myid(), " evicting obj ", obj,
+                     " with delta ", delta);
   }
 }
 
@@ -145,7 +149,8 @@ refcache::cache::review()
       if (obj->weak_ && !obj->dirty_) {
         weak_referenced *wobj = static_cast<weak_referenced*>(&*obj);
         if (wobj->weakref_ && !wobj->weakref_->try_break(wobj)) {
-          verbose.println("refcache: Failed to break weakref to obj ", &*obj);
+          if (SDEBUG)
+            sdebug.println("refcache: Failed to break weakref to obj ", &*obj);
           kstats::inc(&kstats::refcache_weakref_break_failed);
           // We failed to break the weak reference, meaning that this
           // object has been revived.  It still has a zero global
@@ -163,7 +168,8 @@ refcache::cache::review()
         // The reference count was modified during this round, which
         // means it isn't yet stable.  Since it's zero again, it
         // might *now* be stable.  Check it again in another round.
-        verbose.println("refcache: CPU ", myid(), " re-queueing obj ", &*obj);
+        if (SDEBUG)
+          sdebug.println("refcache: CPU ", myid(), " re-queueing obj ", &*obj);
         obj->dirty_ = false;
         obj->review_epoch_ = epoch + 2;
         scoped_cli cli;
@@ -171,7 +177,8 @@ refcache::cache::review()
         ++nrequeued;
       } else {
         // It was zero for the whole round.  Free it.
-        verbose.println("refcache: CPU ", myid(), " freeing obj ", &*obj);
+        if (SDEBUG)
+          sdebug.println("refcache: CPU ", myid(), " freeing obj ", &*obj);
         obj->review_epoch_ = 0;
         l.release();
 
@@ -183,12 +190,14 @@ refcache::cache::review()
       // The count is now non-zero and hence clearly unstable.  Drop
       // it from our review list.  When it goes zero again, some
       // other core will put it on their review list.
-      verbose.println("refcache: CPU ", myid(), " disowning obj ", &*obj);
+      if (SDEBUG)
+        sdebug.println("refcache: CPU ", myid(), " disowning obj ", &*obj);
       if (obj->weak_) {
         // The object is no longer dying
         weak_referenced *wobj = static_cast<weak_referenced*>(&*obj);
         if (wobj->weakref_) {
-          verbose.println("refcache: Un-dying obj ", &*obj);
+          if (SDEBUG)
+            sdebug.println("refcache: Un-dying obj ", &*obj);
           wobj->weakref_->mark_dying(false);
         }
       }
@@ -324,14 +333,14 @@ class reftest : public refcache::weak_referenced
 public:
   void onzero()
   {
-    verbose.println("refcache: TEST onzero");
+    console.println("refcache: TEST onzero");
   }
 };
 
 static void
 test(void *)
 {
-  verbose.println("refcache: TEST STARTING");
+  console.println("refcache: TEST STARTING");
   static reftest rt;
   refcache::weakref<reftest> wr(&rt);
   for (int i = 0; i < 100; i++) {
@@ -352,7 +361,7 @@ test(void *)
     microdelay(100000);
   }
   assert(!wr.get());
-  verbose.println("refcache: TEST PASSED");
+  console.println("refcache: TEST PASSED");
 #if CODEX
   codex_trace_end();
   halt();
