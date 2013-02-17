@@ -23,11 +23,6 @@ using namespace std;
 static atomic<u64> tlbflush_req __mpalign__;
 static __padout__ __attribute__((used));
 
-// Ensure have_kbase_mapping lives on a cache line by itself since we
-// read this from all cores all the time.
-bool have_kbase_mapping __mpalign__;
-static __padout__ __attribute__((used));
-
 static const char *levelnames[] = {
   "PT", "PD", "PDP", "PML4"
 };
@@ -302,9 +297,6 @@ initpg(void)
       paddr pa = it.index() - KBASE;
       *it.create(0) = pa | PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
     }
-
-    // Inform system that kbase mapping is now usable
-    have_kbase_mapping = true;
   }
 
   // Enable global pages.  This has to happen on every core.

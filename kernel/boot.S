@@ -138,9 +138,9 @@ tramp64:
 .comm stack, STACK
 
 # Page tables.  See section 4.5 of 253668.pdf.
-# We map the first GB of physical memory at 0 and at KCODE.  At boot
+# We map the first GB of physical memory at 0, KBASE, KCODE.  At boot
 # time we are using the mapping at 0 but during ordinary execution we
-# use the high mapping.
+# use the high mappings.
 # The intent is that after bootstrap the kernel can expand this mapping
 # to cover all the available physical memory.
 # This would be easier if we could use the PS bit to create GB-sized entries
@@ -149,20 +149,34 @@ tramp64:
 .global kpml4
 kpml4:
 	.quad PADDR(pdpt0) + (1<<0) + (1<<1)  // present, read/write
-	.space 4096 - 2*8
-	.quad PADDR(pdpt1) + (1<<0) + (1<<1)  // present, read/write
+	.space 4096 - 3*8
+	// We can't just use pdpt0 because we mark pdpt0 no-execute
+	// in initpg.
+	.quad PADDR(pdptbase) + (1<<0) + (1<<1)  // present, read/write
+	.quad PADDR(pdptcode) + (1<<0) + (1<<1)  // present, read/write
+
 .align 4096
 pdpt0:
-	.quad PADDR(pdt) + (1<<0) + (1<<1)  // present, read/write
+	.quad PADDR(pdtcode) + (1<<0) + (1<<1)  // present, read/write
 	.space 4096 - 8
        
 .align 4096
-pdpt1:
+pdptbase:
+	.quad PADDR(pdtbase) + (1<<0) + (1<<1)  // present, read/write
 	.space 4096 - 8
-	.quad PADDR(pdt) + (1<<0) + (1<<1)  // present, read/write
+
+.align 4096
+pdptcode:
+	.space 4096 - 8
+	.quad PADDR(pdtcode) + (1<<0) + (1<<1)  // present, read/write
        
 .align 4096
-pdt:
+pdtbase:
+	// Filled in below.
+	.space 4096
+
+.align 4096
+pdtcode:
 	// Filled in below.
 	.space 4096
 
@@ -210,13 +224,15 @@ initpagetables:
 	movl $(0 | 1<<0 | 1<<1 | 1<<7 | 1<<8), %eax
 	movl $0, %edx
 
-	// Fill in 512 entries at pdt.
-	movl $PADDR(pdt), %edi
+	// Fill in 512 entries at pdtbase and pdtcode.
+	movl $PADDR(pdtbase), %edi
 	movl $512, %ecx
 1:
 	// Write this 64-bit entry.
 	movl %eax, 0(%edi)
 	movl %edx, 4(%edi)
+	movl %eax, (0+pdtcode-pdtbase)(%edi)
+	movl %edx, (4+pdtcode-pdtbase)(%edi)
 	addl $8, %edi
 	// 64-bit add to prepare address for next entry.
 	// Because this is a large page entry, it covers 512 4k pages (2 MB).
