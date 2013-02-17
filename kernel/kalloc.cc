@@ -867,9 +867,9 @@ initpageinfo(void)
   page_info_map_end = page_info_map + map_size;
 }
 
-// Initialize free list of physical pages.
+// Initialize physical memory map
 void
-initkalloc(u64 mbaddr)
+initphysmem(paddr mbaddr)
 {
   parse_mb_map((Mbdata*) p2v(mbaddr));
 
@@ -878,7 +878,12 @@ initkalloc(u64 mbaddr)
 
   console.println("Scrubbed memory map:");
   mem.print();
+}
 
+// Initialize free list of physical pages.
+void
+initkalloc(void)
+{
   // Make sure newend is in the KBASE mapping, rather than the KCODE
   // mapping (which may be too small for what we do below).
   newend = (char*)p2v(v2p(newend));

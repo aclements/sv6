@@ -25,7 +25,8 @@ void initnmi(void);
 void initcodex(void);
 void inittrap(void);
 void initseg(struct cpu *);
-void initkalloc(u64 mbaddr);
+void initphysmem(paddr mbaddr);
+void initkalloc(void);
 void initz(void);
 void initrcu(void);
 void initproc(void);
@@ -154,6 +155,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   extern u64 cpuhz;
 
   inituart();
+  initphysmem(mbaddr);
   initpg();
   inithz();        // CPU Hz, microdelay
   initseg(&cpus[0]);
@@ -183,7 +185,7 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   inittrap();
   initcmdline();
-  initkalloc(mbaddr);
+  initkalloc();
   initwq();        // (after kalloc)
   initz();         // (after wq)
   initproc();      // process table
