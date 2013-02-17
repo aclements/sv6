@@ -195,28 +195,33 @@ initacpitables(void)
     dmar = acpi_table<ACPI_TABLE_DMAR, ACPI_DMAR_HEADER>(hdr);
 }
 
-static struct cpu*
-apicid_to_cpu(uint32_t apicid)
+static struct numa_node*
+proximity_domain_to_node(uint32_t proximity_domain)
 {
-  for (int i = 0; i < ncpu; ++i)
-    if (cpus[i].hwid.num == apicid)
-      return &cpus[i];
+  for (auto &node : numa_nodes)
+    if (node.hwid == proximity_domain)
+      return &node;
   return nullptr;
 }
 
-bool
-initcpus_acpi(void)
-{
-  if (!madt.get())
-    return false;
+// A map from OS-assigned CPU ID to APICID used during early boot
+// before the cpus array is set up.
+static static_vector<uint32_t, NCPU> cpu_id_to_apicid;
 
-  verbose.println("acpi: Initializing CPUs");
+// Initialize cpu_id_to_apicid.
+static void
+initcpumap(void)
+{
+  if (!madt.get()) {
+    cpu_id_to_apicid.push_back(0);
+    return;
+  }
 
   // Reserve CPU 0 for the BSP, since we're already committed to that
   hwid_t my_apicid = lapic->id();
-  ncpu = 1;
+  cpu_id_to_apicid.push_back(my_apicid.num);
 
-  // Create CPUs
+  int count = 1;
   bool found_bsp = false;
   for (auto &sub : madt) {
     uint32_t lapicid;
@@ -234,115 +239,140 @@ initcpus_acpi(void)
       continue;
     }
 
-    struct cpu *c;
     if (lapicid == my_apicid.num) {
-      c = &cpus[0];
       found_bsp = true;
-    } else {
-      if (ncpu == NCPU) {
-        console.println("initcpus_acpi: Only ", NCPU,
-                        " CPUs enabled; please increase NCPU");
-        break;
-      }
-      c = &cpus[ncpu++];
+      continue;
     }
-    c->id = c - cpus;
-    c->hwid = HWID(lapicid);
-    verbose.println("acpi: CPU ", c->id, " APICID ", c->hwid.num);
+    if (count < NCPU)
+      cpu_id_to_apicid.push_back(lapicid);
+    ++count;
   }
-  assert(found_bsp);
 
-  // Create NUMA nodes
-  static_vector<uint32_t, MAX_NUMA_NODES> proximity_domains;
-  auto ensure_node = [&](uint32_t domain) -> numa_node* {
-    auto i = std::find(proximity_domains.begin(), proximity_domains.end(),
-                       domain) - proximity_domains.begin();
-    if (i == proximity_domains.size()) {
-      numa_nodes.emplace_back(i);
-      proximity_domains.push_back(domain);
-    }
-    return &numa_nodes[i];
-  };
+  if (count > NCPU)
+    console.println("acpi: Only ", NCPU, " of ", count,
+                    " CPUs supported; please increase NCPU");
+  if (!found_bsp)
+    panic("Bootstrap process missing from MADT");
+}
+
+void
+initnuma(void)
+{
+  initcpumap();
+
   if (!srat.get()) {
     verbose.println("acpi: No SRAT; assuming single NUMA node");
-    numa_nodes.emplace_back(0);
-    numa_nodes.back().mems.emplace_back(0, ~0ull);
-    for (int i = 0; i < ncpu; ++i) {
-      cpus[i].node = &numa_nodes.back();
-      numa_nodes.back().cpus.push_back(&cpus[i]);
-    }
-  } else {
-    for (auto &sub : srat) {
-      uint32_t proximity_domain, apicid;
-      switch (sub.Type) {
-      case ACPI_SRAT_TYPE_CPU_AFFINITY: {
-        auto aff = (ACPI_SRAT_CPU_AFFINITY&)sub;
-        if (!(aff.Flags & ACPI_SRAT_CPU_USE_AFFINITY))
-          continue;
-        proximity_domain = aff.ProximityDomainLo;
-        if (srat->Header.Revision >= 2)
-          for (int i = 0; i < 3; ++i)
-            proximity_domain |= aff.ProximityDomainHi[i] << (i * 8);
-        apicid = aff.ApicId;
-        goto cpu_common;
-      }
-      case ACPI_SRAT_TYPE_X2APIC_CPU_AFFINITY: {
-        auto aff = (ACPI_SRAT_X2APIC_CPU_AFFINITY&)sub;
-        if (!(aff.Flags & ACPI_SRAT_CPU_ENABLED))
-          continue;
-        proximity_domain = aff.ProximityDomain;
-        apicid = aff.ApicId;
-        goto cpu_common;
-      }
-      cpu_common: {
-          auto cpu = apicid_to_cpu(apicid);
-          auto node = ensure_node(proximity_domain);
-          if (!cpu) {
-            // XXX This physical memory will go unused
-            console.println("Warning: SRAT refers to unknown CPU APICID ",
-                            apicid);
-            continue;
-          }
-          if (cpu->node)
-            panic("CPU %d is in multiple NUMA nodes", cpu->id);
-          cpu->node = node;
-          node->cpus.push_back(cpu);
-          break;
-        }
-
-      case ACPI_SRAT_TYPE_MEMORY_AFFINITY: {
-        auto aff = (ACPI_SRAT_MEM_AFFINITY&)sub;
-        if (!(aff.Flags & ACPI_SRAT_MEM_ENABLED))
-          continue;
-        proximity_domain = aff.ProximityDomain;
-        if (srat->Header.Revision < 2)
-          proximity_domain &= 0xff;
-        auto node = ensure_node(proximity_domain);
-        node->mems.emplace_back(aff.BaseAddress, aff.Length);
-        break;
-      }
-
-      default:
-        continue;
-      }
-    }
-
-    // Print NUMA node map
-    for (auto &node : numa_nodes) {
-      verbose.print("acpi: NUMA node ", node.id, ": cpus");
-      for (auto &cpu : node.cpus)
-        verbose.print(" ", cpu->id);
-      verbose.print(" mem");
-      for (auto &mem : node.mems)
-        verbose.print(" ", shex(mem.base), "-", shex(mem.base+mem.length-1));
-      verbose.println();
-    }
-
-    // Check that all CPUs are in a NUMA node
-    for (int c = 0; c < ncpu; ++c)
-      if (!cpus[c].node)
-        panic("CPU %d does not belong to a NUMA node", c);
+    numa_nodes.emplace_back(0, 0);
+    auto &node = numa_nodes.back();
+    node.mems.emplace_back(0, ~0ull);
+    for (size_t i = 0; i < cpu_id_to_apicid.size(); ++i)
+      node.cpuids.push_back(i);
+    return;
   }
+
+  // Construct NUMA nodes
+  for (auto &sub : srat) {
+    if (sub.Type == ACPI_SRAT_TYPE_MEMORY_AFFINITY) {
+      auto aff = (ACPI_SRAT_MEM_AFFINITY&)sub;
+      if (!(aff.Flags & ACPI_SRAT_MEM_ENABLED))
+        continue;
+      uint32_t proximity_domain = aff.ProximityDomain;
+      if (srat->Header.Revision < 2)
+        proximity_domain &= 0xff;
+      auto node = proximity_domain_to_node(proximity_domain);
+      if (!node) {
+        numa_nodes.emplace_back(numa_nodes.size(), proximity_domain);
+        node = &numa_nodes.back();
+      }
+      node->mems.emplace_back(aff.BaseAddress, aff.Length);
+    }
+  }
+
+  // Associate CPU IDs with NUMA nodes.  We'll associate the actual
+  // struct cpu*'s in initcpus_acpi.
+  for (auto &sub : srat) {
+    uint32_t proximity_domain, apicid;
+    switch (sub.Type) {
+    case ACPI_SRAT_TYPE_CPU_AFFINITY: {
+      auto aff = (ACPI_SRAT_CPU_AFFINITY&)sub;
+      if (!(aff.Flags & ACPI_SRAT_CPU_USE_AFFINITY))
+        continue;
+      proximity_domain = aff.ProximityDomainLo;
+      if (srat->Header.Revision >= 2)
+        for (int i = 0; i < 3; ++i)
+          proximity_domain |= aff.ProximityDomainHi[i] << (i * 8);
+      apicid = aff.ApicId;
+      break;
+    }
+    case ACPI_SRAT_TYPE_X2APIC_CPU_AFFINITY: {
+      auto aff = (ACPI_SRAT_X2APIC_CPU_AFFINITY&)sub;
+      if (!(aff.Flags & ACPI_SRAT_CPU_ENABLED))
+        continue;
+      proximity_domain = aff.ProximityDomain;
+      apicid = aff.ApicId;
+      break;
+    }
+    default:
+      continue;
+    }
+
+    auto node = proximity_domain_to_node(proximity_domain);
+    bool found = false;
+    for (int cpuid = 0; !found && cpuid < cpu_id_to_apicid.size(); ++cpuid) {
+      if (cpu_id_to_apicid[cpuid] == apicid) {
+        node->cpuids.push_back(cpuid);
+        found = true;
+      }
+    }
+    if (!found)
+      panic("SRAT refers to unknown CPU APICID %d", apicid);
+  }
+
+  // Print NUMA node map
+  for (auto &node : numa_nodes) {
+    verbose.print("acpi: NUMA node ", node.id, ": cpus");
+    for (auto cpuid : node.cpuids)
+      verbose.print(" ", cpuid);
+    verbose.print(" mem");
+    for (auto &mem : node.mems)
+      verbose.print(" ", shex(mem.base), "-", shex(mem.base+mem.length-1));
+    verbose.println();
+  }
+}
+
+bool
+initcpus_acpi(void)
+{
+  if (!madt.get())
+    return false;
+
+  verbose.println("acpi: Initializing CPUs");
+
+  ncpu = cpu_id_to_apicid.size();
+
+  // Create CPUs.  We already did most of the work in initcpumap.
+  for (int cpuid = 0; cpuid < cpu_id_to_apicid.size(); ++cpuid) {
+    auto c = &cpus[cpuid];
+    c->id = cpuid;
+    c->hwid = HWID(cpu_id_to_apicid[cpuid]);
+    verbose.println("acpi: CPU ", c->id, " APICID ", c->hwid.num);
+  }
+
+  // Associate CPUs with NUMA nodes
+  for (auto &node : numa_nodes) {
+    for (auto id : node.cpuids) {
+      auto cpu = &cpus[id];
+      if (cpu->node)
+        panic("CPU %d is in multiple NUMA nodes", cpu->id);
+      cpu->node = &node;
+      node.cpus.push_back(cpu);
+    }
+  }
+
+  // Check that all CPUs are in a NUMA node
+  for (int c = 0; c < ncpu; ++c)
+    if (!cpus[c].node)
+      panic("CPU %d does not belong to a NUMA node", c);
 
   return true;
 }

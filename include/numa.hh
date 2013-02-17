@@ -19,11 +19,18 @@ struct numa_node
     MAX_MEMS = 16
   };
 
-  const std::size_t id;         // Index in numa_nodes
-  static_vector<struct cpu*, NCPU> cpus;
-  static_vector<region, MAX_MEMS> mems;
+  // Index in numa_nodes
+  const std::size_t id;
+  // Hardware ID of this node (ACPI proximity domain)
+  const uint32_t hwid;
+  // IDs of CPUs belonging to this node.  We initialize this early (in
+  // initnuma).
+  static_vector<int, NCPU> cpuids;
 
-  numa_node(std::size_t id) : id(id) { }
+  static_vector<region, MAX_MEMS> mems;
+  static_vector<struct cpu*, NCPU> cpus;
+
+  numa_node(std::size_t id, uint32_t hwid) : id(id), hwid(hwid) { }
 };
 
 enum {

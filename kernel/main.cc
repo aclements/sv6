@@ -46,6 +46,7 @@ void initcmdline(void);
 void initdistref(void);
 void initrefcache(void);
 void initacpitables(void);
+void initnuma(void);
 void initcpus(void);
 void initlapic(void);
 void initiommu(void);
@@ -160,7 +161,8 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   initacpitables();        // Requires initpg, inittls
   initlapic();             // Requires initpg
-  initcpus();              // Requires initlapic, suggests initacpitables
+  initnuma();              // Requires initacpitables, initlapic
+  initcpus();              // Requires initnuma, suggests initacpitables
 
   initpic();       // interrupt controller
   initiommu();             // Requires initlapic
