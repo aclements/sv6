@@ -522,13 +522,15 @@ public:
 
   // Return the first region of physical memory of size @c size at or
   // after @c start.  If @c align is provided, the returned pointer
-  // will be a multiple of @c align, which must be a power of 2.
-  void *alloc(void *start, size_t size, size_t align = 0) const
+  // will be a multiple of @c align, which must be a power of 2.  This
+  // does not remove the region from the physical map; it's up to the
+  // caller to ensure nothing else also allocates this memory.
+  uintptr_t alloc(uintptr_t start, size_t size, size_t align = 0) const
   {
     // Find region containing start.  Also accept addresses right at
     // the end of a region, in case the caller just right to the last
     // byte of a region.
-    uintptr_t pa = v2p(start);
+    uintptr_t pa = start;
     for (auto &reg : regions) {
       if (pa == 0)
         pa = reg.base;
@@ -539,26 +541,15 @@ public:
           pa = (pa + align - 1) & ~(align - 1);
         // Is there enough space?
         if (pa + size < reg.end)
-          return p2v(pa);
+          return pa;
         // Not enough space.  Move to next region
         pa = 0;
       }
     }
     if (pa == 0)
       panic("phys_map: out of memory allocating %lu bytes at %p",
-            size, start);
-    panic("phys_map: bad start address %p", start);
-  }
-
-  // Return the maximum allocation size for an allocation starting at
-  // @c start.
-  size_t max_alloc(void *start) const
-  {
-    uintptr_t pa = v2p(start);
-    for (auto &reg : regions)
-      if (reg.base <= pa && pa <= reg.end)
-        return reg.end - (uintptr_t)pa;
-    panic("phys_map: bad start address %p", start);
+            size, (void*)start);
+    panic("phys_map: bad start address %p", (void*)start);
   }
 
   // Return the total number of bytes in the memory map.
@@ -581,19 +572,6 @@ public:
         b = reg.base;
     }
     return b;
-  }
-
-  // Return the total number of bytes after address start.
-  size_t bytes_after(void *start) const
-  {
-    uintptr_t pa = v2p(start);
-    size_t total = 0;
-    for (auto &reg : regions)
-      if (reg.base > pa)
-        total += reg.end - reg.base;
-      else if (reg.base <= pa && pa <= reg.end)
-        total += reg.end - (uintptr_t)pa;
-    return total;
   }
 
   // Return the first physical address above all of the regions.
