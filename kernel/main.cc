@@ -156,7 +156,7 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   inituart();
   initphysmem(mbaddr);
-  initpg();
+  initpg();                // Requires initphysmem
   inithz();        // CPU Hz, microdelay
   initseg(&cpus[0]);
   inittls(&cpus[0]);       // Requires initseg

@@ -265,9 +265,6 @@ struct slab {
 
 struct slab slabmem[slab_type_max];
 
-extern char end[]; // first address after kernel loaded from ELF file
-char *newend;
-
 page_info_map_entry page_info_map[512];
 size_t page_info_map_shift;
 page_info_map_entry *page_info_map_end;
@@ -288,7 +285,7 @@ static percpu<struct cpu_mem> cpu_mem;
 static_vector<numa_node, MAX_NUMA_NODES> numa_nodes;
 
 static int kinited __mpalign__;
-static char *pgalloc();
+static char *early_kalloc(size_t size);
 
 struct memory {
   balancer<memory, mempool> b_;
@@ -315,11 +312,8 @@ struct memory {
 
   char* kalloc(const char *name, size_t size)
   {
-    if (!kinited) {
-      // XXX Could have a less restricted boot allocator
-      assert(size == PGSIZE);
-      return pgalloc();
-    }
+    if (!kinited)
+      return early_kalloc(size);
     void *res = nullptr;
     auto mem = mycpu()->mem;
     if (size == PGSIZE) {
@@ -625,17 +619,14 @@ parse_mb_map(struct Mbdata *mb)
   }
 }
 
-// simple page allocator to get off the ground during boot
+// Simple allocator to get off the ground during boot.  Works directly
+// with the physical memory map.
 static char *
-pgalloc(void)
+early_kalloc(size_t size)
 {
-  if (newend == 0)
-    newend = end;
-
-  void *p = (void*)PGROUNDUP((uptr)newend);
-  memset(p, 0, PGSIZE);
-  newend = newend + PGSIZE;
-  return (char*) p;
+  paddr pa = mem.alloc(0, size, size);
+  mem.remove(0, pa + size);
+  return (char*)p2v(pa);
 }
 
 void
@@ -669,11 +660,8 @@ kalloc(const char *name, size_t size)
 char*
 kalloc(const char *name, size_t size)
 {
-  if (!kinited) {
-    // XXX Could have a less restricted boot allocator
-    assert(size == PGSIZE);
-    return pgalloc();
-  }
+  if (!kinited)
+    return early_kalloc(size);
 
   void *res = nullptr;
   const char *source = nullptr;
@@ -871,6 +859,9 @@ initpageinfo(void)
 void
 initphysmem(paddr mbaddr)
 {
+  // First address after kernel loaded from ELF file
+  extern char end[];
+
   parse_mb_map((Mbdata*) p2v(mbaddr));
 
   // Consider first 1MB of memory unusable
@@ -878,23 +869,15 @@ initphysmem(paddr mbaddr)
 
   console.println("Scrubbed memory map:");
   mem.print();
+
+  // Reserve kernel ELF image
+  mem.remove(0, v2p(end));
 }
 
 // Initialize free list of physical pages.
 void
 initkalloc(void)
 {
-  // Make sure newend is in the KBASE mapping, rather than the KCODE
-  // mapping (which may be too small for what we do below).
-  newend = (char*)p2v(v2p(newend));
-
-  // Round newend up to a page boundary so allocations are aligned.
-  newend = PGROUNDUP(newend);
-
-  // Remove memory before newend from the memory map
-  mem.remove(0, v2p(newend));
-  // After this point, do not use newend!
-
   // Reserve the page_info arrays
   initpageinfo();
 
