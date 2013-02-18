@@ -206,7 +206,8 @@ struct pmuevent_ops {
 };
 
 static void
-print_entry(Addr2line &addr2line, int count, int total, struct pmuevent *e)
+print_entry(Addr2line &addr2line, uint64_t count, uint64_t total,
+            struct pmuevent *e)
 {
   std::vector<line_info> li;
   addr2line.lookup(e->rip, &li);
@@ -218,8 +219,8 @@ print_entry(Addr2line &addr2line, int count, int total, struct pmuevent *e)
     }
   }
 
-  printf("%2d%% %-7u %c ",
-         count * 100 / total, count, e->idle?'I':' ');
+  printf("%2d%% %-7" PRIu64 " %c ",
+         (int)(count * 100 / total), count, e->idle?'I':' ');
 
   const char *indent = "";
   for (auto &l : li) {
@@ -293,7 +294,7 @@ main(int ac, char **av)
     }
   }
   
-  std::map<int, struct pmuevent*, gt> sorted;
+  std::map<uint64_t, struct pmuevent*, gt> sorted;
   int total = 0;
   for (std::pair<struct pmuevent* const, int> &p : map) {
     sorted[p.second] = p.first;
@@ -303,7 +304,7 @@ main(int ac, char **av)
   printf("total samples: %" PRIu64 "  idle samples: %" PRIu64 " (%d%%)\n\n",
          samples, idle_samples, (int)(idle_samples * 100 / samples));
 
-  for (std::pair<const int, struct pmuevent*> &p : sorted)
+  for (std::pair<const uint64_t, struct pmuevent*> &p : sorted)
     print_entry(addr2line, p.first, total, p.second);
 
   return 0;
