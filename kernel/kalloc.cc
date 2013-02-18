@@ -690,6 +690,7 @@ kalloc(const char *name, size_t size)
             goto general;
           }
           lb = &buddies[*buddyit];
+          l.release();
           l = lb->lock.guard();
           if (!mem->steal.is_local(*buddyit)) {
             kstats::inc(&kstats::kalloc_hot_list_steal_count);
