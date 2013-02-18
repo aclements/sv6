@@ -10,6 +10,7 @@
   _##name##_size:; \
     .quad _##name##_end - _##name##_start
 
+.section .init_rodata, "a", @progbits
 include_bin(kernel/initcode,initcode)
 include_bin(kernel/bootother,bootother)
 include_bin(fs.img,fs_img)

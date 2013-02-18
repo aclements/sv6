@@ -27,6 +27,11 @@ SECTIONS
                 PROVIDE_HIDDEN(__init_array_end = .);
         }
 
+        /* Binary blobs from kernel/incbin.S */
+        .init_rodata : {
+                *(.init_rodata)
+        }
+
 	. = ALIGN(0x1000);
 	.data : {
 		*(.data .data.* .gnu.linkonce.d.*)
