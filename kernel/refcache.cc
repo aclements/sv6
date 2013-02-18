@@ -18,9 +18,9 @@ enum { SDEBUG = false };
 #endif
 static console_stream sdebug(SDEBUG);
 
-percpu<refcache::cache> refcache::mycache;
-
 namespace refcache {
+  DEFINE_PERCPU(cache, mycache);
+
   // The current global epoch.  All local epochs are <= the global
   // epoch at all times.  Specifically, because we wait until all
   // cores reach the global epoch before incrementing it, all local

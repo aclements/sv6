@@ -149,6 +149,7 @@
 #include "spinlock.h"
 #include "ilist.hh"
 #include "percpu.hh"
+#include "spercpu.hh"
 #include "kstats.hh"
 #include "seqlock.hh"
 #include "condvar.h"
@@ -488,8 +489,7 @@ namespace refcache {
   // accessed with interrupts disabled or by a pinned process to
   // prevent migration.  Some fields of cache specifically require
   // interrupts to be disabled to prevent concurrent access.
-  // XXX Allocation of this should be NUMA-aware
-  extern percpu<cache> mycache;
+  DECLARE_PERCPU(cache, mycache);
 
   inline void
   referenced::inc()
