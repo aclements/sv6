@@ -84,7 +84,7 @@ public:
   void flush();
 } __mpalign__;
 
-percpu<struct pmulog, percpu_safety::internal> pmulog;
+DEFINE_PERCPU(struct pmulog, pmulog, percpu_safety::internal);
 
 //
 // AMD PMU
@@ -650,12 +650,11 @@ samplog(int pmc, struct trapframe *tf)
 static int
 readlog(char *dst, u32 off, u32 n)
 {
-  struct pmulog *q = &pmulog[NCPU];
-  struct pmulog *p;
   int ret = 0;
   u64 cur = 0;
 
-  for (p = &pmulog[0]; p != q && n != 0; p++) {
+  for (int i = 0; i < ncpu && n != 0; i++) {
+    struct pmulog *p = &pmulog[i];
     p->flush();
     u64 len = p->count * sizeof(struct pmuevent);
     if (cur <= off && off < cur+len) {
@@ -683,12 +682,11 @@ readlog(char *dst, u32 off, u32 n)
 static void
 sampstat(mdev*, struct stat *st)
 {
-  struct pmulog *q = &pmulog[NCPU];
-  struct pmulog *p;
   u64 sz = 0;
   
   sz += LOGHEADER_SZ;
-  for (p = &pmulog[0]; p != q; p++) {
+  for (int i = 0; i < ncpu; ++i) {
+    struct pmulog *p = &pmulog[i];
     p->flush();
     sz += p->count * sizeof(struct pmuevent);
   }
@@ -699,8 +697,6 @@ sampstat(mdev*, struct stat *st)
 static int
 sampread(mdev*, char *dst, u32 off, u32 n)
 {
-  struct pmulog *q = &pmulog[NCPU];
-  struct pmulog *p;
   struct logheader *hdr;
   int ret;
   int i;
@@ -714,13 +710,11 @@ sampread(mdev*, char *dst, u32 off, u32 n)
     if (hdr == nullptr)
       return -1;
     hdr->ncpus = NCPU;
-    i = 0;
-    for (p = &pmulog[0]; p != q; p++) {
-      u64 sz = p->count * sizeof(struct pmuevent);
+    for (i = 0; i < NCPU; ++i) {
+      u64 sz = i < ncpu ? pmulog[i].count * sizeof(struct pmuevent) : 0;
       hdr->cpu[i].offset = len;
       hdr->cpu[i].size = sz;
       len += sz;
-      i++;
     }
 
     cc = MIN(LOGHEADER_SZ-off, n);
@@ -855,8 +849,10 @@ initsamp(void)
 // watchdog
 //
 
-static percpu<int> wd_count;
-static spinlock wdlock("wdlock");
+namespace {
+  DEFINE_PERCPU(int, wd_count);
+  spinlock wdlock("wdlock");
+};
 
 static void
 wdcheck(int pmc, struct trapframe* tf)

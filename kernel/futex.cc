@@ -7,7 +7,7 @@
 #include "condvar.h"
 #include "proc.hh"
 #include "cpu.hh"
-#include "percpu.hh"
+#include "spercpu.hh"
 #include "kmtrace.hh"
 
 //
@@ -64,7 +64,7 @@ struct nscache {
 
 // XXX(austin) If we used percpu_safety::cli here, would nscache no
 // longer need the lock?
-percpu<nscache, percpu_safety::internal> nscache_;
+DEFINE_PERCPU(nscache, nscache_, percpu_safety::internal);
 
 nscache::nscache(void)
   : lock_("nscache::lock_", LOCKSTAT_FUTEX), head_(0), tail_(0)

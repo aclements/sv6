@@ -457,7 +457,7 @@ namespace mmu_shared_page_table {
 }
 
 namespace mmu_per_core_page_table {
-  static percpu<const page_map_cache*> cur_cache;
+  DEFINE_PERCPU(const page_map_cache*, cur_cache);
 
   void
   page_map_cache::insert(uintptr_t va, tracker *t, pme_t pte)

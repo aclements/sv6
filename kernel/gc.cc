@@ -6,7 +6,7 @@
 #include "proc.hh"
 #include "cpu.hh"
 #include "cpputil.hh"
-#include "percpu.hh"
+#include "spercpu.hh"
 #include "gc.hh"
 #include "major.h"
 #include "uk/gcstat.h"
@@ -70,8 +70,8 @@ public:
   void inc_cur_epoch(void);
 };
 
-percpu<gc_state, percpu_safety::internal> gc_states;
-percpu<gc_stat, percpu_safety::internal> stat;
+DEFINE_PERCPU(gc_state, gc_states, percpu_safety::internal);
+DEFINE_PERCPU(gc_stat, stat, percpu_safety::internal);
 int ngc_cpu;
 int gc_batchsize;
 

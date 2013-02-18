@@ -8,7 +8,7 @@ struct state {
  __padout__;
 };
 
-percpu<state,percpu_safety::internal> rstate;
+DEFINE_PERCPU(state, rstate, percpu_safety::internal);
 
 u64
 rnd(void)

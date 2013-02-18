@@ -279,8 +279,9 @@ struct cpu_mem
   size_t nhot;
 };
 
-// Prefer mycpu()->mem for local access to this.
-static percpu<struct cpu_mem> cpu_mem;
+// Prefer mycpu()->mem for local access to this.  This is NOINIT since
+// we set up the cpu_mems during CPU 0 boot.
+DEFINE_PERCPU_NOINIT(struct cpu_mem, cpu_mem);
 
 static_vector<numa_node, MAX_NUMA_NODES> numa_nodes;
 

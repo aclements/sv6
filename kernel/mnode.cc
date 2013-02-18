@@ -5,8 +5,10 @@
 #include "atomic_util.hh"
 #include "percpu.hh"
 
-static weakcache<u64, mnode, 257> mnode_cache;
-static percpu<u64> next_inumber;
+namespace {
+  weakcache<u64, mnode, 257> mnode_cache;
+  DEFINE_PERCPU(u64, next_inumber);
+};
 
 struct inumber
 {
@@ -73,8 +75,8 @@ mnode::get(u64 inum)
 sref<mnode>
 mnode::alloc(u8 type)
 {
-  auto counter = next_inumber.load();
-  return mnode::get(inumber(type, myid(), (*counter)++).v_);
+  scoped_cli cli;
+  return mnode::get(inumber(type, myid(), (*next_inumber)++).v_);
 }
 
 mnode::mnode(u64 inum) : inum_(inum), cache_pin_(false), valid_(false)

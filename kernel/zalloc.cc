@@ -25,7 +25,7 @@ struct zallocator {
   unsigned nPages;
   wframe frame;
 };
-percpu<zallocator> z_;
+DEFINE_PERCPU(zallocator, z_);
 
 struct zwork : public work {
   zwork(wframe* frame)

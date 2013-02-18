@@ -97,13 +97,15 @@ lapiceoi()
   lapic->eoi();
 }
 
+namespace {
+  DEFINE_PERCPU(uintptr_t, nmi_lastpc);
+  DEFINE_PERCPU(int, nmi_swallow);
+}
+
 void
 trap(struct trapframe *tf)
 {
   if (tf->trapno == T_NMI) {
-    static percpu<uintptr_t> lastpc;
-    static percpu<int> swallow;
-
     // The only locks that we can acquire during NMI are ones
     // we acquire only during NMI.
 
@@ -122,10 +124,10 @@ trap(struct trapframe *tf)
 
     // Is this a back-to-back NMI?  If so, we might have handled all
     // of the NMI sources already.
-    bool repeat = (*lastpc == tf->rip);
-    *lastpc = tf->rip;
+    bool repeat = (*nmi_lastpc == tf->rip);
+    *nmi_lastpc = tf->rip;
     if (!repeat)
-      *swallow = 0;
+      *nmi_swallow = 0;
 
     // Handle NMIs
     int handled = 0;
@@ -135,12 +137,12 @@ trap(struct trapframe *tf)
     // be EOI'd (and fixed mode interrupts can't be programmed to
     // produce an NMI vector).
 
-    if (handled == 0 && !*swallow)
+    if (handled == 0 && !*nmi_swallow)
       panic("NMI");
 
     // This NMI accounts for one handled event, so we can swallow up
     // to handled - 1 more back-to-back NMIs after this one.
-    *swallow += handled - 1;
+    *nmi_swallow += handled - 1;
 
     return;
   }

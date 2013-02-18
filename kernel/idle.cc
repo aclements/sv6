@@ -5,7 +5,7 @@
 #include "condvar.h"
 #include "proc.hh"
 #include "cpu.hh"
-#include "percpu.hh"
+#include "spercpu.hh"
 #include "wq.hh"
 #include "kmtrace.hh"
 #include "bits.hh"
@@ -19,7 +19,9 @@ struct idle {
   struct spinlock lock;
 };
 
-static percpu<idle> idlem;
+namespace {
+  DEFINE_PERCPU(idle, idlem);
+};
 
 void idleloop(void);
 

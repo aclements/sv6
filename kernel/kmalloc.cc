@@ -25,7 +25,7 @@ struct freelist {
   char name[MAXNAME];
 };
 
-percpu<struct freelist> freelists;
+DEFINE_PERCPU(struct freelist, freelists);
 
 void
 kminit(void)
