@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include "percpu.hh"
 #include "bitset.hh"
 
 // A TLB shootdown gatherer that doesn't track anything, but as a
