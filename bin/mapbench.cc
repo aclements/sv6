@@ -156,6 +156,7 @@ int get_cpu_order(int thread)
 void*
 timer_thread(void *)
 {
+  pthread_barrier_wait(&bar);
   sleep(duration);
   stop = true;
   return NULL;
@@ -435,7 +436,7 @@ main(int argc, char **argv)
 
   pthread_t* tid = (pthread_t*) malloc(sizeof(*tid)*nthread);
 
-  pthread_barrier_init(&bar, 0, nthread);
+  pthread_barrier_init(&bar, 0, nthread+1);
 
   for(int i = 0; i < nthread; i++) {
     if (setaffinity(get_cpu_order(i)) < 0)
