@@ -5,7 +5,7 @@
 #include "pstream.hh"
 
 #ifdef XV6_KERNEL
-#include "cpu.hh"
+#include "spercpu.hh"
 #endif
 
 // XXX(Austin) With decent per-CPU static variables, we could just use
@@ -79,6 +79,10 @@
   KSTATS_REFCACHE(X)                            \
   KSTATS_SOCKET(X)                              \
 
+struct kstats;
+#ifdef XV6_KERNEL
+DECLARE_PERCPU(struct kstats, mykstats, percpu_safety::internal);
+#endif
 
 struct kstats
 {
@@ -90,7 +94,7 @@ struct kstats
   template<class T>
   static void inc(T kstats::* field, T delta = 1)
   {
-    mykstats()->*field += delta;
+    (*mykstats).*field += delta;
   }
 
   class timer

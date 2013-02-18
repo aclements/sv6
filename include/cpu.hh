@@ -41,7 +41,6 @@ struct cpu {
   struct proc *proc;           // The currently-running process.
   struct cpu_mem *mem;         // The per-core memory metadata
   u64 syscallno;               // Temporary used by sysentry
-  struct kstats *kstats;
   void *percpu_base;           // Per-CPU memory region base
 } __mpalign__;
 
@@ -73,14 +72,6 @@ mykmem(void)
   u64 val;
   __asm volatile("movq %%gs:16, %0" : "=r" (val));
   return (struct kmem *)val;
-}
-
-static inline struct kstats *
-mykstats(void)
-{
-  u64 val;
-  __asm volatile("movq %%gs:(8*4), %0" : "=r" (val));
-  return (struct kstats *)val;
 }
 
 static inline cpuid_t

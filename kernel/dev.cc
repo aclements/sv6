@@ -7,6 +7,8 @@
 
 extern const char *kconfig;
 
+DEFINE_PERCPU(struct kstats, mykstats, percpu_safety::internal);
+
 static int
 kconfigread(mdev*, char *dst, u32 off, u32 n)
 {
@@ -26,7 +28,7 @@ kstatsread(mdev*, char *dst, u32 off, u32 n)
   if (off >= sizeof total)
     return 0;
   for (size_t i = 0; i < ncpu; ++i)
-    total += *cpus[i].kstats;
+    total += mykstats[i];
   if (n > sizeof total - off)
     n = sizeof total - off;
   memmove(dst, (char*)&total + off, n);
