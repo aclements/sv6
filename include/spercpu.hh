@@ -17,6 +17,9 @@
 #include "amd64.h"
 #include "bits.hh"
 
+#include <cstddef>
+#include <new>
+
 // Safety policy for how to protect against CPU migrations while using
 // a per-CPU variable.
 enum class percpu_safety {
@@ -33,8 +36,18 @@ enum class percpu_safety {
 // This defines CPU 0's instance of this percpu variable and the
 // static_percpu wrapper for accessing it.  The gunk after the section
 // makes .percpu a BSS-like section (allocated, writable, but with no
-// data in the object).
-#define DEFINE_PERCPU(type, name, ...) \
+// data in the object).  It also create an initializer function and
+// records a pointer to it in the .percpuinit_array section.
+#define DEFINE_PERCPU(type, name, ...)                                  \
+  DEFINE_PERCPU_NOINIT(type, name, ##__VA_ARGS__);                      \
+  static void __##name##_init(size_t c) { new(&name[c]) type(); }       \
+  static void (*__##name##_initp)(size_t)                               \
+    __attribute__((section(".percpuinit_array"),used)) = __##name##_init;
+
+// This is like DEFINE_PERCPU, but doesn't call the class's
+// constructor.  This is for special cases like cpus that must be
+// initialized remotely.
+#define DEFINE_PERCPU_NOINIT(type, name, ...)                           \
   type __##name##_key __attribute__((__section__(".percpu,\"aw\",@nobits#"))); \
   static_percpu<type, &__##name##_key, ##__VA_ARGS__> name
 

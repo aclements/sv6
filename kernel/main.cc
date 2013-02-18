@@ -67,8 +67,15 @@ mpboot(void)
 {
   initseg(&cpus[bcpuid]);
   inittls(&cpus[bcpuid]);       // Requires initseg
-
   initpg();
+
+  // Call per-CPU static initializers.  This is the per-CPU equivalent
+  // of the init_array calls in cmain.
+  extern void (*__percpuinit_array_start[])(int);
+  extern void (*__percpuinit_array_end[])(int);
+  for (size_t i = 0; i < __percpuinit_array_end - __percpuinit_array_start; i++)
+      (*__percpuinit_array_start[i])(bcpuid);
+
   initlapic();
   initsamp();
   initidle();
@@ -179,7 +186,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   // Some global constructors require mycpu()->id (via myid()) which
   // we setup in inittls.  (Note that gcc 4.7 eliminated the .ctors
   // section entirely, but gcc has supported .init_array for some
-  // time.)
+  // time.)  Note that this will implicitly initialize CPU 0's per-CPU
+  // objects as well.
   extern void (*__init_array_start[])(int, char **, char **);
   extern void (*__init_array_end[])(int, char **, char **);
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)

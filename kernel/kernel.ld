@@ -27,6 +27,12 @@ SECTIONS
                 PROVIDE_HIDDEN(__init_array_end = .);
         }
 
+	.percpuinit_array : {
+		PROVIDE_HIDDEN(__percpuinit_array_start = .);
+		KEEP(*(.percpuinit_array))
+		PROVIDE_HIDDEN(__percpuinit_array_end = .);
+	}
+
         /* Binary blobs from kernel/incbin.S */
         .init_rodata : {
                 *(.init_rodata)
