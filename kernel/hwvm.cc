@@ -390,18 +390,14 @@ inittls(struct cpu *c)
   c->kstats = &percpu[c->id].kstats;
 }
 
-static void tlbflush(u64 myreq);
-
-static void
-tlbflush()
+void
+batched_shootdown::perform() const
 {
+  if (!need_shootdown)
+    return;
+
   u64 myreq = ++tlbflush_req;
-  tlbflush(myreq);
-}
 
-static void
-tlbflush(u64 myreq)
-{
   // the caller may not hold any spinlock, because other CPUs might
   // be spinning waiting for that spinlock, with interrupts disabled,
   // so we will deadlock waiting for their TLB flush..
@@ -420,15 +416,6 @@ tlbflush(u64 myreq)
   for (int i = 0; i < ncpu; i++)
     while (cpus[i].tlbflush_done < myreq)
       /* spin */ ;
-}
-
-void
-batched_shootdown::perform() const
-{
-  if (!need_shootdown)
-    return;
-
-  tlbflush();
 }
 
 void
