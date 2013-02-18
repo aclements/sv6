@@ -35,12 +35,13 @@ struct cpu {
   hwid_t hwid __mpalign__;     // Local APIC ID, accessed by other CPUs
   __padout__;
 
-  // Cpu-local storage variables; see below
+  // Cpu-local storage variables; see below and in spercpu.hh
   struct cpu *cpu;
   struct proc *proc;           // The currently-running process.
   struct cpu_mem *mem;         // The per-core memory metadata
   u64 syscallno;               // Temporary used by sysentry
   struct kstats *kstats;
+  void *percpu_base;           // Per-CPU memory region base
 } __mpalign__;
 
 extern struct cpu cpus[NCPU];

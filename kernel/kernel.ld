@@ -46,6 +46,14 @@ SECTIONS
 	.bss : {
 		*(.bss .bss.* .gnu.linkonce.b.*)
 	}
+
+	. = ALIGN(0x1000);
+	.percpu : {
+		PROVIDE(__percpu_start = .);
+		*(.percpu)
+		PROVIDE(__percpu_end = .);
+	}
+
         /* 2MByte align, because we set NX on 2MByte super pages. */
 	. = ALIGN(0x200000);
 	PROVIDE(end = .);

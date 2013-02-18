@@ -3,22 +3,10 @@
 #include "cpu.hh"
 #include "amd64.h"
 #include "bits.hh"
+#include "spercpu.hh"
 
 extern void pushcli(void);
 extern void popcli(void);
-
-// Safety policy for how to protect against CPU migrations while using
-// a per-CPU variable.
-enum class percpu_safety {
-  // Interrupts are disabled so the thread cannot migrate.  This can
-  // be done in the calling code, or using the load method to get a
-  // scoped cli.
-  cli,
-  // No protection against migration is required.  The variables are
-  // internally thread-safe.  Generally the per-CPU variable is used
-  // only as a sharding mechanism.
-  internal,
-};
 
 template <typename T, percpu_safety S>
 struct percpu;

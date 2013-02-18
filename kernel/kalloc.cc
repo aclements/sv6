@@ -284,6 +284,8 @@ static percpu<struct cpu_mem> cpu_mem;
 
 static_vector<numa_node, MAX_NUMA_NODES> numa_nodes;
 
+void *percpu_offsets[NCPU];
+
 static int kinited __mpalign__;
 static char *early_kalloc(size_t size);
 
@@ -767,6 +769,42 @@ node_usable_map(const numa_node &node)
     node_mem.add(mem.base, mem.base + mem.length);
   node_mem.intersect(mem);
   return node_mem;
+}
+
+// Assign per-CPU memory from each CPU's NUMA node.
+void
+initpercpu(void)
+{
+  // Linker-provided end-of-per-CPU section
+  extern char __percpu_end[];
+  size_t percpusize = __percpu_end - __percpu_start;
+  // Round up to a cache line
+  percpusize = (percpusize | (CACHELINE - 1)) + 1;
+  for (auto &node : numa_nodes) {
+    phys_map node_mem = node_usable_map(node);
+    paddr pos = node_mem.base();
+
+    for (auto cpuid : node.cpuids) {
+      void *base;
+      if (cpuid == 0) {
+        // CPU 0's per-CPU is statically allocated in the kernel
+        // binary.
+        base = __percpu_start;
+      } else {
+        pos = node_mem.alloc(pos, percpusize, CACHELINE);
+        base = p2v(pos);
+        memset(base, 0, percpusize);
+        // Reserve this physical memory
+        mem.remove(pos, pos + percpusize);
+        pos = pos + percpusize;
+      }
+
+      percpu_offsets[cpuid] = base;
+      cpus[cpuid].percpu_base = base;
+      verbose.println("kalloc: CPU ", cpuid, " per-CPU memory at ",
+                      base, "..", (void*)((char*)base + percpusize - 1));
+    }
+  }
 }
 
 // Initialize the page_info arrays and page_info_map

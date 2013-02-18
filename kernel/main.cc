@@ -26,6 +26,7 @@ void initcodex(void);
 void inittrap(void);
 void initseg(struct cpu *);
 void initphysmem(paddr mbaddr);
+void initpercpu(void);
 void initkalloc(void);
 void initz(void);
 void initrcu(void);
@@ -164,6 +165,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initacpitables();        // Requires initpg, inittls
   initlapic();             // Requires initpg
   initnuma();              // Requires initacpitables, initlapic
+  initpercpu();            // Requires initnuma
   initcpus();              // Requires initnuma, suggests initacpitables
 
   initpic();       // interrupt controller

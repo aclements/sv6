@@ -1,0 +1,98 @@
+// Per-CPU variables with static duration
+
+// We isolate percpu variables in a special section called .percpu,
+// which kernel.ld places just after the bss.  The .percpu section in
+// the kernel image itself becomes the per-CPU storage for the boot
+// CPU.  For other CPUs, we allocate a separate region in that CPU's
+// NUMA node of the same size as .percpu.  Then, to find a CPU's
+// instance of a per-CPU variable, we simply offset that variable's
+// address from the .percpu section into the other CPU's region.  This
+// approach lets the linker do most of the heavy lifting for us, packs
+// per-CPU data nice (unlike creating arrays for each variable), and
+// makes it easy to associate per-CPU variables with the appropriate
+// NUMA nodes.
+
+#pragma once
+
+#include "amd64.h"
+#include "bits.hh"
+
+// Safety policy for how to protect against CPU migrations while using
+// a per-CPU variable.
+enum class percpu_safety {
+  // Interrupts are disabled so the thread cannot migrate.  This can
+  // be done in the calling code, or using the load method to get a
+  // scoped cli.
+  cli,
+  // No protection against migration is required.  The variables are
+  // internally thread-safe.  Generally the per-CPU variable is used
+  // only as a sharding mechanism.
+  internal,
+};
+
+// This defines CPU 0's instance of this percpu variable and the
+// static_percpu wrapper for accessing it.  The gunk after the section
+// makes .percpu a BSS-like section (allocated, writable, but with no
+// data in the object).
+#define DEFINE_PERCPU(type, name, ...) \
+  type __##name##_key __attribute__((__section__(".percpu,\"aw\",@nobits#"))); \
+  static_percpu<type, &__##name##_key, ##__VA_ARGS__> name
+
+#define DECLARE_PERCPU(type, name, ...) \
+  extern type __##name##_key;                \
+  extern static_percpu<type, &__##name##_key, ##__VA_ARGS__> name
+
+// The base of each CPU's per-CPU region.  This is used to find other
+// CPU's regions.  This pointer is also stored in struct cpu; that
+// copy is used to quickly find our own CPU's region.
+extern void *percpu_offsets[NCPU];
+
+// The base of core 0's percpu variable block.  Provided by the
+// linker.
+extern char __percpu_start[];
+
+template<class T, T *key, percpu_safety S = percpu_safety::cli>
+struct static_percpu
+{
+  constexpr static_percpu() = default;
+
+  static_percpu(const static_percpu &o) = delete;
+  static_percpu(static_percpu &&o) = delete;
+  static_percpu &operator=(const static_percpu &o) = delete;
+  static_percpu &operator=(static_percpu &&o) = delete;
+
+  T* get_unchecked() const
+  {
+    uintptr_t val;
+    // The per-CPU memory offset is stored at %gs:40.
+    // XXX Having to subtract __percpu_start makes this several
+    // instructions longer than strictly necessary.  Alternatively, we
+    // could locate .percpu at address 0 and use the key as a direct
+    // offset.
+    __asm("add %%gs:40, %0" : "=r" (val) : "0" ((char*)key - __percpu_start));
+    return (T*)val;
+  }
+
+  T* get() const
+  {
+    if (S == percpu_safety::cli)
+      assert(!(readrflags() & FL_IF));
+    return get_unchecked();
+  }
+
+  T* operator->() const
+  {
+    return get();
+  }
+
+  T& operator*() const
+  {
+    return *get();
+  }
+
+  T& operator[](int id) const
+  {
+    assert(percpu_offsets[id]);
+    return *(T*)((char*)percpu_offsets[id] + ((char*)key - __percpu_start));
+  }
+};
