@@ -71,8 +71,8 @@ mpboot(void)
 
   // Call per-CPU static initializers.  This is the per-CPU equivalent
   // of the init_array calls in cmain.
-  extern void (*__percpuinit_array_start[])(int);
-  extern void (*__percpuinit_array_end[])(int);
+  extern void (*__percpuinit_array_start[])(size_t);
+  extern void (*__percpuinit_array_end[])(size_t);
   for (size_t i = 0; i < __percpuinit_array_end - __percpuinit_array_start; i++)
       (*__percpuinit_array_start[i])(bcpuid);
 
