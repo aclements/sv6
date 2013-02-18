@@ -1005,13 +1005,13 @@ initkalloc(void)
   }
 
   // Finally, allow CPUs to steal from any buddy
-  for (int cpu = 0; cpu < NCPU; ++cpu)
+  for (int cpu = 0; cpu < ncpu; ++cpu)
     if (cpus[cpu].mem)
       cpus[cpu].mem->steal.add(0, buddies.size());
 
   if (0) {
     console.println("kalloc: Buddy steal order (<local> remote)");
-    for (int cpu = 0; cpu < NCPU; ++cpu)
+    for (int cpu = 0; cpu < ncpu; ++cpu)
       console.println("  CPU ", cpu, ": ", cpus[cpu].mem->steal);
   }
 

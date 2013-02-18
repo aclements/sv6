@@ -310,17 +310,17 @@ refcache::referenced::get_consistent()
   for (;;) {
     uint64_t count = 0;
     seqcount<uint32_t>::reader r[NCPU+1];
-    for (int i = 0; i < NCPU; i++) {
+    for (int i = 0; i < ncpu; i++) {
       auto way = refcache::mycache[i].hash_way(this);
       r[i] = way->seq.read_begin();
       if (way->obj == this)
         count += way->delta;
     }
 
-    r[NCPU] = refcount_seq_.read_begin();
+    r[ncpu] = refcount_seq_.read_begin();
     count += refcount_;
 
-    for (int i = 0; i < NCPU+1; i++)
+    for (int i = 0; i < ncpu+1; i++)
       if (r[i].need_retry())
         continue;
     return count;
