@@ -119,7 +119,6 @@ bootothers(void)
   extern u8 _bootother_start[];
   extern u64 _bootother_size;
   extern void (*apstart)(void);
-  struct cpu *c;
   char *stack;
   u8 *code;
 
@@ -129,9 +128,10 @@ bootothers(void)
   code = (u8*) p2v(0x7000);
   memmove(code, _bootother_start, _bootother_size);
 
-  for(c = cpus; c < cpus+ncpu; c++){
-    if(c == cpus+myid())  // We've started already.
+  for (int i = 0; i < ncpu; ++i) {
+    if(i == myid())  // We've started already.
       continue;
+    struct cpu *c = &cpus[i];
 
     warmreset(v2p(code));
 
@@ -162,6 +162,10 @@ cmain(u64 mbmagic, u64 mbaddr)
 {
   extern u64 cpuhz;
 
+  // Make cpus[0] work.  CPU 0's percpu data is pre-allocated directly
+  // in the image.  *cpu and such won't work until we inittls.
+  percpu_offsets[0] = __percpu_start;
+
   inituart();
   initphysmem(mbaddr);
   initpg();                // Requires initphysmem
@@ -173,7 +177,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   initlapic();             // Requires initpg
   initnuma();              // Requires initacpitables, initlapic
   initpercpu();            // Requires initnuma
-  initcpus();              // Requires initnuma, suggests initacpitables
+  initcpus();              // Requires initnuma, initpercpu,
+                           // suggests initacpitables
 
   initpic();       // interrupt controller
   initiommu();             // Requires initlapic

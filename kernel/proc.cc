@@ -198,9 +198,9 @@ exit(void)
   // Clean up FPU state
   if (myproc()->fpu_state) {
     // Make sure no CPUs think this process is the FPU owner
-    for (auto &cpu : cpus) {
+    for (int i = 0; i < ncpu; ++i) {
       struct proc *copy = myproc();
-      atomic_compare_exchange_strong(&cpu.fpu_owner, &copy, (proc*)nullptr);
+      atomic_compare_exchange_strong(&cpus[i].fpu_owner, &copy, (proc*)nullptr);
     }
   }
 

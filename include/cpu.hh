@@ -3,6 +3,7 @@
 #include "mmu.h"
 #include <atomic>
 #include "spinlock.h"
+#include "spercpu.hh"
 
 using std::atomic;
 
@@ -44,7 +45,7 @@ struct cpu {
   void *percpu_base;           // Per-CPU memory region base
 } __mpalign__;
 
-extern struct cpu cpus[NCPU];
+DECLARE_PERCPU(struct cpu, cpus);
 
 // Per-CPU variables, holding pointers to the
 // current cpu and to the current process.

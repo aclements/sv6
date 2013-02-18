@@ -591,10 +591,10 @@ void
 sampstart(void)
 {
   pushcli();
-  for(struct cpu *c = cpus; c < cpus+ncpu; c++) {
-    if(c == cpus+mycpu()->id)
+  for (int i = 0; i < ncpu; ++i) {
+    if (i == myid())
       continue;
-    lapic->send_sampconf(c);
+    lapic->send_sampconf(&cpus[i]);
   }
   sampconf();
   popcli();
