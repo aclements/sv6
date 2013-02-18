@@ -430,13 +430,12 @@ main(int argc, char **argv)
 #endif
 
   gbarrier.left = nthread;
+  pthread_barrier_init(&bar, 0, nthread+1);
 
   pthread_t timer;
   pthread_create(&timer, NULL, timer_thread, NULL);
 
   pthread_t* tid = (pthread_t*) malloc(sizeof(*tid)*nthread);
-
-  pthread_barrier_init(&bar, 0, nthread+1);
 
   for(int i = 0; i < nthread; i++) {
     if (setaffinity(get_cpu_order(i)) < 0)
