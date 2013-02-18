@@ -104,8 +104,10 @@ public:
   void switch_to()
   {
     auto nreq = tlbflush_req.load();
-    lcr3(v2p(this));
+    u64 cr3 = v2p(this);
+    lcr3(cr3);
     mycpu()->tlbflush_done = nreq;
+    mycpu()->tlb_cr3 = cr3;
   }
 
   // An iterator that references the page structure entry on a fixed
@@ -397,6 +399,7 @@ batched_shootdown::perform() const
     return;
 
   u64 myreq = ++tlbflush_req;
+  u64 cr3 = rcr3();
 
   // the caller may not hold any spinlock, because other CPUs might
   // be spinning waiting for that spinlock, with interrupts disabled,
@@ -407,14 +410,14 @@ batched_shootdown::perform() const
   kstats::timer timer(&kstats::tlb_shootdown_cycles);
 
   for (int i = 0; i < ncpu; i++) {
-    if (cpus[i].tlbflush_done < myreq) {
+    if (cpus[i].tlb_cr3 == cr3 && cpus[i].tlbflush_done < myreq) {
       lapic->send_tlbflush(&cpus[i]);
       kstats::inc(&kstats::tlb_shootdown_targets);
     }
   }
 
   for (int i = 0; i < ncpu; i++)
-    while (cpus[i].tlbflush_done < myreq)
+    while (cpus[i].tlb_cr3 == cr3 && cpus[i].tlbflush_done < myreq)
       /* spin */ ;
 }
 
