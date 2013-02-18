@@ -18,8 +18,8 @@ struct cpu {
   int timer_printpc;
   __mpalign__
   atomic<u64> tlbflush_done;   // last tlb flush req done on this cpu
-  __padout__;
   atomic<u64> tlb_cr3;         // current value of cr3 on this cpu
+  __padout__;
   struct proc *prev;           // The previously-running process
   atomic<struct proc*> fpu_owner; // The proc with the current FPU state
   struct numa_node *node;
