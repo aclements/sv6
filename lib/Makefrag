@@ -2,7 +2,7 @@ $(O)/lib/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
 $(O)/lib/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER -fno-exceptions -fno-rtti
 
 ULIB = ulib.o printf.o umalloc.o uthread.o fmt.o stdio.o \
-       threads.o crt.o sysstubs.o perf.o \
+       string.o threads.o crt.o sysstubs.o perf.o \
        getopt.o rand.o msort.o qsort.o ctype.o \
        time.o timemath.o
 ULIB := $(addprefix $(O)/lib/, $(ULIB))

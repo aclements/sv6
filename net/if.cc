@@ -5,6 +5,8 @@ extern "C" {
 
 #include "kernel.hh"
 
+#include <string.h>
+
 /**
  * In this function, the hardware should be initialized.
  * Called from if_init().

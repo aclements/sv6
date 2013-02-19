@@ -217,17 +217,6 @@ sref<file>      getfile(int fd);
 sref<mnode>     create(sref<mnode>, const char *, short, short, short, bool);
 void            sockclose(const struct file_socket *);
 
-// string.c
-extern  "C" int  memcmp(const void*, const void*, size_t);
-extern "C" void* memmove(void*, const void*, size_t);
-extern "C" void* memset(void*, int, size_t);
-extern "C" void* memcpy(void*, const void *, size_t);
-char*            safestrcpy(char*, const char*, size_t);
-extern "C" unsigned int strlen(const char*);
-extern "C" int   strncmp(const char*, const char*, size_t);
-extern "C" char* strncpy(char*, const char*, size_t);
-extern "C" int   strcmp(const char *p, const char *q);
-
 // swtch.S
 void            swtch(struct context**, struct context*);
 

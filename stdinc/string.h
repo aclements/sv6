@@ -20,5 +20,6 @@ int strncmp(const char *p, const char *q, size_t n);
 
 // Not C11
 void *mempcpy(void *dest, const void *src, size_t n);
+char *safestrcpy(char *s, const char *t, size_t n);
 
 END_DECLS

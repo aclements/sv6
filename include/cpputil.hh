@@ -2,6 +2,7 @@
 
 #include "kernel.hh"
 
+#include <string.h>
 #include <type_traits>
 #include <utility>
 #include <new>

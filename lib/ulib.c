@@ -8,71 +8,6 @@
 #include <unistd.h>
 
 char*
-strncpy(char *s, const char *t, size_t n)
-{
-  int tlen = strlen((char *)t);
-  memmove(s, (char *)t, n > tlen ? tlen : n);
-  if (n > tlen)
-    s[tlen] = 0;
-  return s;
-}
-
-char*
-strcpy(char *s, const char *t)
-{
-  char *os;
-
-  os = s;
-  while((*s++ = *t++) != 0)
-    ;
-  return os;
-}
-
-int
-strcmp(const char *p, const char *q)
-{
-  while(*p && *p == *q)
-    p++, q++;
-  return (u8)*p - (u8)*q;
-}
-
-int
-strncmp(const char *p, const char *q, size_t n)
-{
-  while(n > 0 && *p && *p == *q)
-    n--, p++, q++;
-  if(n == 0)
-    return 0;
-  return (u8)*p - (u8)*q;
-}
-
-size_t
-strlen(const char *s)
-{
-  size_t n;
-
-  for(n = 0; s[n]; n++)
-    ;
-  return n;
-}
-
-void*
-memset(void *dst, int c, size_t n)
-{
-  stosb(dst, c, n);
-  return dst;
-}
-
-char*
-strchr(const char *s, int c)
-{
-  for(; *s; s++)
-    if(*s == c)
-      return (char*)s;
-  return 0;
-}
-
-char*
 gets(char *buf, int max)
 {
   int i, cc;
@@ -138,59 +73,6 @@ atol(const char *s)
   while('0' <= *s && *s <= '9')
     n = n*10 + *s++ - '0';
   return n;
-}
-
-void*
-memcpy(void *dst, const void *src, size_t n)
-{
-  return memmove(dst, (void *)src, n);
-}
-
-void*
-mempcpy(void *dst, const void *src, size_t n)
-{
-  return memmove(dst, (void *)src, n) + n;
-}
-
-void *
-memmove(void *dst, const void *src, size_t n)
-{
-  const char *s;
-  char *d;
-
-  s = src;
-  d = dst;
-  if (s < d && s + n > d) {
-    s += n;
-    d += n;
-    if ((intptr_t)s%4 == 0 && (intptr_t)d%4 == 0 && n%4 == 0)
-      __asm volatile("std; rep movsl\n"
-              :: "D" (d-4), "S" (s-4), "c" (n/4) : "cc", "memory");
-    else
-      __asm volatile("std; rep movsb\n"
-              :: "D" (d-1), "S" (s-1), "c" (n) : "cc", "memory");
-    // Some versions of GCC rely on DF being clear
-    __asm volatile("cld" ::: "cc");
-  } else {
-    if ((intptr_t)s%4 == 0 && (intptr_t)d%4 == 0 && n%4 == 0)
-      __asm volatile("cld; rep movsl\n"
-              :: "D" (d), "S" (s), "c" (n/4) : "cc", "memory");
-    else
-      __asm volatile("cld; rep movsb\n"
-              :: "D" (d), "S" (s), "c" (n) : "cc", "memory");
-  }
-  return dst;
-}
-
-int
-memcmp(const void* s1, const void* s2, size_t n)
-{
-  const u8* p1 = s1;
-  const u8* p2 = s2;
-  for (size_t i = 0; i < n; i++)
-    if (p1[i] != p2[i])
-      return p1[i] - p2[i];
-  return 0;
 }
 
 int

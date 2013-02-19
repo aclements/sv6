@@ -1,6 +1,7 @@
 #pragma once
 // Routines to let C code use special x86 instructions.
 
+#include <stddef.h>
 #include <stdint.h>
 
 static inline void

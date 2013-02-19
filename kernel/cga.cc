@@ -2,6 +2,8 @@
 #include "kernel.hh"
 #include "amd64.h"
 
+#include <string.h>
+
 #define BACKSPACE 0x100
 #define CRTPORT 0x3d4
 static volatile u16 *crt = (u16*)(KBASE + 0xb8000);  // CGA memory
