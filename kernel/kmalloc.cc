@@ -30,7 +30,7 @@ DEFINE_PERCPU(struct freelist, freelists);
 void
 kminit(void)
 {
-  for (int c = 0; c < NCPU; c++) {
+  for (int c = 0; c < ncpu; c++) {
     freelists[c].name[0] = (char) c + '0';
     safestrcpy(freelists[c].name+1, "freelist", MAXNAME-1);
   }

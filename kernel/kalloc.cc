@@ -52,7 +52,7 @@ struct mempool : public balance_pool<mempool> {
   uintptr_t base_; // base this pool's local memory
   uintptr_t lim_;  // first address beyond this pool's local memory
 
-  mempool(int buddy, int nfree, uintptr_t base,  uintptr_t sz) : 
+  mempool(int buddy, int nfree, uintptr_t base,  uintptr_t sz) :
     balance_pool(nfree), buddy_(buddy), base_(base), lim_ (base+sz) {};
   ~mempool() {};
   NEW_DELETE_OPS(mempool);
@@ -69,7 +69,7 @@ struct mempool : public balance_pool<mempool> {
   void balance_move_to(mempool *target) {
     u64 avail = balance_count();
     // steal no more than max:
-    size_t size = (buddy_allocator::MAX_SIZE > avail/2) ? 
+    size_t size = (buddy_allocator::MAX_SIZE > avail/2) ?
       avail / 2 : buddy_allocator::MAX_SIZE;
     auto lb = &buddies[buddy_];
     auto l = lb->lock.guard();
@@ -88,23 +88,23 @@ struct mempool : public balance_pool<mempool> {
     }
   };
 
-  void *get_base() const {  
-    return (void*)base_; 
+  void *get_base() const {
+    return (void*)base_;
   }
 
-  void *get_limit() const { 
+  void *get_limit() const {
     return (void*)lim_;
   }
 
-  char *kalloc(size_t size) 
+  char *kalloc(size_t size)
   {
     auto lb = &buddies[buddy_];
     auto l = lb->lock.guard();
-    void *res = lb->alloc.alloc_nothrow(size);    
+    void *res = lb->alloc.alloc_nothrow(size);
     return (char *) res;
   }
 
-  void kfree(void *v, size_t size) 
+  void kfree(void *v, size_t size)
   {
     auto lb = &buddies[buddy_];
     auto l = lb->lock.guard();
@@ -361,7 +361,7 @@ struct memory {
   // XXX Is the right policy?  Maybe leave in it this node's pool?  Or, only
   // return when we have a big chucnk of memory to return? (e.g., a MAX_SIZE
   // buddy area).
-  void kfree_pool(void *v, size_t size) 
+  void kfree_pool(void *v, size_t size)
   {
     // Find the allocator to return v to.
     // XXX update stats
