@@ -33,6 +33,7 @@
 #define STR(x) XSTR(x)
 
 enum { verbose = 0 };
+enum { warmup_secs = 1 };
 enum { duration = 5 };
 enum { fault = 1 };
 enum { pipeline_width = 1 };
@@ -86,6 +87,7 @@ static bench_mode mode;
 static pthread_barrier_t bar;
 
 static volatile bool stop __mpalign__;
+static volatile bool warmup;
 static __padout__ __attribute__((unused));
 
 // For PIPELINE mode
@@ -156,7 +158,10 @@ int get_cpu_order(int thread)
 void*
 timer_thread(void *)
 {
+  warmup = true;
   pthread_barrier_wait(&bar);
+  sleep(warmup_secs);
+  warmup = false;
   sleep(duration);
   stop = true;
   return NULL;
@@ -203,17 +208,29 @@ thr(void *arg)
   if (setaffinity(get_cpu_order(cpu)) < 0)
     die("setaffinity err");
 
-  pthread_barrier_wait(&bar);
-
-  start_tscs[cpu] = rdtsc();
+  bool mywarmup = true;
+  uint64_t tsc1 = 0;
   uint64_t myiters = 0, mypages = 0, myunderflows = 0;
 #ifdef RECORD_PMC
-  uint64_t pmc1 = rdpmc(PMCNO);
+  uint64_t pmc1 = 0;
+# define CHECK_STAGE_PMC() pmc1 = rdpmc(PMCNO)
+#else
+# define CHECK_STAGE_PMC()
 #endif
+#define CHECK_STAGE()                                   \
+  if (__builtin_expect(mywarmup, 0) && !warmup) {       \
+    mywarmup = false;                                   \
+    myiters = mypages = myunderflows = 0;               \
+    tsc1 = rdtsc();                                     \
+    CHECK_STAGE_PMC();                                  \
+  }
+
+  pthread_barrier_wait(&bar);
 
   switch (mode) {
   case bench_mode::LOCAL:
     while (!stop) {
+      CHECK_STAGE();
       volatile char *p = base + cpu * npg * 0x100000;
       if (mmap((void *) p, npg * PGSIZE, PROT_READ|PROT_WRITE,
                MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
@@ -233,6 +250,8 @@ thr(void *arg)
 
   case bench_mode::PIPELINE: {
     while (!stop) {
+      CHECK_STAGE();
+
       bool underflow = true;
 
       // Fill the outgoing pipeline
@@ -276,6 +295,8 @@ thr(void *arg)
 
   case bench_mode::GLOBAL: {
     while (!stop) {
+      CHECK_STAGE();
+
       // Map my part of the "hash table".  After the first iteration,
       // this will also clear the old mapping.
       volatile char *p = (base + cpu * npg * PGSIZE);
@@ -314,6 +335,8 @@ thr(void *arg)
       p2 = base + npg * PGSIZE;
 
     while (!stop) {
+      CHECK_STAGE();
+
       // Map my part of the "hash table".
       if (mmap((void *) p, p2 - p, PROT_READ|PROT_WRITE,
                MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
@@ -350,6 +373,7 @@ thr(void *arg)
   }
   }
   stop_tscs[cpu] = rdtsc();
+  start_tscs[cpu] = tsc1;
 #ifdef RECORD_PMC
   pmcs[cpu] = rdpmc(PMCNO) - pmc1;
 #endif
@@ -410,8 +434,8 @@ main(int argc, char **argv)
   else
     npg = 1;
 
-  printf("# --cores=%d --duration=%ds --mode=%s --fault=%s",
-         nthread, duration,
+  printf("# --cores=%d --duration=%ds --warmup=%ds --mode=%s --fault=%s",
+         nthread, duration, warmup_secs,
          mode == bench_mode::LOCAL ? "local" :
          mode == bench_mode::PIPELINE ? "pipeline" :
          mode == bench_mode::GLOBAL ? "global" :
