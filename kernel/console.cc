@@ -322,7 +322,7 @@ consoleintr(int (*getc)(void))
       scheddump();
       break;
     case C('F'):  // kmem stats
-      kmemprint();
+      kmemprint(&console);
       break;
     case C('Y'):  // scopedperf stats
       // scopedperf::perfsum_base::printall();

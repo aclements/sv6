@@ -20,6 +20,8 @@
 #include "vector.hh"
 #include "numa.hh"
 #include "lb.hh"
+#include "file.hh"
+#include "major.h"
 
 #include <algorithm>
 #include <iterator>
@@ -633,11 +635,11 @@ early_kalloc(size_t size)
 }
 
 void
-kmemprint()
+kmemprint(print_stream *s)
 {
   for (int cpu = 0; cpu < NCPU; ++cpu) {
     auto &local = cpu_mem[cpu].steal.get_local();
-    console.print("cpu ", cpu, ":");
+    s->print("cpu ", cpu, ":");
     for (auto buddy = local.low; buddy < local.high; ++buddy) {
       buddy_allocator::stats stats;
       size_t free_limit;
@@ -646,13 +648,21 @@ kmemprint()
         stats = buddies[buddy].alloc.get_stats();
         free_limit = buddies[buddy].free_limit;
       }
-      console.print(" ", buddy, ":[");
+      s->print(" ", buddy, ":[");
       for (size_t order = 0; order <= buddy_allocator::MAX_ORDER; ++order)
-        console.print(stats.nfree[order], " ");
-      console.print("free ", stats.free, " limit ", free_limit, "]");
+        s->print(stats.nfree[order], " ");
+      s->print("free ", stats.free, " limit ", free_limit, "]");
     }
-    console.println();
+    s->println();
   }
+}
+
+static int
+kmemstatsread(mdev*, char *dst, u32 off, u32 n)
+{
+  window_stream s(dst, off, n);
+  kmemprint(&s);
+  return s.get_used();
 }
 
 #if KALLOC_LOAD_BALANCE
@@ -1035,6 +1045,8 @@ initkalloc(void)
 
   kminit();
   kinited = 1;
+
+  devsw[MAJ_KMEMSTATS].read = kmemstatsread;
 }
 
 #if KALLOC_LOAD_BALANCE

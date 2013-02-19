@@ -7,3 +7,4 @@
 #define MAJ_GC       7
 #define MAJ_KCONFIG  8
 #define MAJ_KSTATS   9
+#define MAJ_KMEMSTATS 10

@@ -29,6 +29,7 @@ static struct {
   { "/dev/gc",   MAJ_GC},
   { "/dev/kconfig",   MAJ_KCONFIG},
   { "/dev/kstats",    MAJ_KSTATS},
+  { "/dev/kmemstats",    MAJ_KMEMSTATS},
 };
 
 static int

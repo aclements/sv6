@@ -5,7 +5,7 @@
 #define NFILE       100  // open files per system
 #define NBUF      10000  // size of disk block cache
 #define NINODE     5000  // maximum number of active i-nodes
-#define NDEV         10  // maximum major device number
+#define NDEV         16  // maximum major device number
 #define ROOTDEV       1  // device number of file system root disk
 #define MAXARG       32  // max exec arguments
 #define MAXARGLEN    64  // max exec argument length
