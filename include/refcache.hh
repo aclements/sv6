@@ -418,10 +418,11 @@ namespace refcache {
     // Return the way in which a particular object's delta could be stored.
     way *hash_way(referenced *obj)
     {
-      // XXX Hash pointer better?  This isn't bad: it's very fast and
-      // shouldn't suffer from small alignments.
-      std::size_t wayno = (((uintptr_t)obj) ^ ((uintptr_t)obj / CACHE_SLOTS))
-        % CACHE_SLOTS;
+      // Hash based on Java's HashMap re-hashing function.
+      std::uint64_t wayno = (uintptr_t)obj;
+      wayno ^= (wayno >> 32) ^ (wayno >> 20) ^ (wayno >> 12);
+      wayno ^= (wayno >> 7) ^ (wayno >> 4);
+      wayno %= CACHE_SLOTS;
       struct way *way = &ways_[wayno];
       // XXX More associativity.  Since this is in the critical path
       // of every reference operation, perhaps we should do something
