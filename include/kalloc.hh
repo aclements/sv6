@@ -60,8 +60,6 @@ enum {
   slab_type_max
 };
 
-extern percpu<kmem, percpu_safety::internal> kmems;
-
 // std allocator
 
 template<class T>
