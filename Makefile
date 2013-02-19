@@ -192,10 +192,13 @@ setup-xv6:
 	ssh amsterdam.csail.mit.edu \
 	sed -i .bak "'s/^default /#&/;/^# *default xv6/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg
 
-reboot-linux:
+reboot-linux: setup-linux
 	ssh amsterdam.csail.mit.edu \
-	sed -i .bak "'s/^default /#&/;/^# *default localboot/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg \&\& \
 	ipmitool -I lanplus $(IPMIOPTS) -H $(HW)adm.csail.mit.edu -f/home/am6/mpdev/.ipmipassword power reset
+
+setup-linux:
+	ssh amsterdam.csail.mit.edu \
+	sed -i .bak "'s/^default /#&/;/^# *default localboot/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg
 
 bench:
 	/bin/echo -ne "xv6\\nbench\\nexit\\n" | nc $(HW).csail.mit.edu 23
