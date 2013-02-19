@@ -497,6 +497,11 @@ main(int argc, char **argv)
 #endif
 
 #ifdef XV6_USER
+  double secs = (double)(stop_avg - start_avg) / cpuhz();
+  printf("%f secs\n", secs);
+  printf("%f iterations/sec\n", iter / secs);
+  printf("%f page touches/sec\n", sum(pages, nthread) / secs);
+
   struct kstats kstats = kstats_after - kstats_before;
 
   printf("%lu TLB shootdowns\n", kstats.tlb_shootdown_count);
