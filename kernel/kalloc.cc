@@ -38,11 +38,18 @@ static console_stream verbose(false);
 struct locked_buddy
 {
   spinlock lock;
+  // The limit on the free bytes of memory in this allocator.  If a
+  // given buddy has reached it's limit, memory should be returned to
+  // another overlapping buddy.
+  size_t free_limit;
   buddy_allocator alloc;
   __padout__;
 
   locked_buddy(buddy_allocator &&alloc)
-    : lock(spinlock("buddy")), alloc(std::move(alloc)) { }
+    : lock(spinlock("buddy")), alloc(std::move(alloc))
+  {
+    free_limit = alloc.get_free_bytes();
+  }
 };
 
 static static_vector<locked_buddy, MAX_BUDDIES> buddies;
@@ -633,14 +640,16 @@ kmemprint()
     console.print("cpu ", cpu, ":");
     for (auto buddy = local.low; buddy < local.high; ++buddy) {
       buddy_allocator::stats stats;
+      size_t free_limit;
       {
         auto l = buddies[buddy].lock.guard();
         stats = buddies[buddy].alloc.get_stats();
+        free_limit = buddies[buddy].free_limit;
       }
       console.print(" ", buddy, ":[");
       for (size_t order = 0; order <= buddy_allocator::MAX_ORDER; ++order)
         console.print(stats.nfree[order], " ");
-      console.print("free ", stats.free, "]");
+      console.print("free ", stats.free, " limit ", free_limit, "]");
     }
     console.println();
   }
@@ -1060,14 +1069,21 @@ kfree(void *v, size_t size)
       for (size_t i = 0; i < KALLOC_HOT_PAGES / 2; ++i) {
         void *ptr = mem->hot_pages[i];
         // Do we have the right buddy?
-        if (!lb || !lb->alloc.contains(ptr)) {
-          // Find the first buddy in steal order that contains ptr.
-          // We do it this way in case there are overlapping buddies.
+        if (!lb || !(lb->alloc.contains(ptr) &&
+                     lb->alloc.get_free_bytes() < lb->free_limit)) {
+          // Find the first buddy in steal order that contains ptr and
+          // hasn't reached its free limit.  We do it this way in case
+          // there are overlapping buddies.
           lock.release();
           lb = nullptr;
           for (auto buddyidx : mem->steal) {
-            if (buddies[buddyidx].alloc.contains(ptr)) {
-              lb = &buddies[buddyidx];
+            auto lbtry = &buddies[buddyidx];
+            // We can access free_bytes and free_limit without locking
+            // here since it's okay if we actually go a little over
+            // free_limit.
+            if (lbtry->alloc.contains(ptr) &&
+                lbtry->alloc.get_free_bytes() < lbtry->free_limit) {
+              lb = lbtry;
               break;
             }
           }
