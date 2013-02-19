@@ -128,7 +128,7 @@ public:
   }
 
   // Return statistics for this allocator.  This may be expensive.
-  void get_stats(stats *out) const;
+  stats get_stats() const;
 
 private:
   // The address represented by the beginning of the tracking bitmaps

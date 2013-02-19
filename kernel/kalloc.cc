@@ -58,11 +58,8 @@ struct mempool : public balance_pool<mempool> {
   NEW_DELETE_OPS(mempool);
 
   u64 balance_count() const {
-    buddy_allocator::stats stats;
-    {
-      auto l = buddies[buddy_].lock.guard();
-      buddies[buddy_].alloc.get_stats(&stats);
-    }
+    auto l = buddies[buddy_].lock.guard();
+    auto stats = buddies[buddy_].alloc.get_stats();
     return stats.free;
   };
 
@@ -304,11 +301,8 @@ struct memory {
   }
 
   void add(int buddy, void *base, size_t size) {
-    buddy_allocator::stats stats;
-    {
-      auto l = buddies[buddy].lock.guard();
-      buddies[buddy].alloc.get_stats(&stats);
-    }
+    auto l = buddies[buddy].lock.guard();
+    auto stats = buddies[buddy].alloc.get_stats();
     auto m = mempool(buddy, stats.free, (uintptr_t) base, size);
     mempools.emplace_back(m);
   }
@@ -642,7 +636,7 @@ kmemprint()
       buddy_allocator::stats stats;
       {
         auto l = buddies[buddy].lock.guard();
-        buddies[buddy].alloc.get_stats(&stats);
+        stats = buddies[buddy].alloc.get_stats();
       }
       console.print(" ", buddy, ":[");
       for (size_t order = 0; order <= buddy_allocator::MAX_ORDER; ++order)

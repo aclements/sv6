@@ -203,16 +203,16 @@ buddy_allocator::mark_allocated(void *ptr, std::size_t order, bool allocated)
 }
 #endif
 
-void
-buddy_allocator::get_stats(stats *out) const
+buddy_allocator::stats
+buddy_allocator::get_stats() const
 {
-  out->free = 0;
+  stats out{};
   for (size_t order = 0; order <= MAX_ORDER; ++order) {
-    out->nfree[order] = 0;
     for (auto &b : orders[order].blocks) {
       (void)b;                  // Hush g++
-      ++out->nfree[order];
+      ++out.nfree[order];
     }
-    out->free += out->nfree[order] * (MIN_SIZE << order);
+    out.free += out.nfree[order] * (MIN_SIZE << order);
   }
+  return out;
 }
