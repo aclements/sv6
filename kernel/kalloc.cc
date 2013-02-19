@@ -59,8 +59,7 @@ struct mempool : public balance_pool<mempool> {
 
   u64 balance_count() const {
     auto l = buddies[buddy_].lock.guard();
-    auto stats = buddies[buddy_].alloc.get_stats();
-    return stats.free;
+    return buddies[buddy_].alloc.get_free_bytes();
   };
 
   void balance_move_to(mempool *target) {
@@ -302,8 +301,8 @@ struct memory {
 
   void add(int buddy, void *base, size_t size) {
     auto l = buddies[buddy].lock.guard();
-    auto stats = buddies[buddy].alloc.get_stats();
-    auto m = mempool(buddy, stats.free, (uintptr_t) base, size);
+    auto free = buddies[buddy].alloc.get_free_bytes();
+    auto m = mempool(buddy, free, (uintptr_t) base, size);
     mempools.emplace_back(m);
   }
 
