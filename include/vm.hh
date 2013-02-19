@@ -124,8 +124,9 @@ struct vmap {
   // Copy this vmap's structure and share pages copy-on-write.
   vmap* copy();
 
-  // Map desc from virtual addresses start to start+len.
-  long insert(const vmdesc &desc, uptr start, uptr len, bool dotlb = true);
+  // Map desc from virtual addresses start to start+len.  Returns
+  // MAP_FAILED ((uptr)-1) if inserting the region fails.
+  uptr insert(const vmdesc &desc, uptr start, uptr len, bool dotlb = true);
 
   // Unmap from virtual addresses start to start+len.
   int remove(uptr start, uptr len);

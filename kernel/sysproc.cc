@@ -124,9 +124,6 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
 #endif
 
   uptr r = myproc()->vmap->insert(vmdesc::anon_desc, start, end - start);
-  if (r < 0)
-    return MAP_FAILED;
-
   return (void*)r;
 }
 

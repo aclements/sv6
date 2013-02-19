@@ -187,7 +187,7 @@ vmap::copy()
   return nm;
 }
 
-long
+uptr
 vmap::insert(const vmdesc &desc, uptr start, uptr len, bool dotlb)
 {
   kstats::inc(&kstats::mmap_count);
@@ -207,7 +207,7 @@ again:
     start = unmapped_area(len / PGSIZE);
     if (start == 0) {
       cprintf("vmap::insert: no unmapped areas\n");
-      return -1;
+      return (uptr)-1;
     }
   }
 
