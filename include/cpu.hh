@@ -66,14 +66,6 @@ myproc(void)
   return (struct proc *)val;
 }
 
-static inline struct kmem *
-mykmem(void)
-{
-  u64 val;
-  __asm volatile("movq %%gs:16, %0" : "=r" (val));
-  return (struct kmem *)val;
-}
-
 static inline cpuid_t
 myid(void)
 {
