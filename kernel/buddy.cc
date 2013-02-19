@@ -71,6 +71,8 @@ buddy_allocator::buddy_allocator(void *base, size_t len,
   for (uintptr_t block = block_base; block < free_end; block += MAX_SIZE)
     orders[MAX_ORDER].blocks.push_back((struct block*)block);
 
+  free_bytes = free_end - block_base;
+
 #if BUDDY_DEBUG
   if (0)
     console.println("bitmap ", (void*)((uintptr_t)free_base), "\n"
@@ -214,5 +216,6 @@ buddy_allocator::get_stats() const
     }
     out.free += out.nfree[order] * (MIN_SIZE << order);
   }
+  assert(out.free == get_free_bytes());
   return out;
 }

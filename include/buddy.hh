@@ -90,7 +90,10 @@ public:
   // not satisfy the requirements.
   void *alloc_nothrow(std::size_t size)
   {
-    return alloc_order(size_to_order(size));
+    void *ptr = alloc_order(size_to_order(size));
+    if (ptr)
+      free_bytes -= size;
+    return ptr;
   }
 
   // Like alloc_nothrow(), but throws std::bad_alloc if out of memory.
@@ -105,6 +108,7 @@ public:
   // Free a region previously allocated with <tt>alloc(size)</tt>.
   void free(void *ptr, std::size_t size)
   {
+    free_bytes += size;
     free_order(ptr, size_to_order(size));
   }
 
@@ -127,6 +131,13 @@ public:
     return get_base() <= ptr && ptr < get_limit();
   }
 
+  // Return the number of bytes of free memory in this buddy
+  // allocator.  Unlike get_stats, this is fast.
+  size_t get_free_bytes() const
+  {
+    return free_bytes;
+  }
+
   // Return statistics for this allocator.  This may be expensive.
   stats get_stats() const;
 
@@ -134,6 +145,9 @@ private:
   // The address represented by the beginning of the tracking bitmaps
   // and the address just beyond the end of the tracking bitmaps.
   uintptr_t base, limit;
+
+  // The number of bytes of free memory in this buddy allocator.
+  size_t free_bytes;
 
   struct block
   {
