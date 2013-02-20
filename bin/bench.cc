@@ -8,7 +8,7 @@
 #include <string.h>
 
 static u64
-time_this(char *const av[])
+time_this(const char *av[])
 {
   u64 t0 = rdtsc();
 
@@ -17,7 +17,7 @@ time_this(char *const av[])
     die("time_this: fork failed %s", av[0]);
 
   if (pid == 0) {
-    exec(av[0], av);
+    exec(av[0], const_cast<char * const *>(av));
     die("time_this: exec failed %s", av[0]);
   }
 
@@ -40,7 +40,7 @@ struct Bench
 
 struct TimedExec : public Bench
 {
-  TimedExec(char * const *argv) : argv_(argv) {}
+  TimedExec(const char **argv) : argv_(argv) {}
   
   virtual void run(void) {
     char *str = result_;
@@ -61,7 +61,7 @@ struct TimedExec : public Bench
     return result_;
   }
 
-  char * const *argv_;
+  const char **argv_;
   char result_[256];
 
   NEW_OPERATOR(TimedExec)
@@ -71,10 +71,10 @@ struct LoopsBench : public Bench
 {
   static const int runs = 1;
 
-  LoopsBench(char *cmd, int nloops, int cpuinc) :
+  LoopsBench(const char *cmd, int nloops, int cpuinc) :
     Bench(), cmd_(cmd), nloops_(nloops), cpuinc_(cpuinc) {}
 
-  char* runone(int ncore, char** argv, char *res, int n) {
+  char* runone(int ncore, const char** argv, char *res, int n) {
       u64 min = ~0ull;
       char cores[16];   
 
@@ -93,7 +93,7 @@ struct LoopsBench : public Bench
   virtual void run(void) {
     char nloopstr[16];
     snprintf(nloopstr, sizeof(nloopstr), "%u", nloops_); 
-    char *argv[] = { cmd_, 0, nloopstr, 0 };
+    const char *argv[] = { cmd_, 0, nloopstr, 0 };
 
     char *res = result_;
     char *q = res + sizeof(result_);
@@ -110,7 +110,7 @@ struct LoopsBench : public Bench
     return result_;
   }
 
-  char* cmd_;
+  const char* cmd_;
   int nloops_;
   int cpuinc_;
   char result_[1024];
