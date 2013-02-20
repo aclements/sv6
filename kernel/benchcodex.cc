@@ -236,7 +236,7 @@ benchcodex::ap(testcase *t)
 {
   cprintf("benchcodex::ap() called on cpu=%d\n", mycpu()->id);
   while (!_start)
-    ;
+    nop_pause();
 
   cprintf("benchcodex::ap() doing work on cpu=%d\n", mycpu()->id);
   t->do_work();
