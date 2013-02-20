@@ -89,6 +89,9 @@ namespace mmu_shared_page_table {
 
     // Switch to this page_map_cache on this CPU.
     void switch_to() const;
+
+    // Count the number of pages used by this page_map_cache.
+    u64 internal_pages() const;
   };
 }
 
@@ -199,6 +202,8 @@ namespace mmu_per_core_page_table {
     }
 
     void switch_to() const;
+
+    u64 internal_pages() const;
   };
 }
 

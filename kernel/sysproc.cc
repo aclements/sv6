@@ -148,6 +148,13 @@ sys_munmap(userptr<void> addr, size_t len)
   return 0;
 }
 
+//SYSCALL
+long
+sys_pt_pages(void)
+{
+  return myproc()->vmap->internal_pages();
+}
+
 //SYSCALL NORET
 void
 sys_halt(void)

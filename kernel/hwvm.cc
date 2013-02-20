@@ -65,6 +65,21 @@ private:
       kfree(this);
   }
 
+  u64 internal_pages(int level, int end = 512) const
+  {
+    u64 count = 1;
+
+    if (level != 0) {
+      for (int i = 0; i < end; i++) {
+        pme_t entry = e[i].load(memory_order_relaxed);
+        if (entry & PTE_P)
+          count += ((pgmap*) p2v(PTE_ADDR(entry)))->internal_pages(level - 1);
+      }
+    }
+
+    return count;
+  }
+
 public:
   ~pgmap()
   {
@@ -103,6 +118,11 @@ public:
     lcr3(cr3);
     mycpu()->tlbflush_done = nreq;
     mycpu()->tlb_cr3 = cr3;
+  }
+
+  u64 internal_pages() const
+  {
+    return internal_pages(L_PML4, PX(L_PML4, KBASE));
   }
 
   // An iterator that references the page structure entry on a fixed
@@ -454,6 +474,12 @@ namespace mmu_shared_page_table {
   {
     pml4->switch_to();
   }
+
+  u64
+  page_map_cache::internal_pages() const
+  {
+    return pml4->internal_pages();
+  }
 }
 
 namespace mmu_per_core_page_table {
@@ -477,6 +503,21 @@ namespace mmu_per_core_page_table {
       mypml4 = kpml4.kclone();
     mypml4->switch_to();
     *cur_cache = this;
+  }
+
+  u64
+  page_map_cache::internal_pages() const
+  {
+    u64 count = 0;
+
+    for (int i = 0; i < ncpu; i++) {
+      pgmap* pm = pml4[i];
+      if (!pm)
+        continue;
+      count += pm->internal_pages();
+    }
+
+    return count;
   }
 
   void

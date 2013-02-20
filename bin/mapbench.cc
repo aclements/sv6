@@ -552,6 +552,8 @@ main(int argc, char **argv)
   if (kstats.munmap_count)
     printf("%lu cycles/munmap\n",
            kstats.munmap_cycles / kstats.munmap_count);
+
+  printf("%lu PT pages\n", pt_pages());
 #endif
 
   printf("%lu cycles/iteration\n",

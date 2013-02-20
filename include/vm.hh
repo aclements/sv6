@@ -154,6 +154,9 @@ struct vmap {
   // into @c dst.
   size_t safe_read(void *dst, uintptr_t src, size_t n);
 
+  // Report the number of internal pages used by the page map cache.
+  u64 internal_pages() const { return cache.internal_pages(); }
+
   uptr brk_;                    // Top of heap
 
 private:

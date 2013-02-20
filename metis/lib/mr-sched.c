@@ -287,6 +287,9 @@ mr_print_stats(void)
 	printf("Reduce:\t%" PRIu32 SEP, the_app.mapgr.tasks);
     }
     printf("\n");
+#if XV6_USER
+    printf("PT pages: %" PRIu64 "\n", pt_pages());
+#endif
 }
 
 void
