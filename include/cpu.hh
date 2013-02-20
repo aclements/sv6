@@ -12,6 +12,11 @@ namespace MMU_SCHEME {
 
 // Per-CPU state
 struct cpu {
+  // XXX(Austin) We should move more of this out to static_percpu's.
+  // The only things that need to live here are the fast-access
+  // %gs-relative fields at the end (with a little more
+  // sophistication, we could probably get rid of those, too).
+
   cpuid_t id;                  // Index into cpus[] below
   int ncli;                    // Depth of pushcli nesting.
   int intena;                  // Were interrupts enabled before pushcli?
@@ -27,7 +32,6 @@ struct cpu {
   struct proc *prev;           // The previously-running process
   atomic<struct proc*> fpu_owner; // The proc with the current FPU state
   struct numa_node *node;
-  MMU_SCHEME::page_map_cache *curcache;
 
   // The list of IPI calls to this CPU
   __mpalign__

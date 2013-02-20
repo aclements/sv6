@@ -23,6 +23,8 @@ using namespace std;
 static atomic<u64> tlbflush_req __mpalign__;
 static __padout__ __attribute__((used));
 
+DEFINE_PERCPU(const MMU_SCHEME::page_map_cache*, cur_page_map_cache);
+
 static const char *levelnames[] = {
   "PT", "PD", "PDP", "PML4"
 };
@@ -370,17 +372,17 @@ switchvm(struct proc *p)
   mycpu()->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
   ltr(TSSSEG);
 
-  if (mycpu()->curcache)
-    mycpu()->curcache->switch_from();
+  if (*cur_page_map_cache)
+    (*cur_page_map_cache)->switch_from();
 
   // XXX(Austin) This puts the TLB tracking logic in pgmap, which is
   // probably the wrong place.
   if (p->vmap) {
     p->vmap->cache.switch_to();
-    mycpu()->curcache = &p->vmap->cache;
+    *cur_page_map_cache = &p->vmap->cache;
   } else {
     kpml4.switch_to();
-    mycpu()->curcache = nullptr;
+    *cur_page_map_cache = nullptr;
   }
 
   writefs(UDSEG);
@@ -545,8 +547,6 @@ namespace mmu_shared_page_table {
 }
 
 namespace mmu_per_core_page_table {
-  DEFINE_PERCPU(const page_map_cache*, cur_cache);
-
   void
   page_map_cache::insert(uintptr_t va, page_tracker *t, pme_t pte)
   {
@@ -564,7 +564,6 @@ namespace mmu_per_core_page_table {
     if (!mypml4)
       mypml4 = kpml4.kclone();
     mypml4->switch_to();
-    *cur_cache = this;
   }
 
   u64
@@ -585,7 +584,12 @@ namespace mmu_per_core_page_table {
   void
   page_map_cache::clear(uintptr_t start, uintptr_t end)
   {
-    bool current = (*cur_cache == this);
+    // Are we the current page_map_cache on this core?  (Depending on
+    // MMU_SCHEME, *cur_page_map_cache may not be this type of
+    // page_map_cache, but if it isn't, we'll never take this code
+    // path.)
+    bool current =
+      (reinterpret_cast<const page_map_cache*>(*cur_page_map_cache) == this);
     pgmap *mypml4 = *pml4;
     // If we're clearing this CPU's page map cache, then we must have
     // inserted something into it previously.  (Note that this may
