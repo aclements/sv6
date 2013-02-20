@@ -30,8 +30,9 @@ ipi_call::start(unsigned cpu)
     auto l = q.lock.guard();
     if (!(q.head || q.ipicall_active))
       need_ipi = true;
+    next[cpu] = nullptr;
     *q.tail = this;
-    q.tail = &this->chain[cpu].next;
+    q.tail = &this->next[cpu];
   }
   if (need_ipi)
     lapic->send_ipi(&cpus[cpu], T_IPICALL);
@@ -46,14 +47,14 @@ ipi_call::run_on(const bitset<NCPU> &cpus)
   // safe to do a local call.
   bool interruptable = readrflags() & FL_IF;
   unsigned id = interruptable ? -1 : myid();
+  waiting = cpus.count() - (!interruptable && cpus[id]);
   for (auto cpu : cpus)
     if (cpu != id)
       start(cpu);
   if (!interruptable && cpus[id])
     run();
-  for (auto cpu : cpus)
-    if (cpu != id)
-      wait(cpu);
+  while (waiting.load(memory_order_relaxed))
+    nop_pause();
 }
 
 // Handle an IPI call interrupt on this CPU.
@@ -78,11 +79,11 @@ on_ipicall()
     while (call) {
       call->run();
 
-      ipi_call *next = call->chain[id].next;
+      ipi_call *next = call->next[id];
 
       // This call is done.  After we mark it done, we can't use any
       // fields because it may be freed immediately by its creator.
-      call->chain[id].done.store(true, memory_order_relaxed);
+      call->waiting.fetch_sub(1, memory_order_relaxed);
 
       call = next;
     }

@@ -6,28 +6,21 @@
 
 struct ipi_call
 {
-  virtual void run() = 0;
-
-  void start(unsigned cpu);
-
-  void wait(unsigned cpu)
-  {
-    while (!chain[cpu].done.load(std::memory_order_relaxed))
-      nop_pause();
-  }
-
   void run_on(const bitset<NCPU> &);
 
-  struct chain
-  {
-    // next is protected by ipi_queue::lock for this chain entry's
-    // CPU.
-    struct ipi_call* next;
-    atomic<bool> done;
-    chain() : next(nullptr), done(false) { }
-  };
+protected:
+  virtual void run() = 0;
 
-  percpu<struct chain> chain;
+private:
+  void start(unsigned cpu);
+
+  // next[i] must be valid before this call is linked in to the
+  // myipi[i] queue and must not change until the call is done.
+  struct ipi_call* next[NCPU];
+  __mpalign__ atomic<int> waiting;
+  __padout__;
+
+  friend void on_ipicall();
 };
 
 template<class CB>
@@ -39,7 +32,8 @@ private:
 public:
   ipi_call_callable(const CB &cb) : cb(cb) { }
 
-  void run()
+protected:
+  void run() override
   {
     cb();
   }
