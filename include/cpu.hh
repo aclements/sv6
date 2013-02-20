@@ -6,6 +6,9 @@
 #include "spercpu.hh"
 
 using std::atomic;
+namespace MMU_SCHEME {
+  class page_map_cache;
+};
 
 // Per-CPU state
 struct cpu {
@@ -24,6 +27,7 @@ struct cpu {
   struct proc *prev;           // The previously-running process
   atomic<struct proc*> fpu_owner; // The proc with the current FPU state
   struct numa_node *node;
+  MMU_SCHEME::page_map_cache *curcache;
 
   // The list of IPI calls to this CPU
   __mpalign__

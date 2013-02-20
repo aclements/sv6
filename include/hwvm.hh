@@ -13,17 +13,65 @@ class batched_shootdown
 public:
   constexpr batched_shootdown() : need_shootdown(false) { }
 
+  // Do not track anything in the page_map_cache.  Actually
+  // this should probably hold things like tlbflush_req and
+  // per-CPU tlbflush_done.
+  class cache_tracker {
+  public:
+    void track_switch_to() const {}
+    void track_switch_from() const {}
+  };
+
   // Indicate that some page needs to be shot down.
-  void add(uintptr_t va)
+  void add_range(uintptr_t start, uintptr_t end)
   {
     need_shootdown = true;
   }
+
+  void set_cache_tracker(cache_tracker* t) {}
 
   // Fully flush all cores' TLBs.
   void perform() const;
 
   // Handle receipt of a TLB flush IPI.
   static void on_ipi();
+};
+
+class core_tracking_shootdown
+{
+public:
+  constexpr core_tracking_shootdown() : t_(nullptr), start_(~0), end_(0) {}
+
+  // Track the set of cores that are using the page_map_cache.
+  class cache_tracker {
+    mutable bitset<NCPU> active_cores;
+    friend class core_tracking_shootdown;
+
+  public:
+    void track_switch_to() const;
+    void track_switch_from() const;
+  };
+
+  void set_cache_tracker(cache_tracker* t) {
+    assert(t_ == nullptr || t_ == t);
+    t_ = t;
+  }
+
+  void add_range(uintptr_t start, uintptr_t end) {
+    if (start < start_)
+      start_ = start;
+    if (end_ < end)
+      end_ = end;
+  }
+
+  void perform() const;
+
+  static void on_ipi() { panic("core_tracking_shootdown::on_ipi\n"); }
+
+private:
+  void clear_tlb() const;
+  class cache_tracker *t_;
+  uintptr_t start_, end_;
 };
 
 // An MMU implementation based on shared page tables, where each vmap
@@ -39,11 +87,11 @@ namespace mmu_shared_page_table {
 
   // A shootdown gathers invalidations that need to be performed on
   // other cores.
-  typedef batched_shootdown shootdown;
+  typedef TLB_SCHEME shootdown;
 
   // A page_map_cache controls the hardware cache of
   // virtual-to-physical page mappings.
-  class page_map_cache
+  class page_map_cache : shootdown::cache_tracker
   {
     struct pgmap * const pml4;
 
@@ -89,6 +137,9 @@ namespace mmu_shared_page_table {
 
     // Switch to this page_map_cache on this CPU.
     void switch_to() const;
+
+    // Switch out of this page_map_cache on this CPU.
+    void switch_from() const { track_switch_from(); }
 
     // Count the number of pages used by this page_map_cache.
     u64 internal_pages() const;
@@ -202,6 +253,7 @@ namespace mmu_per_core_page_table {
     }
 
     void switch_to() const;
+    void switch_from() const {}
 
     u64 internal_pages() const;
   };

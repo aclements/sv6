@@ -361,8 +361,8 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
 void
 switchvm(struct proc *p)
 {
+  scoped_cli cli;
   u64 base = (u64) &mycpu()->ts;
-  pushcli();
   mycpu()->gdt[TSSSEG>>3] = (struct segdesc)
     SEGDESC(base, (sizeof(mycpu()->ts)-1), SEG_P|SEG_TSS64A);
   mycpu()->gdt[(TSSSEG>>3)+1] = (struct segdesc) SEGDESCHI(base);
@@ -370,17 +370,21 @@ switchvm(struct proc *p)
   mycpu()->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
   ltr(TSSSEG);
 
+  if (mycpu()->curcache)
+    mycpu()->curcache->switch_from();
+
   // XXX(Austin) This puts the TLB tracking logic in pgmap, which is
   // probably the wrong place.
-  if (p->vmap)
+  if (p->vmap) {
     p->vmap->cache.switch_to();
-  else
+    mycpu()->curcache = &p->vmap->cache;
+  } else {
     kpml4.switch_to();
+    mycpu()->curcache = nullptr;
+  }
 
   writefs(UDSEG);
   writemsr(MSR_FS_BASE, p->user_fs_);
-
-  popcli();
 }
 
 // Set up CPU's kernel segment descriptors.
@@ -436,6 +440,59 @@ batched_shootdown::on_ipi()
   popcli();
 }
 
+void
+core_tracking_shootdown::cache_tracker::track_switch_to() const
+{
+  active_cores.atomic_set(myid());
+  // Ensure that reads from the cache cannot move up before the tracker
+  // update, and that the tracker update does not move down after the
+  // cache reads.
+  std::atomic_thread_fence(std::memory_order_acq_rel);
+}
+
+void
+core_tracking_shootdown::cache_tracker::track_switch_from() const
+{
+  active_cores.atomic_reset(myid());
+  // No need for a fence; worst case, we just get an extra shootdown.
+}
+
+void
+core_tracking_shootdown::clear_tlb() const
+{
+  if (end_ > start_ && end_ - start_ > 4 * PGSIZE) {
+    lcr3(rcr3());
+  } else {
+    for (uintptr_t va = start_; va < end_; va += PGSIZE)
+      invlpg((void*) va);
+  }
+}
+
+void
+core_tracking_shootdown::perform() const
+{
+  if (!t_ || start_ >= end_)
+    return;
+
+  // Ensure that cache invalidations happen before reading the tracker;
+  // see also cache_tracker::track_switch_to().
+  std::atomic_thread_fence(std::memory_order_acq_rel);
+
+  bitset<NCPU> targets = t_->active_cores;
+  if (targets[myid()]) {
+    clear_tlb();
+    targets.reset(myid());
+  }
+
+  if (targets.count() == 0)
+    return;
+
+  kstats::inc(&kstats::tlb_shootdown_count);
+  kstats::inc(&kstats::tlb_shootdown_targets, targets.count());
+  kstats::timer timer(&kstats::tlb_shootdown_cycles);
+  run_on_cpus(targets, [this]() { clear_tlb(); });
+}
+
 namespace mmu_shared_page_table {
   page_map_cache::page_map_cache() : pml4(kpml4.kclone())
   {
@@ -460,11 +517,12 @@ namespace mmu_shared_page_table {
   page_map_cache::__invalidate(
     uintptr_t start, uintptr_t len, shootdown *sd)
   {
+    sd->set_cache_tracker(this);
     for (auto it = pml4->find(start); it.index() < start + len;
          it += it.span()) {
       if (it.is_set()) {
         it->store(0, memory_order_relaxed);
-        sd->add(it.index());
+        sd->add_range(it.index(), it.index() + it.span());
       }
     }
   }
@@ -472,6 +530,7 @@ namespace mmu_shared_page_table {
   void
   page_map_cache::switch_to() const
   {
+    track_switch_to();
     pml4->switch_to();
   }
 
