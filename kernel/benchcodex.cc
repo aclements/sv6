@@ -22,7 +22,7 @@ public:
   {
     // spin-wait
     while (c.load() != 0)
-      ;
+      nop_pause();
   }
 
   NEW_DELETE_OPS(count_down_latch);
