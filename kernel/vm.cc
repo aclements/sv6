@@ -37,7 +37,7 @@ void to_stream(class print_stream *s, const vmdesc &vmd)
         {"COW", vmdesc::FLAG_COW},
         {"ANON", vmdesc::FLAG_ANON}}), " ");
   if (vmd.page)
-    s->print(vmd.page->pa(), "}");
+    s->print((void*)vmd.page->pa(), "}");
   else
     s->print("null}");
 }
