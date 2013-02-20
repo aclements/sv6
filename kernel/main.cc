@@ -152,7 +152,7 @@ bootothers(void)
 #endif
     // Wait for cpu to finish mpmain()
     while(bstate.load() == 0)
-      ;
+      nop_pause();
     rstrreset();
   }
 }
