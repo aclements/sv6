@@ -857,16 +857,16 @@ namespace {
 static void
 wdcheck(int pmc, struct trapframe* tf)
 {
-  if (*wd_count == 1) {
+  ++*wd_count;
+  if (*wd_count == 2 || *wd_count == 10) {
     auto l = wdlock.guard();
     // uartputc guarantees some output
     uartputc('W');
     uartputc('D');
-    __cprintf(" cpu %u locked up\n", myid());
+    __cprintf(" cpu %u locked up for %d seconds\n", myid(), *wd_count);
     __cprintf("  %016lx\n", tf->rip);
     printtrace(tf->rbp);
   }
-  ++*wd_count;
 }
 
 void
