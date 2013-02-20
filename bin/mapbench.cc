@@ -310,7 +310,8 @@ thr(void *arg)
         break;
 
       // Fault in random pages
-      uint64_t *touched = (uint64_t*)malloc(1 + nthread * npg / 8);
+      uint64_t touched[nthread * npg / 64 + 1];
+      memset(touched, 0, sizeof(touched));
       for (int i = 0; i < nthread * npg; ++i) {
         size_t pg = rnd() % (nthread * npg);
         if (!(touched[pg / 64] & (1ull << (pg % 64)))) {
@@ -348,7 +349,8 @@ thr(void *arg)
         break;
 
       // Fault in random pages
-      uint64_t *touched = (uint64_t*)malloc(1 + npg / 8);
+      uint64_t touched[npg / 64 + 1];
+      memset(touched, 0, sizeof(touched));
       for (int i = 0; i < npg; ++i) {
         size_t pg = rnd() % npg;
         if (!(touched[pg / 64] & (1ull << (pg % 64)))) {
