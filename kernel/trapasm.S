@@ -74,6 +74,11 @@ sysentry:
 
         movq    %rax, %rsp
 
+        // Push a fake activation record so we can stack unwind
+        pushq   0x98(%rax)  // Return RIP
+        pushq   %rbp        // User RBP
+        mov     %rsp, %rbp
+
         movq    %r10, %rcx  // saved by usys.S
         pushq   %gs:24      // syscall# saved from %rax
 
@@ -82,7 +87,7 @@ sysentry:
         cli
 
         // return using SYSRET
-        popq    %r11        // discard syscall# arg on the stack
+        add     $(8*3), %rsp  // Discard syscall#, fake activation record
         movq    %rsp, %r11
         swapgs
 
