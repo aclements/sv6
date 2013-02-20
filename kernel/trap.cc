@@ -106,6 +106,13 @@ void
 trap(struct trapframe *tf)
 {
   if (tf->trapno == T_NMI) {
+    // An NMI can come in after popcli() drops ncli to zero and intena
+    // is 1, but before popcli() checks intena and calls sti.  If the
+    // NMI handler acquires any lock, acquire() will call pushcli(),
+    // which will set intena to 0, and upon return from the NMI, the
+    // preempted popcli will observe intena=0 and fail to sti.
+    int intena_save = mycpu()->intena;
+
     // The only locks that we can acquire during NMI are ones
     // we acquire only during NMI.
 
@@ -144,6 +151,7 @@ trap(struct trapframe *tf)
     // to handled - 1 more back-to-back NMIs after this one.
     *nmi_swallow += handled - 1;
 
+    mycpu()->intena = intena_save;
     return;
   }
 
