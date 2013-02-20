@@ -486,7 +486,7 @@ namespace mmu_per_core_page_table {
   DEFINE_PERCPU(const page_map_cache*, cur_cache);
 
   void
-  page_map_cache::insert(uintptr_t va, tracker *t, pme_t pte)
+  page_map_cache::insert(uintptr_t va, page_tracker *t, pme_t pte)
   {
     scoped_cli cli;
     auto mypml4 = *pml4;

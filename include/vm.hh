@@ -17,7 +17,7 @@ using std::atomic;
 // address space.  This plays a similar role to the more traditional
 // "virtual memory area," but this does not know its size (it could
 // represent a single page or the entire address space).
-struct vmdesc : public mmu::tracker
+struct vmdesc : public mmu::page_tracker
 {
   enum {
     // Bit used for radix tree range locking
@@ -87,7 +87,7 @@ struct vmdesc : public mmu::tracker
 
   // Duplicate this descriptor for use in another vmap.  This copies
   // the descriptor except for its lock bit (since it should be
-  // initially unlocked in the new vmap) and its tracker (since it is
+  // initially unlocked in the new vmap) and its page tracker (since it is
   // now associated with a new page_map_cache and hence not cached on
   // any core).
   vmdesc dup() const
@@ -103,7 +103,7 @@ private:
   vmdesc(u64 flags)
     : flags(flags), page(), inode(), start() { }
 
-  // Create a new vmdesc with an empty tracker.
+  // Create a new vmdesc with an empty page tracker.
   vmdesc(u64 flags, const sref<class page_info> &page,
          const sref<struct mnode> &inode, intptr_t start)
     : flags(flags), page(page), inode(inode), start(start) { }
