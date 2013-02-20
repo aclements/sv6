@@ -315,7 +315,7 @@ spinlock::try_acquire()
 {
   pushcli();
   locking(this);
-  if (locked.exchange(1) != 0) {
+  if (locked.exchange(1, std::memory_order_acquire) != 0) {
       popcli();
       return false;
   }
