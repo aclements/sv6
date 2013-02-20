@@ -20,7 +20,9 @@ struct ipi_call
 
   struct chain
   {
-    atomic<struct ipi_call*> next;
+    // next is protected by ipi_queue::lock for this chain entry's
+    // CPU.
+    struct ipi_call* next;
     atomic<bool> done;
     chain() : next(nullptr), done(false) { }
   };

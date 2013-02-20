@@ -7,20 +7,34 @@
 
 using namespace std;
 
+struct ipi_queue
+{
+  spinlock lock;
+  struct ipi_call *head;
+  struct ipi_call **tail;
+  bool ipicall_active;
+
+  ipi_queue()
+    : lock("ipi_queue::lock"), head(nullptr), tail(&head),
+      ipicall_active(false) { }
+};
+
+DEFINE_PERCPU(struct ipi_queue, myipi);
+
 void
 ipi_call::start(unsigned cpu)
 {
   bool need_ipi = false;
-  auto &c = cpus[cpu];
+  auto &q = myipi[cpu];
   {
-    auto l = c.ipi_lock.guard();
-    if (!c.ipi.load(memory_order_relaxed))
+    auto l = q.lock.guard();
+    if (!(q.head || q.ipicall_active))
       need_ipi = true;
-    (*c.ipi_tail).store(this, memory_order_relaxed);
-    c.ipi_tail = &this->chain[cpu].next;
+    *q.tail = this;
+    q.tail = &this->chain[cpu].next;
   }
   if (need_ipi)
-    lapic->send_ipi(&c, T_IPICALL);
+    lapic->send_ipi(&cpus[cpu], T_IPICALL);
 }
 
 void
@@ -47,29 +61,30 @@ void
 on_ipicall()
 {
   assert(!(readrflags() & FL_IF));
-  auto cpu = mycpu();
-  ipi_call *call = cpu->ipi.load(memory_order_relaxed);
-  while (call) {
-    call->run();
+  auto id = myid();
+  while (true) {
+    // Get the IPI call list
+    auto &q = *myipi;
+    auto l = q.lock.guard();
+    ipi_call *call = q.head;
+    q.head = nullptr;
+    q.tail = &q.head;
+    q.ipicall_active = !!call;
+    if (!call)
+      break;
+    l.release();
 
-    auto next = call->chain[cpu->id].next.load(memory_order_relaxed);
-    if (!next) {
-      // Check under protection of the list lock
-      auto l = cpu->ipi_lock.guard();
-      next = call->chain[cpu->id].next.load(memory_order_relaxed);
-      if (!next) {
-        // We've consumed the list.  Reset it, which will also
-        // indicate to other CPUs that they should again send an
-        // interrupt if they add to the call list.
-        cpu->ipi.store(nullptr, memory_order_relaxed);
-        cpu->ipi_tail = &cpu->ipi;
-      }
+    // Walk the call list
+    while (call) {
+      call->run();
+
+      ipi_call *next = call->chain[id].next;
+
+      // This call is done.  After we mark it done, we can't use any
+      // fields because it may be freed immediately by its creator.
+      call->chain[id].done.store(true, memory_order_relaxed);
+
+      call = next;
     }
-
-    // This call is done.  After we mark it done, we can't use any
-    // fields because it may be freed by its creator.
-    call->chain[cpu->id].done.store(true, memory_order_relaxed);
-
-    call = next;
   }
 }
