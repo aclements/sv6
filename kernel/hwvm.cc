@@ -479,9 +479,12 @@ core_tracking_shootdown::perform() const
   std::atomic_thread_fence(std::memory_order_acq_rel);
 
   bitset<NCPU> targets = t_->active_cores;
-  if (targets[myid()]) {
-    clear_tlb();
-    targets.reset(myid());
+  {
+    scoped_cli cli;
+    if (targets[myid()]) {
+      clear_tlb();
+      targets.reset(myid());
+    }
   }
 
   if (targets.count() == 0)
