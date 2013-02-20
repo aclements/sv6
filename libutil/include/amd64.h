@@ -311,7 +311,7 @@ popcnt64(uint64_t v)
 
 // Atomically set bit nr of *a.  nr must be <= 64.
 static inline void
-locked_set_bit(int nr, volatile void *a)
+locked_set_bit(uint64_t nr, volatile void *a)
 {
   __asm volatile("lock; btsq %1,%0"
                  : "+m" (*(volatile uint64_t*)a)
@@ -321,7 +321,7 @@ locked_set_bit(int nr, volatile void *a)
 
 // Atomically clear bit nr of *a.  nr must be <= 64.
 static inline void
-locked_reset_bit(int nr, volatile void *a)
+locked_reset_bit(uint64_t nr, volatile void *a)
 {
   __asm volatile("lock; btrq %1,%0"
                  : "+m" (*(volatile uint64_t*)a)

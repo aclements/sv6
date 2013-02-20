@@ -64,17 +64,17 @@ public:
   bitset &atomic_set(std::size_t pos, bool val = true) noexcept
   {
     if (val) {
-      locked_set_bit(&words[pos / BITS_PER_WORD], pos % BITS_PER_WORD);
+      locked_set_bit(pos % BITS_PER_WORD, &words[pos / BITS_PER_WORD]);
       return *this;
     } else {
-      return reset(pos);
+      return atomic_reset(pos);
     }
   }
 
   // Remove @c pos from the bit set.
   bitset &atomic_reset(std::size_t pos) noexcept
   {
-    locked_reset_bit(&words[pos / BITS_PER_WORD], pos % BITS_PER_WORD);
+    locked_reset_bit(pos % BITS_PER_WORD, &words[pos / BITS_PER_WORD]);
     return *this;
   }
 
