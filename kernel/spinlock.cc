@@ -267,7 +267,7 @@ initlockstat(void)
 #endif
 
 spinlock::spinlock(spinlock &&o)
-#if CODEX
+#if USE_CODEX_IMPL
   : locked(o.locked)
 #else
   : locked(o.locked.load())
@@ -298,7 +298,7 @@ spinlock::operator=(spinlock &&o)
   lockstat_stop(this);
 #endif
 
-#if CODEX
+#if USE_CODEX_IMPL
   locked = o.locked;
 #else
   locked = o.locked.load();
@@ -323,7 +323,7 @@ spinlock::~spinlock()
 }
 #endif
 
-#if CODEX
+#if USE_CODEX_IMPL
 // note: the codex implemention doesn't actually enforce mutual exclusion, but
 // that's by design
 
@@ -338,18 +338,18 @@ void
 spinlock::acquire()
 {
   pushcli();
-  codex::atomic_section a(locked);
+  codex::atomic_section a(!locked);
+  locked++; // must come *before* reporting to codex
   codex_magic_action_run_acquire((intptr_t) &locked, false);
   codex_magic_action_run_acquire((intptr_t) &locked, true);
-  locked = 1;
 }
 
 void
 spinlock::release()
 {
   assert(locked);
+  locked--; // must come *before* reporting to codex
   codex_magic_action_run_release((intptr_t) &locked);
-  locked = 0;
   popcli();
 }
 #else

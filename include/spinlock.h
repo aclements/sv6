@@ -74,11 +74,13 @@ public:
 };
 #endif
 
+#define USE_CODEX_IMPL CODEX
+
 // Mutual exclusion lock.
 struct spinlock {
 
 // Is the lock held?
-#if defined(__cplusplus) && !CODEX
+#if defined(__cplusplus) && !USE_CODEX_IMPL
   std::atomic<u32> locked;
 #else
   // codex does not use atomic<u32>, to avoid
