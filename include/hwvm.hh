@@ -48,6 +48,10 @@ public:
     friend class core_tracking_shootdown;
 
   public:
+    ~cache_tracker() {
+      assert(active_cores.count() == 0);
+    }
+
     void track_switch_to() const;
     void track_switch_from() const;
   };
