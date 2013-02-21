@@ -36,7 +36,6 @@ enum { verbose = 0 };
 enum { warmup_secs = 1 };
 enum { duration = 5 };
 enum { fault = 1 };
-enum { pipeline_width = 1 };
 
 enum class bench_mode
 {
@@ -93,8 +92,7 @@ static __padout__ __attribute__((unused));
 // For PIPELINE mode
 static struct
 {
-  std::atomic<uint64_t> head __mpalign__;
-  std::atomic<uint64_t> tail __mpalign__;
+  std::atomic<uint64_t> round __mpalign__;
   __padout__;
 } channels[NCPU];
 
@@ -190,20 +188,10 @@ read_kstats(kstats *out)
 #endif
 }
 
-static inline char *
-pipeline_get_region(uint64_t channel, uint64_t step)
-{
-  return base + ((step % pipeline_width) * npg +
-                 channel * npg * pipeline_width) * 0x10000000;
-}
-
 void*
 thr(void *arg)
 {
   const int cpu = (uintptr_t)arg;
-
-  const uint64_t inchan = cpu;
-  const uint64_t outchan = (cpu + 1) % nthread;
 
   if (setaffinity(get_cpu_order(cpu)) < 0)
     die("setaffinity err");
@@ -249,45 +237,43 @@ thr(void *arg)
     break;
 
   case bench_mode::PIPELINE: {
+    const uintptr_t sibling = (cpu + 1) % nthread;
+    uint64_t myround = 0;
     while (!stop) {
       CHECK_STAGE();
+      volatile char *p = (base +
+                          cpu * NCPU *       0x10000000ull +
+                          (myround % NCPU) * 0x100000ull);
+      if (mmap((void *) p, npg * PGSIZE, PROT_READ|PROT_WRITE,
+               MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
+        die("%d: map failed", cpu);
 
-      bool underflow = true;
+      if (fault)
+        for (int j = 0; j < npg * PGSIZE; j += PGSIZE)
+          p[j] = '\0';
 
-      // Fill the outgoing pipeline
-      uint64_t target = channels[outchan].tail + pipeline_width;
-      for (; channels[outchan].head < target; ++channels[outchan].head) {
-        underflow = false;
+      // Indicate that my mapping is ready
+      channels[cpu].round = ++myround;
 
-        volatile char *p = pipeline_get_region(outchan, channels[outchan].head);
-        if (mmap((void *) p, npg * PGSIZE, PROT_READ|PROT_WRITE,
-                 MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) == MAP_FAILED)
-          die("%d: map failed", cpu);
+      // Wait for sibling to finish its mapping
+      while (channels[sibling].round < myround && !stop)
+        ;
+      if (stop)
+        break;
 
-        if (fault)
-          for (int j = 0; j < npg * PGSIZE; j += PGSIZE)
-            p[j] = '\0';
-      }
+      // Access and unmap the mapping from our sibling
+      p = (base +
+           sibling * NCPU *   0x10000000 +
+           ((myround-1) % NCPU) * 0x100000);
 
-      // Consume incoming pipeline
-      target = channels[inchan].head;
-      for (; channels[inchan].tail < target; ++channels[inchan].tail) {
-        underflow = false;
+      if (fault)
+        for (int j = 0; j < npg * PGSIZE; j += PGSIZE)
+          p[j] = '\0';
 
-        volatile char *p = pipeline_get_region(inchan, channels[inchan].tail);
+      if (munmap((void *) p, npg * PGSIZE) < 0)
+        die("%d: unmap failed\n", cpu);
 
-        if (fault)
-          for (int j = 0; j < npg * PGSIZE; j += PGSIZE)
-            p[j] = '\0';
-
-        if (munmap((void *) p, npg * PGSIZE) < 0)
-          die("%d: unmap failed\n", cpu);
-
-        ++myiters;
-      }
-
-      if (underflow)
-        ++myunderflows;
+      ++myiters;
     }
     mypages = myiters * npg * 2;
     break;
@@ -447,8 +433,6 @@ main(int argc, char **argv)
     printf(" --totalpg=%d", npg);
   else
     printf(" --npg=%d", npg);
-  if (mode == bench_mode::PIPELINE)
-    printf(" --pipeline-width=%d", pipeline_width);
   printf("\n");
 
 #ifdef RECORD_PMC
