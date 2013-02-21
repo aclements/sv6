@@ -257,7 +257,7 @@ codex_magic_action_run_read(const T *addr, T readval)
       codex_encode_action_with_flags(action_type::R),
       (uint64_t) addr,
       (uint64_t) readval,
-      0);
+      (uint64_t) readval);
 }
 
 template <typename T> inline ALWAYS_INLINE void
@@ -267,7 +267,7 @@ codex_magic_action_run_read(const volatile T *addr, T readval)
 }
 
 template <typename T> inline ALWAYS_INLINE void
-codex_magic_action_run_write(T *addr, T writeval)
+codex_magic_action_run_write(T *addr, T oldval, T writeval)
 {
   if (codex::g_codex_trace_start)
     codex_magic(
@@ -275,14 +275,14 @@ codex_magic_action_run_write(T *addr, T writeval)
       (uint64_t) codex::current_tid(),
       codex_encode_action_with_flags(action_type::W),
       (uint64_t) addr,
-      (uint64_t) writeval,
-      0);
+      (uint64_t) oldval,
+      (uint64_t) writeval);
 }
 
 template <typename T> inline ALWAYS_INLINE void
-codex_magic_action_run_write(volatile T *addr, T writeval)
+codex_magic_action_run_write(volatile T *addr, T oldval, T writeval)
 {
-  codex_magic_action_run_write((T *) addr, writeval);
+  codex_magic_action_run_write((T *) addr, oldval, writeval);
 }
 
 inline ALWAYS_INLINE void
@@ -354,15 +354,17 @@ codex::on_atomic_section_completion(void)
 template <typename T> inline ALWAYS_INLINE void
 __codex_store_value(T *ptr, T value)
 {
-  *ptr = value;
-  codex_magic_action_run_write(ptr, value);
+  auto before = value;
+  auto after = (*ptr = value);
+  codex_magic_action_run_write(ptr, before, after);
 }
 
 template <typename T> inline ALWAYS_INLINE void
 __codex_store_value(volatile T *ptr, T value)
 {
-  *ptr = value;
-  codex_magic_action_run_write(ptr, value);
+  auto before = value;
+  auto after = (*ptr = value);
+  codex_magic_action_run_write(ptr, before, after);
 }
 
 template <typename T> inline ALWAYS_INLINE T
