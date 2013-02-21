@@ -8,15 +8,15 @@ import subprocess
 import socket
 import sys
 import threading
+import tempfile
 
+WRITE_TO_STDOUT=False
 QEMU=os.path.expanduser('~/qemu-bin/bin/qemu-system-x86_64')
 XV6_KERNEL=os.path.expanduser('~/xv6/o.qemu/kernel.elf')
 QEMU_ARGS="-smp 2 -m 512 -serial mon:stdio -nographic -numa node -numa node -net user -net nic,model=e1000 -redir tcp:2323::23 -redir tcp:8080::80" + " -kernel " + XV6_KERNEL
 
 UPSTREAM_SOCK='/tmp/codexd.sock'
-DOWNSTREAM_SOCK='/tmp/codexd-relay.sock'
-LOGFILE='/tmp/codexlog'
-LOGFILEPAT=(LOGFILE + r'\d+')
+DOWNSTREAM_SOCK_NAME='codexd-relay.sock'
 
 class ProtocolError(RuntimeError):
   pass
@@ -80,11 +80,12 @@ class PacketStream(object):
     self.__fp.close()
 
 class Client(object):
-  def __init__(self, upstream_fp, downstream_accept_fp):
+  def __init__(self, upstream_fp, downstream_accept_fp, exec_dir):
     '''takes ownership of fps'''
     self.__upstream_fp = upstream_fp
     self.__upstream_ps = PacketStream(upstream_fp.makefile("w"))
     self.__downstream_acccept_fp = downstream_accept_fp
+    self.__exec_dir = exec_dir
     self.__ctr = 0
 
   def close(self):
@@ -99,30 +100,34 @@ class Client(object):
       return False
     elif res == "reset":
       # spawn downstream proc
-      stdout = open(LOGFILE + str(self.__ctr), 'w')
+      logfile = open(os.path.join(self.__exec_dir, "codexlog_%d" % (self.__ctr)), 'w')
       self.__ctr += 1
+      proc_env = dict(os.environ) # copy
+      proc_env['CODEX_RELAY_SOCK'] = os.path.join(self.__exec_dir, DOWNSTREAM_SOCK_NAME)
       proc = subprocess.Popen([QEMU] + QEMU_ARGS.split(),
           stdin=open('/dev/null', 'r'),
           stdout=subprocess.PIPE,
-          stderr=subprocess.STDOUT)
+          stderr=subprocess.STDOUT,
+          env=proc_env)
 
       fd = proc.stdout.fileno()
       fl = fcntl.fcntl(fd, fcntl.F_GETFL)
       fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
       class TeeThread(threading.Thread):
-        def __init__(self, poll_fd, out):
+        def __init__(self, poll_fd, out_fds):
           threading.Thread.__init__(self, name="tee-thd")
           self.poll_fd = poll_fd
-          self.out = out
+          self.out_fds = out_fds
           self.running = True
 
         def run_one_iter(self):
           while True:
             try:
               buf = os.read(self.poll_fd, 1024)
-              sys.stdout.write(buf)
-              self.out.write(buf)
+              # multi-cast
+              for fd in self.out_fds:
+                fd.write(buf)
               break
             except OSError as e:
               if e.errno != errno.EAGAIN:
@@ -133,7 +138,7 @@ class Client(object):
           while self.running:
             self.run_one_iter()
 
-      teethd = TeeThread(fd, stdout)
+      teethd = TeeThread(fd, [sys.stdout, logfile] if WRITE_TO_STDOUT else [logfile])
       teethd.start()
 
       downstream_fp, _ = s.accept()
@@ -164,8 +169,8 @@ class Client(object):
 
           proc.kill()
           proc.wait()
-          stdout.flush()
-          stdout.close()
+          logfile.flush()
+          logfile.close()
 
           # done
           return True
@@ -187,20 +192,16 @@ if __name__ == '__main__':
         '[ERROR] Cannot find xv6 kernel (%s), did you forget to run make?' % (XV6_KERNEL)
     sys.exit(1)
 
-  try:
-    os.remove(DOWNSTREAM_SOCK)
-  except OSError as e:
-    if e.errno != 2:
-      raise e
+  # get a new exection directory
+  exec_dir = tempfile.mkdtemp(prefix="codex")
 
-  purge('/tmp', LOGFILEPAT)
-
+  # create a new downstream socket
   s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-  s.bind(DOWNSTREAM_SOCK)
+  s.bind(os.path.join(exec_dir, DOWNSTREAM_SOCK_NAME))
   s.listen(1)
   upstream_fp = socket.socket(socket.AF_UNIX)
   upstream_fp.connect(UPSTREAM_SOCK)
-  client = Client(upstream_fp, s)
+  client = Client(upstream_fp, s, exec_dir)
   while client.next():
     print "Finished a run"
     sys.stdout.flush()
