@@ -54,7 +54,11 @@
 #define SCHED_LOAD_BALANCE 1
 
 #if defined(HW_qemu)
+#if CODEX
+#define DEBUG         0
+#else
 #define DEBUG         1
+#endif
 #define NCPU          8   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        0
