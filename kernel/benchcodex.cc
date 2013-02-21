@@ -71,7 +71,7 @@ private:
 
 class correct_counter : public testcase {
 public:
-  static const uint64_t N = 5;
+  static const uint64_t N = 2;
 
   correct_counter() : ctr(0) {}
 
@@ -79,8 +79,8 @@ public:
   do_work(void) override
   {
     for (int i = 0; i < N; i++) {
-      cprintf("do_work(cpu=%d)\n", mycpu()->id);
-      ctr++;
+      int x = ctr++;
+      cprintf("do_work(cpu=%d, ctr: %d -> %d)\n", mycpu()->id, x, x + 1);
     }
   }
 

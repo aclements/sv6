@@ -76,10 +76,14 @@ public:
 
 // Mutual exclusion lock.
 struct spinlock {
-#ifdef __cplusplus
+
+// Is the lock held?
+#if defined(__cplusplus) && !CODEX
   std::atomic<u32> locked;
 #else
-  u32 locked;       // Is the lock held?
+  // codex does not use atomic<u32>, to avoid
+  // recursive instrumentation
+  u32 locked;
 #endif
 
 #if SPINLOCK_DEBUG

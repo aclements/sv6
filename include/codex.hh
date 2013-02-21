@@ -85,11 +85,40 @@ __load_value(volatile const T *ptr)
 class codex {
 public:
   static unsigned int current_tid(void);
+
   static inline ALWAYS_INLINE bool
   in_atomic_section(void)
   {
     return g_atomic_section;
   }
+
+  static inline void
+  on_atomic_section_completion(void);
+
+  struct atomic_section {
+    atomic_section(bool enabled)
+      : enabled(enabled)
+    {
+      if (enabled)
+        ++g_atomic_section;
+    }
+
+    ~atomic_section()
+    {
+      if (enabled) {
+        assert(g_atomic_section);
+        if (!--g_atomic_section)
+          on_atomic_section_completion();
+      }
+    }
+
+    // no copy/moving
+    atomic_section(const atomic_section &) = delete;
+    atomic_section &operator=(const atomic_section &) = delete;
+    atomic_section(atomic_section &&) = delete;
+
+    const bool enabled;
+  };
 
 // XXX: make private
   static bool g_codex_trace_start;
@@ -257,6 +286,30 @@ codex_magic_action_run_write(volatile T *addr, T writeval)
 }
 
 inline ALWAYS_INLINE void
+codex_magic_action_run_acquire(intptr_t lock, bool acquired)
+{
+  if (codex::g_codex_trace_start)
+    codex_magic(
+      (uint64_t) codex_call_type::ACTION_RUN,
+      (uint64_t) codex::current_tid(),
+      codex_encode_action_with_flags(acquired ? action_type::ACQUIRED : action_type::ACQUIRE),
+      (uint64_t) lock,
+      0, 0);
+}
+
+inline ALWAYS_INLINE void
+codex_magic_action_run_release(intptr_t lock)
+{
+  if (codex::g_codex_trace_start)
+    codex_magic(
+      (uint64_t) codex_call_type::ACTION_RUN,
+      (uint64_t) codex::current_tid(),
+      codex_encode_action_with_flags(action_type::RELEASE),
+      (uint64_t) lock,
+      0, 0);
+}
+
+inline ALWAYS_INLINE void
 codex_magic_action_run_thread_create(tid_t tid)
 {
   if (codex::g_codex_trace_start)
@@ -278,6 +331,24 @@ codex_magic_action_run_async_event(uint32_t intno)
       codex_encode_action_with_flags(action_type::ASYNC_EVENT),
       (uint64_t) intno,
       0, 0);
+}
+
+inline ALWAYS_INLINE void
+codex_magic_action_run_nop(void)
+{
+  if (codex::g_codex_trace_start)
+    codex_magic(
+      (uint64_t) codex_call_type::ACTION_RUN,
+      (uint64_t) codex::current_tid(),
+      codex_encode_action_with_flags(action_type::NOP),
+      0, 0, 0);
+}
+
+void
+codex::on_atomic_section_completion(void)
+{
+  assert(!in_atomic_section());
+  codex_magic_action_run_nop();
 }
 
 template <typename T> inline ALWAYS_INLINE void

@@ -267,14 +267,21 @@ initlockstat(void)
 #endif
 
 spinlock::spinlock(spinlock &&o)
+#if CODEX
+  : locked(o.locked)
+#else
   : locked(o.locked.load())
+#endif
+
 #if SPINLOCK_DEBUG
     , name(o.name)
     , cpu(o.cpu)
 #endif
+
 #if LOCKSTAT
     , stat(o.stat)
 #endif
+
 {
 #if SPINLOCK_DEBUG
   memcpy(&pcs, &o.pcs, sizeof(pcs));
@@ -290,7 +297,13 @@ spinlock::operator=(spinlock &&o)
 #if LOCKSTAT
   lockstat_stop(this);
 #endif
+
+#if CODEX
+  locked = o.locked;
+#else
   locked = o.locked.load();
+#endif
+
 #if SPINLOCK_DEBUG
   name = o.name;
   cpu = o.cpu;
@@ -310,6 +323,36 @@ spinlock::~spinlock()
 }
 #endif
 
+#if CODEX
+// note: the codex implemention doesn't actually enforce mutual exclusion, but
+// that's by design
+
+bool
+spinlock::try_acquire()
+{
+  // XXX(stephentu): we'll need a new codex primitive to support this
+  return false;
+}
+
+void
+spinlock::acquire()
+{
+  pushcli();
+  codex::atomic_section a(locked);
+  codex_magic_action_run_acquire((intptr_t) &locked, false);
+  codex_magic_action_run_acquire((intptr_t) &locked, true);
+  locked = 1;
+}
+
+void
+spinlock::release()
+{
+  assert(locked);
+  codex_magic_action_run_release((intptr_t) &locked);
+  locked = 0;
+  popcli();
+}
+#else
 bool
 spinlock::try_acquire()
 {
@@ -353,3 +396,4 @@ spinlock::release()
 
   popcli();
 }
+#endif
