@@ -3,95 +3,95 @@
 ./benchhdr bench=mapbench
 echo
 
-./mapbench 1 local
-./mapbench 10 local
-./mapbench 20 local
-./mapbench 30 local
-./mapbench 40 local
-./mapbench 50 local
-./mapbench 60 local
-./mapbench 70 local
-./mapbench 80 local
+./mapbench 1 local; sleep 5
+./mapbench 10 local; sleep 5
+./mapbench 20 local; sleep 5
+./mapbench 30 local; sleep 5
+./mapbench 40 local; sleep 5
+./mapbench 50 local; sleep 5
+./mapbench 60 local; sleep 5
+./mapbench 70 local; sleep 5
+./mapbench 80 local; sleep 5
 
-./mapbench 1 local
-./mapbench 10 local
-./mapbench 20 local
-./mapbench 30 local
-./mapbench 40 local
-./mapbench 50 local
-./mapbench 60 local
-./mapbench 70 local
-./mapbench 80 local
+./mapbench 1 local; sleep 5
+./mapbench 10 local; sleep 5
+./mapbench 20 local; sleep 5
+./mapbench 30 local; sleep 5
+./mapbench 40 local; sleep 5
+./mapbench 50 local; sleep 5
+./mapbench 60 local; sleep 5
+./mapbench 70 local; sleep 5
+./mapbench 80 local; sleep 5
 
-./mapbench 1 local
-./mapbench 10 local
-./mapbench 20 local
-./mapbench 30 local
-./mapbench 40 local
-./mapbench 50 local
-./mapbench 60 local
-./mapbench 70 local
-./mapbench 80 local
+./mapbench 1 local; sleep 5
+./mapbench 10 local; sleep 5
+./mapbench 20 local; sleep 5
+./mapbench 30 local; sleep 5
+./mapbench 40 local; sleep 5
+./mapbench 50 local; sleep 5
+./mapbench 60 local; sleep 5
+./mapbench 70 local; sleep 5
+./mapbench 80 local; sleep 5
 
-./mapbench 1 pipeline
-./mapbench 10 pipeline
-./mapbench 20 pipeline
-./mapbench 30 pipeline
-./mapbench 40 pipeline
-./mapbench 50 pipeline
-./mapbench 60 pipeline
-./mapbench 70 pipeline
-./mapbench 80 pipeline
+./mapbench 1 pipeline; sleep 5
+./mapbench 10 pipeline; sleep 5
+./mapbench 20 pipeline; sleep 5
+./mapbench 30 pipeline; sleep 5
+./mapbench 40 pipeline; sleep 5
+./mapbench 50 pipeline; sleep 5
+./mapbench 60 pipeline; sleep 5
+./mapbench 70 pipeline; sleep 5
+./mapbench 80 pipeline; sleep 5
 
-./mapbench 1 pipeline
-./mapbench 10 pipeline
-./mapbench 20 pipeline
-./mapbench 30 pipeline
-./mapbench 40 pipeline
-./mapbench 50 pipeline
-./mapbench 60 pipeline
-./mapbench 70 pipeline
-./mapbench 80 pipeline
+./mapbench 1 pipeline; sleep 5
+./mapbench 10 pipeline; sleep 5
+./mapbench 20 pipeline; sleep 5
+./mapbench 30 pipeline; sleep 5
+./mapbench 40 pipeline; sleep 5
+./mapbench 50 pipeline; sleep 5
+./mapbench 60 pipeline; sleep 5
+./mapbench 70 pipeline; sleep 5
+./mapbench 80 pipeline; sleep 5
 
-./mapbench 1 pipeline
-./mapbench 10 pipeline
-./mapbench 20 pipeline
-./mapbench 30 pipeline
-./mapbench 40 pipeline
-./mapbench 50 pipeline
-./mapbench 60 pipeline
-./mapbench 70 pipeline
-./mapbench 80 pipeline
+./mapbench 1 pipeline; sleep 5
+./mapbench 10 pipeline; sleep 5
+./mapbench 20 pipeline; sleep 5
+./mapbench 30 pipeline; sleep 5
+./mapbench 40 pipeline; sleep 5
+./mapbench 50 pipeline; sleep 5
+./mapbench 60 pipeline; sleep 5
+./mapbench 70 pipeline; sleep 5
+./mapbench 80 pipeline; sleep 5
 
-./mapbench 1 global 16
-./mapbench 10 global 16
-./mapbench 20 global 16
-./mapbench 30 global 16
-./mapbench 40 global 16
-./mapbench 50 global 16
-./mapbench 60 global 16
-./mapbench 70 global 16
-./mapbench 80 global 16
+./mapbench 1 global 16; sleep 5
+./mapbench 10 global 16; sleep 5
+./mapbench 20 global 16; sleep 5
+./mapbench 30 global 16; sleep 5
+./mapbench 40 global 16; sleep 5
+./mapbench 50 global 16; sleep 5
+./mapbench 60 global 16; sleep 5
+./mapbench 70 global 16; sleep 5
+./mapbench 80 global 16; sleep 5
 
-./mapbench 1 global 16
-./mapbench 10 global 16
-./mapbench 20 global 16
-./mapbench 30 global 16
-./mapbench 40 global 16
-./mapbench 50 global 16
-./mapbench 60 global 16
-./mapbench 70 global 16
-./mapbench 80 global 16
+./mapbench 1 global 16; sleep 5
+./mapbench 10 global 16; sleep 5
+./mapbench 20 global 16; sleep 5
+./mapbench 30 global 16; sleep 5
+./mapbench 40 global 16; sleep 5
+./mapbench 50 global 16; sleep 5
+./mapbench 60 global 16; sleep 5
+./mapbench 70 global 16; sleep 5
+./mapbench 80 global 16; sleep 5
 
-./mapbench 1 global 16
-./mapbench 10 global 16
-./mapbench 20 global 16
-./mapbench 30 global 16
-./mapbench 40 global 16
-./mapbench 50 global 16
-./mapbench 60 global 16
-./mapbench 70 global 16
-./mapbench 80 global 16
+./mapbench 1 global 16; sleep 5
+./mapbench 10 global 16; sleep 5
+./mapbench 20 global 16; sleep 5
+./mapbench 30 global 16; sleep 5
+./mapbench 40 global 16; sleep 5
+./mapbench 50 global 16; sleep 5
+./mapbench 60 global 16; sleep 5
+./mapbench 70 global 16; sleep 5
+./mapbench 80 global 16; sleep 5
 
 # Below here is unused in RadixVM
 
