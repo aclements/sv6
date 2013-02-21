@@ -433,6 +433,8 @@ private:
     ev.count = 1;
     while (pos < ds->pebs_index) {
       auto record = (pebs_record_v1*)pos;
+      ev.ints_disabled = !(record->rflags & FL_IF);
+      ev.kernel = record->rip >= KCODE;
       ev.rip = record->rip;
       if (pebs_version >= 1) {
         ev.latency = record->latency;
@@ -637,6 +639,8 @@ samplog(int pmc, struct trapframe *tf)
 {
   struct pmuevent ev{};
   ev.idle = (myproc() == idleproc());
+  ev.ints_disabled = !(tf->rflags & FL_IF);
+  ev.kernel = tf->rip >= KCODE;
   ev.count = 1;
   ev.rip = tf->rip;
   getcallerpcs((void*)tf->rbp, ev.trace, NELEM(ev.trace));

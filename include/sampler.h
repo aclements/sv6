@@ -30,6 +30,8 @@ struct perf_selector
 
 struct pmuevent {
   u8 idle:1;
+  u8 ints_disabled:1;
+  u8 kernel:1;
   u32 count;
   u64 rip;
   uptr trace[NTRACE];

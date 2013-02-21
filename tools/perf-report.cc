@@ -219,8 +219,9 @@ print_entry(Addr2line &addr2line, uint64_t count, uint64_t total,
     }
   }
 
-  printf("%2d%% %-7" PRIu64 " %c ",
-         (int)(count * 100 / total), count, e->idle?'I':' ');
+  printf("%2d%% %-7" PRIu64 " %c%c ",
+         (int)(count * 100 / total), count, e->idle?'I':' ',
+         e->ints_disabled?'C':' ');
 
   const char *indent = "";
   for (auto &l : li) {
@@ -230,7 +231,7 @@ print_entry(Addr2line &addr2line, uint64_t count, uint64_t total,
       printf("%s%-16s", indent, "(inlined by)");
     printf(" %s:%u %s\n",
            l.file.c_str(), l.line, l.func.c_str());
-    indent = "              ";
+    indent = "               ";
   }
 
   printf("\n");
@@ -272,7 +273,8 @@ main(int ac, char **av)
   }
   header = (struct logheader*)x;
 
-  uint64_t samples = 0, idle_samples = 0;
+  uint64_t samples = 0, idle_samples = 0,
+    ints_disabled_samples = 0, kernel_samples = 0;
   std::unordered_map<struct pmuevent*, int, pmuevent_ops, pmuevent_ops> map;
   for (u32 i = 0; i < header->ncpus; i++) {
     struct pmuevent *p;
@@ -283,6 +285,10 @@ main(int ac, char **av)
     for (; p < q; p++) {
       if (p->idle)
         idle_samples += p->count;
+      if (p->ints_disabled)
+        ints_disabled_samples += p->count;
+      if (p->kernel)
+        kernel_samples += p->count;
       samples += p->count;
       if (ignoreidle_mode && p->idle)
         continue;
@@ -301,8 +307,16 @@ main(int ac, char **av)
     total += p.second;
   }
 
-  printf("total samples: %" PRIu64 "  idle samples: %" PRIu64 " (%d%%)\n\n",
+  uint64_t user_samples = samples - kernel_samples;
+  printf("total samples: %" PRIu64 "  idle samples: %" PRIu64 " (%d%%)\n",
          samples, idle_samples, (int)(idle_samples * 100 / samples));
+  printf("kernel samples: %" PRIu64 " (%d%%)"
+         "  user samples: %" PRIu64 " (%d%%)\n",
+         kernel_samples, (int)(kernel_samples * 100 / samples),
+         user_samples, (int)(user_samples * 100 / samples));
+  printf("ints disabled samples: %" PRIu64 " (%d%%)\n",
+         ints_disabled_samples, (int)(ints_disabled_samples * 100 / samples));
+  printf("\n");
 
   for (std::pair<const uint64_t, struct pmuevent*> &p : sorted)
     print_entry(addr2line, p.first, total, p.second);
