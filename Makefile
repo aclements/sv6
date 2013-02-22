@@ -11,7 +11,6 @@ EXCEPTIONS ?= y
 RUN	   ?= $(empty)
 PYTHON     ?= python
 O  	   = o.$(HW)
-CODEX      ?= 0
 
 ifeq ($(HW),linux)
 PLATFORM   := native
@@ -19,7 +18,7 @@ else
 PLATFORM   := xv6
 endif
 
-ifeq ($(CODEX),1)
+ifeq ($(HW),codex)
 CODEXINC = -Icodexinc
 else
 CODEXINC =
@@ -50,7 +49,7 @@ INCLUDES  = --sysroot=$(O)/sysroot \
 	-iquote libutil/include \
 	-Istdinc $(CODEXINC) -I$(QEMUSRC) \
 	-include param.h -include libutil/include/compiler.h
-COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 -DCODEX=$(CODEX) \
+COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
 	    -mno-red-zone
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)

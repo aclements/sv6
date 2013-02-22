@@ -54,12 +54,15 @@
 #define SCHED_LOAD_BALANCE 1
 
 #if defined(HW_qemu)
-#if CODEX
-#define DEBUG         0
-#else
 #define DEBUG         1
-#endif
 #define NCPU          8   // maximum number of CPUs
+#define NSOCKET       2
+#define MTRACE        0
+#define PERFSIZE      (16<<20ull)
+#elif defined(HW_codex)
+#define DEBUG         0
+#define CODEX         1
+#define NCPU          2
 #define NSOCKET       2
 #define MTRACE        0
 #define PERFSIZE      (16<<20ull)
@@ -114,6 +117,9 @@
 
 #ifndef DEBUG
 #define DEBUG 1
+#endif
+#ifndef CODEX
+#define CODEX 0
 #endif
 #ifndef E1000_PORT
 // Use E1000 port 0 by default

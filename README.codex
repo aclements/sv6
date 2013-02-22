@@ -1,6 +1,10 @@
 Running codex for xv6:
 
-1. Build xv6 with codex enabled, by setting CODEX=1 in config.mk
+1. Build xv6 with codex enabled: make HW=codex
+   This will build the kernel in o.codex/kernel.elf
+
+   Optionally set HW=codex in config.mk to avoid specifying it
+   for every make invocation.
 
 2. Build qemu with codex enabled:
 $ git clone -b codex ssh://amsterdam.csail.mit.edu/home/am3/stephentu/qemu-codex.git 

@@ -62,7 +62,7 @@ enum {
 #endif
 };
 
-#if !defined(LINUX) && !defined(HW_qemu)
+#if !defined(LINUX) && !defined(HW_qemu) && !defined(HW_codex)
 #define RECORD_PMC pmc_l2_cache_misses
 #define PMCNO 0
 #endif
