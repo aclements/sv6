@@ -16,10 +16,10 @@ LOG_REPLAY_RECORDS=False
 
 # XXX(stephentu): should find a cleaner way to do this
 #QEMU=os.path.expanduser('~/qemu-bin/bin/qemu-system-x86_64')
-#XV6_KERNEL=os.path.expanduser('~/xv6/o.qemu/kernel.elf')
+#XV6_KERNEL=os.path.expanduser('~/xv6/o.codex/kernel.elf')
 
 QEMU=os.path.expanduser('/x/stephentu/qemu-bin/bin/qemu-system-x86_64')
-XV6_KERNEL=os.path.expanduser('/x/stephentu/xv6/o.qemu/kernel.elf')
+XV6_KERNEL=os.path.expanduser('/x/stephentu/xv6/o.codex/kernel.elf')
 
 # Don't enable network, so we can run multiple instances concurrently
 #QEMU_ARGS="-smp 2 -m 512 -serial mon:stdio -nographic -numa node -numa node -net user -net nic,model=e1000 -redir tcp:2323::23 -redir tcp:8080::80" + " -kernel " + XV6_KERNEL
