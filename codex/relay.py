@@ -10,9 +10,11 @@ import sys
 import threading
 import tempfile
 
-WRITE_TO_STDOUT=False
+WRITE_TO_STDOUT=True
 QEMU=os.path.expanduser('~/qemu-bin/bin/qemu-system-x86_64')
 XV6_KERNEL=os.path.expanduser('~/xv6/o.qemu/kernel.elf')
+#QEMU=os.path.expanduser('/x/stephentu/qemu-bin/bin/qemu-system-x86_64')
+#XV6_KERNEL=os.path.expanduser('/x/stephentu/xv6/o.qemu/kernel.elf')
 #QEMU_ARGS="-smp 2 -m 512 -serial mon:stdio -nographic -numa node -numa node -net user -net nic,model=e1000 -redir tcp:2323::23 -redir tcp:8080::80" + " -kernel " + XV6_KERNEL
 
 # Don't enable network, so we can run multiple instances concurrently
@@ -107,6 +109,7 @@ class Client(object):
       self.__ctr += 1
       proc_env = dict(os.environ) # copy
       proc_env['CODEX_RELAY_SOCK'] = os.path.join(self.__exec_dir, DOWNSTREAM_SOCK_NAME)
+      proc_env['CODEX_PANIC_FILE'] = os.path.join(self.__exec_dir, 'panic.err')
       proc = subprocess.Popen([QEMU] + QEMU_ARGS.split(),
           stdin=open('/dev/null', 'r'),
           stdout=subprocess.PIPE,
@@ -186,6 +189,15 @@ def purge(d, pattern):
     if re.search(pattern, f):
       os.remove(os.path.join(d, f))
 
+def mkdir_p(path):
+  try:
+    os.makedirs(path)
+  except OSError as exc: # Python >2.5
+    if exc.errno == errno.EEXIST and os.path.isdir(path):
+      pass
+    else:
+      raise
+
 if __name__ == '__main__':
   if not os.path.exists(QEMU):
     print >>sys.stderr, \
@@ -197,7 +209,11 @@ if __name__ == '__main__':
     sys.exit(1)
 
   # get a new exection directory
-  exec_dir = tempfile.mkdtemp(prefix="codex")
+  if 'CODEX_EXEC_DIR' in os.environ:
+    exec_dir = os.environ['CODEX_EXEC_DIR']
+    mkdir_p(exec_dir)
+  else:
+    exec_dir = tempfile.mkdtemp(prefix="codex")
 
   # create a new downstream socket
   s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
