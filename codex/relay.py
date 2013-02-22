@@ -10,14 +10,19 @@ import sys
 import threading
 import tempfile
 
+# verboseness options
 WRITE_TO_STDOUT=True
-QEMU=os.path.expanduser('~/qemu-bin/bin/qemu-system-x86_64')
-XV6_KERNEL=os.path.expanduser('~/xv6/o.qemu/kernel.elf')
-#QEMU=os.path.expanduser('/x/stephentu/qemu-bin/bin/qemu-system-x86_64')
-#XV6_KERNEL=os.path.expanduser('/x/stephentu/xv6/o.qemu/kernel.elf')
-#QEMU_ARGS="-smp 2 -m 512 -serial mon:stdio -nographic -numa node -numa node -net user -net nic,model=e1000 -redir tcp:2323::23 -redir tcp:8080::80" + " -kernel " + XV6_KERNEL
+LOG_REPLAY_RECORDS=False
+
+# XXX(stephentu): should find a cleaner way to do this
+#QEMU=os.path.expanduser('~/qemu-bin/bin/qemu-system-x86_64')
+#XV6_KERNEL=os.path.expanduser('~/xv6/o.qemu/kernel.elf')
+
+QEMU=os.path.expanduser('/x/stephentu/qemu-bin/bin/qemu-system-x86_64')
+XV6_KERNEL=os.path.expanduser('/x/stephentu/xv6/o.qemu/kernel.elf')
 
 # Don't enable network, so we can run multiple instances concurrently
+#QEMU_ARGS="-smp 2 -m 512 -serial mon:stdio -nographic -numa node -numa node -net user -net nic,model=e1000 -redir tcp:2323::23 -redir tcp:8080::80" + " -kernel " + XV6_KERNEL
 QEMU_ARGS="-smp 2 -m 512 -serial mon:stdio -nographic -numa node -numa node -kernel " + XV6_KERNEL
 
 UPSTREAM_SOCK='/tmp/codexd.sock'
@@ -106,10 +111,16 @@ class Client(object):
     elif res == "reset":
       # spawn downstream proc
       logfile = open(os.path.join(self.__exec_dir, "codexlog_%d" % (self.__ctr)), 'w')
-      self.__ctr += 1
+      panicfile = os.path.join(self.__exec_dir, 'panic_%d.err' % (self.__ctr))
+      replayfile = os.path.join(self.__exec_dir, 'replay_%d.trace' % (self.__ctr))
+      recordfile = os.path.join(self.__exec_dir, 'record_%d.trace' % (self.__ctr))
       proc_env = dict(os.environ) # copy
-      proc_env['CODEX_RELAY_SOCK'] = os.path.join(self.__exec_dir, DOWNSTREAM_SOCK_NAME)
-      proc_env['CODEX_PANIC_FILE'] = os.path.join(self.__exec_dir, 'panic.err')
+      proc_env['CODEX_RELAY_SOCK']        = os.path.join(self.__exec_dir, DOWNSTREAM_SOCK_NAME)
+      proc_env['CODEX_PANIC_FILE']        = panicfile
+      proc_env['CODEX_REPLAY_SCHED_FILE'] = replayfile
+      if LOG_REPLAY_RECORDS:
+        proc_env['CODEX_RECORD_FILE'] = recordfile
+      self.__ctr += 1
       proc = subprocess.Popen([QEMU] + QEMU_ARGS.split(),
           stdin=open('/dev/null', 'r'),
           stdout=subprocess.PIPE,
