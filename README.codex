@@ -1,0 +1,22 @@
+Running codex for xv6:
+
+1. Build xv6 with codex enabled, by setting CODEX=1 in config.mk
+
+2. Build qemu with codex enabled:
+$ git clone -b codex ssh://amsterdam.csail.mit.edu/home/am3/stephentu/qemu-codex.git 
+$ cd ./qemu-codex
+[Edit configure.cmd appropriately]
+$ ./configure.cmd
+$ make
+
+3. Build codex. 
+
+4. Edit variables QEMU and XV6_KERNEL in xv6/codex/relay.py to point the right
+binaries created by steps (1) and (2).
+
+5. Start codex. Any of the schedulers *should* work, but simple_dpor is
+currently recommended:
+$./codexd --scheduler simple_dpor
+
+6. Now start interleaving xv6:
+$ python codex/relay.py
