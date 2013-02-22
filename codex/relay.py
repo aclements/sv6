@@ -123,6 +123,7 @@ class Client(object):
           self.poll_fd = poll_fd
           self.out_fds = out_fds
           self.running = True
+          self.daemon = True
 
         def run_one_iter(self):
           while True:
