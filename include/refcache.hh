@@ -155,6 +155,7 @@
 #include "condvar.h"
 
 #include <stdexcept>
+#include <limits.h>
 
 #ifndef REFCACHE_DEBUG
 #define REFCACHE_DEBUG 1
@@ -239,8 +240,7 @@ namespace refcache {
     // cache's hash table), but wouldn't require the vtable pointer in
     // each object or the overhead of virtual method calls.
 
-    virtual ~referenced() { };
-    virtual void onzero() { delete this; }
+    virtual void onzero() = 0;
   };
 
   // A subclass of referenced for objects that support a weak
@@ -449,7 +449,7 @@ namespace refcache {
         way->obj = obj;
       }
       // If the delta is getting close to overflowing, evict.
-      if (way->delta == __INT32_MAX__ || way->delta == -__INT32_MAX__-1)
+      if (way->delta == INT_MAX || way->delta == INT_MIN)
         evict(way, false);
       return way;
     }

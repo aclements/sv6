@@ -357,9 +357,9 @@ locked_clear_bit(int nr, volatile void *a)
 static inline void
 clear_bit(int nr, volatile void *a)
 {
-  __asm volatile("btr %1,%0"
-                 : "+m" (*((volatile uint8_t*)a + (nr / 8)))
-                 : "Ir" (nr % 8)
+  __asm volatile("btrq %1,%0"
+                 : "+m" (*(volatile uint8_t*)a)
+                 : "Ir" (nr)
                  : "memory");
 }
 

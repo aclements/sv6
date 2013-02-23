@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 #ifdef XV6_USER
 #include "types.h"
 #include "user.h"
@@ -62,7 +63,7 @@ main(int ac, char** av)
   setaffinity(0);
 
   uint32_t min = 0;
-  uint32_t max = __UINT32_MAX__;
+  uint32_t max = UINT_MAX;
 
   for (;;) {
     int opt = getopt(ac, av, "vct");
@@ -112,7 +113,7 @@ main(int ac, char** av)
     printf(" check");
   if (run_threads)
     printf(" threads");
-  if (min == 0 && max == __UINT32_MAX__)
+  if (min == 0 && max == UINT_MAX)
     printf(" all");
   else if (min == max)
     printf(" %d", min);

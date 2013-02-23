@@ -63,6 +63,7 @@ pthread_create(pthread_t* tid, const pthread_attr_t* attr,
   return 0;
 }
 
+int
 pthread_createflags(pthread_t* tid, const pthread_attr_t* attr,
                     void* (*start)(void*), void* arg, int flag)
 {

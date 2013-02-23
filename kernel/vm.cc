@@ -58,7 +58,7 @@ class page_holder
     ~batch()
     {
       for (size_t i = 0; i < used; ++i)
-        pages[i].~sref();
+        pages[i].~sref<page_info>();
     }
   };
 

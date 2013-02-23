@@ -14,7 +14,7 @@ ceil_log2(std::size_t x)
 
 // Return ceil(log2(x)).  This is slow, but can be evaluated in a
 // constexpr context.
-static constexpr std::size_t
+static inline constexpr std::size_t
 ceil_log2_const(std::size_t x, bool exact = true)
 {
   return (x == 0) ? (1/x)

@@ -8,6 +8,8 @@
 #include "kalloc.hh"
 #include "fs.h"
 
+#include <limits.h>
+
 class mdir;
 class mfile;
 class mdev;
@@ -303,7 +305,7 @@ private:
     sref<page_info> pg;
   };
 
-  enum { maxidx = __SIZE_MAX__ / PGSIZE + 1 };
+  enum { maxidx = ULONG_MAX / PGSIZE + 1 };
   radix_array<page_state, maxidx, PGSIZE,
               kalloc_allocator<page_state>> pages_;
 

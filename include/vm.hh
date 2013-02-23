@@ -52,7 +52,7 @@ struct vmdesc : public mmu::page_tracker
   // ourselves.
 
   // The file mapped at this page frame.
-  sref<struct mnode> inode;
+  sref<mnode> inode;
 
   // If a file is mapped at this page frame, the virtual address of
   // that file's 0 byte.  For anonymous memory, this must be 0.  We
@@ -67,7 +67,7 @@ struct vmdesc : public mmu::page_tracker
 
   // Construct a descriptor that maps the beginning of ip's file to
   // virtual address start (which may be negative).
-  vmdesc(const sref<struct mnode> &ip, intptr_t start)
+  vmdesc(const sref<mnode> &ip, intptr_t start)
     : flags(FLAG_MAPPED), inode(ip), start(start) { }
 
   // The anonymous memory descriptor.
@@ -105,7 +105,7 @@ private:
 
   // Create a new vmdesc with an empty page tracker.
   vmdesc(u64 flags, const sref<class page_info> &page,
-         const sref<struct mnode> &inode, intptr_t start)
+         const sref<mnode> &inode, intptr_t start)
     : flags(flags), page(page), inode(inode), start(start) { }
 };
 

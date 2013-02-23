@@ -23,7 +23,7 @@ operator new(std::size_t nbytes)
 }
 
 void
-operator delete(void* p) noexcept
+operator delete(void* p)
 {
   panic("global operator delete");
 
@@ -40,7 +40,7 @@ operator new[](std::size_t nbytes)
 }
 
 void
-operator delete[](void* p) noexcept
+operator delete[](void* p)
 {
   u64* x = (u64*) p;
   kmfree(x-1, x[-1] + sizeof(u64));
@@ -146,7 +146,7 @@ namespace std {
 
   template<>
   u128
-  atomic<u128>::load(memory_order __m) const
+  atomic<u128>::load(memory_order __m) const noexcept
   {
     __sync_synchronize();
     u128 v = _M_i;

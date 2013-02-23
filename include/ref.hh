@@ -133,8 +133,6 @@ public:
     if (c)
       onzero();
   }
-  
-  NEW_DELETE_OPS(referenced);
 
 protected:
   virtual ~referenced() { }

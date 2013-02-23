@@ -37,8 +37,6 @@ struct sbuf
 class print_stream
 {
 public:
-  virtual ~print_stream() { }
-
   // Write each of the arguments to this stream in order.
   template<typename... T>
   void print(T&&... args)

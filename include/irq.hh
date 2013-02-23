@@ -1,6 +1,7 @@
 #pragma once
 
 #include "apic.hh"
+#include "cpputil.hh"
 
 class irq_handler
 {

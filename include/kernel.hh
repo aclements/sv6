@@ -42,6 +42,7 @@ struct work;
 struct irq;
 class print_stream;
 class mnode;
+class buf;
 
 // acpi.c
 typedef void *ACPI_HANDLE;
@@ -67,9 +68,9 @@ void            to_stream(print_stream *s, const struct acpi_resource_source &r)
 
 // bio.c
 void            binit(void);
-struct buf*     bread(u32, u64, int writer);
-void            brelse(struct buf*, int writer);
-void            bwrite(struct buf*);
+buf*            bread(u32, u64, int writer);
+void            brelse(buf*, int writer);
+void            bwrite(buf*);
 
 // cga.c
 void            cgaputc(int c);

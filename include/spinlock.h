@@ -137,7 +137,8 @@ struct spinlock {
   spinlock &operator=(spinlock &&o);
 
 #if LOCKSTAT
-  ~spinlock();
+  // Conflicts with constexpr
+  // ~spinlock();
 #endif
 
   NEW_DELETE_OPS(spinlock);

@@ -65,7 +65,7 @@ load_inum(u64 inum)
     return m;
 
   sref<inode> i = iget(1, inum);
-  switch (i->type) {
+  switch (i->type.load()) {
   case T_DIR:
     m = mnode_alloc(inum, mnode::types::dir);
     load_dir(i, m);

@@ -149,7 +149,7 @@ public:
     // page structure tree.
     struct pgmap *cur;
 
-    friend class pgmap;
+    friend struct pgmap;
 
     iterator(struct pgmap *pml4, uintptr_t va, int level)
       : pml4(pml4), va(va), level(level)

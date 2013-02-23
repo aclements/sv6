@@ -78,14 +78,14 @@ INLINE_ATTR pthread_t pthread_start(void *(*fn) (void *), uintptr_t arg);
 INLINE_ATTR void lfence(void);
 INLINE_ATTR void mfence(void);
 
-uint32_t
+static inline uint32_t
 rnd(uint32_t * seed)
 {
     *seed = *seed * 1103515245 + 12345;
     return *seed & 0x7fffffff;
 }
 
-uint64_t
+static inline uint64_t
 read_tsc(void)
 {
     uint32_t a, d;
@@ -93,7 +93,7 @@ read_tsc(void)
     return ((uint64_t) a) | (((uint64_t) d) << 32);
 }
 
-uint64_t
+static inline uint64_t
 read_pmc(uint32_t ecx)
 {
     uint32_t a, d;
@@ -101,25 +101,25 @@ read_pmc(uint32_t ecx)
     return ((uint64_t) a) | (((uint64_t) d) << 32);
 }
 
-void
+static inline void
 mfence(void)
 {
     __asm __volatile("mfence");
 }
 
-void
+static inline void
 nop_pause(void)
 {
     __asm __volatile("pause"::);
 }
 
-uint64_t
+static inline uint64_t
 usec(void)
 {
     return 0;
 }
 
-uint64_t
+static inline uint64_t
 get_cpu_freq(void)
 {
 #ifdef JOS_USER
@@ -151,7 +151,7 @@ get_cpu_freq(void)
 #endif
 }
 
-uint32_t
+static inline uint32_t
 get_core_count(void)
 {
 #ifdef JOS_USER
@@ -164,7 +164,7 @@ get_core_count(void)
 #endif
 }
 
-int
+static inline int
 fill_core_array(uint32_t * cid, uint32_t n)
 {
     uint32_t z = get_core_count();
@@ -176,7 +176,7 @@ fill_core_array(uint32_t * cid, uint32_t n)
     return z;
 }
 
-pthread_t
+static inline pthread_t
 pthread_start(void *(*fn) (void *), uintptr_t arg)
 {
     pthread_t th;
@@ -184,7 +184,7 @@ pthread_start(void *(*fn) (void *), uintptr_t arg)
     return th;
 }
 
-void
+static inline void
 lfence(void)
 {
     __asm __volatile("lfence");

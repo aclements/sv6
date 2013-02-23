@@ -2,11 +2,11 @@
 
 typedef unsigned char mark_sense_t;
 class gcd_memory;
-struct gcptr;
+class gcptr;
 
 struct gcptr_ref
 {
-  struct gcptr*    ptr;
+  class gcptr*     ptr;
   ilink<gcptr_ref> link;
 };
 

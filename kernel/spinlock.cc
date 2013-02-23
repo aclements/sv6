@@ -317,10 +317,11 @@ spinlock::operator=(spinlock &&o)
 }
 
 #if LOCKSTAT
-spinlock::~spinlock()
-{
-  lockstat_stop(this);
-}
+// Conflicts with constexpr
+// spinlock::~spinlock()
+// {
+//   lockstat_stop(this);
+// }
 #endif
 
 #if USE_CODEX_IMPL

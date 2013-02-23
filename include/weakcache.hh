@@ -9,7 +9,7 @@ template<class K, class V, size_t Buckets>
 class weakcache
 {
 private:
-  struct bucket;
+  class bucket;
 
   class item : public rcu_freed
   {
