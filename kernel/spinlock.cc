@@ -129,7 +129,7 @@ static struct lockstat_list lockstat_list = { (struct klockstat*) nullptr };
 static struct spinlock lockstat_lock("lockstat");
 
 klockstat::klockstat(const char *name) :
-  rcu_freed("klockstat")
+  rcu_freed("klockstat", this, sizeof(*this))
 {
   magic = LOCKSTAT_MAGIC;
   memset(&s, 0, sizeof(s));
