@@ -14,7 +14,6 @@
 #define NEPOCH        4
 #define CACHELINE    64  // cache line size
 #define CPUKSTACKS   (NPROC + NCPU*2)
-#define QUANTUM      10  // scheduling time quantum and tick length (in msec)
 #define VICTIMAGE 1000000 // cycles a proc executes before an eligible victim
 #define VERBOSE       0  // print kernel diagnostics
 #define SPINLOCK_DEBUG DEBUG // Debug spin locks
@@ -64,6 +63,7 @@
 #define NSOCKET       2
 #define MTRACE        1
 #define PERFSIZE      (16<<20ull)
+#define QUANTUM       100
 #elif defined(HW_codex)
 #define DEBUG         0
 #define CODEX         1
@@ -133,4 +133,7 @@
 // default.  Also common is setting the RTC to local time, in which
 // case this should be TZ_SECS.
 #define RTC_TZ_SECS 0
+#endif
+#ifndef QUANTUM
+#define QUANTUM      10  // scheduling time quantum and tick length (in msec)
 #endif
