@@ -15,8 +15,8 @@ $ make
 
 3. Build codex. 
 
-4. Edit variable QEMU in xv6/codex/relay.py to point the right
-   binary created by step (2).
+4. Copy xv6/codex/codexconfig.py.sample to xv6/codex/codexconfig.py, and
+   set the variable QEMU to point the right binary created by step (2).
 
 5. Start codex. Any of the schedulers *should* work, but simple_dpor is
 currently recommended:

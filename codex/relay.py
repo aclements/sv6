@@ -9,16 +9,14 @@ import socket
 import sys
 import threading
 import tempfile
+import codexconfig
 
 # verboseness options
 WRITE_TO_STDOUT=True
 LOG_REPLAY_RECORDS=False
 
 XV6_KERNEL=os.path.dirname(os.path.realpath(__file__)) + '/../o.codex/kernel.elf'
-
-# XXX(stephentu): should find a cleaner way to do this
-#QEMU=os.path.expanduser('~/qemu-bin/bin/qemu-system-x86_64')
-QEMU=os.path.expanduser('/x/stephentu/qemu-bin/bin/qemu-system-x86_64')
+QEMU=codexconfig.QEMU
 
 # Don't enable network, so we can run multiple instances concurrently
 #QEMU_ARGS="-smp 2 -m 512 -serial mon:stdio -nographic -numa node -numa node -net user -net nic,model=e1000 -redir tcp:2323::23 -redir tcp:8080::80" + " -kernel " + XV6_KERNEL
