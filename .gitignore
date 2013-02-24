@@ -8,6 +8,7 @@ o.user/
 o.native/
 o.linux/
 o.codex/
+o.mtrace/
 /mtrace.out
 /mtrace.txt
 /mscan.out
