@@ -181,7 +181,7 @@ exec(const char *path, const char * const *argv)
   if((ip = namei(myproc()->cwd_m, path)) == 0)
     return -1;
 
-  gc_begin_epoch();
+  scoped_gc_epoch rcu;
 
   // Check header
   if (ip->type() != mnode::types::file)
@@ -201,7 +201,6 @@ exec(const char *path, const char * const *argv)
     if (i == sz)
       goto bad;
     const char *argv[] = {&buf[2], path, NULL};
-    gc_end_epoch();
     return exec(argv[0], argv);
   }
 
@@ -266,13 +265,11 @@ exec(const char *path, const char * const *argv)
   assert(wqcrit_push(w, myproc()->data_cpuid) >= 0);
   myproc()->data_cpuid = myid();
 
-  gc_end_epoch();
   return 0;
 
  bad:
   cprintf("exec failed\n");
   if(vmp)
     vmp->decref();
-  gc_end_epoch();
   return 0;
 }

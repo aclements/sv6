@@ -219,7 +219,7 @@ class xns : public rcu_freed {
     }
   }
 
-  class iterator {
+  class iterator : public scoped_gc_epoch {
   private:
     xns<K, V, HF> *ns_;
     xelem<K, V> *chain_;
@@ -227,8 +227,6 @@ class xns : public rcu_freed {
 
   public:
     iterator(xns<K, V, HF> *ns) {
-      if (ns_)
-        gc_begin_epoch();
       ns_ = ns;
       ndx_ = 0;
       chain_ = ns->table[ndx_++].chain;
@@ -240,11 +238,6 @@ class xns : public rcu_freed {
       ns_ = 0;
       ndx_ = NHASH;
       chain_ = 0;
-    }
-
-    ~iterator() {
-      if (ns_)
-        gc_end_epoch();
     }
 
     bool operator!=(const iterator &other) const {
