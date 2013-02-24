@@ -25,7 +25,7 @@ struct file : public rcu_freed {
   virtual void dec() = 0;
 
 protected:
-  file() : rcu_freed("file") {}
+  file() : rcu_freed("file", this, sizeof(*this)) {}
 };
 
 struct file_inode : public refcache::referenced, public file {

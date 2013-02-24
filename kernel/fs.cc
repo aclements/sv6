@@ -424,7 +424,7 @@ iupdate(struct inode *ip)
 // Though unlocked, all fields will be present,
 // so looking a ip->inum and ip->gen are OK even w/o lock.
 inode::inode(u32 d, u32 i)
-  : rcu_freed("inode"),
+  : rcu_freed("inode", this, sizeof(*this)),
     dev(d), inum(i),
     valid(false),
     busy(false),
@@ -761,7 +761,9 @@ class diskblock : public rcu_freed {
   u64 _block;
 
  public:
-  diskblock(int dev, u64 block) : rcu_freed("diskblock"), _dev(dev), _block(block) {}
+  diskblock(int dev, u64 block)
+    : rcu_freed("diskblock", this, sizeof(*this)),
+      _dev(dev), _block(block) {}
   virtual void do_gc() override {
     scoped_gc_epoch e;
     bfree(_dev, _block);

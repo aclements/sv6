@@ -148,7 +148,7 @@ private:
 
 class radix_elem : public rcu_freed {
  public:
-  radix_elem() : rcu_freed("radix_elem") {}
+  radix_elem() : rcu_freed("radix_elem", this, sizeof(*this)) {}
   virtual ~radix_elem() {}
   virtual void decref(u64 delta = 1) = 0;
   virtual void incref(u64 delta = 1) = 0;

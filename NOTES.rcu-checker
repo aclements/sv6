@@ -1,0 +1,38 @@
+% make HW=mtrace mtrace.out
+
+$ avar onkern
+...
+$ avar off
+$ halt
+
+% ../mtrace/mtrace-tools/mscan --check-gc
+
+False positives:
+
+- Global objects of a type that can be GCed (xnspid).
+  Workaround: only flag for objects that we see eventually GCed?
+  Not ideal because objects might not be GCed for a while..
+
+- Touching an object prior to insertion in a data structure (xelem).
+  Workaround: explicit annotation for when an object becomes "live"?
+
+- Non-epoch reasons for why an object is alive (proc).
+  Many things touch myproc() without an RCU epoch (cannot GC until exit).
+  Some things touch a proc while holding the proc lock.
+  [ Why is 'proc' rcu_freed anyway? ]
+
+Unclear:
+
+- Why is 'file' both rcu_freed and referenced?
+  This seems to be a bug: a file could be resuscitated after reaching zero!
+  Need a slightly different form of weak references?
+  Complication: some file objects are refcached, other are regular referenced.
+
+- Why is 'inode' both rcu_freed and referenced?
+  Unclear concurrency story, mnode seems more consistent.
+
+Likely bugs:
+
+- condvar::wake_all() and timerintr() could touch a deleted proc
+  [ but see existing comment in proc.cc:kill() ]
+

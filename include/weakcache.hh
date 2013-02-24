@@ -20,7 +20,8 @@ private:
     islink<item> link_;
 
     item(const K& k, V* v, bucket* b)
-      : rcu_freed("weakcache::item"), key_(k), weakref_(v), parent_(b) {}
+      : rcu_freed("weakcache::item", this, sizeof(*this)),
+        key_(k), weakref_(v), parent_(b) {}
     void do_gc() override { delete this; }
     NEW_DELETE_OPS(item)
   };

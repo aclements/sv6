@@ -11,7 +11,7 @@ class nstbl : public rcu_freed
   typedef xns<K, V, HF> ins;
 
 public:
-  nstbl() : rcu_freed("nstbl") {
+  nstbl() : rcu_freed("nstbl", this, sizeof(*this)) {
     for (int i = 0; i < NINS; i++)
       a_[i].store(nullptr);
   }

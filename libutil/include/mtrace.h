@@ -1,3 +1,5 @@
+#pragma once
+
 #if MTRACE
 #include <stdint.h>
 
@@ -41,6 +43,26 @@ static inline void mtops(uint64_t n)
   mtrace_appdata_register(&entry);
 }
 
+static inline void mtgcregister(void* base, uint64_t nbytes, const char* name)
+{
+  mtrace_gc_register((uint64_t) base, nbytes, name, 0);
+}
+
+static inline void mtgcdead(void* base)
+{
+  mtrace_gc_register((uint64_t) base, 0, "", 1);
+}
+
+static inline void mtrcubegin()
+{
+  mtrace_gcepoch_register(1);
+}
+
+static inline void mtrcuend()
+{
+  mtrace_gcepoch_register(0);
+}
+
 #include "mtrace-magic.h"
 #else
 #define mtlabel(type, addr, bytes, str, n) do { } while (0)
@@ -54,4 +76,8 @@ static inline void mtops(uint64_t n)
 #define mtenable_type(type, name) do { } while (0)
 #define mtdisable(name) do { } while (0)
 #define mtops(n) do { } while (0)
+#define mtrcubegin(ptr) do { } while (0)
+#define mtrcuend(ptr) do { } while (0)
+#define mtgcregister(base, nbytes, name) do { } while (0)
+#define mtgcdead(base) do { } while (0)
 #endif

@@ -14,7 +14,9 @@ template<class K, class V>
 class chainhash {
 private:
   struct item : public rcu_freed {
-    item(const K& k, const V& v) : rcu_freed("chainhash::item"), key(k), val(v) {}
+    item(const K& k, const V& v)
+      : rcu_freed("chainhash::item", this, sizeof(*this)),
+        key(k), val(v) {}
     void do_gc() override { delete this; }
     NEW_DELETE_OPS(item);
 

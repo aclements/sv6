@@ -145,7 +145,8 @@ futexaddr::alloc(futexkey_t key)
 }
 
 futexaddr::futexaddr(futexkey_t key, xns<u32, proc*, proc::hash>* nspid)
-  : rcu_freed("futexaddr"), key_(key), inserted_(false), nspid_(nspid)
+  : rcu_freed("futexaddr", this, sizeof(*this)),
+    key_(key), inserted_(false), nspid_(nspid)
 {
 }
 

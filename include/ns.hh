@@ -27,7 +27,7 @@ class xelem : public rcu_freed {
   std::atomic<xelem<K, V>*>* percore_pprev;
 
   xelem(const K &k, const V &v)
-    : rcu_freed("xelem"), val(v), key(k),
+    : rcu_freed("xelem", this, sizeof(*this)), val(v), key(k),
       next_lock(0), next(0),
       percore_next(0), percore_pprev(0) {}
   void do_gc() override {
@@ -53,7 +53,7 @@ class xns : public rcu_freed {
   spinlock percore_lock[NCPU];
 
  public:
-  xns(bool dup) : rcu_freed("xns") {
+  xns(bool dup) : rcu_freed("xns", this, sizeof(*this)) {
     allowdup = dup;
     nextkey = 1;
     for (int i = 0; i < NHASH; i++)
