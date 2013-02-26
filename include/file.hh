@@ -54,7 +54,7 @@ protected:
   void do_gc(void) override { delete this; }
 };
 
-struct file_socket : public referenced, public file {
+struct file_socket : public refcache::referenced, public file {
 public:
   file_socket() : socket(0), localsock(nullptr),
                   wsem("file::wsem", 1), rsem("file::rsem", 1) {}
