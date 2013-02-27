@@ -2,7 +2,7 @@
 #pragma once
 
 #include "compiler.h"
-#include "types.h"
+#include <stddef.h>
 
 BEGIN_DECLS
 
