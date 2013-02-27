@@ -27,7 +27,8 @@ enum { vm_debug = 0 };
  * vmdesc
  */
 
-vmdesc vmdesc::anon_desc(vmdesc::FLAG_MAPPED | vmdesc::FLAG_ANON);
+vmdesc vmdesc::anon_desc(vmdesc::FLAG_MAPPED | vmdesc::FLAG_ANON | vmdesc::FLAG_WRITE);
+vmdesc vmdesc::anon_desc_readonly(vmdesc::FLAG_MAPPED | vmdesc::FLAG_ANON);
 
 void to_stream(class print_stream *s, const vmdesc &vmd)
 {
@@ -329,10 +330,15 @@ vmap::pagefault(uptr va, u32 err)
       sdebug.println("vm: pagefault err ", shex(err), " va ", shex(va),
                      " desc ", *it, " pid ", myproc()->pid);
 
+    auto &desc = *it;
+    // Check for write protection violation
+    if (type == access_type::WRITE && !(desc.flags & vmdesc::FLAG_WRITE)) {
+      return -1;
+    }
+
     // If this is a COW fault, we need to hold a reference to the old
     // physical page until we've cleared the PTE and done TLB shoot
     // down.
-    auto &desc = *it;
     if (type == access_type::WRITE && (desc.flags & vmdesc::FLAG_COW)) {
       old_page = desc.page;
       cache.invalidate(va, PGSIZE, it, &shootdown);
@@ -358,8 +364,12 @@ vmap::pagefault(uptr va, u32 err)
     // don't mark it writable!
     if (desc.flags & vmdesc::FLAG_COW)
       cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
-    else
-      cache.insert(va, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+    else {
+      if (desc.flags & vmdesc::FLAG_WRITE)
+        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+      else
+        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
+    }
   }
 
   shootdown.perform();
@@ -452,6 +462,26 @@ vmap::copyout(uptr va, const void *p, u64 len)
     len -= n;
     buf += n;
     va = va0 + PGSIZE;
+  }
+  return 0;
+}
+
+int
+vmap::set_write_permission(uptr start, uptr len, bool is_readonly)
+{
+  assert(start % PGSIZE == 0);
+  assert(len % PGSIZE == 0);
+  auto it = vpfs_.find(start / PGSIZE);
+  auto end = vpfs_.find((start + len) / PGSIZE);
+  auto lock = vpfs_.acquire(it, end);
+  for (; it != end; ++it) {
+    if (!it.is_set())
+      return -1;
+    auto &desc = *it;
+    if (is_readonly)
+      desc.flags &= ~vmdesc::FLAG_WRITE;
+    else
+      desc.flags |= vmdesc::FLAG_WRITE;
   }
   return 0;
 }
