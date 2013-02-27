@@ -2,14 +2,4 @@
 // C++11 20.6.13
 #pragma once
 
-#include "compiler.h"
-#include <cstddef>
-
-BEGIN_DECLS
-
-int memcmp(const void *s1, const void *s2, size_t n);
-void *memcpy(void *s1, const void* s2, size_t n);
-void *memmove(void *s1, const void *s2, size_t n);
-void *memset(void *s, int c, size_t n);
-
-END_DECLS
+#include "string.h"
