@@ -171,6 +171,27 @@ ok(char *message, int n)
 static void
 deliver(char *message, int n)
 {
+  char filename[MAXPATH];
+  char *p = strstr(message, "TO:");
+  while (*p != ' ') p++;
+  while (*p == ' ') p++;
+  for (int i = 0; *p != '@'; i++,p++) filename[i] = *p;
+  int fd = open(filename, O_APPEND|O_CREAT|O_WRONLY, S_IRWXU);
+  if (fd < 0) {
+    die("open failed");
+  }
+  p = strstr(message, "DATASTRING");
+  while (*p != ' ') p++;
+  char *q = strstr(p, "ENDDATA");
+  while (p != q) {
+    int n;
+    n = write(fd, p, 1);
+    if (n != 1) {
+      die("write failed");
+    }
+    p++;
+  }
+  close(fd);
 }
 
 void *
