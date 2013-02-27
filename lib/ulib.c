@@ -109,9 +109,14 @@ struct proghdr *_dl_phdr;
 size_t _dl_phnum;
 
 void
-usetup(u64 elf_phdr, u64 elf_phnum)
+__crt_main(uint64_t argc, char **argv, uint64_t elf_phdr, uint64_t elf_phnum)
 {
   _dl_phdr = (struct proghdr*) elf_phdr;
   _dl_phnum = elf_phnum;
   forkt_setup(getpid());
+
+  extern int main(int argc, char **argv);
+  int res = main(argc, argv);
+
+  exit(res);
 }

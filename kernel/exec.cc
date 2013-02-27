@@ -260,6 +260,8 @@ exec(const char *path, const char * const *argv)
   myproc()->vmap = vmp;
   myproc()->tf->rip = elf->entry;
   myproc()->tf->rsp = sp;
+  // Additional arguments.  We can't pass these in ABI argument
+  // registers because the sysentry return path doesn't restore those.
   myproc()->tf->r12 = phdr;         // AT_PHDR
   myproc()->tf->r13 = elf->phnum;   // AT_PHNUM
   myproc()->run_cpuid_ = myid();
