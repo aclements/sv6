@@ -8,7 +8,7 @@ OBJS = \
 	cmdline.o \
 	condvar.o \
 	console.o \
-	cpprt.o \
+	kcpprt.o \
 	e1000.o \
 	exec.o \
 	file.o \
