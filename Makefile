@@ -80,8 +80,8 @@ endef
 ifeq ($(PLATFORM),xv6)
 include net/Makefrag
 include kernel/Makefrag
-endif
 include lib/Makefrag
+endif
 include libutil/Makefrag
 include bin/Makefrag
 include tools/Makefrag

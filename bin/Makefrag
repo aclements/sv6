@@ -90,10 +90,8 @@ ifeq ($(PLATFORM),native)
 ALL += $(addprefix $(O)/bin/, $(UPROGS_NATIVE))
 endif
 
-ifneq ($(PLATFORM),native)
-UPROGS_LIBS += $(ULIBA)
-endif
-UPROGS_LIBS += $(LIBUTIL_A)
+# (ULIBA will be empty for native builds)
+UPROGS_LIBS := $(ULIBA) $(LIBUTIL_A)
 
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(UPROGS_LIBS)
 	@echo "  LD     $@"
@@ -105,8 +103,10 @@ $(O)/bin/%: $(O)/bin/%.unstripped
 	$(Q)mkdir -p $(@D)
 	$(Q)$(STRIP) -o $@ $<
 
+ifeq ($(PLATFORM),xv6)
 # Assume everything inclues user.h, which includes sysstubs.h
 $(patsubst %,$(O)/bin/%.o,$(UPROGS_BIN)): $(O)/include/sysstubs.h
+endif
 
 .PRECIOUS: $(O)/bin/%.o $(O)/bin/%.unstripped
 -include $(O)/bin/*.d

@@ -17,8 +17,10 @@ LIBUTIL_OBJS := \
 LIBUTIL_OBJS := $(addprefix $(O)/libutil/, $(LIBUTIL_OBJS))
 LIBUTIL_A = $(O)/libutil/libutil.a
 
+ifeq ($(PLATFORM),xv6)
 # Assume all of the library sources include sysstubs.h
 $(LIBUTIL_OBJS): $(O)/include/sysstubs.h
+endif
 
 $(LIBUTIL_A): $(LIBUTIL_OBJS)
 	@echo "  AR     $@"

@@ -45,7 +45,7 @@ $(O)/metis/%.o: metis/%.c $(O)/include/sysstubs.h $(O)/sysroot
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(CFLAGS) -c -o $@ $< $(METIS_CFLAGS) $(METIS_INCLUDES)
 
-$(O)/bin/metis_%.unstripped: $(O)/metis/app/%.o $(O)/libmetis.a $(ULIB) $(LIBUTIL_A)
+$(O)/bin/metis_%.unstripped: $(O)/metis/app/%.o $(O)/libmetis.a $(ULIBA) $(LIBUTIL_A)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(LD) $(LDFLAGS) -o $@ $^
