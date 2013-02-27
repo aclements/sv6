@@ -543,7 +543,7 @@ vmap::sbrk(ssize_t n, uptr *addr)
 uptr
 vmap::unmapped_area(size_t npages)
 {
-  uptr start = std::max(myproc()->unmapped_hint, 1UL);
+  uptr start = std::max(myproc()->unmapped_hint, 16UL * 1024 * 1024 / PGSIZE);
   auto it = vpfs_.find(start), end = vpfs_.find(USERTOP / PGSIZE);
 
   for (; it < end; it += it.span()) {
