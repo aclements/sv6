@@ -1,6 +1,6 @@
 # -*- makefile-gmake -*-
 $(O)/bin/%.o: CFLAGS:=$(CFLAGS)
-$(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -fno-exceptions -fno-rtti
+$(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS)
 
 ifeq ($(PLATFORM),xv6)
 $(O)/bin/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
@@ -93,10 +93,10 @@ endif
 # (ULIBA will be empty for native builds)
 UPROGS_LIBS := $(ULIBA) $(LIBUTIL_A)
 
-$(O)/bin/%.unstripped: $(O)/bin/%.o $(UPROGS_LIBS)
+$(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB_BEGIN) $(ULIB_END) $(UPROGS_LIBS)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(LD) $(LDFLAGS) -o $@ $^
+	$(Q)$(LD) $(LDFLAGS) -o $@ $(ULIB_BEGIN) $< $(UPROGS_LIBS) $(ULIB_END)
 
 $(O)/bin/%: $(O)/bin/%.unstripped
 	@echo "  STRIP  $@"

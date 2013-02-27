@@ -1,12 +1,14 @@
 $(O)/lib/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
-$(O)/lib/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER -fno-exceptions -fno-rtti
+$(O)/lib/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER
 
 ULIB = ulib.o printf.o umalloc.o uthread.o fmt.o stdio.o \
        string.o threads.o crt.o sysstubs.o perf.o \
        getopt.o rand.o msort.o qsort.o ctype.o \
-       time.o timemath.o
+       time.o timemath.o cpprt.o
 ULIB := $(addprefix $(O)/lib/, $(ULIB))
 ULIBA = $(O)/lib/libu.a
+ULIB_BEGIN := $(O)/lib/crtbegin.o
+ULIB_END := $(O)/lib/crtend.o
 
 $(O)/lib/sysstubs.S: tools/syscalls.py kernel/*.cc
 	$(call SYSCALLGEN,--ustubs)
@@ -17,10 +19,16 @@ $(O)/include/sysstubs.h: tools/syscalls.py kernel/*.cc
 # Assume all of the library sources include sysstubs.h
 $(ULIB): $(O)/include/sysstubs.h
 
-$(ULIBA): $(ULIB)
+$(O)/lib/cxxruntime: $(CXXRUNTIME)
+	@echo "  AR x   $^"
+	$(Q)rm -rf $@
+	$(Q)mkdir -p $@
+	$(Q)cd $@; for a in $(CXXRUNTIME); do $(AR) x $$a; done
+
+$(ULIBA): $(ULIB) $(O)/lib/cxxruntime
 	@echo "  AR     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(AR) rc $@ $^
+	$(Q)$(AR) rc $@ $(ULIB) $(O)/lib/cxxruntime/*
 
 .PRECIOUS: $(O)/lib/%.o
 .PRECIOUS: $(ULIBA)

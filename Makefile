@@ -67,6 +67,24 @@ CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare $(CXXFLAGS)
 ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
 
+ifeq ($(EXCEPTIONS),y)
+  # Include C++ support libraries for stack unwinding and RTTI.  Some of
+  # the objects in these archives depend on symbols we don't define, but
+  # we provide our own definitions for any symbols we do use from such
+  # objects, so the linker ignores these objects entirely.  If you start
+  # getting "multiple definition" and "undefined reference" errors,
+  # there's probably a new ABI symbol we need to define ourselves.
+  CXXRUNTIME = $(shell $(CC) -print-file-name=libgcc_eh.a) \
+	  $(shell $(CC) -print-file-name=libsupc++.a)
+  CXXFLAGS += -DEXCEPTIONS=1
+  ifndef USE_CLANG
+    CXXFLAGS += -fnothrow-opt -Wnoexcept
+  endif
+else
+  CXXRUNTIME =
+  CXXFLAGS += -fno-exceptions -fno-rtti -DEXCEPTIONS=0
+endif
+
 ALL := 
 all:
 

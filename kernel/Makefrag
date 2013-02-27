@@ -74,16 +74,7 @@ OBJS = \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
-ifeq ($(EXCEPTIONS),y)
-# Include C++ support libraries for stack unwinding and RTTI.  Some of
-# the objects in these archives depend on symbols we don't define, but
-# we provide our own definitions for any symbols we do use from such
-# objects, so the linker ignores these objects entirely.  If you start
-# getting "multiple definition" and "undefined reference" errors,
-# there's probably a new ABI symbol we need to define ourselves.
-OBJS += $(shell $(CC) -print-file-name=libgcc_eh.a) \
-	$(shell $(CC) -print-file-name=libsupc++.a)
-endif
+OBJS += $(CXXRUNTIME)
 
 # Include ACPICA fragment after we've set up the kernel object list,
 # but before the kernel build rules
@@ -94,16 +85,6 @@ ALL += $(KERN)
 
 $(O)/kernel/%.o: CFLAGS+=-mcmodel=kernel -DXV6_KERNEL -mno-sse
 $(O)/kernel/%.o: CXXFLAGS+=-mcmodel=kernel -DXV6_KERNEL -mno-sse
-
-ifeq ($(EXCEPTIONS),y)
-  ifdef USE_CLANG
-    $(O)/kernel/%.o: CXXFLAGS+=-DEXCEPTIONS=1
-  else
-    $(O)/kernel/%.o: CXXFLAGS+=-fnothrow-opt -Wnoexcept -DEXCEPTIONS=1
-  endif
-else
-  $(O)/kernel/%.o: CXXFLAGS+=-fno-exceptions -fno-rtti -DEXCEPTIONS=0
-endif
 
 $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	@echo "  LD     $@"

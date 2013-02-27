@@ -98,25 +98,45 @@ sleep(unsigned secs)
   return 0;
 }
 
-extern void __cxa_pure_virtual(void);
-void __cxa_pure_virtual(void)
-{ 
-  fprintf(stderr, "__cxa_pure_virtual");
-  exit(-1);
-}
-
 struct proghdr *_dl_phdr;
 size_t _dl_phnum;
 
 void
 __crt_main(uint64_t argc, char **argv, uint64_t elf_phdr, uint64_t elf_phnum)
 {
+  extern void __cpprt_init(void);
+  extern void __cpprt_fini(void);
+
   _dl_phdr = (struct proghdr*) elf_phdr;
   _dl_phnum = elf_phnum;
   forkt_setup(getpid());
+  __cpprt_init();
 
+  // Run global initializers.  (Note that gcc 4.7 eliminated the
+  // .ctors section entirely, but gcc has supported .init_array for
+  // some time.)  The third argument is envp, which we don't use.
+  extern void (*__preinit_array_start[])(int, char **, char **);
+  extern void (*__preinit_array_end[])(int, char **, char **);
+  for (size_t i = 0; i < __preinit_array_end - __preinit_array_start; i++)
+      (*__preinit_array_start[i])(argc, argv, 0);
+
+  extern void (*__init_array_start[])(int, char **, char **);
+  extern void (*__init_array_end[])(int, char **, char **);
+  for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
+      (*__init_array_start[i])(argc, argv, 0);
+
+  // Run main
   extern int main(int argc, char **argv);
   int res = main(argc, argv);
+
+  // Run atexit functions
+  __cpprt_fini();
+
+  // Run global destructors.
+  extern void (*__fini_array_start[])(void);
+  extern void (*__fini_array_end[])(void);
+  for (size_t i = __fini_array_end - __fini_array_start; i-- > 0; )
+      (*__fini_array_start[i])();
 
   exit(res);
 }

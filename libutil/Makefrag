@@ -1,7 +1,5 @@
 # -*- makefile-gmake -*-
 
-$(O)/libutil/%.o: CXXFLAGS:=$(CXXFLAGS) -fno-exceptions -fno-rtti
-
 ifeq ($(PLATFORM),xv6)
 $(O)/libutil/%.o: CFLAGS:=$(CFLAGS) -DXV6_USER
 $(O)/libutil/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER
