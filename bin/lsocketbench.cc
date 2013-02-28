@@ -33,7 +33,7 @@
 #define MAXMSG  512
 #define MAXPATH 100
 #define SMESSAGE "OK"
-#define CMESSAGE "MAIL from: kaashoek@mit.edu\nRCPT TO: xxx@mit.edu\nDATA\nDATASTRING Hello\nENDDATA\n"
+#define CMESSAGE "MAIL from: kaashoek@mit.edu\nRCPT TO: %d@mit.edu\nDATA\nDATASTRING Hello\nENDDATA\n"
 #define DIE "QUIT"
 #define CLIENTPROC 1
 #define NOFDSHARE 1
@@ -45,6 +45,7 @@ int nclient;
 int nmsg;
 int trace = 0;
 int filter;
+int deliver;
 int sock;  // socket on which server threads receive
 long *clientid;
 long *serverid;
@@ -169,7 +170,7 @@ ok(char *message, int n)
 }
 
 static void
-deliver(char *message, int n)
+store(char *message, int n)
 {
   char filename[MAXPATH];
   char *p = strstr(message, "TO:");
@@ -226,13 +227,8 @@ thread(void* x)
       pthread_exit(0);
     }
 
-    if (strcmp(message, CMESSAGE) != 0) {
-      printf("%ld: received (%d) message %s(%ld)\n", id, nbytes, message, strlen(CMESSAGE));
-      die ("data is incorrect (server)");
-    }
-
-    if (filter && ok(message, nbytes)) {
-      deliver(message, nbytes);
+    if ((filter && ok(message, nbytes)) || deliver) {
+      store(message, nbytes);
     }
     
     strcpy(message, SMESSAGE);
@@ -257,11 +253,13 @@ client(int id)
 {
   int sock;
   char message[MAXMSG];
+  char cmessage[MAXMSG];
   struct sockaddr_un name;
   char path[MAXPATH];
   size_t size;
   int nbytes;
 
+  snprintf(cmessage, MAXMSG, CMESSAGE, id);
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
 
   sock = make_named_socket (path);
@@ -275,7 +273,7 @@ client(int id)
 
     if (trace) printf("%d: client send\n", i);
 
-    nbytes = sendto(sock, (void *) CMESSAGE, strlen (CMESSAGE) + 1, 0,
+    nbytes = sendto(sock, (void *) cmessage, strlen (cmessage) + 1, 0,
                     (struct sockaddr *) & name, size);
     if (nbytes < 0) {
       die ("sendto (client) failed");
@@ -308,6 +306,9 @@ client(int id)
   }
 
   unlink (path);
+
+  snprintf(cmessage, MAXMSG, "%d", id);
+  unlink (cmessage);
 
   close (sock);
 }
@@ -384,13 +385,14 @@ void clients()
 int
 main (int argc, char *argv[])
 {
-  if (argc < 5)
-    die("usage: %s n-server-threads n-client-procs nmsg filter", argv[0]);
+  if (argc < 6)
+    die("usage: %s n-server-threads n-client-procs nmsg filter deliver", argv[0]);
 
   nthread = atoi(argv[1]);
   nclient = atoi(argv[2]);
   nmsg = atoi(argv[3]);
   filter = atoi(argv[4]);
+  deliver = atoi(argv[5]);
 
   unlink (SERVER);
   sock = make_named_socket (SERVER);

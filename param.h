@@ -50,7 +50,7 @@
 // If 1, create a buddy per CPU.
 #define KALLOC_BUDDY_PER_CPU 1
 // Whether or not to load balance in the scheduler.
-#define SCHED_LOAD_BALANCE 1
+#define SCHED_LOAD_BALANCE 0
 
 #if defined(HW_qemu)
 #define DEBUG         1
