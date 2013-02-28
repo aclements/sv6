@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 template <class T, typename = void>
 class sref {
 private:
@@ -140,10 +142,10 @@ protected:
 
 private:
   mutable union {
-    volatile u64 v;
+    volatile uint64_t v;
     struct {
-      volatile u32 count;
-      volatile u32 invalid;
+      volatile uint32_t count;
+      volatile uint32_t invalid;
     };
   } ref_;
 };
