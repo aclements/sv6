@@ -60,7 +60,7 @@ COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 # No mere mortal can call ld correctly on a real machine, so use gcc's
 # link driver instead.
-LD = $(TOOLPREFIX)gcc
+LD = $(TOOLPREFIX)g++
 endif
 COMFLAGS += -g -MD -MP -O3 -Wall -Werror -DHW_$(HW) $(INCLUDES)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
