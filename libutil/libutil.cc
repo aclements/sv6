@@ -41,7 +41,6 @@ edie(const char* errstr, ...)
 #else
   vfprintf(stderr, errstr, ap);
   va_end(ap);
-  fprintf(stderr, "\n");
   fprintf(stderr, ": %s\n", strerror(errno));
   exit(1);
 #endif
