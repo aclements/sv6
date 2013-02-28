@@ -177,7 +177,7 @@ store(char *message, int n)
   while (*p != ' ') p++;
   while (*p == ' ') p++;
   for (int i = 0; *p != '@'; i++,p++) filename[i] = *p;
-  int fd = open(filename, O_APPEND|O_CREAT|O_WRONLY, S_IRWXU);
+  int fd = open(filename, O_APPEND|O_WRONLY, S_IRWXU);
   if (fd < 0) {
     die("open failed");
   }
@@ -258,6 +258,13 @@ client(int id)
   char path[MAXPATH];
   size_t size;
   int nbytes;
+
+  snprintf(cmessage, MAXMSG, "%d", id);
+  int fd = open(cmessage, O_APPEND|O_WRONLY|O_CREAT, S_IRWXU);
+  if (fd < 0) {
+    die("open failed");
+  }
+  close(fd);
 
   snprintf(cmessage, MAXMSG, CMESSAGE, id);
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
