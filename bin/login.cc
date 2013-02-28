@@ -32,7 +32,7 @@ main(void)
 
   if (pw && !strcmp(pw, "xv6")) {
     static const char *argv[] = { "/sh", 0 };
-    exec(argv[0], const_cast<char * const *>(argv));
+    execv(argv[0], const_cast<char * const *>(argv));
   }
   return 0;
 }

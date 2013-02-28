@@ -28,7 +28,7 @@ forktree(int depth)
       char depthbuf[16];
       snprintf(depthbuf, sizeof(depthbuf), "%d", depth);
       const char *av[] = { "forkexectree", depthbuf, 0 };
-      int r = exec("forkexectree", const_cast<char * const *>(av));
+      int r = execv("forkexectree", const_cast<char * const *>(av));
       die("forkexectree: exec failed %d", r);
     }
   }

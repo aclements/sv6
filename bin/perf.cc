@@ -99,7 +99,7 @@ main(int ac, char *av[])
 
   if (pid == 0) {
     conf(fd, c);
-    exec(av[optind], av+optind);
+    execv(av[optind], av+optind);
     die("perf: exec failed");
   }
 

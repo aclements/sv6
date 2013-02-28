@@ -14,7 +14,7 @@ main(int ac, char * const av[])
   }
 
   if (pid == 0) {
-    exec(av[1], av+1);
+    execv(av[1], av+1);
     die("time: exec failed");
   }
 

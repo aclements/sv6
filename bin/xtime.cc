@@ -59,7 +59,7 @@ main(int ac, char * const av[])
     die("xtime: fork failed");
   
   if (pid == 0) {
-    exec(xav[0], xav);
+    execv(xav[0], xav);
     die("xtime: exec failed");
   }
 

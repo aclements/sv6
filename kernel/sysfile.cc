@@ -515,7 +515,7 @@ clean:
 
 //SYSCALL
 int
-sys_exec(const char *upath, userptr<userptr<char> const> uargv)
+sys_execv(const char *upath, userptr<userptr<char> const> uargv)
 {
   myproc()->data_cpuid = myid();
 #if EXECSWITCH

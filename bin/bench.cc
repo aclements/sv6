@@ -17,7 +17,7 @@ time_this(const char *av[])
     die("time_this: fork failed %s", av[0]);
 
   if (pid == 0) {
-    exec(av[0], const_cast<char * const *>(av));
+    execv(av[0], const_cast<char * const *>(av));
     die("time_this: exec failed %s", av[0]);
   }
 

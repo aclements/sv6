@@ -79,7 +79,7 @@ runcmd(struct cmd *cmd)
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit(0);
-    exec(ecmd->argv[0], const_cast<char * const *>(ecmd->argv));
+    execv(ecmd->argv[0], const_cast<char * const *>(ecmd->argv));
     fprintf(stderr, "exec %s failed\n", ecmd->argv[0]);
     break;
 

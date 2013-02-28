@@ -42,7 +42,7 @@ startone(const char * const *argv)
     die("init: fork failed");
   }
   if(pid == 0){
-    exec(argv[0], const_cast<char * const *>(argv));
+    execv(argv[0], const_cast<char * const *>(argv));
     die("init: exec %s failed", argv[0]);
   }
   return pid;

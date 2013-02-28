@@ -2,12 +2,12 @@
 
 #include "traps.h"
 
-# exec(init, argv)
+# execv(init, argv)
 .globl start
 start:
   movq $argv, %rsi
   movq $init, %rdi
-  movq $SYS_exec, %rax
+  movq $SYS_execv, %rax
   syscall
 
 # for(;;) exit();

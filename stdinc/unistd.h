@@ -13,6 +13,7 @@ ssize_t read(int fd, void *buf, size_t count);
 int close(int fd);
 int link(const char *oldpath, const char *newpath);
 int unlink(const char *pathname);
+int execv(const char *path, char *const argv[]);
 
 unsigned sleep(unsigned);
 pid_t getpid(void);

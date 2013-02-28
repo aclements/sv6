@@ -72,7 +72,7 @@ main(void)
       dup(ss);
       dup(ss);
       dup(ss);
-      exec(argv[0], const_cast<char * const *>(argv));
+      execv(argv[0], const_cast<char * const *>(argv));
       exit(0);
     }
     close(ss);
