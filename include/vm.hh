@@ -71,7 +71,7 @@ struct vmdesc : public mmu::page_tracker
   // Construct a descriptor that maps the beginning of ip's file to
   // virtual address start (which may be negative).
   vmdesc(const sref<mnode> &ip, intptr_t start)
-    : flags(FLAG_MAPPED), inode(ip), start(start) { }
+    : flags(FLAG_MAPPED | FLAG_WRITE), inode(ip), start(start) { }
 
   // The anonymous memory descriptor.
   static struct vmdesc anon_desc;

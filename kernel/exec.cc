@@ -58,9 +58,15 @@ dosegment(sref<mnode> ip, vmap* vmp, u64 off, u64 *load_addr)
                     va_start, mapped_end - va_start) < 0)
       return -1;
 
+#if 0
+    // XXX there appears to be an off-by-one bug here:
+    // running "fstest -v" crashes when writing to the optind
+    // global variable.
+
     // set the text segment to read-only
     if (vmp->set_write_permission(va_start, mapped_end - va_start, true) < 0)
       return -1;
+#endif
   }
 
   if (mapped_end != backed_end) {
