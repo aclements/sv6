@@ -132,3 +132,21 @@ strcmp(const char *p, const char *q)
     p++, q++;
   return (uint8_t)*p - (uint8_t)*q;
 }
+
+char*
+strstr(const char *str, const char *needle) 
+{
+  if (!*needle) return (char *) str;
+  char *p1 = (char*)str;
+  while (*p1) {
+    char *start = p1, *p2 = (char*)needle;
+    while (*p1 && *p2 && *p1 == *p2) {
+      p1++;
+      p2++;
+    }
+    if (!*p2)
+      return start;
+    p1 = start + 1;
+  }
+  return NULL;
+}

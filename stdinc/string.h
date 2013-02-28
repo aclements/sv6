@@ -17,6 +17,8 @@ char* strcpy(char*, const char*);
 char* strncpy(char *s, const char *t, size_t n);
 int strcmp(const char*, const char*);
 int strncmp(const char *p, const char *q, size_t n);
+char *strstr(const char *haystack, const char *needle);
+
 
 // Not C11
 void *mempcpy(void *dest, const void *src, size_t n);
