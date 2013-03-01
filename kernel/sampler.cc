@@ -84,7 +84,7 @@ public:
   void flush();
 } __mpalign__;
 
-DEFINE_PERCPU(struct pmulog, pmulog, percpu_safety::internal);
+DEFINE_PERCPU(struct pmulog, pmulog);
 
 //
 // AMD PMU
@@ -103,7 +103,7 @@ class amd_pmu : public pmu
     perf_selector sel[MAX_PMCS];
   };
 
-  percpu<struct local, percpu_safety::internal> local;
+  percpu<struct local> local;
 
 public:
   bool
@@ -230,7 +230,7 @@ class intel_pmu : public pmu
     struct ds_area ds_area;
   };
 
-  percpu<struct local, percpu_safety::internal> local;
+  percpu<struct local> local;
 
   bool have_pebs;
   int pebs_version;

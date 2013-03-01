@@ -71,8 +71,8 @@ public:
   void inc_cur_epoch(void);
 };
 
-DEFINE_PERCPU(gc_state, gc_states, percpu_safety::internal);
-DEFINE_PERCPU(gc_stat, stat, percpu_safety::internal);
+DEFINE_PERCPU(gc_state, gc_states, NO_MIGRATE);
+DEFINE_PERCPU(gc_stat, stat, NO_CRITICAL);
 int ngc_cpu;
 int gc_batchsize;
 

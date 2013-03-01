@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "amd64.h"
 #include "pstream.hh"
 
 #ifdef XV6_KERNEL
@@ -87,7 +88,7 @@
 
 struct kstats;
 #ifdef XV6_KERNEL
-DECLARE_PERCPU(struct kstats, mykstats, percpu_safety::internal);
+DECLARE_PERCPU(struct kstats, mykstats, NO_CRITICAL);
 #endif
 
 struct kstats

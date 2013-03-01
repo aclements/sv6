@@ -12,6 +12,7 @@
 #include "kstream.hh"
 #include "log2.hh"
 #include "rnd.hh"
+#include "amd64.h"
 
 // allocate in power-of-two sizes up to 2^KMMAX (PGSIZE)
 #define KMMAX 12

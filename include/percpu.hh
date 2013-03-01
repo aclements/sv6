@@ -1,11 +1,9 @@
 #pragma once
 
 #include "cpu.hh"
-#include "amd64.h"
-#include "bits.hh"
 #include "spercpu.hh"
 
-template <typename T, percpu_safety S = percpu_safety::cli>
+template <typename T, critical_mask CM = NO_SCHED>
 struct percpu {
   constexpr percpu() = default;
 
@@ -21,14 +19,16 @@ struct percpu {
   }
 
   T* operator->() const {
-    if (S == percpu_safety::cli)
-      assert(!(readrflags() & FL_IF));
+#if DEBUG
+    check_critical(CM);
+#endif
     return cpu(myid());
   }
 
   T& operator*() const {
-    if (S == percpu_safety::cli)
-      assert(!(readrflags() & FL_IF));
+#if DEBUG
+    check_critical(CM);
+#endif
     return *cpu(myid());
   }
 

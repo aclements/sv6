@@ -64,7 +64,7 @@ struct nscache {
 
 // XXX(austin) If we used percpu_safety::cli here, would nscache no
 // longer need the lock?
-DEFINE_PERCPU(nscache, nscache_, percpu_safety::internal);
+DEFINE_PERCPU(nscache, nscache_, NO_CRITICAL);
 
 nscache::nscache(void)
   : lock_("nscache::lock_", LOCKSTAT_FUTEX), head_(0), tail_(0)

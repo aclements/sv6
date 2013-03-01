@@ -14,25 +14,10 @@
 
 #pragma once
 
-#include "amd64.h"
-#include "bits.hh"
 #include "critical.hh"
 
 #include <cstddef>
 #include <new>
-
-// Safety policy for how to protect against CPU migrations while using
-// a per-CPU variable.
-enum class percpu_safety {
-  // Interrupts are disabled so the thread cannot migrate.  This can
-  // be done in the calling code, or using the load method to get a
-  // scoped cli.
-  cli,
-  // No protection against migration is required.  The variables are
-  // internally thread-safe.  Generally the per-CPU variable is used
-  // only as a sharding mechanism.
-  internal,
-};
 
 // This defines CPU 0's instance of this percpu variable and the
 // static_percpu wrapper for accessing it.  The gunk after the section
@@ -65,7 +50,13 @@ extern void *percpu_offsets[NCPU];
 // linker.
 extern char __percpu_start[];
 
-template<class T, T *key, percpu_safety S = percpu_safety::cli>
+// A per-CPU variable of type T at location 'key' in CPU 0's per-CPU
+// region.  For debugging, CM specifies how interruptable the current
+// context can be when accessing this per-CPU variable.  It defaults
+// to requiring the preemption be disabled to prevent the accessing
+// thread from migrating, but for per-CPU variables that may be
+// accessed by interrupt handlers, it should be set to NO_INT.
+template<class T, T *key, critical_mask CM = NO_SCHED>
 struct static_percpu
 {
   constexpr static_percpu() = default;
@@ -89,8 +80,9 @@ struct static_percpu
 
   T* get() const
   {
-    if (S == percpu_safety::cli)
-      assert(!(readrflags() & FL_IF));
+#if DEBUG
+    assert(check_critical(CM));
+#endif
     return get_unchecked();
   }
 

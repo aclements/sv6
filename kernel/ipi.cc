@@ -2,6 +2,7 @@
 
 #include "apic.hh"
 #include "traps.h"
+#include "bits.hh"
 
 #include <iterator>
 

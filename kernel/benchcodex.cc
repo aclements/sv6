@@ -3,6 +3,7 @@
 #include "benchcodex.hh"
 #include "cpu.hh"
 #include "codex.hh"
+#include "amd64.h"
 
 class count_down_latch {
 public:

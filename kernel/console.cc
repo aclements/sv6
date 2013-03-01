@@ -21,6 +21,7 @@
 #include "apic.hh"
 #include "irq.hh"
 #include "kstream.hh"
+#include "bits.hh"
 
 #define BACKSPACE 0x100
 

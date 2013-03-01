@@ -319,7 +319,7 @@ struct inode_cache_dir
 
 private:
 
-  percpu<inode_cache<512>, percpu_safety::internal> cache_;
+  percpu<inode_cache<512>, NO_CRITICAL> cache_;
   balancer<inode_cache_dir, inode_cache<512>> balancer_;
 };
 

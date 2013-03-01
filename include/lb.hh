@@ -110,6 +110,6 @@ class balancer {
 
  private:
   const PoolDir* const bd_;
-  percpu<persocket,percpu_safety::internal> rpsock_;
-  percpu<othersocket,percpu_safety::internal> rpother_;
+  percpu<persocket,NO_CRITICAL> rpsock_;
+  percpu<othersocket,NO_CRITICAL> rpother_;
 };

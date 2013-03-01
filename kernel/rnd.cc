@@ -2,17 +2,19 @@
 #include "kernel.hh"
 #include "percpu.hh"
 #include "rnd.hh"
+#include "amd64.h"
 
 struct state {
   u64 seed;
  __padout__;
 };
 
-DEFINE_PERCPU(state, rstate, percpu_safety::internal);
+DEFINE_PERCPU(state, rstate);
 
 u64
 rnd(void)
 {
+  scoped_critical crit(NO_SCHED);
   if (rstate->seed == 0) {
 #if CODEX
     rstate->seed = 0xdeadbeef;

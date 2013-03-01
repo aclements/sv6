@@ -3,6 +3,7 @@
 #include <atomic>
 #include "percpu.hh"
 #include "bitset.hh"
+#include "bits.hh"
 
 // A TLB shootdown gatherer that doesn't track anything, but as a
 // result can be batched with other TLB shootdowns.
