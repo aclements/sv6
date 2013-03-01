@@ -78,6 +78,7 @@ UPROGS_NATIVE := \
         fstest \
         dirbench \
 	mailbench \
+	sh \
 
 FSEXTRA += \
 	bin/linkbench-tom \

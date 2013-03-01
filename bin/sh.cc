@@ -1,223 +1,553 @@
 // Shell.
 
-#include "types.h"
-#include "user.h"
+#include "ref.hh"
+#include "libutil.h"
+#include "xsys.h"
 
+#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-bool interactive;
+#include <stdexcept>
+#include <string>
+#include <vector>
 
-// Parsed command representation
-#define EXEC  1
-#define REDIR 2
-#define PIPE  3
-#define LIST  4
-#define BACK  5
+using std::move;
+using std::string;
+using std::vector;
 
-#define MAXARGS 16
-
-struct cmd {
-  int type;
-};
-
-struct execcmd {
-  int type;
-  const char *argv[MAXARGS];
-  char *eargv[MAXARGS];
-};
-
-struct redircmd {
-  int type;
-  struct cmd *cmd;
-  char *file;
-  char *efile;
-  int mode;
-  int fd;
-};
-
-struct pipecmd {
-  int type;
-  struct cmd *left;
-  struct cmd *right;
-};
-
-struct listcmd {
-  int type;
-  struct cmd *left;
-  struct cmd *right;
-};
-
-struct backcmd {
-  int type;
-  struct cmd *cmd;
-};
+bool interactive = true;
 
 int fork1(void);  // Fork but panics on failure.
-void panic(const char*);
-struct cmd *parsecmd(char*);
 
-// Execute cmd.  Never returns.
-void
-runcmd(struct cmd *cmd)
+//////////////////////////////////////////////////////////////////
+// Commands
+//
+
+class savefd
 {
-  int p[2];
-  struct backcmd *bcmd;
-  struct execcmd *ecmd;
-  struct listcmd *lcmd;
-  struct pipecmd *pcmd;
-  struct redircmd *rcmd;
+  static vector<int> cloexec;
+  int fd_, saved_;
 
-  if(cmd == 0)
-    exit(0);
-  
-  switch(cmd->type){
-  default:
-    panic("runcmd");
+public:
+  savefd(int fd) : fd_(fd), saved_(dup(fd))
+  {
+    cloexec.push_back(saved_);
+  }
 
-  case EXEC:
-    ecmd = (struct execcmd*)cmd;
-    if(ecmd->argv[0] == 0)
-      exit(0);
-    execv(ecmd->argv[0], const_cast<char * const *>(ecmd->argv));
-    fprintf(stderr, "exec %s failed\n", ecmd->argv[0]);
-    break;
+  ~savefd()
+  {
+    close(fd_);
+    dup(saved_);
+    close(saved_);
+    assert(cloexec.back() == saved_);
+    cloexec.pop_back();
+  }
 
-  case REDIR:
-    rcmd = (struct redircmd*)cmd;
-    close(rcmd->fd);
-    if(open(rcmd->file, rcmd->mode, 0666) < 0){
-      fprintf(stderr, "open %s failed\n", rcmd->file);
-      exit(1);
+  static void preexec()
+  {
+    for (int fd : cloexec)
+      close(fd);
+  }
+};
+vector<int> savefd::cloexec;
+
+class cmd : public referenced
+{
+public:
+  virtual ~cmd() { }
+  virtual int run() = 0;
+};
+
+class expr : public referenced
+{
+public:
+  virtual ~expr() { }
+  virtual void eval(vector<string> *out) = 0;
+};
+
+class cmd_exec : public cmd
+{
+public:
+  vector<sref<expr> > argv_;
+
+  int run() override
+  {
+    if (argv_.empty())
+      return 0;
+
+    vector<string> argv;
+    for (auto &expr : argv_)
+      expr->eval(&argv);
+
+    // Handle built-ins
+    if (argv[0] == "cd") {
+      if (argv.size() != 2) {
+        fprintf(stderr, "cd: wrong number of arguments");
+        return 1;
+      }
+      if (chdir(argv[1].c_str()) < 0) {
+        fprintf(stderr, "cd: failed\n");
+        return 1;
+      }
+      return 0;
     }
-    runcmd(rcmd->cmd);
-    break;
+    if (argv[0] == "exit") {
+      exit(0);
+    }
 
-  case LIST:
-    lcmd = (struct listcmd*)cmd;
-    if(fork1() == 0)
-      runcmd(lcmd->left);
-    wait(-1);
-    runcmd(lcmd->right);
-    break;
+    // Not a built-in
+    vector<const char *> argstrs;
+    for (auto &arg : argv)
+      argstrs.push_back(arg.c_str());
+    argstrs.push_back(nullptr);
 
-  case PIPE:
-    pcmd = (struct pipecmd*)cmd;
-    if(pipe(p) < 0)
-      panic("pipe");
-    if(fork1() == 0){
+    if (fork1() == 0) {
+      savefd::preexec();
+      execv(argstrs[0], const_cast<char * const *>(argstrs.data()));
+      edie("exec %s failed", argstrs[0]);
+    }
+    return xwait();
+  }
+};
+
+class cmd_redir : public cmd
+{
+  int fd_, mode_;
+  sref<expr> file_;
+  sref<cmd> left_;
+
+public:
+  cmd_redir(int fd, int mode, const sref<expr> &file, const sref<cmd> &left)
+    : fd_(fd), mode_(mode), file_(file), left_(left) { }
+
+  int run() override
+  {
+    vector<string> files;
+    file_->eval(&files);
+    if (files.size() != 1) {
+      fprintf(stderr, "redirection requires exactly one file name");
+      return 1;
+    }
+
+    savefd saved(fd_);
+    close(fd_);
+    if (open(files[0].c_str(), mode_, 0666) < 0) {
+      fprintf(stderr, "sh: open %s failed\n", files[0].c_str());
+      return 1;
+    }
+    return left_->run();
+  }
+};
+
+class cmd_pipe : public cmd
+{
+  sref<cmd> left_, right_;
+
+public:
+  cmd_pipe(const sref<cmd> &left, const sref<cmd> &right)
+    : left_(left), right_(right) { }
+
+  int run() override
+  {
+    int p[2];
+    if (pipe(p) < 0)
+      edie("pipe");
+
+    if (fork1() == 0) {
       close(1);
       dup(p[1]);
       close(p[0]);
       close(p[1]);
-      runcmd(pcmd->left);
+      exit(left_->run());
     }
-    if(fork1() == 0){
-      close(0);
-      dup(p[0]);
-      close(p[0]);
-      close(p[1]);
-      runcmd(pcmd->right);
-    }
+
+    savefd saved(0);
+    close(0);
+    dup(p[0]);
     close(p[0]);
     close(p[1]);
-    wait(-1);
-    wait(-1);
-    break;
-    
-  case BACK:
-    bcmd = (struct backcmd*)cmd;
-    if(fork1() == 0)
-      runcmd(bcmd->cmd);
-    break;
+    int res = right_->run();
+    xwait();
+    return res;
   }
-  exit(0);
-}
+};
 
-int
-getcmd(char *buf, int nbuf)
+class cmd_back : public cmd
 {
-  if (interactive)
-    fprintf(stderr, "$ ");
-  memset(buf, 0, nbuf);
-  gets(buf, nbuf);
-  if(buf[0] == 0) // EOF
-    return -1;
-  return 0;
-}
+  sref<cmd> cmd_;
 
-int
-main(int ac, char** av)
+public:
+  cmd_back(const sref<cmd> &cmd)
+    : cmd_(cmd) { }
+
+  int run() override
+  {
+    if (fork1() == 0)
+      exit(cmd_->run());
+    return 0;
+  }
+};
+
+class cmd_list : public cmd
 {
-  static char buf[100];
-  int fd;
-  
-  // Assumes three file descriptors open.
-  while((fd = open("console", O_RDWR)) >= 0){
-    if(fd >= 3){
-      close(fd);
+  sref<cmd> left_, right_;
+
+public:
+  cmd_list(const sref<cmd> &left, const sref<cmd> &right)
+    : left_(left), right_(right) { }
+
+  int run() override
+  {
+    left_->run();
+    return right_->run();
+  }
+};
+
+class cmd_error : public cmd
+{
+  const string error_;
+
+public:
+  cmd_error(const string &error) : error_(error) { }
+
+  int run() override
+  {
+    fprintf(stderr, "sh: %s\n", error_.c_str());
+    return 1;
+  }
+};
+
+class expr_word : public expr
+{
+  const string val_;
+
+public:
+  expr_word(const string val)
+    : val_(val) { }
+
+  void eval(vector<string> *out) override
+  {
+    out->push_back(val_);
+  }
+};
+
+//////////////////////////////////////////////////////////////////
+// Parser
+//
+
+class syntax_error : public std::runtime_error
+{
+public:
+  explicit syntax_error(const char* what_arg)
+    : runtime_error(what_arg) { }
+};
+
+class syntax_incomplete : public std::exception
+{
+};
+
+struct tok
+{
+  char type;
+  string word;
+};
+
+void
+lex(const string &buf, bool eof, vector<tok> *toks)
+{
+  static constexpr const char *whitespace = " \t\r\n\v";
+  static constexpr const char *symbols = "<>|&;()";
+
+  string::const_iterator pos(buf.begin()), end(buf.end());
+  enum {
+    NORMAL, WORD, SINGLE, DOUBLE
+  } mode = NORMAL;
+  string word;
+
+  while (pos < end) {
+    if (mode == NORMAL)
+      while (pos < end && strchr(whitespace, *pos))
+        ++pos;
+    if (pos == end)
+      break;
+
+    switch (mode) {
+    case NORMAL:
+      if (strchr(symbols, *pos)) {
+        if (*pos == '>' && (pos + 1) < end && *(pos + 1) == '>') {
+          toks->push_back(tok{'+'}); // >>
+          pos += 2;
+        } else
+          toks->push_back(tok{*(pos++)});
+      } else if (*pos == '#') {
+        while (pos < end && *pos != '\n' && *pos != '\r')
+          ++pos;
+      } else {
+        word.clear();
+        mode = WORD;
+      }
+      break;
+
+    case WORD:
+      if (strchr(whitespace, *pos) || strchr(symbols, *pos) || *pos == '#') {
+        toks->push_back(tok{'a', move(word)});
+        mode = NORMAL;
+        continue;
+      } else if (*pos == '\'') {
+        mode = SINGLE;
+      } else if (*pos == '\"') {
+        mode = DOUBLE;
+      } else if (*pos == '\\' && (pos+1) < end) {
+        ++pos;
+        if (*pos != '\n')
+          word += *(pos++);
+        else if (pos+1 == end && !eof)
+          // Escaped newline.  Get more input.
+          throw syntax_incomplete();
+      } else {
+        word += *pos;
+      }
+      ++pos;
+      break;
+
+    case SINGLE:
+      if (*pos == '\'')
+        mode = WORD;
+      else
+        word += *pos;
+      ++pos;
+      break;
+
+    case DOUBLE:
+      if (*pos == '\"')
+        mode = WORD;
+      else if (*pos == '\\' && *(pos+1) == '\n')
+        ++pos;
+      else if (*pos == '\\' && strchr("$`\"\\", *(pos+1)))
+        word += *++pos;
+      else
+        word += *pos;
+      ++pos;
       break;
     }
   }
-  interactive = true;
 
-  // If args, concatenate them parse as a command.
-  if (ac > 1 && strcmp(av[1], "-c") == 0) {
-    char* b = buf;
-    char* e = b+sizeof(buf);
-    for (int i = 2; i < ac; i++) {
-      int n;
-      n = strlen(av[i]);
-      if (b+n+1 > e)
-        die("sh: too long");
-      strcpy(b, av[i]);
-      b += n;
-      if (b+1+1 > e)
-        die("sh: too long");
-      strcpy(b, " ");
-      b++;
+  switch (mode) {
+  case WORD:
+    assert(pos == end);
+  case NORMAL:
+    break;
+  case SINGLE:
+  case DOUBLE:
+    if (eof)
+      throw syntax_error("unterminated quoted string");
+    throw syntax_incomplete();
+  }
+}
+
+class parser
+{
+  vector<tok> toks;
+  vector<tok>::const_iterator cur;
+  bool eof;
+
+  char tryget(const char *accept, string *word_out = nullptr)
+  {
+    if (cur == toks.end() || !strchr(accept, cur->type))
+      return 0;
+    char type = cur->type;
+    if (word_out)
+      *word_out = cur->word;
+    ++cur;
+    return type;
+  }
+
+  char require(const char *accept, const char *error)
+  {
+    if (!eof && cur == toks.end())
+      throw syntax_incomplete();
+    char type = tryget(accept);
+    if (!type)
+      throw syntax_error(error);
+    return type;
+  }
+
+  sref<cmd> pexec()
+  {
+    if (tryget("(")) {
+      auto res = plist();
+      require(")", "missing ')'");
+      res = predir(res);
+      return res;
     }
 
-    if(fork1() == 0)
-      runcmd(parsecmd(buf));
-    wait(-1);
-    exit(0);
-  } else if (ac > 1) {
+    cmd_exec *ex = new cmd_exec();
+    auto res = sref<cmd>::transfer(ex);
+    while (true) {
+      res = predir(res);
+
+      sref<expr> word = pexpr();
+      if (!word)
+        break;
+      ex->argv_.push_back(move(word));
+    }
+    return res;
+  }
+
+  sref<cmd> predir(sref<cmd> res)
+  {
+    char tok;
+    while ((tok = tryget("<>+"))) {
+      sref<expr> file = pexpr();
+      if (!file)
+        throw syntax_error("missing file for redirection");
+      switch (tok) {
+      case '<':
+        res = sref<cmd>::transfer(new cmd_redir{0, O_RDONLY, file, res});
+        break;
+      case '>':
+        res = sref<cmd>::transfer(
+          new cmd_redir{1, O_WRONLY|O_CREAT|O_TRUNC, file, res});
+        break;
+      case '+':                 // >>
+        res = sref<cmd>::transfer(
+          new cmd_redir{1, O_WRONLY|O_CREAT|O_APPEND, file, res});
+        break;
+      }
+    }
+    return res;
+  }
+
+  sref<cmd> ppipe()
+  {
+    auto res = pexec();
+    if (tryget("|"))
+      res = sref<cmd>::transfer(new cmd_pipe{res, ppipe()});
+    return res;
+  }
+
+  sref<cmd> pback()
+  {
+    auto res = ppipe();
+    if (tryget("&")) {
+      while (tryget("&"));
+      res = sref<cmd>::transfer(new cmd_back{res});
+    }
+    return res;
+  }
+
+  sref<cmd> plist()
+  {
+    auto res = pback();
+    if (tryget(";"))
+      res = sref<cmd>::transfer(new cmd_list{res, plist()});
+    return res;
+  }
+
+  sref<expr> pexpr()
+  {
+    string word;
+    if (!tryget("a", &word))
+      return sref<expr>();
+    return sref<expr>::transfer(new expr_word{move(word)});
+  }
+
+public:
+  sref<cmd> res;
+  bool incomplete;
+
+  parser(const string &buf, bool eof) : eof(eof), incomplete(false)
+  {
+    try {
+      lex(buf, eof, &toks);
+      cur = toks.begin();
+      res = plist();
+      if (cur != toks.end())
+        res = sref<cmd>::transfer(
+          new cmd_error{string("unexpected token: ") + cur->type});
+    } catch (syntax_error &error) {
+      res = sref<cmd>::transfer(
+        new cmd_error{string("syntax error: ") + error.what()});
+    } catch (syntax_incomplete &x) {
+      assert(!eof);
+      incomplete = true;
+    }
+    vector<tok>().swap(toks);
+  }
+};
+
+//////////////////////////////////////////////////////////////////
+// Main
+//
+
+string
+readline(bool continuation)
+{
+  if (interactive)
+    fprintf(stderr, continuation ? "> " : "$ ");
+  string line;
+  while (true) {
+    char c;
+    size_t n = read(0, &c, 1);
+    if (n < 1)
+      break;
+    line += c;
+    if (c == '\n' || c == '\r')
+      break;
+  }
+  return line;
+}
+
+int
+main(int argc, char** argv)
+{
+  string buf;
+
+  // If args, concatenate them parse as a command.
+  if (argc > 1 && strcmp(argv[1], "-c") == 0) {
+    for (int i = 2; i < argc; i++) {
+      if (i > 2)
+        buf.push_back(' ');
+      buf.append(argv[i]);
+    }
+
+    parser p(buf, true);
+    exit(p.res->run());
+  } else if (argc > 1) {
     // Shell script
     interactive = false;
     close(0);
-    if (open(av[1], O_RDONLY) < 0) {
-      fprintf(stderr, "cannot open %s\n", av[1]);
+    if (open(argv[1], O_RDONLY) < 0) {
+      fprintf(stderr, "cannot open %s\n", argv[1]);
       return -1;
     }
   }
 
   // Read and run input commands.
-  while(getcmd(buf, sizeof(buf)) >= 0){
-    if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
-      // Clumsy but will have to do for now.
-      // Chdir has no effect on the parent if run in the child.
-      buf[strlen(buf)-1] = 0;  // chop \n
-      if(chdir(buf+3) < 0)
-        fprintf(stderr, "cannot cd %s\n", buf+3);
-      continue;
-    } else if(!strcmp(buf, "exit\n") || !strcmp(buf, "exit\r")){
-      exit(0);
+  int last = 0;
+  while (true) {
+    string line = readline(!buf.empty());
+    if (line.empty()) {
+      if (!buf.empty()) {
+        // Give EOF error
+        parser p(buf, true);
+        exit(p.res->run());
+      }
+      break;
     }
-    if(fork1() == 0)
-      runcmd(parsecmd(buf));
-    wait(-1);
-  }
-  return 0;
-}
+    buf += line;
 
-void
-panic(const char *s)
-{
-  fprintf(stderr, "%s\n", s);
-  exit(1);
+    parser p(buf, false);
+    if (p.incomplete)
+      continue;
+    buf.clear();
+    last = p.res->run();
+  }
+  return last;
 }
 
 int
@@ -225,363 +555,8 @@ fork1(void)
 {
   int pid;
   
-  pid = fork(0);
-  if(pid == -1)
-    panic("fork");
+  pid = xfork();
+  if (pid == -1)
+    die("fork");
   return pid;
-}
-
-//PAGEBREAK!
-// Constructors
-
-struct cmd*
-execcmd(void)
-{
-  struct execcmd *cmd;
-
-  cmd = (struct execcmd *) malloc(sizeof(*cmd));
-  memset(cmd, 0, sizeof(*cmd));
-  cmd->type = EXEC;
-  return (struct cmd*)cmd;
-}
-
-struct cmd*
-redircmd(struct cmd *subcmd, char *file, char *efile, int mode, int fd)
-{
-  struct redircmd *cmd;
-
-  cmd = (struct redircmd *) malloc(sizeof(*cmd));
-  memset(cmd, 0, sizeof(*cmd));
-  cmd->type = REDIR;
-  cmd->cmd = subcmd;
-  cmd->file = file;
-  cmd->efile = efile;
-  cmd->mode = mode;
-  cmd->fd = fd;
-  return (struct cmd*)cmd;
-}
-
-struct cmd*
-pipecmd(struct cmd *left, struct cmd *right)
-{
-  struct pipecmd *cmd;
-
-  cmd = (struct pipecmd *) malloc(sizeof(*cmd));
-  memset(cmd, 0, sizeof(*cmd));
-  cmd->type = PIPE;
-  cmd->left = left;
-  cmd->right = right;
-  return (struct cmd*)cmd;
-}
-
-struct cmd*
-listcmd(struct cmd *left, struct cmd *right)
-{
-  struct listcmd *cmd;
-
-  cmd = (struct listcmd *) malloc(sizeof(*cmd));
-  memset(cmd, 0, sizeof(*cmd));
-  cmd->type = LIST;
-  cmd->left = left;
-  cmd->right = right;
-  return (struct cmd*)cmd;
-}
-
-struct cmd*
-backcmd(struct cmd *subcmd)
-{
-  struct backcmd *cmd;
-
-  cmd = (struct backcmd *) malloc(sizeof(*cmd));
-  memset(cmd, 0, sizeof(*cmd));
-  cmd->type = BACK;
-  cmd->cmd = subcmd;
-  return (struct cmd*)cmd;
-}
-//PAGEBREAK!
-// Parsing
-
-char whitespace[] = " \t\r\n\v";
-char symbols[] = "<|>&;()";
-
-int
-gettoken(char **ps, char *es, char **q, char **eq)
-{
-  char *s;
-  int ret;
-  
-  s = *ps;
-  while(s < es && strchr(whitespace, *s))
-    s++;
-  if(q)
-    *q = s;
-  ret = *s;
-  switch(*s){
-  case 0:
-    break;
-  case '|':
-  case '(':
-  case ')':
-  case ';':
-  case '&':
-  case '<':
-    s++;
-    break;
-  case '>':
-    s++;
-    if(*s == '>'){
-      ret = '+';
-      s++;
-    }
-    break;
-  case '#':
-    ret = 0;
-    *s = 0;
-    break;
-  default:
-    ret = 'a';
-    {
-      char *out = s;
-      enum
-      {
-        WORD, SINGLE, DOUBLE, DONE
-      } state = WORD;
-      while(s < es && state != DONE) {
-        switch (state) {
-        case WORD:
-          if (strchr(whitespace, *s) || strchr(symbols, *s)) {
-            state = DONE;
-            continue;
-          } else if (*s == '\'')
-            state = SINGLE;
-          else if (*s == '\"')
-            state = DOUBLE;
-          else if (*s == '\\' && *(s+1) == '\n')
-            s += 2;
-          else if (*s == '\\')
-            *out++ = *++s;
-          else
-            *out++ = *s;
-          break;
-        case SINGLE:
-          if (*s == '\'')
-            state = WORD;
-          else
-            *out++ = *s;
-          break;
-        case DOUBLE:
-          if (*s == '\"')
-            state = WORD;
-          else if (*s == '\\' && *(s+1) == '\n')
-            s += 2;
-          else if (*s == '\\' && strchr("$`\"\\", *(s+1)))
-            *out++ = *++s;
-          else
-            *out++ = *s;
-          break;
-        case DONE:
-          panic("unreachable");
-        }
-        s++;
-      }
-      if (s < es && state != DONE)
-        panic("unterminated");
-      if (eq)
-        *eq = out;
-      eq = nullptr;
-    }
-    break;
-  }
-  if(eq)
-    *eq = s;
-  
-  while(s < es && strchr(whitespace, *s))
-    s++;
-  *ps = s;
-  return ret;
-}
-
-int
-peek(char **ps, char *es, const char *toks)
-{
-  char *s;
-  
-  s = *ps;
-  while(s < es && strchr(whitespace, *s))
-    s++;
-  *ps = s;
-  return *s && strchr(toks, *s);
-}
-
-struct cmd *parseline(char**, char*);
-struct cmd *parsepipe(char**, char*);
-struct cmd *parseexec(char**, char*);
-struct cmd *nulterminate(struct cmd*);
-
-struct cmd*
-parsecmd(char *s)
-{
-  char *es;
-  struct cmd *cmd;
-
-  es = s + strlen(s);
-  cmd = parseline(&s, es);
-  peek(&s, es, "");
-  if(*s){
-    fprintf(stderr, "leftovers: %s\n", s);
-    panic("syntax");
-  }
-  nulterminate(cmd);
-  return cmd;
-}
-
-struct cmd*
-parseline(char **ps, char *es)
-{
-  struct cmd *cmd;
-
-  cmd = parsepipe(ps, es);
-  while(peek(ps, es, "&")){
-    gettoken(ps, es, 0, 0);
-    cmd = backcmd(cmd);
-  }
-  if(peek(ps, es, ";")){
-    gettoken(ps, es, 0, 0);
-    cmd = listcmd(cmd, parseline(ps, es));
-  }
-  return cmd;
-}
-
-struct cmd*
-parsepipe(char **ps, char *es)
-{
-  struct cmd *cmd;
-
-  cmd = parseexec(ps, es);
-  if(peek(ps, es, "|")){
-    gettoken(ps, es, 0, 0);
-    cmd = pipecmd(cmd, parsepipe(ps, es));
-  }
-  return cmd;
-}
-
-struct cmd*
-parseredirs(struct cmd *cmd, char **ps, char *es)
-{
-  int tok;
-  char *q, *eq;
-
-  while(peek(ps, es, "<>")){
-    tok = gettoken(ps, es, 0, 0);
-    if(gettoken(ps, es, &q, &eq) != 'a')
-      panic("missing file for redirection");
-    switch(tok){
-    case '<':
-      cmd = redircmd(cmd, q, eq, O_RDONLY, 0);
-      break;
-    case '>':
-      cmd = redircmd(cmd, q, eq, O_WRONLY|O_CREAT|O_TRUNC, 1);
-      break;
-    case '+':  // >>
-      cmd = redircmd(cmd, q, eq, O_WRONLY|O_CREAT|O_APPEND, 1);
-      break;
-    }
-  }
-  return cmd;
-}
-
-struct cmd*
-parseblock(char **ps, char *es)
-{
-  struct cmd *cmd;
-
-  if(!peek(ps, es, "("))
-    panic("parseblock");
-  gettoken(ps, es, 0, 0);
-  cmd = parseline(ps, es);
-  if(!peek(ps, es, ")"))
-    panic("syntax - missing )");
-  gettoken(ps, es, 0, 0);
-  cmd = parseredirs(cmd, ps, es);
-  return cmd;
-}
-
-struct cmd*
-parseexec(char **ps, char *es)
-{
-  char *q, *eq;
-  int tok, argc;
-  struct execcmd *cmd;
-  struct cmd *ret;
-  
-  if(peek(ps, es, "("))
-    return parseblock(ps, es);
-
-  ret = execcmd();
-  cmd = (struct execcmd*)ret;
-
-  argc = 0;
-  ret = parseredirs(ret, ps, es);
-  while(!peek(ps, es, "|)&;")){
-    if((tok=gettoken(ps, es, &q, &eq)) == 0)
-      break;
-    if(tok != 'a')
-      panic("syntax");
-    cmd->argv[argc] = q;
-    cmd->eargv[argc] = eq;
-    argc++;
-    if(argc >= MAXARGS)
-      panic("too many args");
-    ret = parseredirs(ret, ps, es);
-  }
-  cmd->argv[argc] = 0;
-  cmd->eargv[argc] = 0;
-  return ret;
-}
-
-// NUL-terminate all the counted strings.
-struct cmd*
-nulterminate(struct cmd *cmd)
-{
-  int i;
-  struct backcmd *bcmd;
-  struct execcmd *ecmd;
-  struct listcmd *lcmd;
-  struct pipecmd *pcmd;
-  struct redircmd *rcmd;
-
-  if(cmd == 0)
-    return 0;
-  
-  switch(cmd->type){
-  case EXEC:
-    ecmd = (struct execcmd*)cmd;
-    for(i=0; ecmd->argv[i]; i++)
-      *ecmd->eargv[i] = 0;
-    break;
-
-  case REDIR:
-    rcmd = (struct redircmd*)cmd;
-    nulterminate(rcmd->cmd);
-    *rcmd->efile = 0;
-    break;
-
-  case PIPE:
-    pcmd = (struct pipecmd*)cmd;
-    nulterminate(pcmd->left);
-    nulterminate(pcmd->right);
-    break;
-    
-  case LIST:
-    lcmd = (struct listcmd*)cmd;
-    nulterminate(lcmd->left);
-    nulterminate(lcmd->right);
-    break;
-
-  case BACK:
-    bcmd = (struct backcmd*)cmd;
-    nulterminate(bcmd->cmd);
-    break;
-  }
-  return cmd;
 }
