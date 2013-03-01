@@ -180,7 +180,7 @@ private:
 
   // Virtual page frames
   typedef radix_array<vmdesc, USERTOP / PGSIZE, PGSIZE,
-                      kalloc_allocator<vmdesc>, scoped_cli> vpf_array;
+                      kalloc_allocator<vmdesc>, scoped_no_sched> vpf_array;
   vpf_array vpfs_;
 
   struct spinlock brklock_;

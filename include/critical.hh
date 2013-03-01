@@ -108,6 +108,12 @@ public:
   scoped_cli() : scoped_critical(NO_INT) { }
 };
 
+class scoped_no_sched : public scoped_critical
+{
+public:
+  scoped_no_sched() : scoped_critical(NO_SCHED) { }
+};
+
 // Return true if the current context is protected against the forms
 // of interruption given in mask.
 bool check_critical(critical_mask mask);

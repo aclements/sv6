@@ -237,7 +237,7 @@ namespace mmu_per_core_page_table {
       // us the overhead of a self-IPI, and prevents the shootdown in
       // a COW page fault's invalidate/insert/shootdown cycle from
       // shooting down its own insert).
-      assert(!(readrflags() & FL_IF));
+      assert(check_critical(NO_SCHED));
       if (present[myid()]) {
         clear(start, start + len);
         present.reset(myid());
