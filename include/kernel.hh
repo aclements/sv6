@@ -238,8 +238,7 @@ public:
 
   ~scoped_cli()
   {
-    if (have)
-      popcli();
+    release();
   }
 
   scoped_cli(const scoped_cli &o) = delete;
@@ -255,6 +254,13 @@ public:
     have = o.have;
     o.have = false;
     return *this;
+  }
+
+  void release()
+  {
+    if (have)
+      popcli();
+    have = false;
   }
 };
 

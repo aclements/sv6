@@ -72,6 +72,15 @@ public:
 };
 
 /**
+ * A scoped critical section manager that does nothing.
+ */
+class scoped_critical_no_op
+{
+public:
+  void release() { }
+};
+
+/**
  * A sparse array with range-oriented modification, run compression,
  * range locking, lock-free lookup, and concurrent independent
  * modifications.
@@ -130,9 +139,12 @@ public:
  * @tparam NodeBytes The size of a node in the radix tree, in bytes.
  * @tparam ZAllocator A zero-optimized allocator.  Defaults to the
  * standard allocator.
+ * @tparam ScopedCritical A scoped critical section manager with a
+ * release() method.
  */
 template<typename T, std::size_t N, std::size_t NodeBytes = 4096,
-         typename ZAllocator = zallocator_adaptor<std::allocator<T> > >
+         typename ZAllocator = zallocator_adaptor<std::allocator<T> >,
+         typename ScopedCritical = scoped_critical_no_op>
 class radix_array
 {
 public:
@@ -924,14 +936,12 @@ public:
 
     radix_array *r_;
     key_type low_, high_;
+    ScopedCritical crit_;
 
-    constexpr lock(radix_array *r, key_type low, key_type high)
+    lock(radix_array *r, key_type low, key_type high)
       : r_(r), low_(low), high_(high) { }
 
   public:
-    /** Default constructor. */
-    constexpr lock() : r_(nullptr), low_(0), high_(0) { }
-
     /** Copying is forbidden. */
     lock(const lock &o) = delete;
     lock &operator=(const lock &o) = delete;
@@ -974,9 +984,7 @@ public:
           for (; it.k_ < high_; it += it.span())
             it.unlock();
         r_ = nullptr;
-#ifdef XV6_KERNEL
-        popcli();
-#endif
+        crit_.release();
       }
     }
   };
@@ -993,6 +1001,10 @@ public:
    * This may lock a larger range than requested if ranges have been
    * folded (unlike #fill(), the will not expand compressed regions).
    * Callers should be prepared for this.
+   *
+   * It is up to the caller to disable preemption until the lock is
+   * released, if required by the environment.  All bit spinlocks are
+   * acquired with cli_caller.
    */
   lock
   acquire(const iterator &low, const iterator &high)
@@ -1009,13 +1021,9 @@ public:
       // We have to lock the whole high slot
       high_key += high.base_span();
 
-#ifdef XV6_KERNEL
-    // Rather than bumping the cli count for every bit lock we take
-    // and being very careful when we propagate bit locks over
-    // decompression, we simply managing the cli count ourselves, with
-    // one cli for the entire locked range.
-    pushcli();
-#endif
+    // Create the lock object first in case we're using a nontrivial
+    // ScopedCritical.
+    lock l(this, low_key, high_key);
 
     // We have to iterate from low_key to high_key, rather than just
     // from low to high, because the shape of the tree might change
@@ -1027,7 +1035,7 @@ public:
       it.lock();
     }
 
-    return lock(this, low_key, high_key);
+    return l;
   }
 
   /**
@@ -1038,11 +1046,9 @@ public:
   lock
   acquire(const iterator &it)
   {
-#ifdef XV6_KERNEL
-    pushcli();
-#endif
+    lock l(this, it.base(), it.base() + it.base_span());
     it.lock();
-    return lock(this, it.base(), it.base() + it.base_span());
+    return l;
   }
 
 private:
