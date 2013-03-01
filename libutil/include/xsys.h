@@ -1,15 +1,20 @@
+#pragma once
+
+#include "libutil.h"
+
 #if !defined(XV6_USER)
 
 #include <sys/wait.h>
 
 #define xfork() fork()
-static inline void xwait()
+static inline int xwait()
 {
   int status;
   if (wait(&status) < 0)
     edie("wait");
   if (!WIFEXITED(status))
     die("bad status %u", status);
+  return WEXITSTATUS(status);
 }
 #define mtenable(x) do { } while(0)
 #define mtenable_type(x, y) do { } while (0)
@@ -20,8 +25,15 @@ static inline void xwait()
 
 #else // Must be xv6
 
+extern "C" int wait(int);
+
 #define xfork() fork(0)
-#define xwait() wait(-1)
+static inline int xwait()
+{
+  if (wait(-1) < 0)
+    edie("wait");
+  return 0;
+}
 #define xpthread_join(tid) wait(tid)
 
 #endif
