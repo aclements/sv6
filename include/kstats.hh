@@ -72,12 +72,18 @@
   X(uint64_t, socket_local_recvfrom_cycles)   \
   X(uint64_t, socket_local_recvfrom_cnt)   \
 
+#define KSTATS_SCHED(X)                         \
+  X(uint64_t, sched_tick_count)                 \
+  X(uint64_t, sched_blocked_tick_count)         \
+  X(uint64_t, sched_delayed_tick_count)         \
+
 #define KSTATS_ALL(X)                           \
   KSTATS_TLB(X)                                 \
   KSTATS_VM(X)                                  \
   KSTATS_KALLOC(X)                              \
   KSTATS_REFCACHE(X)                            \
   KSTATS_SOCKET(X)                              \
+  KSTATS_SCHED(X)                               \
 
 struct kstats;
 #ifdef XV6_KERNEL

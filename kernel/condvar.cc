@@ -24,6 +24,9 @@ wakeup(struct proc *p)
 u64
 nsectime(void)
 {
+  // XXX Ticks don't happen when interrupts are disabled, which means
+  // we could lose track of wall-clock time.  We should use the HPET
+  // for this.
   u64 msec = ticks*QUANTUM;
   return msec*1000000;
 }

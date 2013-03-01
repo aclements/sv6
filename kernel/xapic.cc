@@ -10,6 +10,7 @@
 #include "apic.hh"
 #include "kstream.hh"
 #include "bitset.hh"
+#include "critical.hh"
 
 static console_stream verbose(true);
 

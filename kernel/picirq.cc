@@ -6,6 +6,7 @@
 #include "kernel.hh"
 #include "bitset.hh"
 #include "kstream.hh"
+#include "critical.hh"
 
 // I/O Addresses of the two programmable interrupt controllers
 #define IO_PIC1         0x20    // Master (IRQs 0-7)

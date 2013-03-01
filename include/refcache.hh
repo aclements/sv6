@@ -153,6 +153,7 @@
 #include "kstats.hh"
 #include "seqlock.hh"
 #include "condvar.h"
+#include "critical.hh"
 
 #include <stdexcept>
 #include <limits.h>

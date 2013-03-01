@@ -7,6 +7,7 @@
 #include "apic.hh"
 #include "kstream.hh"
 #include "bitset.hh"
+#include "critical.hh"
 
 #define ID      0x802   // ID
 #define VER     0x803   // Version

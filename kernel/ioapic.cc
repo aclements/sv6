@@ -12,6 +12,7 @@
 #include "kstream.hh"
 #include "iommu.hh"
 #include "bitset.hh"
+#include "critical.hh"
 
 static console_stream verbose(true);
 

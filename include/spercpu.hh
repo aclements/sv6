@@ -16,6 +16,7 @@
 
 #include "amd64.h"
 #include "bits.hh"
+#include "critical.hh"
 
 #include <cstddef>
 #include <new>

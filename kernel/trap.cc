@@ -164,6 +164,7 @@ trap(struct trapframe *tf)
 
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
+    kstats::inc(&kstats::sched_tick_count);
     // for now, just care about timer interrupts
 #if CODEX
     codex_magic_action_run_async_event(T_IRQ0 + IRQ_TIMER);
@@ -185,6 +186,14 @@ trap(struct trapframe *tf)
       timerintr();
     refcache::mycache->tick();
     lapiceoi();
+    if (mycpu()->no_sched_count) {
+      kstats::inc(&kstats::sched_blocked_tick_count);
+      // Request a yield when no_sched_count is released.  We can
+      // modify this without protection because interrupts are
+      // disabled.
+      mycpu()->no_sched_count |= NO_SCHED_COUNT_YIELD_REQUESTED;
+      return;
+    }
     break;
   case T_IRQ0 + IRQ_IDE:
     ideintr();
@@ -477,4 +486,31 @@ to_stream(class print_stream *s, const struct irq &irq)
   } else {
     s->print("invalid IRQ");
   }
+}
+
+void
+scoped_critical::release_yield()
+{
+  kstats::inc(&kstats::sched_delayed_tick_count);
+  // Clear the yield request and yield
+  modify_no_sched_count(-NO_SCHED_COUNT_YIELD_REQUESTED);
+  // Below here is racy, strictly speaking, but that's okay.
+  yield();
+}
+
+bool
+check_critical(critical_mask mask)
+{
+  if (mask == NO_CRITICAL)
+    return true;
+  bool safe = !(readrflags() & FL_IF);
+  if (mask & NO_INT)
+    return safe;
+  safe = safe || mycpu()->no_sched_count;
+  if (mask & NO_SCHED)
+    return safe;
+  safe = safe || myproc()->cpu_pin;
+  if (mask & NO_MIGRATE)
+    return safe;
+  return false;
 }
