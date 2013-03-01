@@ -147,7 +147,6 @@ vmap::copy()
   vmap *nm = new vmap();
   mmu::shootdown shootdown;
 
-  // Hold lock until TLB flush
   {
     auto out = nm->vpfs_.begin();
     auto lock = vpfs_.acquire(vpfs_.begin(), vpfs_.end());
@@ -180,9 +179,9 @@ vmap::copy()
       ++out;
       ++it;
     }
-  }
 
-  shootdown.perform();
+    shootdown.perform();
+  }
 
   nm->brk_ = brk_;
   return nm;
@@ -218,7 +217,6 @@ again:
   page_holder pages;
 
   {
-    // New scope to release the search lock before shootdown
     auto lock = vpfs_.acquire(begin, end);
 
     for (auto it = begin; it < end; it += it.span()) {
@@ -233,9 +231,9 @@ again:
     cache.invalidate(start, len, begin, &shootdown);
 
     vpfs_.fill(begin, end, desc, !fixed);
-  }
 
-  shootdown.perform();
+    shootdown.perform();
+  }
 
   return start;
 }
@@ -253,7 +251,6 @@ vmap::remove(uptr start, uptr len)
   page_holder pages;
 
   {
-    // New scope to release the search lock before shootdown
     auto begin = vpfs_.find(start / PGSIZE);
     auto end = vpfs_.find((start + len) / PGSIZE);
     auto lock = vpfs_.acquire(begin, end);
@@ -262,9 +259,8 @@ vmap::remove(uptr start, uptr len)
         pages.add(std::move(it->page));
     cache.invalidate(start, len, begin, &shootdown);
     vpfs_.unset(begin, end);
+    shootdown.perform();
   }
-
-  shootdown.perform();
 
   return 0;
 }
@@ -320,7 +316,6 @@ vmap::pagefault(uptr va, u32 err)
   // page.
   va = PGROUNDDOWN(va);
 
-  // Hold lock until TLB flush
   {
     auto it = vpfs_.find(va / PGSIZE);
     auto lock = vpfs_.acquire(it);
@@ -370,9 +365,9 @@ vmap::pagefault(uptr va, u32 err)
       else
         cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
     }
-  }
 
-  shootdown.perform();
+    shootdown.perform();
+  }
   return 1;
 }
 
