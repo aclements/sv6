@@ -45,7 +45,6 @@ void initidle(void);
 void initcpprt(void);
 void initfutex(void);
 void initcmdline(void);
-void initdistref(void);
 void initrefcache(void);
 void initacpitables(void);
 void initnuma(void);
@@ -207,7 +206,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   initsched();     // scheduler run queues
   initidle();
   initgc();        // gc epochs and threads
-  initdistref();   // distref collector thread
   initrefcache();  // Requires initsched
   initdisk();      // disk
   initinode();     // inode cache

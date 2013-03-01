@@ -2,7 +2,6 @@
 #include <atomic>
 #include "cpputil.hh"
 #include "hwvm.hh"
-#include "distref.hh"
 #include "bit_spinlock.hh"
 #include "radix_array.hh"
 #include "kalloc.hh"
