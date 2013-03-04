@@ -53,7 +53,6 @@ public:
 
 protected:
   mnode(u64 inum);
-  virtual ~mnode() { }
 
 private:
   void onzero() override;

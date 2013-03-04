@@ -212,13 +212,14 @@ namespace refcache {
     bool weak_ : 1;
 
   public:
-    constexpr referenced(uint64_t refcount = 1)
+    referenced(uint64_t refcount = 1)
       : lock_("refcache::referenced"),
         refcount_(refcount),
         next_(),
         review_epoch_(0),
         dirty_(false),
         weak_(false) { }
+    virtual ~referenced() { }
 
     referenced(const referenced &o) = delete;
     referenced(referenced &&o) = delete;
@@ -259,7 +260,7 @@ namespace refcache {
     weakref<weak_referenced> *weakref_;
 
   public:
-    constexpr weak_referenced(uint64_t refcount = 1)
+    weak_referenced(uint64_t refcount = 1)
       : referenced(refcount),
         weakref_(nullptr) { }
   };
