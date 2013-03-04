@@ -27,7 +27,7 @@ private:
   };
 
   struct bucket {
-    spinlock lock;
+    spinlock lock __mpalign__;
     islist<item, &item::link> chain;
 
     ~bucket() {
