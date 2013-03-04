@@ -16,12 +16,40 @@
 #include <vector>
 
 using std::move;
+using std::pair;
 using std::string;
 using std::vector;
 
 bool interactive = true;
 
 int fork1(void);  // Fork but panics on failure.
+
+//////////////////////////////////////////////////////////////////
+// Environment
+//
+
+vector<pair<string, string> > vars;
+
+void
+setvar(const string &name, const string &val)
+{
+  for (auto &p : vars) {
+    if (p.first == name) {
+      p.second = val;
+      return;
+    }
+  }
+  vars.push_back({name, val});
+}
+
+string
+getvar(const string &name)
+{
+  for (auto &p : vars)
+    if (p.first == name)
+      return p.second;
+  return string();
+}
 
 //////////////////////////////////////////////////////////////////
 // Commands
@@ -67,17 +95,39 @@ class expr : public referenced
 public:
   virtual ~expr() { }
   virtual void eval(vector<string> *out) = 0;
+
+  string eval_join()
+  {
+    vector<string> words;
+    eval(&words);
+    string res;
+    bool first = true;
+    for (auto &w : words) {
+      if (!first)
+        res += ' ';
+      first = false;
+      res += w;
+    }
+    return res;
+  }
 };
 
 class cmd_exec : public cmd
 {
 public:
   vector<sref<expr> > argv_;
+  vector<pair<string, sref<expr> > > vars_;
 
   int run() override
   {
-    if (argv_.empty())
+    if (argv_.empty()) {
+      // Assign shell variables
+      for (auto &p : vars_) {
+        string val = p.second->eval_join();
+        setvar(p.first, val);
+      }
       return 0;
+    }
 
     vector<string> argv;
     for (auto &expr : argv_)
@@ -295,6 +345,7 @@ lex(const string &buf, bool eof, vector<tok> *toks)
     case WORD:
       if (strchr(whitespace, *pos) || strchr(symbols, *pos) || *pos == '#') {
         toks->push_back(tok{'a', move(word)});
+        toks->push_back(tok{' '});
         mode = NORMAL;
         continue;
       } else if (*pos == '\'') {
@@ -310,6 +361,10 @@ lex(const string &buf, bool eof, vector<tok> *toks)
           throw syntax_incomplete();
       } else {
         word += *pos;
+        if (*pos == '=' && word.size() > 1) {
+          toks->push_back(tok{'=', move(word)});
+          word.clear();
+        }
       }
       ++pos;
       break;
@@ -339,6 +394,7 @@ lex(const string &buf, bool eof, vector<tok> *toks)
   switch (mode) {
   case WORD:
     assert(pos == end);
+    toks->push_back(tok{' '});
   case NORMAL:
     break;
   case SINGLE:
@@ -387,8 +443,20 @@ class parser
 
     cmd_exec *ex = new cmd_exec();
     auto res = sref<cmd>::transfer(ex);
+    bool may_assign = true;
     while (true) {
       res = predir(res);
+
+      string var;
+      if (may_assign && tryget("=", &var)) {
+        sref<expr> val = pexpr();
+        assert(val);
+        var.pop_back();         // Remove '=' on the end
+        ex->vars_.emplace_back(var, val);
+        continue;
+      } else {
+        may_assign = false;
+      }
 
       sref<expr> word = pexpr();
       if (!word)
@@ -450,10 +518,17 @@ class parser
 
   sref<expr> pexpr()
   {
-    string word;
-    if (!tryget("a", &word))
-      return sref<expr>();
-    return sref<expr>::transfer(new expr_word{move(word)});
+    string buf, part;
+    bool first = true;
+    while (tryget("a=", first ? &buf : &part)) {
+      if (!first)
+        buf += part;
+      first = false;
+    }
+    if (tryget(" "))
+      return sref<expr>::transfer(new expr_word{move(buf)});
+    assert(first);
+    return sref<expr>();
   }
 
 public:
