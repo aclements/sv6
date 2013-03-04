@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstring>
 #include <utility>
 
 namespace std {
@@ -74,6 +75,20 @@ namespace std {
     if (Compare(a, b))
       return b;
     return a;
+  }
+
+  template<class ForwardIterator, class T>
+  void fill(ForwardIterator first, ForwardIterator last, const T& value)
+  {
+    for (; first != last; ++first)
+      *first = value;
+  }
+
+  template<class T>
+  typename enable_if<sizeof(T) == 1 && is_integral<T>::value, void>::type
+    fill(T* first, T* last, const T& value)
+  {
+    memset(first, value, last - first);
   }
 
   template<class RandomAccessIterator, class Compare>
