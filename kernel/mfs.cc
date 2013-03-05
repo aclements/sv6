@@ -159,6 +159,7 @@ writei(sref<mnode> m, const char* buf, u64 start, u64 nbytes,
       /* File already has the page we are about to update */
       pi = m->as_file()->get_page(pgbase / PGSIZE);
       if (!pi)
+        /* Raced with truncate; assume our data would have been blown away */
         break;
 
       memmove((char*) pi->va() + pgoff, buf + off, pgend - pgoff);

@@ -120,12 +120,13 @@ mnode::linkcount::onzero()
 }
 
 void
-mfile::resizer::resize_nogrow(u64 size)
+mfile::resizer::resize_nogrow(u64 newsize)
 {
-  assert(PGROUNDUP(size) <= PGROUNDUP(mf_->size_));
-  mf_->size_ = size;
-  auto begin = mf_->pages_.find(PGROUNDUP(mf_->size_) / PGSIZE);
-  auto end = mf_->pages_.find(maxidx);
+  u64 oldsize = mf_->size_;
+  assert(PGROUNDUP(newsize) <= PGROUNDUP(mf_->size_));
+  mf_->size_ = newsize;
+  auto begin = mf_->pages_.find(PGROUNDUP(newsize) / PGSIZE);
+  auto end = mf_->pages_.find(PGROUNDUP(oldsize) / PGSIZE);
   auto lock = mf_->pages_.acquire(begin, end);
   mf_->pages_.unset(begin, end);
 }
