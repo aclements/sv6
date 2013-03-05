@@ -7,6 +7,7 @@
 #include <stdexcept>
 
 #include "bit_spinlock.hh"
+#include "log2.hh"
 
 #ifndef RADIX_DEBUG
 #define RADIX_DEBUG 1
@@ -182,14 +183,28 @@ private:
     /** Number of slots in an upper node. */
     UPPER_FANOUT = NodeBytes / sizeof(node_ptr),
     /** Number of slots in a leaf node. */
-    LEAF_FANOUT  = NodeBytes / sizeof(T),
+    LEAF_FANOUT  = NodeBytes / round_up_to_pow2_const(sizeof(T)),
   };
 
   // Work around a bug in GCC 4.6 (fixed in 4.7) where log2 can't be
   // used in an enum.
   static constexpr std::size_t UPPER_BITS = log2_exact(UPPER_FANOUT);
+  static constexpr std::size_t LEAF_BITS = log2_exact(LEAF_FANOUT);
 
   static_assert(UPPER_BITS != ~0, "NodeBytes must be a power of 2");
+  static_assert(LEAF_BITS != ~0, "LEAF_FANOUT not a power of 2?!");
+
+  static constexpr key_type
+  key_shift(unsigned level)
+  {
+    return level == 0 ? 0 : LEAF_BITS + ((level - 1) * UPPER_BITS);
+  }
+
+  static constexpr key_type
+  key_mask(unsigned level)
+  {
+    return level == 0 ? (LEAF_FANOUT - 1) : (UPPER_FANOUT - 1);
+  }
 
   /**
    * Return the key space spanned by one slot on level @c level.
@@ -197,8 +212,7 @@ private:
   static constexpr key_type
   level_span(unsigned level)
   {
-    return level == 0 ? 1 :
-      LEAF_FANOUT * ((key_type)1 << ((level - 1) * UPPER_BITS));
+    return (key_type)1 << key_shift(level);
   }
 
   static constexpr unsigned
@@ -212,18 +226,6 @@ private:
    */
   static constexpr unsigned LEVELS = num_levels();
 
-  static constexpr key_type
-  key_div(unsigned level)
-  {
-    return level_span(level);
-  }
-
-  static constexpr key_type
-  key_mod(unsigned level)
-  {
-    return level == 0 ? LEAF_FANOUT : UPPER_FANOUT;
-  }
-
   /**
    * Return the index into @c level for the given key.  The leaf level
    * is level 0 and the root is level <tt>LEVELS - 1</tt>.
@@ -231,7 +233,7 @@ private:
   static constexpr unsigned
   subkey(key_type k, unsigned level)
   {
-    return (k / key_div(level)) % key_mod(level);
+    return (k >> key_shift(level)) & key_mask(level);
   }
 
 public:
@@ -632,7 +634,8 @@ public:
       // (e.g., null) to a non-terminal pointer (e.g., a leaf node
       // pointer); in this case operator* will lazily force the node
       // pointer further down the tree.
-      if (k_ / key_div(node_level_+1) != (k_ + skip) / key_div(node_level_+1))
+      if (k_ >> key_shift(node_level_+1) !=
+          (k_ + skip) >> key_shift(node_level_+1))
         reset_node();
       k_ += skip;
       return *this;
@@ -758,7 +761,7 @@ public:
     size_type span() const
     {
       auto bs = base_span();
-      return (1 + k_ / bs) * bs - k_;
+      return bs - (k_ & (bs - 1));
     }
 
     /**
@@ -773,8 +776,7 @@ public:
     size_type base() const
     {
       // Round k_ down to the nearest multiple of the base span.
-      auto bs = base_span();
-      return (k_ / bs) * bs;
+      return k_ & ~(base_span() - 1);
     }
 
     /**
