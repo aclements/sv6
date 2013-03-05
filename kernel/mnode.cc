@@ -123,8 +123,8 @@ void
 mfile::resizer::resize_nogrow(u64 newsize)
 {
   u64 oldsize = mf_->size_;
-  assert(PGROUNDUP(newsize) <= PGROUNDUP(mf_->size_));
   mf_->size_ = newsize;
+  assert(PGROUNDUP(newsize) <= PGROUNDUP(oldsize));
   auto begin = mf_->pages_.find(PGROUNDUP(newsize) / PGSIZE);
   auto end = mf_->pages_.find(PGROUNDUP(oldsize) / PGSIZE);
   auto lock = mf_->pages_.acquire(begin, end);
