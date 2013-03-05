@@ -632,7 +632,7 @@ public:
       // (e.g., null) to a non-terminal pointer (e.g., a leaf node
       // pointer); in this case operator* will lazily force the node
       // pointer further down the tree.
-      if (k_ / key_div(node_level_) != (k_ + skip) / key_div(node_level_))
+      if (k_ / key_div(node_level_+1) != (k_ + skip) / key_div(node_level_+1))
         reset_node();
       k_ += skip;
       return *this;
