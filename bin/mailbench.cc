@@ -34,6 +34,7 @@
 #define MAXPATH 100
 #define SMESSAGE "OK"
 #define CMESSAGE "MAIL from: kaashoek@mit.edu\nRCPT TO: %d@mit.edu\nDATA\nDATASTRING Hello\nENDDATA\n"
+#define CMSGSPAM "MAIL from: kaashoek@mit.edu\nRCPT TO: %d@mit.edu\nDATA\nDATASTRING SPAM\nENDDATA\n"
 #define DIE "QUIT"
 #define CLIENTPROC 1
 #define NOFDSHARE 1
@@ -129,13 +130,14 @@ make_named_socket(const char *filename)
 }
 
 static 
-int check(int fd)
+int check()
 {
   char buf[1024];
 
-  while (read(fd, buf, 1024) > 0) {
-    if (strcmp(buf, "SPAM"))
+  while (read(1, buf, 1024) > 0) {
+    if (strstr(buf, "SPAM") != NULL) {
       return 1;
+    }
   }
   return 0;
 }
@@ -143,28 +145,46 @@ int check(int fd)
 static int
 ok(char *message, int n) 
 {
-  int fd[2];
+  int tochild[2];
+  int fromchild[2];
   int r = 1;
 
-  if (pipe(fd) < 0) {
+  if (pipe(tochild) < 0) {
     die ("pipe failed");
   }
-
+  if (pipe(fromchild) < 0) {
+    die ("pipe failed");
+  }
   int pid = xfork();
   if (pid < 0)
     die("fork filter failed");
-  if (pid == 0) {
-    close(fd[1]);
-    check(fd[0]);   // XXX exec()
+  if (pid == 0) {  
+    close(0);
+    close(1);
+    dup(tochild[0]);
+    dup(fromchild[1]);
+    close(tochild[0]);
+    close(tochild[1]);
+    close(fromchild[0]);
+    r = check();  // XXX exec()
+    int n = write(1, &r, sizeof(int));
+    if (n != sizeof(int)) {
+      die("pipe child write");
+    }
     exit(0);
   } else {
-    close(fd[0]);
-    if (write(fd[1], message, n) < 0) {
+    close(tochild[0]);
+    close(fromchild[1]);
+    if (write(tochild[1], message, n) < 0) {
       die("write filter failed");
     }
-    close(fd[1]);
+    close(tochild[1]);
+    int n = read(fromchild[0], &r, sizeof(int));
+    if (n != sizeof(int)) {
+      die("pipe parent read");
+    }
+    close(fromchild[0]);
     xwait();
-    close(fd[1]);
   }
   return r;
 }
@@ -185,11 +205,13 @@ store(char *message, int n)
   while (*p != ' ') p++;
   char *q = strstr(p, "ENDDATA");
   while (p != q) {
+#if 1
     int n;
     n = write(fd, p, 1);
     if (n != 1) {
       die("write failed");
     }
+#endif
     p++;
   }
   close(fd);
@@ -254,6 +276,7 @@ client(int id)
   int sock;
   char message[MAXMSG];
   char cmessage[MAXMSG];
+  char cspam[MAXMSG];
   struct sockaddr_un name;
   char path[MAXPATH];
   size_t size;
@@ -267,6 +290,7 @@ client(int id)
   close(fd);
 
   snprintf(cmessage, MAXMSG, CMESSAGE, id);
+  snprintf(cspam, MAXMSG, CMSGSPAM, id);
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
 
   sock = make_named_socket (path);
@@ -431,6 +455,8 @@ main (int argc, char *argv[])
   //        kstats.socket_local_client_sendto_cnt);
   printf("%d %f #cycles/recvfrom\n", nclient,
          (double)kstats.socket_local_recvfrom_cycles / kstats.socket_local_recvfrom_cnt);
+  printf("%d %f # cycles/write\n", nclient,
+         (double)kstats.write_cycles / kstats.write_count);
 #endif
   return 0;
 }

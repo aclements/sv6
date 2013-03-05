@@ -14,6 +14,7 @@
 #include "mfs.hh"
 #include <uk/fcntl.h>
 #include <uk/stat.h>
+#include "kstats.hh"
 
 sref<file>
 getfile(int fd)
@@ -105,6 +106,9 @@ sys_pread(int fd, void *ubuf, size_t count, off_t offset)
 ssize_t
 sys_write(int fd, userptr<const void> p, size_t n)
 {
+  kstats::timer timer_fill(&kstats::write_cycles);
+  kstats::inc(&kstats::write_count);
+
   sref<file> f = getfile(fd);
   if (!f)
     return -1;

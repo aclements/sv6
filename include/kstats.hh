@@ -73,6 +73,10 @@
   X(uint64_t, socket_local_recvfrom_cycles)   \
   X(uint64_t, socket_local_recvfrom_cnt)   \
 
+#define KSTATS_FILE(X)\
+  X(uint64_t, write_cycles) \
+  X(uint64_t, write_count)   \
+
 #define KSTATS_SCHED(X)                         \
   X(uint64_t, sched_tick_count)                 \
   X(uint64_t, sched_blocked_tick_count)         \
@@ -85,6 +89,7 @@
   KSTATS_REFCACHE(X)                            \
   KSTATS_SOCKET(X)                              \
   KSTATS_SCHED(X)                               \
+  KSTATS_FILE(X)                                \
 
 struct kstats;
 #ifdef XV6_KERNEL

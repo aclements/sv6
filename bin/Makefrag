@@ -51,7 +51,7 @@ UPROGS_BIN= \
         mv \
 	local_server \
 	local_client \
-	lsocketbench \
+	mailbench \
         fstest \
 	base64 \
 	tee \
@@ -76,7 +76,7 @@ UPROGS_NATIVE := \
 	mapbench \
 	tee \
         fstest \
-	lsocketbench \
+	mailbench \
 
 FSEXTRA += \
 	bin/linkbench-tom \
