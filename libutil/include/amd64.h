@@ -334,7 +334,7 @@ static inline int
 locked_test_and_set_bit(int nr, volatile void *a)
 {
   int old;
-  __asm volatile("lock; btsq %2,%1; sbb %0,%0"
+  __asm volatile("lock; bts %2,%1; sbb %0,%0"
                  : "=r" (old), "+m" (*(volatile uint64_t*)a)
                  : "Ir" (nr)
                  : "memory");
@@ -357,7 +357,7 @@ locked_clear_bit(int nr, volatile void *a)
 static inline void
 clear_bit(int nr, volatile void *a)
 {
-  __asm volatile("btrq %1,%0"
+  __asm volatile("btr %1,%0"
                  : "+m" (*(volatile uint8_t*)a)
                  : "Ir" (nr)
                  : "memory");
