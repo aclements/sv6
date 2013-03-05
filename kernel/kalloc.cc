@@ -270,8 +270,8 @@ struct slab {
 
 struct slab slabmem[slab_type_max];
 
-page_info_map_entry page_info_map[512];
-size_t page_info_map_shift;
+page_info_map_entry page_info_map[256];
+size_t page_info_map_add, page_info_map_shift;
 page_info_map_entry *page_info_map_end;
 
 struct cpu_mem
@@ -871,38 +871,64 @@ initpageinfo(void)
     }
   }
 
+  // Construct the page_info map.  Mostly we can uniquely identify a
+  // memory area by a few high bits of its address except that, since
+  // there are usually memory holes in the first node, there's some
+  // *additive* constant to all of the boundaries.  This could be
+  // arbitrarily messy, so we just assume that the beginning of the
+  // second area gives us that constant.
+  uintptr_t area1_base = page_info_areas.size() > 1 ?
+    page_info_areas[1].base : page_info_areas[0].end;
+
   // Find the largest shift (minimum remaining bits) that
-  // distinguishes all page_info areas.  XXX On ben, there's an
-  // *additive* shift of 2GB (because of a NUMA hole between 2GB and
-  // 4GB) that forces this table to 2GB increments instead of 32GB
-  // increments.
+  // distinguishes all page_info areas after the first (which we
+  // accounted for with the additive constant).
   bool good = false;
   int shift;
-  for (shift = sizeof(uintptr_t) * 8 - 1; shift >= 0 && !good; --shift) {
+  for (shift = sizeof(uintptr_t) * 8 - 1; shift >= 0; --shift) {
     good = true;
-    for (size_t i = 0; i < page_info_areas.size() - 1 && good; ++i) {
-      if (((page_info_areas[i].end - 1) >> shift) >=
-          (page_info_areas[i+1].base >> shift))
+    for (size_t i = 1; i < page_info_areas.size() - 1 && good; ++i) {
+      if (((page_info_areas[i].end - area1_base - 1) >> shift) >=
+          ((page_info_areas[i+1].base - area1_base) >> shift))
         good = false;
     }
+    if (good)
+      break;
   }
   if (!good)
     panic("failed to find page_info_map shift");
 
+  // When mapping a physical address, we could subtract area1_base
+  // from it, treat area 0 specially, and only use the address as an
+  // index into the table for areas other than 0, but it's better if
+  // we can avoid the additional branching and logic and always use a
+  // table lookup.  So, we compute something we can first *add* to any
+  // physical address and then shift to get a table index.  Think of
+  // what we've computed so far as placing area 1 at table slot 0 and
+  // area 0 in some negative-indexed table slots.  Here we computes
+  // how many slots area 0 needs, which tells us how much we need to
+  // add to make all table indexes positive while keeping our slot
+  // boundaries aligned.
+  uintptr_t area0_slots = (area1_base + (1ull << shift) - 1) / (1ull << shift);
+  uintptr_t additive = (area0_slots << shift) - area1_base;
+
   // Construct the map from physical address to page_info array.
-  size_t map_size = ((page_info_areas.back().end - 1) >> shift) + 1;
+  size_t map_size = ((page_info_areas.back().end + additive - 1) >> shift) + 1;
   if (map_size >= NELEM(page_info_map))
     panic("page_info map is too large (%zu entries, %d shift)",
           map_size, shift);
   console.println("kalloc: page_info map has ", map_size,
-                  " entries starting at bit ", shift);
+                  " entries using formula",
+                  " (pa+", shex(additive), ") >> ", shift);
   for (auto &area : page_info_areas) {
-    for (size_t i = area.base >> shift; i <= (area.end - 1) >> shift; ++i) {
+    for (size_t i = (area.base + additive) >> shift;
+         i <= (area.end + additive - 1) >> shift; ++i) {
       assert(!page_info_map[i].array);
       page_info_map[i].phys_base = area.phys_base;
       page_info_map[i].array = (page_info*)p2v(area.base);
     }
   }
+  page_info_map_add = additive;
   page_info_map_shift = shift;
   page_info_map_end = page_info_map + map_size;
 }

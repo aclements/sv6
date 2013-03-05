@@ -9,9 +9,11 @@
 #include <cstddef>
 
 // The page_info_map maps from physical address to page_info array.
-// The map is indexed by (phys >> page_info_map_shift).  Since the
-// page_info arrays live at the beginning of each region, this can
-// also be used to find the page_info array of a given page_info*.
+// The map is indexed by
+//   ((phys + page_info_map_add) >> page_info_map_shift)
+// Since the page_info arrays live at the beginning of each region,
+// this can also be used to find the page_info array of a given
+// page_info*.
 struct page_info_map_entry
 {
   // The physical address of the page represented by array[0].
@@ -19,8 +21,8 @@ struct page_info_map_entry
   // The page_info array, indexed by (phys - phys_base) / PGSIZE.
   class page_info *array;
 };
-extern page_info_map_entry page_info_map[512];
-extern size_t page_info_map_shift;
+extern page_info_map_entry page_info_map[256];
+extern size_t page_info_map_add, page_info_map_shift;
 
 // One past the last used entry of page_info_map.
 extern page_info_map_entry *page_info_map_end;
@@ -50,7 +52,8 @@ public:
   static page_info *
   of(paddr pa)
   {
-    page_info_map_entry *entry = &page_info_map[pa >> page_info_map_shift];
+    page_info_map_entry *entry =
+      &page_info_map[(pa + page_info_map_add) >> page_info_map_shift];
     assert(entry < page_info_map_end);
     auto index = (pa - entry->phys_base) / PGSIZE;
     return &entry->array[index];
@@ -67,7 +70,8 @@ public:
   paddr pa() const
   {
     paddr info_pa = (paddr)this - KBASE;
-    page_info_map_entry *entry = &page_info_map[info_pa >> page_info_map_shift];
+    page_info_map_entry *entry =
+      &page_info_map[(info_pa + page_info_map_add) >> page_info_map_shift];
     return entry->phys_base + (this - entry->array) * PGSIZE;
   }
 
