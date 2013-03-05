@@ -963,9 +963,6 @@ initkalloc(void)
     cprintf("%lu mbytes\n", mem.bytes() / (1<<20));
 
   // Construct one or more buddy allocators for each NUMA node
-  // XXX(austin) To reduce lock pressure, we might want to further
-  // subdivide these and spread out CPUs within a node (but still
-  // prefer stealing from the same node before others).
 
 #if KALLOC_LOAD_BALANCE
   void *base = p2v(mem.base());
