@@ -2,6 +2,7 @@
 
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
@@ -237,6 +238,37 @@ print_entry(Addr2line &addr2line, uint64_t count, uint64_t total,
   printf("\n");
 }
 
+static void
+selfless(void)
+{
+  int p[2], s[2], status = 0;
+  char x;
+  if (!isatty(1))
+    return;
+  if (pipe(p) < 0 || pipe2(s, O_CLOEXEC) < 0)
+    edie("%s: pipe", __func__);
+  if (fork() > 0) {
+    dup2(p[0], 0);
+    close(p[1]);
+    close(s[0]);
+    execlp("less", "less", "-SF", NULL);
+    write(s[1], &x, 1);
+    close(s[1]);
+    wait(&status);
+    exit(WIFEXITED(status) ? WEXITSTATUS(status) : 1);
+  }
+
+  close(s[1]);
+  if (read(s[0], &x, 1) == 0)
+    // exec succeeded
+    dup2(p[1], 1);
+  else
+    // exec failed
+    close(p[1]);
+  close(p[0]);
+  close(s[0]);
+}
+
 int
 main(int ac, char **av)
 {
@@ -251,6 +283,8 @@ main(int ac, char **av)
     fprintf(stderr, "usage: %s sample-file elf-file\n", av[0]);
     exit(EXIT_FAILURE);
   }
+
+  selfless();
 
   sample = av[1];
   elf = av[2];
