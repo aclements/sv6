@@ -1,0 +1,18 @@
+8f4fe4bf104935e82dfa46da73b1ace71f048d06
+  nlink link revival race
+
+1ee6b871efd00d8ee948e797b247f974d1fab338
+  nlink drops to zero during link or rename
+
+c904fc04d2fd488b569d2e770ac67cc77d974bc1
+  forgot to hold gc_epoch in hash table lookup
+
+e8faaaf653acb6af4d53f71d43c7692a61bb6a2f
+  crange search vs replace races
+
+3b88e296ea45fc859c2d357c9583e2415d065dcf
+  gc used wrong epoch?
+
+c88e0de458a0da84c559e89586102dc3b1403fb8
+  mmap va reuse during munmap shootdown 
+
