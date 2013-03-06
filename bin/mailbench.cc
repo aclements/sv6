@@ -134,7 +134,7 @@ int check()
 {
   char buf[1024];
 
-  while (read(1, buf, 1024) > 0) {
+  while (read(0, buf, 1024) > 0) {
     if (strstr(buf, "SPAM") != NULL) {
       return 1;
     }
@@ -146,13 +146,9 @@ static int
 ok(char *message, int n) 
 {
   int tochild[2];
-  int fromchild[2];
   int r = 1;
 
   if (pipe(tochild) < 0) {
-    die ("pipe failed");
-  }
-  if (pipe(fromchild) < 0) {
     die ("pipe failed");
   }
   int pid = xfork();
@@ -162,29 +158,18 @@ ok(char *message, int n)
     close(0);
     close(1);
     dup(tochild[0]);
-    dup(fromchild[1]);
     close(tochild[0]);
     close(tochild[1]);
-    close(fromchild[0]);
     r = check();  // XXX exec()
-    int n = write(1, &r, sizeof(int));
-    if (n != sizeof(int)) {
-      die("pipe child write");
-    }
-    exit(0);
+    exit(r);
   } else {
     close(tochild[0]);
-    close(fromchild[1]);
     if (write(tochild[1], message, n) < 0) {
       die("write filter failed");
     }
     close(tochild[1]);
-    int n = read(fromchild[0], &r, sizeof(int));
-    if (n != sizeof(int)) {
-      die("pipe parent read");
-    }
-    close(fromchild[0]);
-    xwait();
+    if (wait(-1, &r) < 0)
+      die("wait failed");
   }
   return r;
 }
@@ -304,7 +289,7 @@ client(int id)
 
     if (trace) printf("%d: client send\n", i);
 
-    nbytes = sendto(sock, (void *) cmessage, strlen (cmessage) + 1, 0,
+    nbytes = sendto(sock, (void *) cspam, strlen (cspam) + 1, 0,
                     (struct sockaddr *) & name, size);
     if (nbytes < 0) {
       die ("sendto (client) failed");
