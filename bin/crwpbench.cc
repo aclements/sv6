@@ -86,7 +86,7 @@ main(int ac, char** av)
   }
 
   for (int i = 0; i < nproc; i++)
-    xwait();
+    wait(NULL);
   uint64_t t1 = rdtsc();
 
   printf("%s: %lu\n", av[0], t1-t0);

@@ -195,6 +195,6 @@ main(int argc, char * argv[])
       exit(0);
     }
   }
-  xwait();
+  wait(NULL);
   return 0;
 }

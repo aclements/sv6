@@ -113,7 +113,7 @@ main(int ac, char** av)
   }
 
   for (uint32_t i = 0; i < nthread; i++)
-    xwait();
+    wait(NULL);
   uint64_t t1 = rdtsc();
   mtdisable("xv6-dirbench");
 

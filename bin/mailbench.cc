@@ -385,7 +385,7 @@ void clients()
 
   for (int i = 0; i < nclient; i++) {
 #if CLIENTPROC
-    xwait();
+    wait(NULL);
 #else
     pthread_join(tid[i], NULL);
 #endif
@@ -424,7 +424,7 @@ main (int argc, char *argv[])
     server();
   } else {
     clients();
-    xwait();
+    wait(NULL);
   }
 
 #ifdef XV6_USER

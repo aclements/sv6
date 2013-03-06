@@ -102,7 +102,7 @@ main(int ac, char **av)
   }
 
   for (int i = 0; i < nthread; i++)
-    xwait();
+    wait(NULL);
   u64 t1 = rdtsc();
   mtdisable("xv6-filebench");
 

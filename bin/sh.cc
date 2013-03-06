@@ -162,7 +162,7 @@ public:
       execv(argstrs[0], const_cast<char * const *>(argstrs.data()));
       edie("exec %s failed", argstrs[0]);
     }
-    return xwait();
+    return wait(NULL);
   }
 };
 
@@ -223,7 +223,7 @@ public:
     close(p[0]);
     close(p[1]);
     int res = right_->run();
-    xwait();
+    wait(NULL);
     return res;
   }
 };
