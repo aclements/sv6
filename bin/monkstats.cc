@@ -34,7 +34,7 @@ main(int ac, char * const av[])
     die("monkstats: exec failed");
   }
 
-  wait(-1, NULL);
+  wait(NULL);
 
   read_kstats(&kstats_after);
 

@@ -32,9 +32,16 @@ sys_exit(int status)
 
 //SYSCALL
 int
-sys_wait(int pid, int *status)
+sys_waitpid(int pid, int *status, int options)
 {
   return wait(pid, status);
+}
+
+//SYSCALL
+int
+sys_wait(int *status)
+{
+  return wait(-1, status);
 }
 
 //SYSCALL

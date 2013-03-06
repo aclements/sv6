@@ -149,7 +149,7 @@ main(int ac, char **av)
     }
 
     for (u64 i = 0; i < ncore; i++)
-      wait(-1, NULL);
+      wait(NULL);
     if (barrier)
       die("forgot to call ready()");
     mtdisable("xv6-asharing");

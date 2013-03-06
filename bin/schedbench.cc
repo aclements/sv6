@@ -62,7 +62,7 @@ void master0(void)
 {
   go = 1;
   for (int i = 0; i < nworkers; i++)
-    wait(-1, NULL);
+    wait(NULL);
 }
 
 int

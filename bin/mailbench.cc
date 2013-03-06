@@ -168,7 +168,7 @@ ok(char *message, int n)
       die("write filter failed");
     }
     close(tochild[1]);
-    if (wait(-1, &r) < 0)
+    if (wait(&r) < 0)
       die("wait failed");
   }
   return r;

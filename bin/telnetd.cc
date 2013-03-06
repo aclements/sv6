@@ -13,7 +13,7 @@ dfork(void)
     return pid;
   } else if (pid > 0) {
     // Wait for intermediate process
-    wait(-1, NULL);
+    wait(NULL);
     return pid;
   }
 

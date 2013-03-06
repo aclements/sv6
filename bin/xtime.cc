@@ -63,7 +63,7 @@ main(int ac, char * const av[])
     die("xtime: exec failed");
   }
 
-  wait(-1, NULL);
+  wait(NULL);
   sys_stat* s1 = sys_stat::read();
   pmc_count pmc1 = pmc_count::read(0);
   u64 t1 = rdtsc();
