@@ -103,7 +103,7 @@ main(int ac, char *av[])
     die("perf: exec failed");
   }
 
-  wait(-1);
+  wait(-1, NULL);
   c.enable = false;
   conf(fd, c);
   return 0;

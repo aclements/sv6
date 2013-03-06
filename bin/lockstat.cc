@@ -80,7 +80,7 @@ main(int ac, char * const av[])
     die("lockstat: exec failed");
   }
   
-  wait(-1);
+  wait(-1, NULL);
   xwrite(fd, '2');
   stats();
   xwrite(fd, '3');

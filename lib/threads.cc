@@ -106,7 +106,7 @@ pthread_join(pthread_t tid, void** retval)
     *retval = 0;
   }
 
-  wait(tid);
+  wait(tid, NULL);
   return 0;
 }
 

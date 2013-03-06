@@ -30,12 +30,12 @@ forktree(void)
   }
 
   for (int i = 0; i < NCHILD; i++) {
-    if (wait(-1) < 0) {
+    if (wait(-1, NULL) < 0) {
       die("wait stopped early");
     }
   }
   
-  if (wait(-1) != -1) {
+  if (wait(-1, NULL) != -1) {
     die("wait got too many");
   }
 

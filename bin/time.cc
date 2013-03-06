@@ -18,7 +18,7 @@ main(int ac, char * const av[])
     die("time: exec failed");
   }
 
-  wait(-1);
+  wait(-1, NULL);
   u64 t1 = rdtsc();
   printf("%lu cycles\n", t1-t0);
   return 0;

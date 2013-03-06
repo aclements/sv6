@@ -25,15 +25,15 @@ static inline int xwait()
 
 #else // Must be xv6
 
-extern "C" int wait(int);
+extern "C" int wait(int,int*);
 
 #define xfork() fork(0)
 static inline int xwait()
 {
-  if (wait(-1) < 0)
+  if (wait(-1, NULL) < 0)
     edie("wait");
   return 0;
 }
-#define xpthread_join(tid) wait(tid)
+#define xpthread_join(tid) wait(tid, NULL)
 
 #endif

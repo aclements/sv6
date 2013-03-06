@@ -21,7 +21,7 @@ execbench(void)
       execv("forkexecbench", const_cast<char * const *>(av));
       die("exec failed\n");
     } else {
-      wait(-1);
+      wait(-1, NULL);
     }
   }
   mtops(NITERS);

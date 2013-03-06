@@ -140,7 +140,7 @@ idleloop(void)
         did_work += worked;
         // If we are no longer the idle thread, exit
         if (worked && myidle->cur != myproc())
-          exit();
+          exit(0);
       } while(worked);
       sti();
       if (did_work)

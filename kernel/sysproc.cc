@@ -26,15 +26,15 @@ sys_fork(int flags)
 void
 sys_exit(int status)
 {
-  exit();
+  exit(status);
   panic("exit() returned");
 }
 
 //SYSCALL
 int
-sys_wait(int pid)
+sys_wait(int pid, int *status)
 {
-  return wait(pid);
+  return wait(pid, status);
 }
 
 //SYSCALL

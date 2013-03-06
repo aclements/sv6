@@ -148,7 +148,7 @@ forkret(void)
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
 void
-exit(void)
+exit(int status)
 {
   struct proc *p, *np;
   int wakeupinit;
@@ -162,6 +162,8 @@ exit(void)
   // Kernel threads might not have a cwd
   if (myproc()->cwd != nullptr)
       myproc()->cwd.reset();
+
+  myproc()->status = status;
 
   // Pass abandoned children to init.
   wakeupinit = 0;
@@ -240,7 +242,7 @@ execstub(void)
 
   if (myproc()->killed) {
     mtstart(trap, myproc());
-    exit();
+    exit(-1);
   } 
 }
 
@@ -512,7 +514,7 @@ finishproc(struct proc *p, bool removepid)
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
-wait(int wpid)
+wait(int wpid, int *status)
 {
   struct proc *p, *np;
   int havekids, pid;
@@ -528,6 +530,7 @@ wait(int wpid)
 	if(p->get_state() == ZOMBIE){
 	  release(&p->lock);	// noone else better be trying to lock p
 	  pid = p->pid;
+          if (status) *status = p->status;
 	  SLIST_REMOVE(&myproc()->childq, p, proc, child_next);
 	  release(&myproc()->lock);
 
@@ -568,7 +571,7 @@ threadhelper(void (*fn)(void *), void *arg)
   post_swtch();
   mtstart(fn, myproc());
   fn(arg);
-  exit();
+  exit(0);
 }
 
 struct proc*

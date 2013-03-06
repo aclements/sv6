@@ -99,7 +99,7 @@ main (int argc, char *argv[])
     pthread_create(&tid, nullptr, thread, (void*)(long)i);
 
   for (int i = 0; i < nthread; i++)
-    wait(-1);
+    wait(-1, NULL);
 
   return 0;
 }

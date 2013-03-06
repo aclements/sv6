@@ -61,6 +61,7 @@ struct proc : public rcu_freed, public sched_link {
   char *kstack;                // Bottom of kernel stack for this process
   volatile int pid;            // Process ID
   struct proc *parent;         // Parent process
+  int status;                  // exit's returns status
   struct trapframe *tf;        // Trap frame for current syscall
   struct context *context;     // swtch() here to run process
   int killed;                  // If non-zero, have been killed

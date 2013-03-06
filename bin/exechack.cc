@@ -42,7 +42,7 @@ master(void)
     }
     
     while (pcount > PROCMIN) {
-      if (wait(-1) < 0)
+      if (wait(-1, NULL) < 0)
         die("master wait");
       pcount--;
       i++;
@@ -50,7 +50,7 @@ master(void)
   }
 
   while (pcount) {
-    wait(-1);
+    wait(-1, NULL);
     pcount--;
   }
   u64 t1 = rdtsc();

@@ -211,7 +211,7 @@ pipe1(void)
     if(total != 5 * 1033)
       printf("pipe1 oops 3 total %d\n", total);
     close(fds[0]);
-    wait(-1);
+    wait(-1, NULL);
   } else {
     die("fork(0) failed");
   }
@@ -258,9 +258,9 @@ preempt(void)
   kill(pid2);
   kill(pid3);
   printf("wait... ");
-  wait(-1);
-  wait(-1);
-  wait(-1);
+  wait(-1, NULL);
+  wait(-1, NULL);
+  wait(-1, NULL);
   printf("preempt ok\n");
 }
 
@@ -277,7 +277,7 @@ exitwait(void)
       return;
     }
     if(pid){
-      if(wait(-1) != pid){
+      if(wait(-1, NULL) != pid){
         printf("wait wrong pid\n");
         return;
       }
@@ -317,7 +317,7 @@ mem(void)
     printf("mem ok\n");
     exit(0);
   } else {
-    wait(-1);
+    wait(-1, NULL);
   }
 }
 
@@ -348,7 +348,7 @@ sharedfd(void)
   if(pid == 0)
     exit(0);
   else
-    wait(-1);
+    wait(-1, NULL);
   close(fd);
   fd = open("sharedfd", 0);
   if(fd < 0){
@@ -403,7 +403,7 @@ twofiles(void)
   }
   close(fd);
   if(pid)
-    wait(-1);
+    wait(-1, NULL);
   else
     exit(0);
 
@@ -459,7 +459,7 @@ createdelete(void)
   if(pid==0)
     exit(0);
   else
-    wait(-1);
+    wait(-1, NULL);
 
   for(i = 0; i < N; i++){
     name[0] = 'p';
@@ -602,7 +602,7 @@ concreate(void)
     if(pid == 0)
       exit(0);
     else
-      wait(-1);
+      wait(-1, NULL);
   }
 
   memset(fa, 0, sizeof(fa));
@@ -641,7 +641,7 @@ concreate(void)
     if(pid == 0)
       exit(0);
     else
-      wait(-1);
+      wait(-1, NULL);
   }
 
   printf("concreate ok\n");
@@ -1104,24 +1104,40 @@ void
 forktest(void)
 {
   int n, pid;
+  int status;
 
   printf("fork test\n");
 
+  #define NFORK 1000
   for(n=0; n<1000; n++){
     pid = fork(0);
     if(pid < 0)
       break;
     if(pid == 0)
-      exit(0);
+      exit(n);
   }
    
   for(; n > 0; n--){
-    if(wait(-1) < 0)
+    if(wait(-1, &status) < 0)
       die("wait stopped early");
+    if (status < 0 || status >= NFORK)
+      die("invalid status");
   }
   
-  if(wait(-1) != -1)
+  if(wait(-1, NULL) != -1)
     die("wait got too many");
+
+
+  // tests return status from exit
+  pid = fork(0);
+  if(pid < 0)
+    die("fork failed");
+  if(pid == 0)
+    exit(13);
+  if(wait(-1, &status) < 0)
+    die("wait failed");
+  if(status != 13)
+    die("strong status");
   
   printf("fork test OK\n");
 }
@@ -1186,7 +1202,7 @@ sbrktest(void)
     die("sbrk test failed post-fork");
   if(pid == 0)
     exit(0);
-  wait(-1);
+  wait(-1, NULL);
 
   // can one allocate the full 640K?
   // less a stack page and an empty page at the top.
@@ -1242,7 +1258,7 @@ sbrktest(void)
       kill(ppid);
       die("oops could read %x = %x", a, *a);
     }
-    wait(-1);
+  wait(-1, NULL);
   }
 #endif
 
@@ -1269,7 +1285,7 @@ sbrktest(void)
     if(pids[i] == -1)
       continue;
     kill(pids[i]);
-    wait(-1);
+    wait(-1, NULL);
   }
   if(c == (char*)0xffffffff)
     die("failed sbrk leaked memory");
@@ -1302,7 +1318,7 @@ validatetest(void)
     nsleep(0);
     nsleep(0);
     kill(pid);
-    wait(-1);
+    wait(-1, NULL);
 
     // try to crash the kernel by passing in a bad string pointer
     if(link("nosuchfile", (char*)p) != -1)
@@ -1347,7 +1363,7 @@ bigargtest(void)
     exit(0);
   } else if(pid < 0)
     die("bigargtest: fork failed");
-  wait(-1);
+  wait(-1, NULL);
 }
 
 void
@@ -1413,7 +1429,7 @@ unopentest(void)
     }
   }
   kill(pid);
-  wait(-1);
+  wait(-1, NULL);
 
   fprintf(stdout, "concurrent unlink/open ok\n");
 }
@@ -1460,7 +1476,7 @@ preads(void)
     exit(0);
 
   for (int i = 0; i < nprocs; i++)
-    wait(-1);
+    wait(-1, NULL);
 
   printf("concurrent preads OK\n");
 }
@@ -1526,7 +1542,7 @@ ftabletest(void)
     die("open");
 
   pthread_barrier_wait(&ftable_bar);
-  wait(-1);
+  wait(-1, NULL);
   printf("ftabletest ok\n");
 }
 
@@ -1567,7 +1583,7 @@ thrtest(void)
   pthread_barrier_wait(&bar1);
 
   for(int i = 0; i < nthread; i++)
-    wait(-1);
+    wait(-1, NULL);
 
   printf("thrtest ok\n");
 }
@@ -1628,7 +1644,7 @@ test_fault(char *p)
 
   close(fds[1]);
   bool faulted = (read(fds[0], &buf, 1) < 1);
-  wait(-1);
+  wait(-1, NULL);
   close(fds[0]);
   return faulted;
 }
@@ -1719,7 +1735,7 @@ vmconcurrent(void)
   }
 
   for(int i = 0; i < nthread; i++)
-    wait(-1);
+    wait(-1, NULL);
 
   printf("vmconcurrent ok\n");
 }
@@ -1761,7 +1777,7 @@ tlb(void)
   }
 
   for(int i = 0; i < nthread; i++)
-    wait(-1);
+    wait(-1, NULL);
 
   printf("tlb ok\n");
 }
@@ -1799,7 +1815,7 @@ floattest(void)
   }
 
   for(int i = 0; i < nthread; i++)
-    wait(-1);
+    wait(-1, NULL);
 
   if (success != nthread)
     die("not all float_thrs succeeded");
@@ -1834,7 +1850,7 @@ writeprotecttest(void)
   }
   else if (pid > 0)
   {
-    wait(-1);
+    wait(-1, NULL);
     int pid = fork(0);
     if (pid == 0)
     {
@@ -1850,7 +1866,7 @@ writeprotecttest(void)
     }
     else if (pid > 0)
     {
-      wait(-1);
+      wait(-1, NULL);
       printf("writeprotecttest ok\n");
     }
     else
