@@ -1,22 +1,32 @@
-#if defined(LINUX)
-#include "user/util.h"
-#include "types.h"
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include "libutil.h"
+#include "amd64.h"
+#include "xsys.h"
+
+// To build on Linux:
+//  make HW=linux
+
+#if !defined(XV6_USER)
+//#include "user/util.h"
+//#include "types.h"
+
+#include <errno.h>
+#include <pthread.h>
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include "xsys.h"
 #else
 #include "types.h"
 #include "user.h"
+#include "pthread.h"
 #include "mtrace.h"
 #include "amd64.h"
 #include "xsys.h"
 #endif
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
 
 static const bool pinit = true;
 
@@ -29,15 +39,15 @@ static char pn[32]
 __attribute__((aligned(4096)));
 
 void
-bench(u32 tid, int nloop, const char* path)
+bench(uint32_t tid, int nloop, const char* path)
 {
 //  char pn[32];
 
   if (pinit)
     setaffinity(tid);
 
-  for (u32 x = 0; x < nloop; x++) {
-    for (u32 i = 0; i < nfile; i++) {
+  for (uint32_t x = 0; x < nloop; x++) {
+    for (uint32_t i = 0; i < nfile; i++) {
       snprintf(pn, sizeof(pn), "%s/f:%d:%d", path, tid, i);
 
       int fd = open(pn, O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
@@ -47,7 +57,7 @@ bench(u32 tid, int nloop, const char* path)
       close(fd);
     }
 
-    for (u32 i = 0; i < nlookup; i++) {
+    for (uint32_t i = 0; i < nlookup; i++) {
       snprintf(pn, sizeof(pn), "%s/f:%d:%d", path, tid, (i % nfile));
       int fd = open(pn, O_RDWR);
       if (fd < 0)
@@ -56,7 +66,7 @@ bench(u32 tid, int nloop, const char* path)
       close(fd);
     }
 
-    for (u32 i = 0; i < nfile; i++) {
+    for (uint32_t i = 0; i < nfile; i++) {
       snprintf(pn, sizeof(pn), "%s/f:%d:%d", path, tid, i);
       if (unlink(pn) < 0)
 	die("unlink failed\n");
@@ -93,8 +103,8 @@ main(int ac, char** av)
 
   mtenable_type(mtrace_record_ascope, "xv6-dirbench");
 
-  u64 t0 = rdtsc();
-  for(u32 i = 0; i < nthread; i++) {
+  uint64_t t0 = rdtsc();
+  for(uint32_t i = 0; i < nthread; i++) {
     int pid = xfork();
     if (pid == 0) {
       bench(i, nloop, path);
@@ -102,9 +112,9 @@ main(int ac, char** av)
       die("fork");
   }
 
-  for (u32 i = 0; i < nthread; i++)
+  for (uint32_t i = 0; i < nthread; i++)
     xwait();
-  u64 t1 = rdtsc();
+  uint64_t t1 = rdtsc();
   mtdisable("xv6-dirbench");
 
   printf("dirbench: %lu\n", t1-t0);

@@ -76,6 +76,7 @@ UPROGS_NATIVE := \
 	mapbench \
 	tee \
         fstest \
+        dirbench \
 	mailbench \
 
 FSEXTRA += \
