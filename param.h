@@ -59,7 +59,7 @@
 #define PERFSIZE      (16<<20ull)
 #elif defined(HW_mtrace)
 #define DEBUG         0
-#define NCPU          4   // maximum number of CPUs
+#define NCPU          16   // maximum number of CPUs
 #define NSOCKET       2
 #define MTRACE        1
 #define PERFSIZE      (16<<20ull)

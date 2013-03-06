@@ -22,3 +22,8 @@ lwip
 cscope.out
 cscope.files
 tags
+bin/hello.cc
+mscan.*.out
+*.swp
+*.log
+cscope.*
