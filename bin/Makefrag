@@ -52,6 +52,7 @@ UPROGS_BIN= \
 	local_server \
 	local_client \
 	mailbench \
+	mailfilter\
         fstest \
 	base64 \
 	tee \
@@ -78,6 +79,7 @@ UPROGS_NATIVE := \
         fstest \
         dirbench \
 	mailbench \
+	mailfilter \
 	sh \
 
 FSEXTRA += \

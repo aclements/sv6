@@ -32,14 +32,14 @@
 #define MAXCPU 100
 #define MAXMSG  512
 #define MAXPATH 100
+#define MAILDIR "u%d"
 #define SMESSAGE "OK"
-#define CMESSAGE "MAIL from: kaashoek@mit.edu\nRCPT TO: %d@mit.edu\nDATA\nDATASTRING Hello\nENDDATA\n"
-#define CMSGSPAM "MAIL from: kaashoek@mit.edu\nRCPT TO: %d@mit.edu\nDATA\nDATASTRING SPAM\nENDDATA\n"
+#define CMESSAGE "MAIL from: kaashoek@mit.edu\nRCPT TO: %s@mit.edu\nDATA\nDATASTRING Hello\nENDDATA\n"
+#define CMSGSPAM "MAIL from: kaashoek@mit.edu\nRCPT TO: %s@mit.edu\nDATA\nDATASTRING SPAM\nENDDATA\n"
 #define DIE "QUIT"
 #define CLIENTPROC 1
 #define NOFDSHARE 1
 #define AFFINITY 1
-
 
 int nthread;
 int nclient;
@@ -129,24 +129,12 @@ make_named_socket(const char *filename)
   return sock;
 }
 
-static 
-int check()
-{
-  char buf[1024];
-
-  while (read(0, buf, 1024) > 0) {
-    if (strstr(buf, "SPAM") != NULL) {
-      return 1;
-    }
-  }
-  return 0;
-}
-
 static int
 ok(char *message, int n) 
 {
   int tochild[2];
-  int r = 1;
+  int r = 0;
+  const char *av[] = { "./mailfilter", 0 };
 
   if (pipe(tochild) < 0) {
     die ("pipe failed");
@@ -156,12 +144,13 @@ ok(char *message, int n)
     die("fork filter failed");
   if (pid == 0) {  
     close(0);
-    close(1);
     dup(tochild[0]);
     close(tochild[0]);
     close(tochild[1]);
-    r = check();  // XXX exec()
-    exit(r);
+    if (execv("./mailfilter",  const_cast<char * const *>(av)) < 0) {
+      die("execv failed");
+    }
+    exit(1);  // if filter fails, deliver
   } else {
     close(tochild[0]);
     if (write(tochild[1], message, n) < 0) {
@@ -179,24 +168,24 @@ store(char *message, int n)
 {
   char filename[MAXPATH];
   char *p = strstr(message, "TO:");
+  int i;
   while (*p != ' ') p++;
   while (*p == ' ') p++;
-  for (int i = 0; *p != '@'; i++,p++) filename[i] = *p;
+  for (i = 0; *p != '@'; i++,p++) filename[i] = *p;
+  filename[i] = 0;
   int fd = open(filename, O_APPEND|O_WRONLY, S_IRWXU);
   if (fd < 0) {
-    die("open failed");
+    printf("open %s failed\n", filename);
+    return;
   }
   p = strstr(message, "DATASTRING");
   while (*p != ' ') p++;
   char *q = strstr(p, "ENDDATA");
   while (p != q) {
-#if 1
-    int n;
-    n = write(fd, p, 1);
+    int n = write(fd, p, 1);
     if (n != 1) {
       die("write failed");
     }
-#endif
     p++;
   }
   close(fd);
@@ -262,20 +251,21 @@ client(int id)
   char message[MAXMSG];
   char cmessage[MAXMSG];
   char cspam[MAXMSG];
+  char maildir[MAXMSG];
   struct sockaddr_un name;
   char path[MAXPATH];
   size_t size;
   int nbytes;
 
-  snprintf(cmessage, MAXMSG, "%d", id);
-  int fd = open(cmessage, O_APPEND|O_WRONLY|O_CREAT, S_IRWXU);
+  snprintf(maildir, MAXMSG, MAILDIR, id);
+  int fd = open(maildir, O_APPEND|O_WRONLY|O_CREAT, S_IRWXU);
   if (fd < 0) {
-    die("open failed");
+    die("open cmessage failed");
   }
   close(fd);
 
-  snprintf(cmessage, MAXMSG, CMESSAGE, id);
-  snprintf(cspam, MAXMSG, CMSGSPAM, id);
+  snprintf(cmessage, MAXMSG, CMESSAGE, maildir);
+  snprintf(cspam, MAXMSG, CMSGSPAM, maildir);
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
 
   sock = make_named_socket (path);
@@ -289,7 +279,7 @@ client(int id)
 
     if (trace) printf("%d: client send\n", i);
 
-    nbytes = sendto(sock, (void *) cspam, strlen (cspam) + 1, 0,
+    nbytes = sendto(sock, (void *) cmessage, strlen (cmessage) + 1, 0,
                     (struct sockaddr *) & name, size);
     if (nbytes < 0) {
       die ("sendto (client) failed");
@@ -323,8 +313,7 @@ client(int id)
 
   unlink (path);
 
-  snprintf(cmessage, MAXMSG, "%d", id);
-  unlink (cmessage);
+  unlink (maildir);
 
   close (sock);
 }
