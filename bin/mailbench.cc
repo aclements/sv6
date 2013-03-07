@@ -6,6 +6,7 @@
 #include "libutil.h"
 #include "amd64.h"
 #include "xsys.h"
+#include "spam.h"
 
 // To build on Linux:
 //  make HW=linux
@@ -32,12 +33,13 @@
 #define MAXCPU 100
 #define MAXMSG  512
 #define MAXPATH 100
-#define MAILDIR "u%d"
+#define MAILBOX "u%d"
 #define SMESSAGE "OK"
 #define CMESSAGE "MAIL from: kaashoek@mit.edu\nRCPT TO: %s@mit.edu\nDATA\nDATASTRING Hello\nENDDATA\n"
 #define CMSGSPAM "MAIL from: kaashoek@mit.edu\nRCPT TO: %s@mit.edu\nDATA\nDATASTRING SPAM\nENDDATA\n"
 #define DIE "QUIT"
 #define CLIENTPROC 1
+#define SERVERPROC 1
 #define NOFDSHARE 1
 #define AFFINITY 1
 
@@ -47,6 +49,8 @@ int nmsg;
 int trace = 0;
 int filter;
 int deliver;
+int isMultithreaded;
+int doExec;
 int sock;  // socket on which server threads receive
 long *clientid;
 long *serverid;
@@ -129,8 +133,12 @@ make_named_socket(const char *filename)
   return sock;
 }
 
+//
+// Server side
+//
+
 static int
-ok(char *message, int n) 
+isOk(char *message, int n) 
 {
   int tochild[2];
   int r = 0;
@@ -147,10 +155,15 @@ ok(char *message, int n)
     dup(tochild[0]);
     close(tochild[0]);
     close(tochild[1]);
-    if (execv("./mailfilter",  const_cast<char * const *>(av)) < 0) {
-      die("execv failed");
+    if (doExec) {
+      if (execv("./mailfilter",  const_cast<char * const *>(av)) < 0) {
+        die("execv failed");
+      }
+      exit(1);  // if exec fails, deliver
+    } else {
+      r = isLegit();
+      exit(r);
     }
-    exit(1);  // if filter fails, deliver
   } else {
     close(tochild[0]);
     if (write(tochild[1], message, n) < 0) {
@@ -204,7 +217,7 @@ thread(void* x)
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
 #endif
-  printf("server thread %d(%d) running\n", getpid(), (int) id);
+  printf("server proc/thread %d(%d) running\n", getpid(), (int) id);
 
   int n = 0;
   while (1)
@@ -223,7 +236,7 @@ thread(void* x)
       pthread_exit(0);
     }
 
-    if ((filter && ok(message, nbytes)) || deliver) {
+    if ((filter && isOk(message, nbytes)) || deliver) {
       store(message, nbytes);
     }
     
@@ -243,6 +256,50 @@ thread(void* x)
   }
 }
 
+void multithreaded()
+{
+  pthread_t tid[MAXCPU];
+
+  for (int i = 0; i < nthread; i++) {
+#if defined(XV6_USER) && NOFDSHARE
+    pthread_createflags(&tid[i], 0, thread, (void*)(long)i, 0);
+#else
+    printf("create thread %d\n", i);
+    xthread_create(&tid[i], 0, thread, (void*)(long)i);
+#endif
+  }
+
+  for (int i = 0; i < nthread; i++)
+    pthread_join(tid[i], NULL);
+
+  exit(0);
+}
+
+void multiproced() 
+{
+  pthread_t tid[MAXCPU];
+
+  for (int i = 0; i < nthread; i++) {
+    int pid = xfork();
+    if (pid < 0) {
+      die("fork failed");
+    }
+    if (pid == 0) {
+      thread((void*)(long)i);
+    } else {
+      tid[i] = pid;
+    }
+  }
+
+  for (int i = 0; i < nthread; i++)
+    waitpid(tid[i], NULL, 0);
+
+  exit(0);
+}
+
+//
+// Client side
+//
 
 void 
 client(int id)
@@ -251,21 +308,21 @@ client(int id)
   char message[MAXMSG];
   char cmessage[MAXMSG];
   char cspam[MAXMSG];
-  char maildir[MAXMSG];
+  char mailbox[MAXMSG];
   struct sockaddr_un name;
   char path[MAXPATH];
   size_t size;
   int nbytes;
 
-  snprintf(maildir, MAXMSG, MAILDIR, id);
-  int fd = open(maildir, O_APPEND|O_WRONLY|O_CREAT, S_IRWXU);
+  snprintf(mailbox, MAXMSG, MAILBOX, id);
+  int fd = open(mailbox, O_APPEND|O_WRONLY|O_CREAT, S_IRWXU);
   if (fd < 0) {
     die("open cmessage failed");
   }
   close(fd);
 
-  snprintf(cmessage, MAXMSG, CMESSAGE, maildir);
-  snprintf(cspam, MAXMSG, CMSGSPAM, maildir);
+  snprintf(cmessage, MAXMSG, CMESSAGE, mailbox);
+  snprintf(cspam, MAXMSG, CMSGSPAM, mailbox);
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
 
   sock = make_named_socket (path);
@@ -313,30 +370,10 @@ client(int id)
 
   unlink (path);
 
-  unlink (maildir);
+  unlink (mailbox);
 
   close (sock);
 }
-
-void server()
-{
-  pthread_t tid[MAXCPU];
-
-  for (int i = 0; i < nthread; i++) {
-#if defined(XV6_USER) && NOFDSHARE
-    pthread_createflags(&tid[i], 0, thread, (void*)(long)i, 0);
-#else
-    printf("create thread %d\n", i);
-    xthread_create(&tid[i], 0, thread, (void*)(long)i);
-#endif
-  }
-
-  for (int i = 0; i < nthread; i++)
-    pthread_join(tid[i], NULL);
-
-  exit(0);
-}
-
 
 static void*
 client_thread(void* x)
@@ -383,22 +420,26 @@ void clients()
   for (int i = 0; i < nclient; i++) {
     sum += clienttimes[i];
   }
-  printf("avg cycles/iter: %lu\n", sum / nclient);
-
+  // printf("avg cycles/iter: %lu\n", sum / nclient);
 }
      
 int
 main (int argc, char *argv[])
 {
-  if (argc < 6)
-    die("usage: %s n-server-threads n-client-procs nmsg filter deliver", argv[0]);
+  if (argc < 8)
+    die("usage: %s n-server-threads n-client-procs nmsg filter deliver multithreaded exec", argv[0]);
 
   nthread = atoi(argv[1]);
   nclient = atoi(argv[2]);
   nmsg = atoi(argv[3]);
   filter = atoi(argv[4]);
   deliver = atoi(argv[5]);
+  isMultithreaded = atoi(argv[6]);
+  doExec = atoi(argv[7]);
 
+  printf("nservers %d nclients %d nmsg %d filter %d deliver %d threaded %d exec %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec);
+
+  // open the server socket before clients run
   unlink (SERVER);
   sock = make_named_socket (SERVER);
 
@@ -410,7 +451,8 @@ main (int argc, char *argv[])
     die("fork failed %s", argv[0]);
 
   if (pid == 0) {
-    server();
+    if (isMultithreaded) multithreaded();
+    else multiproced();
   } else {
     clients();
     wait(NULL);

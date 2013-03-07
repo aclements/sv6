@@ -6,6 +6,7 @@
 #include "libutil.h"
 #include "amd64.h"
 #include "xsys.h"
+#include "spam.h"
 
 // To build on Linux:
 //  make HW=linux
@@ -13,13 +14,7 @@
 int
 main (int argc, char *argv[])
 {
-  char buf[1024];
-
-  while (read(0, buf, 1024) > 0) {
-    if (strstr(buf, "SPAM") != NULL) {
-      exit(0);
-    }
-  }
-  exit(1);
+  int r = isLegit();
+  exit(r);
 }
 
