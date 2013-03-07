@@ -637,7 +637,7 @@ early_kalloc(size_t size)
 void
 kmemprint(print_stream *s)
 {
-  for (int cpu = 0; cpu < NCPU; ++cpu) {
+  for (int cpu = 0; cpu < ncpu; ++cpu) {
     auto &local = cpu_mem[cpu].steal.get_local();
     s->print("cpu ", cpu, ":");
     for (auto buddy = local.low; buddy < local.high; ++buddy) {
