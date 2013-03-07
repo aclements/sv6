@@ -422,22 +422,59 @@ void clients()
   }
   // printf("avg cycles/iter: %lu\n", sum / nclient);
 }
+
+static void
+usage(const char* prog)
+{
+  fprintf(stderr, "Usage: %s nserver nclient nmsg [-e(exec&fork)] [-f(ork)] [-p(rocesses] [-w(rite)\n", prog);
+}
      
 int
 main (int argc, char *argv[])
 {
-  if (argc < 8)
-    die("usage: %s n-server-threads n-client-procs nmsg filter deliver multithreaded exec", argv[0]);
+  if (argc < 4) {
+    usage(argv[0]);
+    return -1;
+  }
 
   nthread = atoi(argv[1]);
   nclient = atoi(argv[2]);
   nmsg = atoi(argv[3]);
-  filter = atoi(argv[4]);
-  deliver = atoi(argv[5]);
-  isMultithreaded = atoi(argv[6]);
-  doExec = atoi(argv[7]);
+  isMultithreaded = 1;
+  filter = 0;
+  deliver = 0;
+  doExec = 0;
+  for (;;) {
+    int opt = getopt(argc, argv, "efpw");
+    if (opt == -1)
+      break;
 
-  printf("nservers %d nclients %d nmsg %d filter %d deliver %d threaded %d exec %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec);
+    switch (opt) {
+
+    case 'e':
+      filter = true;
+      doExec = 1;
+      break;
+
+    case 'f':
+      filter = true;
+      break;
+
+    case 'p':
+      isMultithreaded = false;
+      break;
+      
+    case 'w':
+      deliver = true;
+      break;
+
+    default:
+      usage(argv[0]);
+      return -1;
+    }
+  }
+
+  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %d threaded %d exec filter %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec);
 
   // open the server socket before clients run
   unlink (SERVER);
