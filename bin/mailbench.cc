@@ -217,7 +217,7 @@ thread(void* x)
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
 #endif
-  printf("server proc/thread %d(%d) running\n", getpid(), (int) id);
+  // printf("server proc/thread %d(%d) running\n", getpid(), (int) id);
 
   int n = 0;
   while (1)
@@ -232,7 +232,7 @@ thread(void* x)
     }
 
     if (strcmp(message, DIE) == 0) {
-      printf("server %ld done\n", id);
+      // printf("server %ld done\n", id);
       pthread_exit(0);
     }
 
@@ -401,7 +401,6 @@ void clients()
     if (pid < 0)
       die("fork failed clients");
     if (pid == 0) {
-      printf("fork client proc %ld\n", i);
       client_thread(clientid);
     }
 #else
@@ -432,14 +431,6 @@ usage(const char* prog)
 int
 main (int argc, char *argv[])
 {
-  if (argc < 4) {
-    usage(argv[0]);
-    return -1;
-  }
-
-  nthread = atoi(argv[1]);
-  nclient = atoi(argv[2]);
-  nmsg = atoi(argv[3]);
   isMultithreaded = 1;
   filter = 0;
   deliver = 0;
@@ -473,6 +464,16 @@ main (int argc, char *argv[])
       return -1;
     }
   }
+
+  if (optind +3 == argc) {
+    nthread = atoi(argv[optind]);
+    nclient = atoi(argv[optind+1]);
+    nmsg = atoi(argv[optind+2]);
+  } else {
+    usage(argv[0]);
+    return -1;
+  }
+
 
   printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %d threaded %d exec filter %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec);
 
