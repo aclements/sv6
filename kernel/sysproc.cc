@@ -32,14 +32,14 @@ sys_exit(int status)
 
 //SYSCALL
 int
-sys_waitpid(int pid, int *status, int options)
+sys_waitpid(int pid,  userptr<int> status, int options)
 {
   return wait(pid, status);
 }
 
 //SYSCALL
 int
-sys_wait(int *status)
+sys_wait(userptr<int> status)
 {
   return wait(-1, status);
 }

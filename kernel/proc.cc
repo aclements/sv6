@@ -514,7 +514,7 @@ finishproc(struct proc *p, bool removepid)
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
-wait(int wpid, int *status)
+wait(int wpid,  userptr<int> status)
 {
   struct proc *p, *np;
   int havekids, pid;
@@ -530,9 +530,12 @@ wait(int wpid, int *status)
 	if(p->get_state() == ZOMBIE){
 	  release(&p->lock);	// noone else better be trying to lock p
 	  pid = p->pid;
-          if (status) *status = p->status;
 	  SLIST_REMOVE(&myproc()->childq, p, proc, child_next);
 	  release(&myproc()->lock);
+
+          if (status) {
+            status.store(&p->status);
+          }
 
           if (!xnspid->remove(pid, &p))
             panic("wait: ns_remove");

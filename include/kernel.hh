@@ -181,7 +181,6 @@ void            pinit(void);
 void            procdumpall(void);
 void            scheduler(void) __noret__;
 void            userinit(void);
-int             wait(int, int*);
 void            yield(void);
 struct proc*    threadalloc(void (*fn)(void*), void *arg);
 struct proc*    threadpin(void (*fn)(void*), void *arg, const char *name, int cpu);
@@ -211,6 +210,7 @@ u64             syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 // sysfile.cc
 #include "userptr.hh"
 #include "ref.hh"
+int             wait(int, userptr<int>);
 int             doexec(const char* upath,
                        userptr<userptr<char> const> uargv);
 int             fdalloc(file *f, int omode);
