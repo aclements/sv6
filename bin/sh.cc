@@ -5,6 +5,7 @@
 #include "xsys.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -285,6 +286,42 @@ public:
   }
 };
 
+class expr_var : public expr
+{
+  const string var_;
+
+public:
+  expr_var(const string var)
+    : var_(var) { }
+
+  void eval(vector<string> *out) override
+  {
+    out->push_back(getvar(var_));
+  }
+};
+
+class expr_concat : public expr
+{
+  sref<expr> left_, right_;
+
+public:
+  expr_concat(const sref<expr> &left, const sref<expr> &right)
+    : left_(left), right_(right) { }
+
+  void eval(vector<string> *out) override
+  {
+    // bash/zsh have some crazy and inconsistent rules about how to
+    // concatenate list-like expressions.  We always use Cartesian
+    // product.
+    vector<string> left, right;
+    left_->eval(&left);
+    right_->eval(&right);
+    for (auto &r : right)
+      for (auto &l : left)
+        out->push_back(l + r);
+  }
+};
+
 //////////////////////////////////////////////////////////////////
 // Parser
 //
@@ -359,6 +396,8 @@ lex(const string &buf, bool eof, vector<tok> *toks)
         else if (pos+1 == end && !eof)
           // Escaped newline.  Get more input.
           throw syntax_incomplete();
+      } else if (*pos == '$' && (pos+1) < end) {
+        goto do_var;
       } else {
         word += *pos;
         if (*pos == '=' && word.size() > 1) {
@@ -384,9 +423,33 @@ lex(const string &buf, bool eof, vector<tok> *toks)
         ++pos;
       else if (*pos == '\\' && strchr("$`\"\\", *(pos+1)))
         word += *++pos;
+      else if (*pos == '$' && (pos+1) < end)
+        goto do_var;
       else
         word += *pos;
       ++pos;
+      break;
+
+    do_var:
+      ++pos;
+      toks->push_back(tok{'a', move(word)});
+      word.clear();
+      if (*pos == '{') {
+        ++pos;
+        while (pos < end && *pos != '}')
+          word += *(pos++);
+        if (*pos != '}') {
+          if (eof)
+            throw syntax_error("unterminated substitution");
+          throw syntax_incomplete();
+        }
+        ++pos;
+      } else {
+        while (pos < end && (isalnum(*pos) || *pos == '_'))
+          word += *(pos++);
+      }
+      toks->push_back(tok{'$', move(word)});
+      word.clear();
       break;
     }
   }
@@ -518,17 +581,31 @@ class parser
 
   sref<expr> pexpr()
   {
-    string buf, part;
-    bool first = true;
-    while (tryget("a=", first ? &buf : &part)) {
-      if (!first)
+    if (cur == toks.end() || !strchr("a=$", cur->type))
+      return sref<expr>();
+    string part;
+    sref<expr> res;
+    while (!tryget(" ")) {
+      string buf;
+      bool any = false;
+      while (tryget("a=", &part)) {
         buf += part;
-      first = false;
+        any = true;
+      }
+      sref<expr> word;
+      if (any) {
+        word = sref<expr>::transfer(new expr_word{move(buf)});
+      } else if (tryget("$", &part)) {
+        word = sref<expr>::transfer(new expr_var{move(part)});
+      } else {
+        die("unexpected token type in expression context");
+      }
+      if (!res)
+        res = move(word);
+      else
+        res = sref<expr>::transfer(new expr_concat{res, move(word)});
     }
-    if (tryget(" "))
-      return sref<expr>::transfer(new expr_word{move(buf)});
-    assert(first);
-    return sref<expr>();
+    return res;
   }
 
 public:
