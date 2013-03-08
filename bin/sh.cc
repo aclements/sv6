@@ -243,6 +243,30 @@ public:
   }
 };
 
+class cmd_for : public cmd
+{
+  string var_;
+  vector<sref<expr> > lst_;
+  sref<cmd> body_;
+
+public:
+  cmd_for(string var, vector<sref<expr> > &&lst, sref<cmd> body)
+    : var_(move(var)), lst_(move(lst)), body_(move(body)) { }
+
+  int run() override
+  {
+    vector<string> lst;
+    for (auto &e : lst_)
+      e->eval(&lst);
+    int last = 0;
+    for (auto &val : lst) {
+      setvar(var_, val);
+      last = body_->run();
+    }
+    return last;
+  }
+};
+
 class cmd_list : public cmd
 {
   sref<cmd> left_, right_;
@@ -356,9 +380,14 @@ lex(const string &buf, bool eof, vector<tok> *toks)
   string word;
 
   while (pos < end) {
-    if (mode == NORMAL)
-      while (pos < end && strchr(whitespace, *pos))
+    if (mode == NORMAL) {
+      while (pos < end && strchr(whitespace, *pos)) {
+        if (*pos == '\n')
+          // Semicolon injection
+          toks->push_back(tok{';'});
         ++pos;
+      }
+    }
     if (pos == end)
       break;
 
@@ -485,27 +514,51 @@ class parser
     return type;
   }
 
-  char require(const char *accept, const char *error)
+  char require(const char *accept, const char *error, string *word_out = nullptr)
   {
     if (!eof && cur == toks.end())
       throw syntax_incomplete();
-    char type = tryget(accept);
+    char type = tryget(accept, word_out);
     if (!type)
       throw syntax_error(error);
     return type;
   }
 
+  bool trygetword(const char *word)
+  {
+    if (cur == toks.end() || cur->type != 'a' || cur->word != word ||
+        cur + 1 == toks.end() || (cur+1)->type != ' ')
+      return false;
+    cur += 2;
+    return true;
+  }
+
+  void requireword(const char *word, const char *error)
+  {
+    if (!eof && cur == toks.end())
+      throw syntax_incomplete();
+    if (!trygetword(word))
+      throw syntax_error(error);
+  }
+
   sref<cmd> pexec()
   {
+    sref<cmd> res;
     if (tryget("(")) {
-      auto res = plist();
+      res = plist();
       require(")", "missing ')'");
       res = predir(res);
       return res;
+    } else if ((res = pfor())) {
+      res = predir(res);
+      return res;
+    } else if (trygetword("done")) {
+      cur -= 2;                 // Unget
+      return sref<cmd>::transfer(new cmd_exec());
     }
 
     cmd_exec *ex = new cmd_exec();
-    auto res = sref<cmd>::transfer(ex);
+    res = sref<cmd>::transfer(ex);
     bool may_assign = true;
     while (true) {
       res = predir(res);
@@ -527,6 +580,28 @@ class parser
       ex->argv_.push_back(move(word));
     }
     return res;
+  }
+
+  sref<cmd> pfor()
+  {
+    if (!trygetword("for"))
+      return sref<cmd>();
+    string var;
+    require("a", "expected for loop variable", &var);
+    require(" ", "bad for loop variable");
+    requireword("in", "expected 'in'");
+    vector<sref<expr> > lst;
+    while (true) {
+      sref<expr> elt;
+      if (!(elt = pexpr()))
+        break;
+      lst.push_back(move(elt));
+    }
+    require(";", "expected semicolon");
+    requireword("do", "expected 'do'");
+    auto body = plist();
+    requireword("done", "expected 'done'");
+    return sref<cmd>::transfer(new cmd_for{move(var), move(lst), move(body)});
   }
 
   sref<cmd> predir(sref<cmd> res)
