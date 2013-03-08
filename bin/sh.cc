@@ -19,6 +19,7 @@
 using std::move;
 using std::pair;
 using std::string;
+using std::swap;
 using std::vector;
 
 bool interactive = true;
@@ -324,6 +325,67 @@ public:
   }
 };
 
+class expr_brace : public expr
+{
+  sref<expr> body_;
+
+public:
+  expr_brace(sref<expr> body)
+    : body_(body) { }
+
+  void eval(vector<string> *out) override
+  {
+    vector<string> body;
+    char *send, *eend, *xend;
+    long start, end, step;
+
+    body_->eval(&body);
+    if (body.size() != 1)
+      goto bad;
+
+    // Shell is insane:
+    //   X=1.; echo {$X.3} => 1 2 3
+    //   X="{1"; echo $X..3} => syntax error
+    //   echo {"1.".3} => 1 2 3
+    // In other words, we have to parse here.
+    start = strtol(body[0].c_str(), &send, 10);
+    if (send == body[0].c_str() || strncmp(send, "..", 2))
+      goto bad;
+    end = strtol(send + 2, &eend, 10);
+    if (eend == send + 2)
+      goto bad;
+    if (*eend == 0) {
+      step = 1;
+    } else if (strncmp(eend, "..", 2) == 0) {
+      step = strtol(eend + 2, &xend, 10);
+      if (*xend)
+        goto bad;
+      if (step < 0) {
+        swap(start, end);
+        step = -step;
+      } else if (step == 0) {
+        goto bad;
+      }
+    } else {
+      goto bad;
+    }
+
+    if (start > end)
+      step = -step;
+
+    for (long val = start; (step > 0) ? val <= end : end <= val; val += step) {
+      char buf[64];
+      snprintf(buf, sizeof buf, "%ld", val);
+      out->push_back(buf);
+    }
+    return;
+
+  bad:
+    // XXX No way to return an error from here
+    fprintf(stderr, "sh: syntax error: bad brace expansion\n");
+  }
+};
+
 class expr_concat : public expr
 {
   sref<expr> left_, right_;
@@ -427,6 +489,10 @@ lex(const string &buf, bool eof, vector<tok> *toks)
           throw syntax_incomplete();
       } else if (*pos == '$' && (pos+1) < end) {
         goto do_var;
+      } else if (strchr("{}", *pos)) {
+        toks->push_back(tok{'a', move(word)});
+        toks->push_back(tok{*pos});
+        word.clear();
       } else {
         word += *pos;
         if (*pos == '=' && word.size() > 1) {
@@ -654,13 +720,16 @@ class parser
     return res;
   }
 
-  sref<expr> pexpr()
+  sref<expr> pexpr(const char *term = " ", char *last_out = nullptr)
   {
-    if (cur == toks.end() || !strchr("a=$", cur->type))
+    // Note that word sequences always begin with an 'a' token, even
+    // if that 'a' token is empty.
+    if (cur == toks.end() || cur->type != 'a')
       return sref<expr>();
     string part;
     sref<expr> res;
-    while (!tryget(" ")) {
+    char last;
+    while (!(last = tryget(term))) {
       string buf;
       bool any = false;
       while (tryget("a=", &part)) {
@@ -672,6 +741,13 @@ class parser
         word = sref<expr>::transfer(new expr_word{move(buf)});
       } else if (tryget("$", &part)) {
         word = sref<expr>::transfer(new expr_var{move(part)});
+      } else if (tryget("{")) {
+        char last;
+        word = sref<expr>::transfer(new expr_brace{pexpr(" }", &last)});
+        if (last != '}')
+          throw syntax_error("expected '}'");
+      } else if (tryget("}")) {
+        throw syntax_error("unexpected '}'");
       } else {
         die("unexpected token type in expression context");
       }
@@ -680,6 +756,8 @@ class parser
       else
         res = sref<expr>::transfer(new expr_concat{res, move(word)});
     }
+    if (last_out)
+      *last_out = last;
     return res;
   }
 
