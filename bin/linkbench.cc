@@ -33,19 +33,28 @@
 #include "mtrace.h"
 #endif
 
+enum { warmup_secs = 1 };
+enum { duration = 5 };
+
 static pthread_barrier_t bar;
 static int filefd;
 static uint64_t start_tsc[256], stop_tsc[256];
 static uint64_t tsc_stat[256], tsc_link[256], pmc_stat[256];
 static uint64_t count[256];
-static volatile bool stop;
+static volatile bool stop __mpalign__;
+static volatile bool warmup;
+static __padout__ __attribute__((unused));
 
 static histogram_log2<uint64_t, 1<<20> tsc_hist[256];
 
 void*
 timer_thread(void *)
 {
-  sleep(5);
+  warmup = true;
+  pthread_barrier_wait(&bar);
+  sleep(warmup_secs);
+  warmup = false;
+  sleep(duration);
   stop = true;
   return NULL;
 }
@@ -57,27 +66,31 @@ do_stat(void *opaque)
   setaffinity(cpu);
 
   pthread_barrier_wait(&bar);
-  start_tsc[cpu] = rdtsc();
 
+  bool mywarmup = true;
   struct stat st;
-  uint64_t lcount = 0;
-#ifdef RECORD_PMC
-  uint64_t pmc1 = rdpmc(RECORD_PMC);
-#endif
+  uint64_t mycount = 0;
+  uint64_t pmc1 = 0, pmc2 = 0;
   while (!stop) {
+    if (__builtin_expect(warmup != mywarmup, 0)) {
+      mywarmup = warmup;
+      mycount = 0;
+      start_tsc[cpu] = rdtsc();
+#ifdef RECORD_PMC
+      pmc1 = rdpmc(RECORD_PMC);
+#endif
+    }
     fstat(filefd, &st);
-    ++lcount;
+    ++mycount;
   }
 #ifdef RECORD_PMC
-  uint64_t pmc2 = rdpmc(RECORD_PMC);
+  pmc2 = rdpmc(RECORD_PMC);
 #endif
 
   stop_tsc[cpu] = rdtsc();
-  count[cpu] = lcount;
+  count[cpu] = mycount;
   tsc_stat[cpu] = stop_tsc[cpu] - start_tsc[cpu];
-#ifdef RECORD_PMC
   pmc_stat[cpu] = pmc2 - pmc1;
-#endif
   return NULL;
 }
 
@@ -93,17 +106,22 @@ do_link(void *opaque)
   snprintf(path, sizeof(path), "%d/link", (int)cpu);
 
   pthread_barrier_wait(&bar);
-  start_tsc[cpu] = rdtsc();
 
-  uint64_t lcount = 0;
+  bool mywarmup = true;
+  uint64_t mycount = 0;
   while (!stop) {
+    if (__builtin_expect(warmup != mywarmup, 0)) {
+      mywarmup = warmup;
+      mycount = 0;
+      start_tsc[cpu] = rdtsc();
+    }
     link("0/file", path);
     unlink(path);
-    ++lcount;
+    ++mycount;
   }
 
   stop_tsc[cpu] = rdtsc();
-  count[cpu] = lcount;
+  count[cpu] = mycount;
   tsc_link[cpu] = stop_tsc[cpu] - start_tsc[cpu];
   return NULL;
 }
@@ -130,11 +148,16 @@ do_both(void *opaque)
   snprintf(path, sizeof(path), "%d/link", (int)cpu);
 
   pthread_barrier_wait(&bar);
-  start_tsc[cpu] = rdtsc();
 
+  bool mywarmup = true;
   struct stat st;
-  uint64_t lcount = 0, ltsc_stat = 0, ltsc_link = 0, lpmc_stat = 0;
+  uint64_t mycount = 0, ltsc_stat = 0, ltsc_link = 0, lpmc_stat = 0;
   while (!stop) {
+    if (__builtin_expect(warmup != mywarmup, 0)) {
+      mywarmup = warmup;
+      mycount = ltsc_stat = ltsc_link = lpmc_stat = 0;
+      start_tsc[cpu] = rdtsc();
+    }
 #ifdef RECORD_PMC
     uint64_t pmc1 = rdpmc(RECORD_PMC);
 #endif
@@ -152,11 +175,11 @@ do_both(void *opaque)
     unlink(path);
     uint64_t tsc3 = rdtsc();
     ltsc_link += tsc3 - tsc2;
-    ++lcount;
+    ++mycount;
   }
 
   stop_tsc[cpu] = rdtsc();
-  count[cpu] = lcount;
+  count[cpu] = mycount;
   tsc_stat[cpu] = ltsc_stat;
   tsc_link[cpu] = ltsc_link;
   pmc_stat[cpu] = lpmc_stat;
@@ -201,9 +224,7 @@ main(int argc, char **argv)
   struct utsname uts;
   uname(&uts);
 
-  printf("# --kernel=%s --host=%s --kver=%s\n",
-         uts.sysname, uts.nodename, uts.version);
-  printf("# --cores=%d --duration=5s", nstats+nlinks);
+  printf("# --cores=%d --duration=%ds", nstats+nlinks, duration);
   if (both)
     printf("\n");
   else
@@ -240,11 +261,11 @@ main(int argc, char **argv)
   mtenable_type(mtrace_record_ascope, "xv6-linkbench");
 #endif
 
+  pthread_barrier_init(&bar, 0, nstats + nlinks + 1);
+
   // Run benchmark
   pthread_t timer;
   pthread_create(&timer, NULL, timer_thread, NULL);
-
-  pthread_barrier_init(&bar, 0, nstats + nlinks);
 
   pthread_t *threads = (pthread_t*)malloc(sizeof(*threads) * (nstats + nlinks));
   for (uintptr_t i = 0; i < nstats + nlinks; ++i)
@@ -295,5 +316,4 @@ main(int argc, char **argv)
   // hist.print();
 
   printf("\n");
-  sleep(10);
 }
