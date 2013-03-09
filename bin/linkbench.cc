@@ -4,30 +4,23 @@
 // scalability, while tweaking stat to not return the link count will
 // lead to perfect scalability of stat.
 
-// To build on Linux: g++ -DLINUX -std=c++0x -Wall -g -I.. -pthread linkbench.cc
-
 #include <fcntl.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
 
-#ifdef LINUX
-#include <pthread.h>
-#include <stdio.h>
-#include "user/util.h"
-#include "include/xsys.h"
-#include "include/histogram.hh"
-#else // Assume xv6
-#include "pthread.h"
-#include "types.h"
-#include "user.h"
 #include "amd64.h"
-#include "xsys.h"
-#include "pmc.hh"
-#include "bits.hh"
 #include "histogram.hh"
+#include "xsys.h"
+
+#if defined(XV6_USER)
+#include "pthread.h"
+#else
+#include <pthread.h>
 #endif
 
 #if defined(LINUX)
@@ -36,7 +29,7 @@
 #define RECORD_PMC 0
 #endif
 
-#if defined(MTRACE)
+#if MTRACE
 #include "mtrace.h"
 #endif
 
@@ -243,7 +236,7 @@ main(int argc, char **argv)
   if (filefd < 0)
     die("openat failed");
 
-#if defined(MTRACE)
+#if MTRACE
   mtenable_type(mtrace_record_ascope, "xv6-linkbench");
 #endif
 
@@ -265,7 +258,7 @@ main(int argc, char **argv)
   for (int i = 0; i < nstats + nlinks; ++i)
     xpthread_join(threads[i]);
 
-#if defined(MTRACE)
+#if MTRACE
   mtdisable("xv6-linkbench");
 #endif
 

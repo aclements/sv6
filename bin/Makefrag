@@ -81,6 +81,7 @@ UPROGS_NATIVE := \
 	mailbench \
 	mailfilter \
 	sh \
+	linkbench \
 
 FSEXTRA += \
 	bin/linkbench-tom \
