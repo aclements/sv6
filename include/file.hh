@@ -9,6 +9,7 @@
 #include "semaphore.h"
 #include "seqlock.hh"
 #include "mfs.hh"
+#include "sleeplock.hh"
 
 class dirns;
 
@@ -42,6 +43,7 @@ public:
   const bool writable;
   const bool append;
   u32 off;
+  sleeplock off_lock;
 
   int stat(struct stat*) override;
   ssize_t read(char *addr, size_t n) override;

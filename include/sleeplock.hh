@@ -28,6 +28,10 @@ class sleeplock {
     cv_.wake_all();
   }
 
+  lock_guard<sleeplock> guard() {
+    return lock_guard<sleeplock>(this);
+  }
+
  private:
   spinlock spinlock_;
   condvar cv_;

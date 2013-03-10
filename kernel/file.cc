@@ -41,6 +41,7 @@ file_inode::read(char *addr, size_t n)
   if (!readable)
     return -1;
 
+  auto l = off_lock.guard();
   ssize_t r;
   if (ip->type() == mnode::types::dev) {
     if (ip->as_dev()->major() >= NDEV || !devsw[ip->as_dev()->major()].read)
@@ -60,6 +61,7 @@ file_inode::write(const char *addr, size_t n)
   if (!writable)
     return -1;
 
+  auto l = off_lock.guard();
   ssize_t r;
   if (ip->type() == mnode::types::dev) {
     if (ip->as_dev()->major() >= NDEV || !devsw[ip->as_dev()->major()].write)
