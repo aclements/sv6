@@ -135,6 +135,10 @@ public:
       onzero();
   }
 
+  uint64_t get_consistent() const {
+    return ref_.invalid ? 0 : (ref_.count + 1);
+  }
+
 protected:
   virtual ~referenced() { }
   virtual void onzero() { delete this; }
