@@ -42,9 +42,9 @@ public:
   msock* as_sock();
   const msock* as_sock() const;
 
-  class linkcount : public refcache::referenced {
+  class linkcount : public FS_NLINK_REFCOUNT referenced {
   public:
-    linkcount() : refcache::referenced(0) {};
+    linkcount() : referenced(0) {};
     void onzero() override;
   };
 

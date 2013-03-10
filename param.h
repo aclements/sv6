@@ -51,6 +51,10 @@
 #define KALLOC_BUDDY_PER_CPU 1
 // Whether or not to load balance in the scheduler.
 #define SCHED_LOAD_BALANCE 0
+// Reference counting scheme for inode's nlink.  One of:
+//  :: for shared reference counters
+//  refcache:: for refcache counters
+#define FS_NLINK_REFCOUNT refcache::
 
 #if defined(HW_qemu)
 #define DEBUG         1
