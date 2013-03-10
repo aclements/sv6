@@ -192,7 +192,7 @@ trap(struct trapframe *tf)
       // modify this without protection because interrupts are
       // disabled.
       mycpu()->no_sched_count |= NO_SCHED_COUNT_YIELD_REQUESTED;
-      return;
+      goto out;
     }
     break;
   case T_IRQ0 + IRQ_IDE:
@@ -276,7 +276,7 @@ trap(struct trapframe *tf)
         h->handle_irq();
       lapiceoi();
       piceoi();
-      return;
+      goto out;
     }
 
     if (tf->trapno == T_PGFLT && do_pagefault(tf) == 0)
@@ -312,6 +312,7 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->killed && (tf->cs&3) == 0x3)
     exit(-1);
 
+ out:
 #if MTRACE
   mtstop(myproc());
   if (myproc()->mtrace_stacks.curr >= 0)
