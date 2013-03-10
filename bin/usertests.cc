@@ -1837,11 +1837,11 @@ writeprotecttest(void)
   {
     buffer[1]++;
     buffer[5000]++;
-    printf("Current values %d %d\n", buffer[1], buffer[5000]);
-    printf("reading from read-only #1: %d\n", buffer[2*4096]);
-    printf("writing to read-only #1\n");
+    //printf("Current values %d %d\n", buffer[1], buffer[5000]);
+    //printf("reading from read-only #1: %d\n", buffer[2*4096]);
+    //printf("writing to read-only #1\n");
     buffer[2*4096] = 1;
-    printf("done writing to read-only ?!\n");
+    //printf("done writing to read-only ?!\n");
     munmap(buffer, 4 * 4096);
     exit(0);
   }
@@ -1853,11 +1853,11 @@ writeprotecttest(void)
     {
       buffer[1]++;
       buffer[5000]++;
-      printf("Current values %d %d\n", buffer[1], buffer[5000]);
+      //printf("Current values %d %d\n", buffer[1], buffer[5000]);
       //printf("reading from read-only #2: %d\n", buffer[3*4096+3]);
-      printf("writing to read-only #2\n");
+      //printf("writing to read-only #2\n");
       buffer[3*4096+3] = 1;
-      printf("done writing to read-only ?!\n");
+      //printf("done writing to read-only ?!\n");
       munmap(buffer, 4 * 4096);
       exit(0);
     }
