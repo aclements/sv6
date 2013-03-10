@@ -41,13 +41,22 @@ file_inode::read(char *addr, size_t n)
   if (!readable)
     return -1;
 
-  auto l = off_lock.guard();
+  lock_guard<sleeplock> l;
   ssize_t r;
   if (ip->type() == mnode::types::dev) {
-    if (ip->as_dev()->major() >= NDEV || !devsw[ip->as_dev()->major()].read)
+    u16 major = ip->as_dev()->major();
+    if (major >= NDEV)
       return -1;
-    r = devsw[ip->as_dev()->major()].read(ip->as_dev(), addr, off, n);
+    if (devsw[major].read) {
+      return devsw[major].read(ip->as_dev(), addr, n);
+    } else if (devsw[major].pread) {
+      l = off_lock.guard();
+      r = devsw[major].pread(ip->as_dev(), addr, off, n);
+    } else {
+      return -1;
+    }
   } else {
+    l = off_lock.guard();
     r = readi(ip, addr, off, n);
   }
   if (r > 0)
@@ -61,13 +70,22 @@ file_inode::write(const char *addr, size_t n)
   if (!writable)
     return -1;
 
-  auto l = off_lock.guard();
+  lock_guard<sleeplock> l;
   ssize_t r;
   if (ip->type() == mnode::types::dev) {
-    if (ip->as_dev()->major() >= NDEV || !devsw[ip->as_dev()->major()].write)
+    u16 major = ip->as_dev()->major();
+    if (major >= NDEV)
       return -1;
-    r = devsw[ip->as_dev()->major()].write(ip->as_dev(), addr, off, n);
+    if (devsw[major].write) {
+      return devsw[major].write(ip->as_dev(), addr, n);
+    } else if (devsw[major].pwrite) {
+      l = off_lock.guard();
+      r = devsw[major].pwrite(ip->as_dev(), addr, off, n);
+    } else {
+      return -1;
+    }
   } else if (ip->type() == mnode::types::file) {
+    l = off_lock.guard();
     mfile::resizer resize;
     if (append) {
       resize = ip->as_file()->write_size();
@@ -89,6 +107,12 @@ file_inode::pread(char *addr, size_t n, off_t off)
 {
   if (!readable)
     return -1;
+  if (ip->type() == mnode::types::dev) {
+    u16 major = ip->as_dev()->major();
+    if (major >= NDEV || !devsw[major].pread)
+      return -1;
+    return devsw[major].pread(ip->as_dev(), addr, off, n);
+  }
   return readi(ip, addr, off, n);
 }
 
@@ -97,6 +121,12 @@ file_inode::pwrite(const char *addr, size_t n, off_t off)
 {
   if (!writable)
     return -1;
+  if (ip->type() == mnode::types::dev) {
+    u16 major = ip->as_dev()->major();
+    if (major >= NDEV || !devsw[major].pwrite)
+      return -1;
+    return devsw[major].pwrite(ip->as_dev(), addr, off, n);
+  }
   return writei(ip, addr, off, n);
 }
 

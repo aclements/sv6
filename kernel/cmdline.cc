@@ -29,5 +29,5 @@ initcmdline(void)
   if (VERBOSE)
     cprintf("cmdline: %s\n", cmdline);
 
-  devsw[MAJ_CMDLINE].read = cmdlineread;
+  devsw[MAJ_CMDLINE].pread = cmdlineread;
 }

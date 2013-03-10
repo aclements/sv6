@@ -250,7 +250,7 @@ initnet(void)
 {
   struct proc *t;
 
-  devsw[MAJ_NETIF].read = netifread;
+  devsw[MAJ_NETIF].pread = netifread;
 
   t = threadalloc(initnet_worker, nullptr);
   if (t == nullptr)

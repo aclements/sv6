@@ -737,7 +737,7 @@ sampread(mdev*, char *dst, u32 off, u32 n)
 }
 
 static int
-sampwrite(mdev*, const char *buf, u32 off, u32 n)
+sampwrite(mdev*, const char *buf, u32 n)
 {
   if (n != sizeof(perf_selector))
     return -1;
@@ -845,7 +845,7 @@ initsamp(void)
   pmu->initcore();
 
   devsw[MAJ_SAMPLER].write = sampwrite;
-  devsw[MAJ_SAMPLER].read = sampread;
+  devsw[MAJ_SAMPLER].pread = sampread;
   devsw[MAJ_SAMPLER].stat = sampstat;
 }
 

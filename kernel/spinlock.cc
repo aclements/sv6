@@ -233,7 +233,7 @@ lockstat_read(mdev*, char *dst, u32 off, u32 n)
 }
 
 static int
-lockstat_write(mdev*, const char *buf, u32 off, u32 n)
+lockstat_write(mdev*, const char *buf, u32 n)
 {
   int cmd = buf[0] - '0';
 
@@ -257,7 +257,7 @@ void
 initlockstat(void)
 {
   devsw[MAJ_LOCKSTAT].write = lockstat_write;
-  devsw[MAJ_LOCKSTAT].read = lockstat_read;
+  devsw[MAJ_LOCKSTAT].pread = lockstat_read;
 }
 #else
 void

@@ -288,7 +288,7 @@ readstat(mdev*, char *dst, u32 off, u32 n)
 }
 
 static int
-writectrl(mdev*, const char *buf, u32 off, u32 n)
+writectrl(mdev*, const char *buf, u32 n)
 {
   int op;
   if (n != 3*sizeof(int))
@@ -311,7 +311,7 @@ initgc(void)
   gc_batchsize = 100000000;
 
   devsw[MAJ_GC].write = writectrl;
-  devsw[MAJ_GC].read = readstat;
+  devsw[MAJ_GC].pread = readstat;
 
   for (int c = 0; c < ncpu; c++) {
     char namebuf[32];

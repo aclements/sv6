@@ -38,6 +38,6 @@ kstatsread(mdev*, char *dst, u32 off, u32 n)
 void
 initdev(void)
 {
-  devsw[MAJ_KCONFIG].read = kconfigread;
-  devsw[MAJ_KSTATS].read = kstatsread;
+  devsw[MAJ_KCONFIG].pread = kconfigread;
+  devsw[MAJ_KSTATS].pread = kstatsread;
 }

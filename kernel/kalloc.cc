@@ -1069,7 +1069,7 @@ initkalloc(void)
   kminit();
   kinited = 1;
 
-  devsw[MAJ_KMEMSTATS].read = kmemstatsread;
+  devsw[MAJ_KMEMSTATS].pread = kmemstatsread;
 }
 
 #if KALLOC_LOAD_BALANCE

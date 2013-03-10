@@ -182,8 +182,10 @@ protected:
 class mdev;
 
 struct devsw {
-  int (*read)(mdev*, char*, u32, u32);
-  int (*write)(mdev*, const char*, u32, u32);
+  int (*read)(mdev*, char*, u32);
+  int (*pread)(mdev*, char*, u32, u32);
+  int (*write)(mdev*, const char*, u32);
+  int (*pwrite)(mdev*, const char*, u32, u32);
   void (*stat)(mdev*, struct stat*);
 };
 
