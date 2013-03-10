@@ -312,7 +312,7 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->killed && (tf->cs&3) == 0x3)
     exit(-1);
 
- out:
+ out:;
 #if MTRACE
   mtstop(myproc());
   if (myproc()->mtrace_stacks.curr >= 0)
