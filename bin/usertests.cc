@@ -334,15 +334,13 @@ sharedfd(void)
   unlink("sharedfd");
   fd = open("sharedfd", O_CREAT|O_RDWR, 0666);
   if(fd < 0){
-    printf("fstests: cannot open sharedfd for writing");
-    return;
+    die("fstests: cannot open sharedfd for writing");
   }
   pid = fork(0);
   memset(buf, pid==0?'c':'p', sizeof(buf));
   for(i = 0; i < 1000; i++){
     if(write(fd, buf, sizeof(buf)) != sizeof(buf)){
-      printf("fstests: write sharedfd failed\n");
-      break;
+      die("fstests: write sharedfd failed\n");
     }
   }
   if(pid == 0)
@@ -352,8 +350,7 @@ sharedfd(void)
   close(fd);
   fd = open("sharedfd", 0);
   if(fd < 0){
-    printf("fstests: cannot open sharedfd for reading\n");
-    return;
+    die("fstests: cannot open sharedfd for reading\n");
   }
   nc = np = 0;
   while((n = read(fd, buf, sizeof(buf))) > 0){
@@ -369,7 +366,7 @@ sharedfd(void)
   if(nc == 10000 && np == 10000)
     printf("sharedfd ok\n");
   else
-    printf("sharedfd oops %d %d\n", nc, np);
+    die("sharedfd oops %d %d\n", nc, np);
 }
 
 // two processes write two different files at the same
