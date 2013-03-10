@@ -394,7 +394,8 @@ gc_end_epoch(void)
   gc_states[c].dequeue(myproc()->gc);
   myproc()->gc->core = -1;
 
-  if (stat[c].ndelay % gc_batchsize == 0) {
+  if (stat[c].ndelay - stat[c].lastwake >= gc_batchsize) {
+    stat[c].lastwake = stat[c].ndelay;
     // calling gs->do_gc() works for gcbench, because gcbench threads are pinned
     // to a core.  do_gc is correct when it uses one core's gc_state, so better
     // to wakeup this core's gc thread, and yield the core to it.
