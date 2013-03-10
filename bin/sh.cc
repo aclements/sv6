@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include <stdexcept>
 #include <string>
@@ -157,12 +158,16 @@ public:
       argstrs.push_back(arg.c_str());
     argstrs.push_back(nullptr);
 
-    if (fork1() == 0) {
+    int child;
+    if ((child = fork1()) == 0) {
       savefd::preexec();
       execv(argstrs[0], const_cast<char * const *>(argstrs.data()));
       edie("exec %s failed", argstrs[0]);
     }
-    return wait(NULL);
+    int status;
+    if (waitpid(child, &status, 0) < 0)
+      edie("wait failed");
+    return status;
   }
 };
 
@@ -209,7 +214,8 @@ public:
     if (pipe(p) < 0)
       edie("pipe");
 
-    if (fork1() == 0) {
+    int child;
+    if ((child = fork1()) == 0) {
       close(1);
       dup(p[1]);
       close(p[0]);
@@ -223,7 +229,8 @@ public:
     close(p[0]);
     close(p[1]);
     int res = right_->run();
-    wait(NULL);
+    if (waitpid(child, NULL, 0) < 0)
+      edie("wait failed");
     return res;
   }
 };
