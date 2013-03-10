@@ -104,26 +104,25 @@ private:
 
 class referenced {
 public:
-  // Start with 1 reference
-  referenced() { ref_.v = 0; }
+  // Start with 1 reference by default
+  referenced(uint64_t refcount = 1) { ref_.v = refcount - 1; }
 
   // The number of valid references is:
   //   ref_.invalid ? 0 : ref_.count+1;
 
-  inline bool valid() const {
-    return ref_.invalid == 0;
+  inline void inc() {
+    asm volatile("lock; incq %0" : "+m" (ref_.v) :: "memory", "cc");
   }
 
-  inline void inc() {
+  // Attempt to increment the reference count, failing if the count is
+  // currently zero.  If there is ever a tryinc from zero, the count
+  // will remain zero forever after.
+  inline bool tryinc() {
     // If references is 0 (i.e. ref_.count is 0xffffffff) a 32-bit 
     // increment will increases ref_.count to 0, but ref_.invalid
     // will remain unchanged.
     asm volatile("lock; incl %0" : "+m" (ref_.count) :: "memory", "cc");
-  }
-
-  inline bool tryinc() {
-    inc();
-    return valid();
+    return ref_.invalid == 0;
   }
 
   inline void dec() {
