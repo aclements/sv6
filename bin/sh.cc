@@ -559,6 +559,7 @@ lex(const string &buf, bool eof, vector<tok> *toks)
   switch (mode) {
   case WORD:
     assert(pos == end);
+    toks->push_back(tok{'a', move(word)});
     toks->push_back(tok{' '});
   case NORMAL:
     break;
