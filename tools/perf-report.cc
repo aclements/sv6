@@ -251,6 +251,8 @@ selfless(void)
     dup2(p[0], 0);
     close(p[1]);
     close(s[0]);
+    // Make sure less doesn't exit when we do
+    signal(SIGCHLD, SIG_IGN);
     execlp("less", "less", "-SF", NULL);
     write(s[1], &x, 1);
     close(s[1]);
@@ -267,6 +269,8 @@ selfless(void)
     close(p[1]);
   close(p[0]);
   close(s[0]);
+  // Make sure we exit when less does
+  signal(SIGPIPE, SIG_DFL);
 }
 
 int
