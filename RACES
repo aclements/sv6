@@ -16,3 +16,6 @@ e8faaaf653acb6af4d53f71d43c7692a61bb6a2f
 c88e0de458a0da84c559e89586102dc3b1403fb8
   mmap va reuse during munmap shootdown 
 
+afbbc8342a1518805d2b094483f0ccc4629bd26a
+  reading size_ in file_inode::stat leaked out of the seqlock reader
+
