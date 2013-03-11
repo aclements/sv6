@@ -7,6 +7,7 @@
 #include "queue.h"
 #include "proc.hh"
 #include "cpu.hh"
+#include "hpet.hh"
 
 static u64 ticks __mpalign__;
 
@@ -24,9 +25,15 @@ wakeup(struct proc *p)
 u64
 nsectime(void)
 {
+  static bool used_ticks;
+  if (the_hpet) {
+    assert(!used_ticks);
+    return the_hpet->read_nsec();
+  }
   // XXX Ticks don't happen when interrupts are disabled, which means
-  // we could lose track of wall-clock time.  We should use the HPET
-  // for this.
+  // we lose track of wall-clock time, but if we don't have a HPET,
+  // this is the best we can do.
+  used_ticks = true;
   u64 msec = ticks*QUANTUM;
   return msec*1000000;
 }
