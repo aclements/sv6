@@ -9,6 +9,7 @@
 #include "kstream.hh"
 #include "numa.hh"
 #include "iommu.hh"
+#include "hpet.hh"
 
 #include <algorithm>
 #include <iterator>
@@ -446,6 +447,25 @@ acpi_setup_ioapic(ioapic *apic)
   }
 
   return haveioapic;
+}
+
+bool
+acpi_setup_hpet(class hpet *hpet)
+{
+  if (!have_tables)
+    return false;
+
+  ACPI_TABLE_HPET *table;
+  ACPI_STATUS r = AcpiGetTable((char*)ACPI_SIG_HPET, 0, (ACPI_TABLE_HEADER**)&table);
+  if (ACPI_FAILURE(r) && r != AE_NOT_FOUND)
+    panic("acpi: AcpiGetTable failed: %s", AcpiFormatException(r));
+  if (r != AE_OK)
+    return false;
+
+  if (table->Address.SpaceId != ACPI_ADR_SPACE_SYSTEM_MEMORY)
+    return false;
+
+  return hpet->register_base(table->Address.Address);
 }
 
 void

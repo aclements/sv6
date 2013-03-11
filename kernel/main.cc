@@ -54,6 +54,7 @@ void initiommu(void);
 void initacpi(void);
 void initwd(void);
 void initdev(void);
+void inithpet(void);
 void idleloop(void);
 
 #define IO_RTC  0x70
@@ -217,6 +218,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   inite1000();             // Before initpci
   initpci();               // Suggests initacpi
   initnet();
+  inithpet();              // Requires initacpitables
   initdev();               // Misc /dev nodes
 
   if (VERBOSE)

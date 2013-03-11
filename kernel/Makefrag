@@ -71,6 +71,7 @@ OBJS = \
 	mnode.o \
 	mfs.o \
 	mfsload.o \
+	hpet.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
