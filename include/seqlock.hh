@@ -40,9 +40,9 @@ public:
      */
     bool need_retry() const
     {
-      // The release fence prevents code (specifically, reads) from
-      // sinking below the check.
-      std::atomic_thread_fence(std::memory_order_release);
+      // Prevent code (specifically reads) from sinking below the
+      // check.
+      barrier();
       return sc_->seq_.load(std::memory_order_relaxed) != init_;
     }
   };
@@ -60,16 +60,18 @@ public:
   reader read_begin() const
   {
   retry:
-    // Acquire order disables code hoisting so that reads in the
-    // caller don't move before our counter snapshot.  Furthermore,
-    // this synchronizes with the release store in writer::done such
-    // that, if we observe its write, we will observe all writes
-    // before it.
+    // Acquire order so that this synchronizes with the release store
+    // in writer::done such that, if we observe its write, we will
+    // observe all writes before it.
     auto s = seq_.load(std::memory_order_acquire);
     if (s & 1) {
       nop_pause();
       goto retry;
     }
+    // Disable code hoisting so that reads in the caller don't move
+    // before our counter snapshot.  It turns out the load-acquire
+    // isn't enough to do this.
+    barrier();
     return reader(this, s);
   }
 
