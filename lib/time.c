@@ -7,7 +7,8 @@
 time_t
 time(time_t *t)
 {
-  time_t res = sys_time();
+  uint64_t nsec = time_nsec();
+  time_t res = nsec / 1000000000;
   if (t)
     *t = res;
   return res;
