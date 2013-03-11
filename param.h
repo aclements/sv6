@@ -130,8 +130,8 @@
 #define E1000_PORT 0
 #endif
 #ifndef TZ_SECS
-// Local time zone in seconds west of UTC.  Default to EST.
-#define TZ_SECS (5*60*60)
+// Local time zone in seconds west of UTC.  Default to EDT.
+#define TZ_SECS (4*60*60)
 #endif
 #ifndef RTC_TZ_SECS
 // RTC timezone in seconds west of UTC.  We assume the RTC is GMT by
