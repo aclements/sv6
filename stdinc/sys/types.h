@@ -12,3 +12,6 @@ typedef uint64_t ino_t;
 typedef short nlink_t;
 typedef short mode_t;
 typedef int pid_t;
+
+typedef int time_t;
+typedef int suseconds_t;
