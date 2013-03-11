@@ -10,25 +10,6 @@ namespace {
   DEFINE_PERCPU(u64, next_inumber);
 };
 
-struct inumber
-{
-  u64 v_;
-  static const int type_bits = 4;
-  static const int cpu_bits = 8;
-
-  inumber(u64 v) : v_(v) {}
-  inumber(u8 type, u64 cpu, u64 count)
-    : v_(type | (cpu << type_bits) | (count << (type_bits + cpu_bits)))
-  {
-    assert(type < (1 << type_bits));
-    assert(cpu < (1 << cpu_bits));
-  }
-
-  u8 type() {
-    return v_ & ((1 << type_bits) - 1);
-  }
-};
-
 sref<mnode>
 mnode::get(u64 inum)
 {
@@ -81,12 +62,6 @@ mnode::alloc(u8 type)
 
 mnode::mnode(u64 inum) : inum_(inum), cache_pin_(false), valid_(false)
 {
-}
-
-u8
-mnode::type() const
-{
-  return inumber(inum_).type();
 }
 
 void

@@ -17,6 +17,25 @@ class msock;
 
 class mnode : public refcache::weak_referenced
 {
+private:
+  struct inumber {
+    u64 v_;
+    static const int type_bits = 4;
+    static const int cpu_bits = 8;
+
+    inumber(u64 v) : v_(v) {}
+    inumber(u8 type, u64 cpu, u64 count)
+      : v_(type | (cpu << type_bits) | (count << (type_bits + cpu_bits)))
+    {
+      assert(type < (1 << type_bits));
+      assert(cpu < (1 << cpu_bits));
+    }
+
+    u8 type() {
+      return v_ & ((1 << type_bits) - 1);
+    }
+  };
+
 public:
   struct types {
     enum {
@@ -31,7 +50,7 @@ public:
   static sref<mnode> alloc(u8 type);
 
   void cache_pin(bool flag);
-  u8 type() const;
+  u8 type() const { return inumber(inum_).type(); }
 
   mdir* as_dir();
   const mdir* as_dir() const;
