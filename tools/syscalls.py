@@ -28,6 +28,7 @@ def main():
     if options.kvectors:
         print "#include \"types.h\""
         print "#include \"userptr.hh\""
+        print "#include <uk/unistd.h>"
         print
         for syscall in syscalls:
             print "extern %s %s(%s);" % (syscall.rettype, syscall.kname,
@@ -72,6 +73,8 @@ SYS_%(uname)s = %(num)d
 """ % syscall.__dict__
 
     if options.udecls:
+        print "#include <uk/unistd.h>"
+        print
         types = set(typ for syscall in syscalls for typ in syscall.types())
         for typ in types:
             print typ + ";"

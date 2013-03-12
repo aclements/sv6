@@ -10,13 +10,14 @@
 #include "seqlock.hh"
 #include "mfs.hh"
 #include "sleeplock.hh"
+#include <uk/unistd.h>
 
 class dirns;
 
 u64 namehash(const strbuf<DIRSIZ>&);
 
 struct file : public rcu_freed {
-  virtual int stat(struct stat*) { return -1; }
+  virtual int stat(struct stat*, enum stat_flags) { return -1; }
   virtual ssize_t read(char *addr, size_t n) { return -1; }
   virtual ssize_t write(const char *addr, size_t n) { return -1; }
   virtual ssize_t pread(char *addr, size_t n, off_t offset) { return -1; }
@@ -45,7 +46,7 @@ public:
   u32 off;
   sleeplock off_lock;
 
-  int stat(struct stat*) override;
+  int stat(struct stat*, enum stat_flags) override;
   ssize_t read(char *addr, size_t n) override;
   ssize_t write(const char *addr, size_t n) override;
   ssize_t pread(char* addr, size_t n, off_t off) override;

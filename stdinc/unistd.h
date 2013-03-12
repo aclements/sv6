@@ -23,5 +23,9 @@ extern int optind;
 int getopt(int ac, char* const av[], const char* optstring);
 
 int stat(const char*, struct stat*);
+int fstat(int fd, struct stat *buf);
+
+// xv6-specific
+int fstatx(int fd, struct stat *buf, enum stat_flags flags);
 
 END_DECLS

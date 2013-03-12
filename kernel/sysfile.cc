@@ -143,13 +143,13 @@ sys_pwrite(int fd, const void *ubuf, size_t count, off_t offset)
 
 //SYSCALL
 int
-sys_fstat(int fd, userptr<struct stat> st)
+sys_fstatx(int fd, userptr<struct stat> st, enum stat_flags flags)
 {
   struct stat st_buf;
   sref<file> f = getfile(fd);
   if (!f)
     return -1;
-  if (f->stat(&st_buf) < 0)
+  if (f->stat(&st_buf, flags) < 0)
     return -1;
   if (!st.store(&st_buf))
     return -1;

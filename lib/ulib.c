@@ -139,6 +139,12 @@ mkdir(const char *path, mode_t mode)
   return mkdirat(AT_FDCWD, path, mode);
 }
 
+int
+fstat(int fd, struct stat *st)
+{
+  return fstatx(fd, st, 0);
+}
+
 unsigned
 sleep(unsigned secs)
 {
