@@ -101,7 +101,7 @@ UPROGS_LIBS := $(ULIBA) $(LIBUTIL_A)
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB_BEGIN) $(ULIB_END) $(UPROGS_LIBS)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) $(CXXFLAGS) -o $@ $(ULIB_BEGIN) $< $(UPROGS_LIBS) $(ULIB_END)
+	$(Q)$(CXX) $(CXXFLAGS) -o $@ $(ULIB_BEGIN) $< -Wl,--start-group $(UPROGS_LIBS) -Wl,--end-group $(ULIB_END)
 
 $(O)/bin/%: $(O)/bin/%.unstripped
 	@echo "  STRIP  $@"
