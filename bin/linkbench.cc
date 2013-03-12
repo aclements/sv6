@@ -15,6 +15,7 @@
 
 #include "amd64.h"
 #include "histogram.hh"
+#include "libutil.h"
 #include "xsys.h"
 
 #if defined(XV6_USER)
@@ -40,6 +41,7 @@ static bool omit_nlink;
 static pthread_barrier_t bar, bar2;
 static int filefd;
 static uint64_t start_tsc[256], stop_tsc[256];
+static uint64_t start_usec[256], stop_usec[256];
 static uint64_t tsc_stat[256], tsc_link[256], pmc_stat[256];
 static uint64_t count[256];
 static volatile bool stop __mpalign__;
@@ -88,6 +90,7 @@ do_stat(void *opaque)
     if (__builtin_expect(warmup != mywarmup, 0)) {
       mywarmup = warmup;
       mycount = 0;
+      start_usec[cpu] = now_usec();
       start_tsc[cpu] = rdtsc();
 #ifdef RECORD_PMC
       pmc1 = rdpmc(RECORD_PMC);
@@ -100,6 +103,7 @@ do_stat(void *opaque)
   pmc2 = rdpmc(RECORD_PMC);
 #endif
 
+  stop_usec[cpu] = now_usec();
   stop_tsc[cpu] = rdtsc();
   count[cpu] = mycount;
   tsc_stat[cpu] = stop_tsc[cpu] - start_tsc[cpu];
@@ -127,6 +131,7 @@ do_link(void *opaque)
     if (__builtin_expect(warmup != mywarmup, 0)) {
       mywarmup = warmup;
       mycount = 0;
+      start_usec[cpu] = now_usec();
       start_tsc[cpu] = rdtsc();
     }
     link("0/file", path);
@@ -134,6 +139,7 @@ do_link(void *opaque)
     ++mycount;
   }
 
+  stop_usec[cpu] = now_usec();
   stop_tsc[cpu] = rdtsc();
   count[cpu] = mycount;
   tsc_link[cpu] = stop_tsc[cpu] - start_tsc[cpu];
@@ -170,6 +176,7 @@ do_both(void *opaque)
     if (__builtin_expect(warmup != mywarmup, 0)) {
       mywarmup = warmup;
       mycount = ltsc_stat = ltsc_link = lpmc_stat = 0;
+      start_usec[cpu] = now_usec();
       start_tsc[cpu] = rdtsc();
     }
 #ifdef RECORD_PMC
@@ -192,6 +199,7 @@ do_both(void *opaque)
     ++mycount;
   }
 
+  stop_usec[cpu] = now_usec();
   stop_tsc[cpu] = rdtsc();
   count[cpu] = mycount;
   tsc_stat[cpu] = ltsc_stat;
@@ -201,17 +209,17 @@ do_both(void *opaque)
 }
 
 uint64_t
-summarize_tsc(const char *label, uint64_t tscs[], unsigned count)
+summarize_ts(const char *label, uint64_t ts[], unsigned count)
 {
-  uint64_t min = tscs[0], max = tscs[0], total = 0;
+  uint64_t min = ts[0], max = ts[0], total = 0;
   for (unsigned i = 0; i < count; ++i) {
-    if (tscs[i] < min)
-      min = tscs[i];
-    if (tscs[i] > max)
-      max = tscs[i];
-    total += tscs[i];
+    if (ts[i] < min)
+      min = ts[i];
+    if (ts[i] > max)
+      max = ts[i];
+    total += ts[i];
   }
-  printf("%lu cycles %s skew\n", max - min, label);
+  printf("%lu %s skew\n", max - min, label);
   return total/count;
 }
 
@@ -311,9 +319,15 @@ main(int argc, char **argv)
 #endif
 
   // Summarize
-  uint64_t start_avg = summarize_tsc("start", start_tsc, nstats + nlinks);
-  uint64_t stop_avg = summarize_tsc("stop", stop_tsc, nstats + nlinks);
-  printf("%lu cycles\n", stop_avg - start_avg);
+  uint64_t start_tsc_avg = summarize_ts("start cycles", start_tsc, nstats + nlinks);
+  uint64_t stop_tsc_avg = summarize_ts("stop cycles", stop_tsc, nstats + nlinks);
+  printf("%lu cycles\n", stop_tsc_avg - start_tsc_avg);
+
+  uint64_t start_usec_avg = summarize_ts("start usec", start_usec, nstats + nlinks);
+  uint64_t stop_usec_avg = summarize_ts("stop usec", stop_usec, nstats + nlinks);
+  uint64_t usec = stop_usec_avg - start_usec_avg;
+  printf("%f secs\n", (double)usec / 1e6);
+
   uint64_t stats, links;
   if (both)
     stats = links = sum(count, nstats + nlinks);
@@ -322,6 +336,7 @@ main(int argc, char **argv)
   printf("%lu stats\n", stats);
   if (stats) {
     printf("%lu cycles/stat\n", sum(tsc_stat, nstats + nlinks) / stats);
+    printf("%lu stats/sec\n", stats * 1000000 / usec);
 #ifdef RECORD_PMC
     printf("%lu pmc\n", sum(pmc_stat, nstats + nlinks));
     printf("%lu pmc/stat\n", sum(pmc_stat, nstats + nlinks) / stats);
@@ -332,8 +347,10 @@ main(int argc, char **argv)
 #endif
   }
   printf("%lu links\n", links);
-  if (links)
+  if (links) {
     printf("%lu cycles/link\n", sum(tsc_link, nstats + nlinks) / links);
+    printf("%lu links/sec\n", links * 1000000 / usec);
+  }
 
   // printf("stat tsc histogram: ");
   // auto hist = sum(tsc_hist, nstats + nlinks);
