@@ -53,14 +53,12 @@ COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
 	    -mno-red-zone
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
+COMFLAGS  += -Wl,-m,elf_x86_64 -nostdlib
 LDFLAGS   = -m elf_x86_64
 else
 INCLUDES := -include param.h -iquote libutil/include -I$(QEMUSRC)
 COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
-# No mere mortal can call ld correctly on a real machine, so use gcc's
-# link driver instead.
-LD = $(TOOLPREFIX)g++
 endif
 COMFLAGS += -g -MD -MP -O3 -Wall -Werror -DHW_$(HW) $(INCLUDES)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
