@@ -594,6 +594,8 @@ parse_mb_map(struct Mbdata *mb)
   // Print the map
   uint8_t *p = (uint8_t*) p2v(mb->mmap_addr);
   uint8_t *ep = p + mb->mmap_length;
+  // XXX QEMU's pc-bios/optionrom/multiboot.S has a bug that makes
+  // mmap_length one entry short.
   while (p < ep) {
     struct Mbmem *mbmem = (Mbmem *)p;
     p += 4 + mbmem->size;
