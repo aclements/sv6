@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 static void __attribute__((noreturn))
 vdie(const char* errstr, va_list ap)
@@ -73,6 +74,15 @@ xwrite(int fd, const void *buf, size_t n)
     buf = (char *) buf + r;
     n -= r;
   }
+}
+
+uint64_t
+now_usec(void)
+{
+  struct timeval tv;
+  if (gettimeofday(&tv, NULL) < 0)
+    edie("gettimeofday");
+  return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
 #if !defined(XV6_USER)

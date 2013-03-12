@@ -2,6 +2,7 @@
 
 #include "compiler.h"
 
+#include <stdint.h>
 #include <sys/types.h>
 
 BEGIN_DECLS
@@ -13,6 +14,8 @@ void edie(const char* errstr, ...)
 
 size_t xread(int fd, void *buf, size_t n);
 void xwrite(int fd, const void *buf, size_t n);
+
+uint64_t now_usec(void);
 
 #if !defined(XV6_USER)
 // setaffinity is a syscall in xv6, but not standard in Linux
