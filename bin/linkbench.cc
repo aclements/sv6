@@ -36,6 +36,7 @@
 enum { warmup_secs = 1 };
 enum { duration = 5 };
 
+static bool omit_nlink;
 static pthread_barrier_t bar, bar2;
 static int filefd;
 static uint64_t start_tsc[256], stop_tsc[256];
@@ -46,6 +47,17 @@ static volatile bool warmup;
 static __padout__ __attribute__((unused));
 
 static histogram_log2<uint64_t, 1<<20> tsc_hist[256];
+
+void
+mystat()
+{
+  struct stat st;
+#if defined(XV6_USER)
+  fstatx(filefd, &st, omit_nlink ? STAT_OMIT_NLINK : STAT_NO_FLAGS);
+#else
+  fstat(filefd, &st);
+#endif
+}
 
 void*
 timer_thread(void *)
@@ -70,7 +82,6 @@ do_stat(void *opaque)
   pthread_barrier_wait(&bar2);
 
   bool mywarmup = true;
-  struct stat st;
   uint64_t mycount = 0;
   uint64_t pmc1 = 0, pmc2 = 0;
   while (!stop) {
@@ -82,7 +93,7 @@ do_stat(void *opaque)
       pmc1 = rdpmc(RECORD_PMC);
 #endif
     }
-    fstat(filefd, &st);
+    mystat();
     ++mycount;
   }
 #ifdef RECORD_PMC
@@ -154,7 +165,6 @@ do_both(void *opaque)
   pthread_barrier_wait(&bar2);
 
   bool mywarmup = true;
-  struct stat st;
   uint64_t mycount = 0, ltsc_stat = 0, ltsc_link = 0, lpmc_stat = 0;
   while (!stop) {
     if (__builtin_expect(warmup != mywarmup, 0)) {
@@ -166,7 +176,7 @@ do_both(void *opaque)
     uint64_t pmc1 = rdpmc(RECORD_PMC);
 #endif
     uint64_t tsc1 = rdtsc();
-    fstat(filefd, &st);
+    mystat();
     uint64_t tsc2 = rdtsc();
 #ifdef RECORD_PMC
     uint64_t pmc2 = rdpmc(RECORD_PMC);
@@ -218,17 +228,25 @@ sum(T v[], unsigned count)
 int
 main(int argc, char **argv)
 {
-  if (argc < 2)
-    die("usage: %s nthreads|{nstatthreads nlinkthreads}", argv[0]);
+  if (argc < 3)
+    die("usage: %s {no-}nlink nthreads|{nstatthreads nlinkthreads}", argv[0]);
 
-  int both = argc == 2;
-  int nstats = atoi(argv[1]);
-  int nlinks = both ? 0 : atoi(argv[2]);
+  omit_nlink = strcmp(argv[1], "no-nlink") == 0;
+  if (!omit_nlink && strcmp(argv[1], "nlink") != 0)
+    die("bad nlink argument");
+#if !defined(XV6_USER)
+  if (omit_nlink)
+    die("no-nlink not supported on Linux");
+#endif
+  int both = argc == 3;
+  int nstats = atoi(argv[2]);
+  int nlinks = both ? 0 : atoi(argv[3]);
 
   struct utsname uts;
   uname(&uts);
 
-  printf("# --cores=%d --duration=%ds", nstats+nlinks, duration);
+  printf("# --cores=%d --duration=%ds --nlink=%s", nstats+nlinks, duration,
+         omit_nlink ? "false" : "true");
   if (both)
     printf("\n");
   else
