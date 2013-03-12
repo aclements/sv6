@@ -1,0 +1,115 @@
+#!/usr/bin/python
+
+import sys
+import argparse
+
+import libprof
+
+parser = argparse.ArgumentParser(description="Display PEBS profile")
+parser.add_argument('sampfile', type=file, help="sampler file")
+parser.add_argument('image', type=str, help="ELF image")
+parser.add_argument('--primary', type=str, choices=["address", "rip"],
+                    default="address", help="Primary grouping")
+args = parser.parse_args()
+
+nodes = [[0x0,0x87fffffff],
+         [0x880000000,0x107fffffff],
+         [0x1080000000,0x187fffffff],
+         [0x1880000000,0x207fffffff],
+         [0x2080000000,0x287fffffff],
+         [0x2880000000,0x307fffffff],
+         [0x3080000000,0x387fffffff],
+         [0x3880000000,0x407fffffff]]
+
+KBASE = 0xFFFFFF0000000000
+KBASEEND = 0xFFFFFF5000000000
+KCODE = 0xFFFFFFFFC0000000
+
+def v2p(addr):
+    if KBASE <= addr < KBASEEND:
+        return addr - KBASE
+    elif KCODE <= addr:
+        return addr - KCODE
+    else:
+        return None
+
+def getnode(addr):
+    addr = v2p(addr)
+    if addr == None:
+        return len(nodes)
+    for i, node in enumerate(nodes):
+        if node[0] <= addr <= node[1]:
+            return i
+    assert False, "No node %lx" % addr
+
+symbols = libprof.Symbols(args.image)
+addr2line = libprof.Addr2line(args.image)
+sf = libprof.SamplerFile(args.sampfile)
+
+loc_tree = libprof.HistTree()
+src_tree = libprof.HistTree()
+nodecounts = [[0] * (len(nodes)+1) for i in nodes]
+for cpu in range(sf.ncpu):
+    for samp in sf.read_cpu(cpu):
+        count = samp[sf.COUNT]
+        rip = samp[sf.RIP]
+        latency = samp[sf.LATENCY]
+        source = samp[sf.SOURCE]
+        address = samp[sf.LOAD_ADDRESS]
+
+        path = (str(symbols.lookup(address)),
+                str(addr2line.lookup(rip)[0]))
+        if args.primary == "address":
+            pass
+        elif args.primary == "rip":
+            path = (path[1], path[0])
+        loc_tree.add(path, latency, count)
+
+        path_src = (path[0], source)
+        src_tree.add(path_src, latency, count)
+
+        memnode = getnode(address)
+        cpunode = cpu / 10
+        nodecounts[cpunode][memnode] += count
+#        nodecounts[cpunode][memnode] += count * latency
+
+# Display results
+
+libprof.self_less()
+
+# Node-to-node matrix
+coltotals = [0] * (len(nodes) + 1)
+for row in nodecounts:
+    total = 0
+    for coln, col in enumerate(row):
+        print "%6d" % col,
+        total += col
+        coltotals[coln] += col
+    print "|", total
+print "--"
+for ct in coltotals:
+    print "%6d" % ct,
+print
+
+print
+
+# Profile
+for primary, pritree in loc_tree.items_sorted(reverse=True):
+    hist = pritree.hist
+    print "%2d%% %s min %d mean %d max %d" % \
+        (100 * pritree.fraction_of_parent,
+         primary, hist.min, hist.mean, hist.max)
+    # This histogram is almost never useful
+#    print "  " + hist.to_line().encode("utf8")
+
+    # Sources
+    for source, srctree in src_tree[primary].items_sorted(reverse=True)[:3]:
+        print "   %2d%% %s" % (100 * srctree.fraction_of_parent,
+                               libprof.ll_source_str(source))
+        print "   " + srctree.hist.to_line(right=srctree.parent.hist.max,
+                                          label=False).encode("utf8")
+
+    # Locations
+    for secondary, sectree in pritree.items_sorted(reverse=True)[:3]:
+        print "   %2d%% %s" % (100 * sectree.fraction_of_parent,
+                               secondary)
