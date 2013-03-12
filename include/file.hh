@@ -39,7 +39,7 @@ public:
   void inc() override { refcache::referenced::inc(); }
   void dec() override { refcache::referenced::dec(); }
 
-  sref<mnode> ip;
+  const sref<mnode> ip;
   const bool readable;
   const bool writable;
   const bool append;
