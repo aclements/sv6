@@ -68,7 +68,8 @@ public:
   };
 
   const u64 inum_;
-  linkcount nlink_;
+  linkcount nlink_ __mpalign__;
+  __padout__;
 
 protected:
   mnode(u64 inum);
