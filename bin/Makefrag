@@ -85,6 +85,7 @@ UPROGS_NATIVE := \
 
 FSEXTRA += \
 	bin/linkbench-tom \
+	bin/linkbench-ben \
 	bin/mapbench-ben \
 	bin/metis_wrmem-josmp \
 	bin/metis_wrmem-ben \
