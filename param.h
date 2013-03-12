@@ -55,6 +55,7 @@
 //  :: for shared reference counters
 //  refcache:: for refcache counters
 #define FS_NLINK_REFCOUNT refcache::
+#define RANDOMIZE_KMALLOC 0
 
 #if defined(HW_qemu)
 #define DEBUG         1

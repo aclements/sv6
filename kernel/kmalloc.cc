@@ -48,10 +48,14 @@ morecore(int c, int b)
   if (ALLOC_MEMSET)
     memset(p, 3, PGSIZE);
 
+#if RANDOMIZE_KMALLOC
 #if CODEX
   u8 r = rnd() % 11;
 #else
   u8 r = rdtsc() % 11;
+#endif
+#else
+  u8 r = 0;
 #endif
 
   int sz = 1 << b;
