@@ -6,8 +6,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void* memcpy(void *dst, const void *src, size_t n);
-char* strncpy(char *s, const char *t, size_t n);
+void* memcpy(void *dst, const void *src, size_t n) noexcept;
+char* strncpy(char *s, const char *t, size_t n) noexcept;
 #ifdef __cplusplus
 }
 #endif
