@@ -36,7 +36,7 @@
 enum { warmup_secs = 1 };
 enum { duration = 5 };
 
-static pthread_barrier_t bar;
+static pthread_barrier_t bar, bar2;
 static int filefd;
 static uint64_t start_tsc[256], stop_tsc[256];
 static uint64_t tsc_stat[256], tsc_link[256], pmc_stat[256];
@@ -52,6 +52,7 @@ timer_thread(void *)
 {
   warmup = true;
   pthread_barrier_wait(&bar);
+  pthread_barrier_wait(&bar2);
   sleep(warmup_secs);
   warmup = false;
   sleep(duration);
@@ -66,6 +67,7 @@ do_stat(void *opaque)
   setaffinity(cpu);
 
   pthread_barrier_wait(&bar);
+  pthread_barrier_wait(&bar2);
 
   bool mywarmup = true;
   struct stat st;
@@ -106,6 +108,7 @@ do_link(void *opaque)
   snprintf(path, sizeof(path), "%d/link", (int)cpu);
 
   pthread_barrier_wait(&bar);
+  pthread_barrier_wait(&bar2);
 
   bool mywarmup = true;
   uint64_t mycount = 0;
@@ -148,6 +151,7 @@ do_both(void *opaque)
   snprintf(path, sizeof(path), "%d/link", (int)cpu);
 
   pthread_barrier_wait(&bar);
+  pthread_barrier_wait(&bar2);
 
   bool mywarmup = true;
   struct stat st;
@@ -257,11 +261,8 @@ main(int argc, char **argv)
   if (filefd < 0)
     die("openat failed");
 
-#if MTRACE
-  mtenable_type(mtrace_record_ascope, "xv6-linkbench");
-#endif
-
-  pthread_barrier_init(&bar, 0, nstats + nlinks + 1);
+  pthread_barrier_init(&bar, 0, nstats + nlinks + 2);
+  pthread_barrier_init(&bar2, 0, nstats + nlinks + 2);
 
   // Run benchmark
   pthread_t timer;
@@ -273,6 +274,14 @@ main(int argc, char **argv)
                    both ? do_both :
                    i < nstats ? do_stat :
                    do_link, (void*)i);
+
+  pthread_barrier_wait(&bar);
+
+#if MTRACE
+  mtenable_type(mtrace_record_ascope, "xv6-linkbench");
+#endif
+
+  pthread_barrier_wait(&bar2);
 
   // Wait
   xpthread_join(timer);
