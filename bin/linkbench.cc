@@ -253,7 +253,7 @@ main(int argc, char **argv)
   struct utsname uts;
   uname(&uts);
 
-  printf("# --cores=%d --duration=%ds --nlink=%s", nstats+nlinks, duration,
+  printf("# --cores=%d --duration=%ds --st_nlink=%s", nstats+nlinks, duration,
          omit_nlink ? "false" : "true");
   if (both)
     printf("\n");
