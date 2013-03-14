@@ -28,7 +28,6 @@ enum { vm_debug = 0 };
  */
 
 vmdesc vmdesc::anon_desc(vmdesc::FLAG_MAPPED | vmdesc::FLAG_ANON | vmdesc::FLAG_WRITE);
-vmdesc vmdesc::anon_desc_readonly(vmdesc::FLAG_MAPPED | vmdesc::FLAG_ANON);
 
 void to_stream(class print_stream *s, const vmdesc &vmd)
 {

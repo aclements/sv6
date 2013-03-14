@@ -29,7 +29,7 @@ inituser(void)
   bootproc = p;
   if((p->vmap = vmap::alloc()) == 0)
     panic("userinit: out of vmaps?");
-  if(p->vmap->insert(vmdesc::anon_desc_readonly, INIT_START,
+  if(p->vmap->insert(vmdesc::anon_desc, INIT_START,
                      PGROUNDUP(_initcode_size)) < 0)
     panic("inituser: vmap::insert");
   if(p->vmap->copyout(INIT_START, _initcode_start, _initcode_size) < 0)

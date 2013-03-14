@@ -131,10 +131,10 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
 #endif
 
   uptr r;
-  if (prot & PROT_WRITE)
-    r = myproc()->vmap->insert(vmdesc::anon_desc, start, end - start);
-  else
-    r = myproc()->vmap->insert(vmdesc::anon_desc_readonly, start, end - start);
+  vmdesc desc = vmdesc::anon_desc;
+  if (!(prot & PROT_WRITE))
+    desc.flags &= ~vmdesc::FLAG_WRITE;
+  r = myproc()->vmap->insert(desc, start, end - start);
   return (void*)r;
 }
 

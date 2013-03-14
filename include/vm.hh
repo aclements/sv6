@@ -72,10 +72,8 @@ struct vmdesc : public mmu::page_tracker
   vmdesc(const sref<mnode> &ip, intptr_t start)
     : flags(FLAG_MAPPED | FLAG_WRITE), inode(ip), start(start) { }
 
-  // The anonymous memory descriptor.
+  // A memory descriptor for writable anonymous memory.
   static struct vmdesc anon_desc;
-  // The anonymous read-only memory descriptor.
-  static struct vmdesc anon_desc_readonly;
 
   // Radix_array element methods
 
