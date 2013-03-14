@@ -34,6 +34,12 @@ int
 main(int argc, char *argv[])
 {
   int ncore;
+
+  if (argc < 3) {
+    fprintf(stderr, "Usage: %s ncore nfork\n", argv[0]);
+    exit(-1);
+  }
+
   ncore = atoi(argv[1]);
   nfork = atoi(argv[2]);
 
