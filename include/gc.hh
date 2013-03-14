@@ -8,6 +8,7 @@ using std::atomic;
 
 struct gc_handle {
   std::atomic<u64> epoch;      // low 8 bits are depth count
+  __padout__;
   int core;
   struct gc_handle* next;
   struct gc_handle* prev;
