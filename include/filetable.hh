@@ -19,12 +19,13 @@ public:
         sref<file> f;
         if (getfile((cpu << cpushift) | fd, &f)) {
           f->inc();
-          t->ofile_[cpu][fd].store(f.get());
+          t->ofile_[cpu][fd].store(f.get(), std::memory_order_relaxed);
         } else {
-          t->ofile_[cpu][fd].store(nullptr);
+          t->ofile_[cpu][fd].store(nullptr, std::memory_order_relaxed);
         }
       }
     }
+    std::atomic_thread_fence(std::memory_order_release);
     return t;
   }
   
@@ -93,7 +94,8 @@ private:
       return;
     for(int cpu = 0; cpu < NCPU; cpu++)
       for(int fd = 0; fd < NOFILE; fd++)
-        ofile_[cpu][fd].store(nullptr);
+        ofile_[cpu][fd].store(nullptr, std::memory_order_relaxed);
+    std::atomic_thread_fence(std::memory_order_release);
   }
 
   ~filetable() {
