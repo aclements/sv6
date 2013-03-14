@@ -57,6 +57,7 @@ UPROGS_BIN= \
 	base64 \
 	tee \
         ln \
+	forktest \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
@@ -82,6 +83,7 @@ UPROGS_NATIVE := \
 	mailfilter \
 	sh \
 	linkbench \
+	forktest \
 
 FSEXTRA += \
 	bin/linkbench-tom \
@@ -92,17 +94,22 @@ FSEXTRA += \
 	bin/lsocket \
 	bin/countbench-ben \
 
-ifeq ($(PLATFORM),native)
-ALL += $(addprefix $(O)/bin/, $(UPROGS_NATIVE))
-endif
-
 # (ULIBA will be empty for native builds)
 UPROGS_LIBS := $(ULIBA) $(LIBUTIL_A)
+
+ifeq ($(PLATFORM),native)
+ALL += $(addprefix $(O)/bin/, $(UPROGS_NATIVE))
+LINK_CMD_BEGIN := $(Q)$(CXX) $(CXXFLAGS) 
+LINK_CMD_END :=  -Wl,--start-group $(UPROGS_LIBS) -Wl,--end-group $(ULIB_END)
+else
+LINK_CMD_BEGIN := $(Q)$(LD) $(LDFLAGS) 
+LINK_CMD_END :=  --start-group $(UPROGS_LIBS) --end-group $(ULIB_END)
+endif
 
 $(O)/bin/%.unstripped: $(O)/bin/%.o $(ULIB_BEGIN) $(ULIB_END) $(UPROGS_LIBS)
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(CXX) $(CXXFLAGS) -o $@ $(ULIB_BEGIN) $< -Wl,--start-group $(UPROGS_LIBS) -Wl,--end-group $(ULIB_END)
+	$(Q)$(LINK_CMD_BEGIN) -o $@ $(ULIB_BEGIN) $< $(LINK_CMD_END)
 
 $(O)/bin/%: $(O)/bin/%.unstripped
 	@echo "  STRIP  $@"
