@@ -12,6 +12,7 @@ LIBUTIL_OBJS := \
 	urnd.o \
 	libutil.o \
 	cpuid.o \
+	pmcdb.o \
 
 LIBUTIL_OBJS := $(addprefix $(O)/libutil/, $(LIBUTIL_OBJS))
 LIBUTIL_A = $(O)/libutil/libutil.a
