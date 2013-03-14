@@ -85,6 +85,7 @@ main(int argc, char *argv[])
   ncore = atoi(argv[1]);
   nfork = atoi(argv[2]);
 
+  uint64_t t0 = rdtsc();
   for (int i = 0; i < ncore; i++) {
     int pid = xfork();
     if (pid < 0) {
@@ -95,14 +96,12 @@ main(int argc, char *argv[])
       exit(0);
     }
   }
-
-  printf("parent waits\n");
-
   for (int i = 0; i < ncore; i++) {
     wait(NULL);
   }
+  uint64_t t1 = rdtsc();
   
-  printf("all children done\n");
+  printf("Summary: ncycles %lu for ncore %d nfork %d cycles/fork %lu\n", t1-t0, ncore, nfork, (t1-t0)/nfork);
 
   return 0;
 }

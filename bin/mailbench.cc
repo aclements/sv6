@@ -39,7 +39,6 @@
 #define CMSGSPAM "MAIL from: kaashoek@mit.edu\nRCPT TO: %s@mit.edu\nDATA\nDATASTRING SPAM\nENDDATA\n"
 #define DIE "QUIT"
 #define CLIENTPROC 1
-#define SERVERPROC 1
 #define NOFDSHARE 1
 #define AFFINITY 1
 
@@ -361,7 +360,6 @@ client(int id)
   uint64_t t1 = rdtsc();
   clienttimes[id] = (t1-t0)/nmsg;
   printf("client %d ncycles %lu for nmsg %d cycles/msg %lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
-
   nbytes = sendto(sock, (void *) DIE, strlen (DIE) + 1, 0,
                   (struct sockaddr *) & name, size);
   if (nbytes < 0) {
@@ -415,11 +413,13 @@ void clients()
     pthread_join(tid[i], NULL);
 #endif
   }
+#if !CLIENTPROC
   uint64_t sum = 0;
   for (int i = 0; i < nclient; i++) {
     sum += clienttimes[i];
   }
-  // printf("avg cycles/iter: %lu\n", sum / nclient);
+  printf("avg cycles/iter: %lu\n", sum / nclient);
+#endif
 }
 
 static void
@@ -483,7 +483,8 @@ main (int argc, char *argv[])
 
   struct kstats kstats_before;
   read_kstats(&kstats_before);
-     
+
+  uint64_t t0 = 0, t1 = 0;
   int pid = xfork();
   if (pid < 0)
     die("fork failed %s", argv[0]);
@@ -492,9 +493,14 @@ main (int argc, char *argv[])
     if (isMultithreaded) multithreaded();
     else multiproced();
   } else {
+    sleep(2);
+    t0 = rdtsc();
     clients();
     wait(NULL);
+    t1 = rdtsc();
   }
+
+  printf("Summary: nclient %d ncycles %lu for nmsg %lu cycles/msg %lu\n", nclient, t1-t0, nclient*(uint64_t) nmsg, (t1-t0)/ nmsg);
 
 #ifdef XV6_USER
   struct kstats kstats_after;

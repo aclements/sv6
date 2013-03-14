@@ -294,7 +294,7 @@ main(int argc, char **argv)
     try {
       perf_start(pmcdb_parse_selector(pmc), 0);
     } catch (std::invalid_argument &e) {
-      die(e.what());
+      die("xxx");
     }
     record_pmc = true;
   }
