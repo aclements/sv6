@@ -730,9 +730,9 @@ class parser
 
   sref<expr> pexpr(const char *term = " ", char *last_out = nullptr)
   {
-    // Note that word sequences always begin with an 'a' token, even
-    // if that 'a' token is empty.
-    if (cur == toks.end() || cur->type != 'a')
+    // Note that word sequences always begin with an 'a' or '=' token,
+    // even if that token is empty.
+    if (cur == toks.end() || !strchr("a=", cur->type))
       return sref<expr>();
     string part;
     sref<expr> res;
