@@ -180,6 +180,16 @@ exit(int status)
     release(&bootproc->lock);
   }
 
+  // Release vmap
+  if (myproc()->vmap != nullptr) {
+    auto vmap = myproc()->vmap;
+    // Switch to kernel page table, since we may be just about to
+    // destroy the current page table.
+    myproc()->vmap = nullptr;
+    switchvm(myproc());
+    vmap->decref();
+  }
+
   // Lock the parent first, since otherwise we might deadlock.
   if (myproc()->parent != nullptr)
     acquire(&myproc()->parent->lock);
@@ -496,8 +506,6 @@ finishproc(struct proc *p, bool removepid)
 {
   if (removepid && !xnspid->remove(p->pid, &p))
     panic("finishproc: ns_remove");
-  if (p->vmap != nullptr)
-    p->vmap->decref();
   if (p->kstack)
     ksfree(slab_stack, p->kstack);
 
