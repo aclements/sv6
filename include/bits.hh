@@ -103,28 +103,6 @@
 #define PERF_SEL_INV        (1ULL << 23)
 #define PERF_SEL_CMASK_SHIFT 24
 
-// CPUID function 0x00000001
-#define CPUID_FEATURES      0x00000001
-#define FEATURE_EAX_FAMILY(x) \
-  ((((x) >> 8) & 0xF) + (((x) & 0xf00) == 0xf00 ? (((x) >> 20) & 0xFF) : 0))
-#define FEATURE_ECX_MWAIT   (1 << 3)
-#define FEATURE_ECX_PDCM    (1 << 15) // Perfmon and debug
-#define FEATURE_ECX_X2APIC  (1 << 21)
-#define FEATURE_EBX_APIC(x) (((x) >> 24) & 0xff)
-#define FEATURE_EDX_APIC    (1 << 9) // "APIC on chip"
-#define FEATURE_EDX_DS      (1 << 21) // Debug store
-
-// CPUID function 0x00000005
-#define CPUID_MWAIT         0x00000005
-
-#define CPUID_PERFMON       0x0000000a
-#define PERFMON_EAX_VERSION(x)      ((x) & 0xFF)
-#define PERFMON_EAX_NUM_COUNTERS(x) (((x) >> 8) & 0xFF)
-
-// CPUID function 0x80000001
-#define CPUID_EXTENDED_1 0x80000001
-#define CPUID_EXTENDED_1_EDX_Page1GB (1 << 26)
-
 // APIC Base Address Register MSR
 #define MSR_APIC_BAR        0x0000001b
 #define APIC_BAR_XAPIC_EN   (1 << 11)

@@ -11,6 +11,7 @@
 #include "bits.hh"
 #include "codex.hh"
 #include "benchcodex.hh"
+#include "cpuid.hh"
 
 struct idle {
   struct proc *cur;
@@ -162,13 +163,11 @@ initidle(void)
     panic("initidle proc::alloc");
 
   if (myid() == 0) {
-    u32 eax, ebx, ecx;
-    cpuid(CPUID_FEATURES, nullptr, nullptr, &ecx, nullptr);
-    if (ecx & FEATURE_ECX_MWAIT) {
+    if (cpuid::features().mwait) {
       // Check smallest and largest line sizes
-      cpuid(CPUID_MWAIT, &eax, &ebx, nullptr, nullptr);
-      assert((u16)eax == 0x40);
-      assert((u16)ebx == 0x40);
+      auto info = cpuid::mwait();
+      assert((u16)info.smallest_line == 0x40);
+      assert((u16)info.largest_line == 0x40);
     }
   }
 

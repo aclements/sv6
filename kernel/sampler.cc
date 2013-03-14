@@ -14,6 +14,7 @@
 #include "apic.hh"
 #include "percpu.hh"
 #include "kstream.hh"
+#include "cpuid.hh"
 
 #include <algorithm>
 
@@ -109,9 +110,7 @@ public:
   bool
   try_init() override
   {
-    uint32_t eax;
-    cpuid(CPUID_FEATURES, &eax, 0, 0, 0);
-    if (FEATURE_EAX_FAMILY(eax) < 0x10)
+    if (cpuid::model().family < 0x10)
       return false;
     // 4 counters are supported
     console.println("sampler: Enabling AMD support");
@@ -240,19 +239,15 @@ public:
   bool
   try_init() override
   {
-    uint32_t eax;
-    cpuid(CPUID_PERFMON, &eax, 0, 0, 0);
-    if (PERFMON_EAX_VERSION(eax) < 2) {
+    auto info = cpuid::perfmon();
+    if (info.version < 2) {
       cprintf("initsamp: Unsupported performance monitor version %d\n",
-              PERFMON_EAX_VERSION(eax));
+              info.version);
       return false;
     }
     console.println("sampler: Enabling Intel support");
-    num_pmcs = PERFMON_EAX_NUM_COUNTERS(eax);
-    uint32_t ecx, edx;
-    cpuid(CPUID_FEATURES, 0, 0, &ecx, &edx);
-    if ((ecx & FEATURE_ECX_PDCM) &&
-        (edx & FEATURE_EDX_DS) &&
+    num_pmcs = info.num_counters;
+    if (cpuid::features().pdcm && cpuid::features().ds &&
         !(readmsr(MSR_INTEL_MISC_ENABLE) & MISC_ENABLE_PEBS_UNAVAILABLE)) {
       // Get PEBS version
       auto perfcap = readmsr(MSR_INTEL_PERF_CAPABILITIES);
@@ -771,11 +766,9 @@ enable_nehalem_workaround(void)
     0x4300B1
   };
 
-  uint32_t eax;
-  cpuid(CPUID_PERFMON, &eax, nullptr, nullptr, nullptr);
-  if (PERFMON_EAX_VERSION(eax) == 0)
+  if (cpuid::perfmon().version == 0)
     return;
-  int num = PERFMON_EAX_NUM_COUNTERS(eax);
+  int num = cpuid::perfmon().num_counters;
   if (num > 4)
     num = 4;
 
@@ -805,16 +798,9 @@ initsamp(void)
   static class no_pmu no_pmu;
 
   if (myid() == 0) {
-    u32 name[4];
-    char *s = (char *)name;
-    name[3] = 0;
-
-    cpuid(0, 0, &name[0], &name[2], &name[1]);
-    if (VERBOSE)
-      cprintf("%s\n", s);
-    if (strcmp(s, "AuthenticAMD") == 0 && amd_pmu.try_init())
+    if (cpuid::vendor_is_amd() && amd_pmu.try_init())
       pmu = &amd_pmu;
-    else if (strcmp(s, "GenuineIntel") == 0 && intel_pmu.try_init())
+    else if (cpuid::vendor_is_intel() && intel_pmu.try_init())
       pmu = &intel_pmu;
     else {
       cprintf("initsamp: Unknown manufacturer\n");

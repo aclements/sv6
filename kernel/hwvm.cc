@@ -15,6 +15,7 @@
 #include "kstream.hh"
 #include "ipi.hh"
 #include "kstats.hh"
+#include "cpuid.hh"
 
 using namespace std;
 
@@ -303,9 +304,7 @@ initpg(void)
     pgmap::iterator it;
 
     // Can we use 1GB mappings?
-    u32 edx;
-    cpuid(CPUID_EXTENDED_1, nullptr, nullptr, nullptr, &edx);
-    if (edx & CPUID_EXTENDED_1_EDX_Page1GB) {
+    if (cpuid::features().page1GB) {
       level = pgmap::L_1G;
 
       // Redo KCODE mapping with a 1GB page
