@@ -73,6 +73,7 @@ OBJS = \
 	mfsload.o \
 	hpet.o \
 	cpuid.o \
+	ctype.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 

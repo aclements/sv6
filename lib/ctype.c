@@ -31,6 +31,15 @@ isupper(int c)
 }
 
 int
+tolower(int c)
+{
+  if (isupper(c))
+    return c + 'a' - 'A';
+  else
+    return c;
+}
+
+int
 toupper(int c)
 {
   if (islower(c))

@@ -1,6 +1,8 @@
 #include "amd64.h"
 
+#include <ctype.h>
 #include <string.h>
+#include <strings.h>
 
 void*
 memset(void *dst, int c, size_t n)
@@ -149,4 +151,12 @@ strstr(const char *str, const char *needle)
     p1 = start + 1;
   }
   return NULL;
+}
+
+int
+strcasecmp(const char *p, const char *q)
+{
+  while (*p && tolower((unsigned char)*p) == tolower((unsigned char)*q))
+    p++, q++;
+  return tolower((unsigned char)*p) - tolower((unsigned char)*q);
 }
