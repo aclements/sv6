@@ -12,7 +12,7 @@ public:
   }
 
   filetable* copy() {
-    filetable* t = alloc();
+    filetable* t = new filetable(false);
 
     for(int cpu = 0; cpu < NCPU; cpu++) {
       for(int fd = 0; fd < NOFILE; fd++) {
@@ -88,7 +88,9 @@ public:
   }
 
 private:
-  filetable() : ref_(1) {
+  filetable(bool clear = true) : ref_(1) {
+    if (!clear)
+      return;
     for(int cpu = 0; cpu < NCPU; cpu++)
       for(int fd = 0; fd < NOFILE; fd++)
         ofile_[cpu][fd].store(nullptr);
