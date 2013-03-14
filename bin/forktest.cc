@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include "amd64.h"
 #include "xsys.h"
 #if !defined(XV6_USER)
@@ -11,10 +12,49 @@
 #include "user.h"
 #endif
 
+// pin
+// timer thread
+// forks/s per core
+
 int nfork;
 
-void child()
+#if defined(XV6_USER) && defined(HW_ben)
+int get_cpu_order(int thread)
 {
+  const int cpu_order[] = {
+    // Socket 0
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    // Socket 1
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    // Socket 3
+    30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+    // Socket 2
+    20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+    // Socket 5
+    50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+    // Socket 4
+    40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+    // Socket 6
+    60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+    // Socket 7
+    70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+  };
+
+  return cpu_order[thread];
+}
+#else
+int get_cpu_order(int thread)
+{
+  return thread;
+}
+#endif
+
+void child(int id)
+{
+  // printf("run client %d on cpu %d\n", getpid(), id);
+  if (setaffinity(get_cpu_order(id)) < 0)
+    die("setaffinity err");
+  uint64_t t0 = rdtsc();
   for (int i = 0; i < nfork; i++) {
     int pid = xfork();
     if (pid < 0) {
@@ -28,6 +68,8 @@ void child()
       }
     }
   }
+  uint64_t t1 = rdtsc();
+  printf("client %d ncycles %lu for nfork %d cycles/fork %lu\n", getpid(), t1-t0, nfork, (t1-t0)/nfork);
 }
 
 int
@@ -49,7 +91,7 @@ main(int argc, char *argv[])
       die("fork failed");
     }
     if (pid == 0) {
-      child();
+      child(i);
       exit(0);
     }
   }
