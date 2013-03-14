@@ -13,10 +13,13 @@
 #include <sys/stat.h>
 #include <sys/utsname.h>
 
+#include <stdexcept>
+
 #include "amd64.h"
 #include "histogram.hh"
 #include "libutil.h"
 #include "xsys.h"
+#include "pmcdb.hh"
 
 #if defined(XV6_USER)
 #include "pthread.h"
@@ -24,11 +27,7 @@
 #include <pthread.h>
 #endif
 
-#if defined(LINUX)
-//#define RECORD_PMC 3
-#elif defined(HW_tom)
 #define RECORD_PMC 0
-#endif
 
 #if MTRACE
 #include "mtrace.h"
@@ -37,7 +36,7 @@
 enum { warmup_secs = 1 };
 enum { duration = 5 };
 
-static bool omit_nlink;
+static bool omit_nlink, record_pmc;
 static pthread_barrier_t bar, bar2;
 static int filefd;
 static uint64_t start_tsc[256], stop_tsc[256];
@@ -92,16 +91,14 @@ do_stat(void *opaque)
       mycount = 0;
       start_usec[cpu] = now_usec();
       start_tsc[cpu] = rdtsc();
-#ifdef RECORD_PMC
-      pmc1 = rdpmc(RECORD_PMC);
-#endif
+      if (record_pmc)
+        pmc1 = rdpmc(RECORD_PMC);
     }
     mystat();
     ++mycount;
   }
-#ifdef RECORD_PMC
-  pmc2 = rdpmc(RECORD_PMC);
-#endif
+  if (record_pmc)
+    pmc2 = rdpmc(RECORD_PMC);
 
   stop_usec[cpu] = now_usec();
   stop_tsc[cpu] = rdtsc();
@@ -179,17 +176,12 @@ do_both(void *opaque)
       start_usec[cpu] = now_usec();
       start_tsc[cpu] = rdtsc();
     }
-#ifdef RECORD_PMC
-    uint64_t pmc1 = rdpmc(RECORD_PMC);
-#endif
+    uint64_t pmc1 = record_pmc ? rdpmc(RECORD_PMC) : 0;
     uint64_t tsc1 = rdtsc();
     mystat();
     uint64_t tsc2 = rdtsc();
-#ifdef RECORD_PMC
-    uint64_t pmc2 = rdpmc(RECORD_PMC);
-    if (pmc2 - pmc1 < 5000)
-      lpmc_stat += pmc2 - pmc1;
-#endif
+    uint64_t pmc2 = record_pmc ? rdpmc(RECORD_PMC) : 0;
+    lpmc_stat += pmc2 - pmc1;
     ltsc_stat += tsc2 - tsc1;
     tsc_hist[cpu] += tsc2 - tsc1;
     link("0/file", path);
@@ -233,22 +225,58 @@ sum(T v[], unsigned count)
   return res;
 }
 
+void
+usage(const char *argv0)
+{
+  fprintf(stderr, "Usage: %s [options] {-b nthreads|nstat nlink}\n", argv0);
+  fprintf(stderr, "  -e perfevent  Measure perfevent\n");
+  fprintf(stderr, "  -l true       Get st_nlink\n");
+  fprintf(stderr, "     false      Omit st_nlink\n");
+  fprintf(stderr, "  -b            Alternate between stat and link\n");
+  exit(2);
+}
+
 int
 main(int argc, char **argv)
 {
-  if (argc < 3)
-    die("usage: %s {no-}nlink nthreads|{nstatthreads nlinkthreads}", argv[0]);
+  char *pmc = nullptr;
+  bool both = false;
+  omit_nlink = false;
 
-  omit_nlink = strcmp(argv[1], "no-nlink") == 0;
-  if (!omit_nlink && strcmp(argv[1], "nlink") != 0)
-    die("bad nlink argument");
+  int opt;
+  while ((opt = getopt(argc, argv, "e:l:b")) != -1) {
+    switch (opt) {
+    case 'e':
+      pmc = optarg;
+      break;
+    case 'l':
+      if (strcmp(optarg, "true") == 0)
+        omit_nlink = false;
+      else if (strcmp(optarg, "false") == 0)
+        omit_nlink = true;
+      else
+        usage(argv[0]);
+      break;
+    case 'b':
+      both = true;
+      break;
+    default:
+      usage(argv[0]);
+    }
+  }
+
+  if ((both && argc - optind != 1) ||
+      (!both && argc - optind != 2))
+    usage(argv[0]);
+
+  int nstats = atoi(argv[optind]);
+  int nlinks = both ? 0 : atoi(argv[optind+1]);
 #if !defined(XV6_USER)
   if (omit_nlink)
-    die("no-nlink not supported on Linux");
+    die("-l false not supported on Linux");
+  if (pmc)
+    die("-p not supported on Linux");
 #endif
-  int both = argc == 3;
-  int nstats = atoi(argv[2]);
-  int nlinks = both ? 0 : atoi(argv[3]);
 
   struct utsname uts;
   uname(&uts);
@@ -260,23 +288,16 @@ main(int argc, char **argv)
   else
     printf(" --stats=%d --links=%d\n", nstats, nlinks);
 
-#if !defined(LINUX) && defined(RECORD_PMC)
+#if defined(XV6_USER)
   // Configure PMC
-  // L2 cache misses
-  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|(0x2|0x8)<<8|0x7e, 0);
-  printf("# --pmc=\"L2 cache misses\"\n");
-  // L1 cache misses
-//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|(1<<24)|(0x1f<<8)|0x42, 0);
-  // Retired instructions
-//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0xc0, 0);
-  // Retired mispredicted branch instructions
-//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0xc3, 0);
-  // Dispatch stalls
-//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0xd1, 0);
-  // Dispatch stall on LS full
-//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0xd8, 0);
-  // LS buffer 2 full
-//  perf_start(PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE|0x23, 0);
+  if (pmc) {
+    try {
+      perf_start(pmcdb_parse_selector(pmc), 0);
+    } catch (std::invalid_argument &e) {
+      die(e.what());
+    }
+    record_pmc = true;
+  }
 #endif
 
   // Set up file system
@@ -318,6 +339,11 @@ main(int argc, char **argv)
   mtdisable("xv6-linkbench");
 #endif
 
+#if defined(XV6_USER)
+  if (record_pmc)
+    perf_stop();
+#endif
+
   // Summarize
   uint64_t start_tsc_avg = summarize_ts("start cycles", start_tsc, nstats + nlinks);
   uint64_t stop_tsc_avg = summarize_ts("stop cycles", stop_tsc, nstats + nlinks);
@@ -337,14 +363,10 @@ main(int argc, char **argv)
   if (stats) {
     printf("%lu cycles/stat\n", sum(tsc_stat, nstats + nlinks) / stats);
     printf("%lu stats/sec\n", stats * 1000000 / usec);
-#ifdef RECORD_PMC
-    printf("%lu pmc\n", sum(pmc_stat, nstats + nlinks));
-    printf("%lu pmc/stat\n", sum(pmc_stat, nstats + nlinks) / stats);
-#ifdef LINUX
-    // xv6 doesn't have floating point support
-    printf("%g pmc/stat\n", sum(pmc_stat, nstats + nlinks) / (double)stats);
-#endif
-#endif
+    if (record_pmc) {
+      printf("%lu %s\n", sum(pmc_stat, nstats + nlinks), pmc);
+      printf("%f %s/stat\n", sum(pmc_stat, nstats + nlinks) / (double)stats, pmc);
+    }
   }
   printf("%lu links\n", links);
   if (links) {

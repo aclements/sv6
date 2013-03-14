@@ -3,10 +3,10 @@
 benchhdr "--bench=linkbench"
 
 NTRIAL=3
-for nlink in nlink no-nlink; do
+for st_nlink in true false; do
     for ncore in 1 {5..40..5}; do
         for trial in {1..$NTRIAL}; do
-            linkbench $nlink $ncore $ncore
+            linkbench -l $st_nlink $ncore $ncore
             sleep 5
         done
     done
