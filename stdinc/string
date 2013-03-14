@@ -9,6 +9,8 @@
 #include <stdexcept>
 
 namespace std {
+  class out_of_range;
+
   template<class charT>
   class basic_string
   {
