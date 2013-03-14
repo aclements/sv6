@@ -14,12 +14,13 @@ public:
   filetable* copy() {
     filetable* t = new filetable(false);
 
+    scoped_gc_epoch gc;
     for(int cpu = 0; cpu < NCPU; cpu++) {
       for(int fd = 0; fd < NOFILE; fd++) {
-        sref<file> f;
-        if (getfile((cpu << cpushift) | fd, &f)) {
+        file *f = ofile_[cpu][fd];
+        if (f) {
           f->inc();
-          t->ofile_[cpu][fd].store(f.get(), std::memory_order_relaxed);
+          t->ofile_[cpu][fd].store(f, std::memory_order_relaxed);
         } else {
           t->ofile_[cpu][fd].store(nullptr, std::memory_order_relaxed);
         }
