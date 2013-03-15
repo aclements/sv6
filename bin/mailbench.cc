@@ -277,7 +277,7 @@ void multithreaded()
 #if defined(XV6_USER) && NOFDSHARE
     pthread_createflags(&tid[i], 0, thread, (void*)(long)i, 0);
 #else
-    printf("create thread %d\n", i);
+    // printf("create thread %d\n", i);
     xthread_create(&tid[i], 0, thread, (void*)(long)i);
 #endif
   }
@@ -393,7 +393,7 @@ client_thread(void* x)
 {
   long id = (long)x;
 #if AFFINITY
-  printf("run client %d on cpu %ld\n", getpid(), id);
+  // printf("run client %d on cpu %ld\n", getpid(), id);
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
 #endif
