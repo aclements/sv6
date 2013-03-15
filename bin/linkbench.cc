@@ -275,11 +275,8 @@ main(int argc, char **argv)
   if (omit_nlink)
     die("-l false not supported on Linux");
   if (pmc)
-    die("-p not supported on Linux");
+    die("-e not supported on Linux");
 #endif
-
-  struct utsname uts;
-  uname(&uts);
 
   printf("# --cores=%d --duration=%ds --st_nlink=%s", nstats+nlinks, duration,
          omit_nlink ? "false" : "true");
@@ -294,7 +291,7 @@ main(int argc, char **argv)
     try {
       perf_start(pmcdb_parse_selector(pmc), 0);
     } catch (std::invalid_argument &e) {
-      die("xxx");
+      die("%s", e.what());
     }
     record_pmc = true;
   }
