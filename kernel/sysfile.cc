@@ -50,6 +50,21 @@ sys_dup(int ofd)
 
 //SYSCALL
 int
+sys_dup2(int ofd, int nfd)
+{
+  sref<file> f = getfile(ofd);
+  if (!f)
+    return -1;
+
+  if (!myproc()->ftable->replace(nfd, f.get()))
+    return -1;
+
+  f->inc();
+  return nfd;
+}
+
+//SYSCALL
+int
 sys_close(int fd)
 {
   sref<file> f = getfile(fd);

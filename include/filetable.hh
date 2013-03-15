@@ -80,6 +80,26 @@ public:
       cprintf("filetable::close: bad fd %u\n", fd);
   }
 
+  bool replace(int fd, struct file* newf) {
+    int cpu = fd >> cpushift;
+    fd = fd & fdmask;
+
+    if (cpu < 0 || cpu >= NCPU) {
+      cprintf("filetable::replace: bad fd cpu %u\n", cpu);
+      return false;
+    }
+
+    if (fd < 0 || fd >= NOFILE) {
+      cprintf("filetable::replace: bad fd %u\n", fd);
+      return false;
+    }
+
+    file* oldf = ofile_[cpu][fd].exchange(newf);
+    if (oldf != nullptr)
+      oldf->dec();
+    return true;
+  }
+
   void decref() {
     if (--ref_ == 0)
       delete this;
