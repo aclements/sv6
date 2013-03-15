@@ -65,6 +65,9 @@ do_bench(void *opaque)
 {
   uintptr_t cpu = (uintptr_t)opaque;
 
+  char fname[32];
+  snprintf(fname, sizeof fname, "%d", (int)cpu);
+
   pthread_barrier_wait(&bar);
   pthread_barrier_wait(&bar2);
 
@@ -80,9 +83,7 @@ do_bench(void *opaque)
       if (record_pmc)
         pmc1 = rdpmc(RECORD_PMC);
     }
-    // XXX Might encounter dcache non-scalability in Linux.  Maybe a
-    // form of dup would be more focused?
-    close(open("fdbench.x", open_flags));
+    close(open(fname, open_flags));
     ++mycount;
   }
   if (record_pmc)
@@ -188,7 +189,16 @@ main(int argc, char **argv)
 #endif
 
   // Set up file system
-  close(open("fdbench.x", O_CREAT|O_RDWR, 0666));
+  mkdir("fdbench-d", 0777);
+  chdir("fdbench-d");
+  for (int i = 0; i < nthreads; ++i) {
+    char fname[32];
+    snprintf(fname, sizeof fname, "%d", i);
+    int fd = open(fname, O_CREAT|O_RDWR, 0666);
+    if (fd < 0)
+      die("open failed");
+    close(fd);
+  }
 
   pthread_barrier_init(&bar, 0, nthreads + 2);
   pthread_barrier_init(&bar2, 0, nthreads + 2);
