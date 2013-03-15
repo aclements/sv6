@@ -17,7 +17,7 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#define SERVER  "/tmp/serversocket"
+#define SERVER  "/tmp/srvsck"
 #define CLIENT  "/tmp/mysck"
 #else
 #include "types.h"
@@ -26,7 +26,7 @@
 #include "kstats.hh"
 #include "sched.h"
 #include "unet.h"
-#define SERVER  "/serversocket"
+#define SERVER  "/srvsck"
 #define CLIENT  "/mysck"
 #endif
 
@@ -50,7 +50,8 @@ int filter;
 int deliver;
 int isMultithreaded;
 int doExec;
-int sock;  // socket on which server threads receive
+int separate;
+int sharedsock;  // socket on which server threads receive
 long *clientid;
 long *serverid;
 uint64_t clienttimes[MAXCPU];
@@ -208,14 +209,23 @@ thread(void* x)
 {
   long id = (long)x;
   char message[MAXMSG];
+  char path[MAXPATH];
   struct sockaddr_un name;
   socklen_t size;
   int nbytes;
+  int sock;
 
 #if AFFINITY
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
 #endif
+  if (separate) {
+    snprintf(path, MAXPATH, "%s%ld", SERVER, id);
+    sock = make_named_socket (path);
+  } else {
+    sock = sharedsock;
+  }
+
   // printf("server proc/thread %d(%d) running\n", getpid(), (int) id);
 
   int n = 0;
@@ -251,7 +261,10 @@ thread(void* x)
     }
 
     n++;
-
+  }
+  if (separate) {
+    unlink(path);
+    close(sock);
   }
 }
 
@@ -310,6 +323,7 @@ client(int id)
   char mailbox[MAXMSG];
   struct sockaddr_un name;
   char path[MAXPATH];
+  char spath[MAXPATH];
   size_t size;
   int nbytes;
 
@@ -323,11 +337,16 @@ client(int id)
   snprintf(cmessage, MAXMSG, CMESSAGE, mailbox);
   snprintf(cspam, MAXMSG, CMSGSPAM, mailbox);
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
+  snprintf(spath, MAXPATH, "%s%d", SERVER, id);
 
   sock = make_named_socket (path);
      
   name.sun_family = AF_LOCAL;
-  strcpy (name.sun_path, SERVER);
+  if (separate) {
+    strcpy (name.sun_path, spath);
+  } else {
+    strcpy (name.sun_path, SERVER);
+  }
   size = strlen (name.sun_path) + sizeof (name.sun_family);
 
   for (int i = 0; i < nmsg; i++) {
@@ -373,7 +392,7 @@ client_thread(void* x)
 {
   long id = (long)x;
 #if AFFINITY
-  // printf("run client %d on cpu %d\n", getpid(), id);
+  printf("run client %d on cpu %ld\n", getpid(), id);
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
 #endif
@@ -430,8 +449,9 @@ main (int argc, char *argv[])
   filter = 0;
   deliver = 0;
   doExec = 0;
+  separate = 0;
   for (;;) {
-    int opt = getopt(argc, argv, "efpw");
+    int opt = getopt(argc, argv, "efpsw");
     if (opt == -1)
       break;
 
@@ -449,7 +469,11 @@ main (int argc, char *argv[])
     case 'p':
       isMultithreaded = false;
       break;
-      
+
+    case 's':
+      separate = true;
+      break;
+
     case 'w':
       deliver = true;
       break;
@@ -470,11 +494,13 @@ main (int argc, char *argv[])
   }
 
 
-  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %d threaded %d exec filter %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec);
+  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %d threaded %d exec filter %d separate %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec, separate);
 
-  // open the server socket before clients run
-  unlink (SERVER);
-  sock = make_named_socket (SERVER);
+  if (!separate) {
+    // open a shared server socket before clients run
+    unlink (SERVER);
+    sharedsock = make_named_socket (SERVER);
+  }
 
   struct kstats kstats_before;
   read_kstats(&kstats_before);
@@ -497,7 +523,8 @@ main (int argc, char *argv[])
     t1 = rdtsc();
     usec1 = now_usec();
   }
-  close(sock);
+  if (!separate)
+    close(sharedsock);
   printf("%d %f # nclient throughput in msg/msec; ncycles %lu for nmsg %d cycles/msg %lu\n", nclient, 1000.0 * ((double) nclient*nmsg) /(usec1-usec0), t1-t0, nclient*nmsg, (t1-t0)/nmsg);
 
 #ifdef XV6_USER
