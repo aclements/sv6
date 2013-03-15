@@ -242,7 +242,7 @@ thread(void* x)
 
     if (strcmp(message, DIE) == 0) {
       // printf("server %ld done\n", id);
-      pthread_exit(0);
+      break;
     }
 
     if ((filter && isOk(message, nbytes)) || deliver) {
@@ -266,6 +266,7 @@ thread(void* x)
     unlink(path);
     close(sock);
   }
+  return NULL;
 }
 
 void multithreaded()
