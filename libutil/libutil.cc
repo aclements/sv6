@@ -82,7 +82,7 @@ now_usec(void)
   struct timeval tv;
   if (gettimeofday(&tv, NULL) < 0)
     edie("gettimeofday");
-  return tv.tv_sec * 1000000 + tv.tv_usec;
+  return tv.tv_sec * 1000000ull + tv.tv_usec;
 }
 
 #if !defined(XV6_USER)
