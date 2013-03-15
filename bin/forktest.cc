@@ -12,10 +12,6 @@
 #include "user.h"
 #endif
 
-// pin
-// timer thread
-// forks/s per core
-
 int nfork;
 
 #if defined(XV6_USER) && defined(HW_ben)
@@ -86,6 +82,7 @@ main(int argc, char *argv[])
   nfork = atoi(argv[2]);
 
   uint64_t t0 = rdtsc();
+  uint64_t usec0 = now_usec();
   for (int i = 0; i < ncore; i++) {
     int pid = xfork();
     if (pid < 0) {
@@ -100,8 +97,9 @@ main(int argc, char *argv[])
     wait(NULL);
   }
   uint64_t t1 = rdtsc();
-  
-  printf("Summary: ncycles %lu for ncore %d nfork %d cycles/fork %lu\n", t1-t0, ncore, nfork, (t1-t0)/nfork);
+  uint64_t usec1 = now_usec();
+
+  printf("%d %f # ncores tput in forks/msec; ncycles %lu nfork %d cycles/fork %lu\n", ncore, 1000.0 * ((double) nfork * ncore)/(usec1-usec0), t1-t0, nfork, (t1-t0)/nfork);
 
   return 0;
 }

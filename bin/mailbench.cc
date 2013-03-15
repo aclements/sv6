@@ -18,7 +18,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #define SERVER  "/tmp/serversocket"
-#define CLIENT  "/tmp/mysocket"
+#define CLIENT  "/tmp/mysck"
 #else
 #include "types.h"
 #include "user.h"
@@ -27,7 +27,7 @@
 #include "sched.h"
 #include "unet.h"
 #define SERVER  "/serversocket"
-#define CLIENT  "/mysocket"
+#define CLIENT  "/mysck"
 #endif
 
 #define MAXCPU 100
@@ -126,7 +126,7 @@ make_named_socket(const char *filename)
   name.sun_path[sizeof (name.sun_path) - 1] = '\0';
   size = SUN_LEN (&name);
   if (bind (sock, (struct sockaddr *) &name, size) < 0) {
-    printf("bind on %s failed\n", filename);
+    printf("bind on %s failed; name too long?\n", filename);
     die ("bind error");
   }
   return sock;
@@ -330,7 +330,6 @@ client(int id)
   strcpy (name.sun_path, SERVER);
   size = strlen (name.sun_path) + sizeof (name.sun_family);
 
-  uint64_t t0 = rdtsc();
   for (int i = 0; i < nmsg; i++) {
 
     if (trace) printf("%d: client send\n", i);
@@ -357,20 +356,16 @@ client(int id)
     if (trace) printf("%d: done\n", i);
 
   }
-  uint64_t t1 = rdtsc();
-  clienttimes[id] = (t1-t0)/nmsg;
-  printf("client %d ncycles %lu for nmsg %d cycles/msg %lu\n", getpid(), t1-t0, nmsg, (t1-t0)/nmsg);
   nbytes = sendto(sock, (void *) DIE, strlen (DIE) + 1, 0,
                   (struct sockaddr *) & name, size);
   if (nbytes < 0) {
     die ("sendto (client) failed");
   }
 
+  close (sock);
   unlink (path);
-
   unlink (mailbox);
 
-  close (sock);
 }
 
 static void*
@@ -485,6 +480,7 @@ main (int argc, char *argv[])
   read_kstats(&kstats_before);
 
   uint64_t t0 = 0, t1 = 0;
+  uint64_t usec0 = 0, usec1 = 0;
   int pid = xfork();
   if (pid < 0)
     die("fork failed %s", argv[0]);
@@ -495,12 +491,14 @@ main (int argc, char *argv[])
   } else {
     sleep(2);
     t0 = rdtsc();
+    usec0 = now_usec();
     clients();
     wait(NULL);
     t1 = rdtsc();
+    usec1 = now_usec();
   }
-
-  printf("Summary: nclient %d ncycles %lu for nmsg %lu cycles/msg %lu\n", nclient, t1-t0, nclient*(uint64_t) nmsg, (t1-t0)/ nmsg);
+  close(sock);
+  printf("%d %f # nclient throughput in msg/msec; ncycles %lu for nmsg %d cycles/msg %lu\n", nclient, 1000.0 * ((double) nclient*nmsg) /(usec1-usec0), t1-t0, nclient*nmsg, (t1-t0)/nmsg);
 
 #ifdef XV6_USER
   struct kstats kstats_after;
