@@ -1,0 +1,14 @@
+#!/sh
+
+benchhdr "--bench=fdbench"
+echo
+
+NTRIAL=3
+for any_fd in false true; do
+    for ncore in 1 {10..80..10}; do
+        for trial in {1..$NTRIAL}; do
+            fdbench -e "L2 miss" -a $any_fd $ncore
+            sleep 5
+        done
+    done
+done

@@ -58,6 +58,7 @@ UPROGS_BIN= \
 	tee \
         ln \
 	forktest \
+	fdbench \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
@@ -84,6 +85,7 @@ UPROGS_NATIVE := \
 	sh \
 	linkbench \
 	forktest \
+	fdbench \
 
 FSEXTRA += \
 	bin/linkbench-tom \
@@ -95,7 +97,7 @@ FSEXTRA += \
 	bin/countbench-ben \
 	bin/forktest-ben\
 	bin/mailbench-ben\
-
+	bin/fdbench-ben \
 
 # (ULIBA will be empty for native builds)
 UPROGS_LIBS := $(ULIBA) $(LIBUTIL_A)
