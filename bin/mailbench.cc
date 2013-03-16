@@ -19,6 +19,7 @@
 #include <sys/un.h>
 #define SERVER  "/tmp/srvsck"
 #define CLIENT  "/tmp/mysck"
+#define MAILBOX "/tmp/u%d"
 #else
 #include "types.h"
 #include "user.h"
@@ -28,12 +29,12 @@
 #include "unet.h"
 #define SERVER  "/srvsck"
 #define CLIENT  "/mysck"
+#define MAILBOX "u%d"
 #endif
 
 #define MAXCPU 100
 #define MAXMSG  512
 #define MAXPATH 100
-#define MAILBOX "u%d"
 #define SMESSAGE "OK"
 #define CMESSAGE "MAIL from: kaashoek@mit.edu\nRCPT TO: %s@mit.edu\nDATA\nDATASTRING Hello\nENDDATA\n"
 #define CMSGSPAM "MAIL from: kaashoek@mit.edu\nRCPT TO: %s@mit.edu\nDATA\nDATASTRING SPAM\nENDDATA\n"
