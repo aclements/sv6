@@ -135,12 +135,14 @@ main(int ac, char** av)
 
       if (ra0 == rb0 && ra1 == rb1) {
         if (verbose)
-          printf("test %d: commutes: %s->%d %s->%d\n",
-                 i, fstests[i].call0name, ra0, fstests[i].call1name, ra1);
+          printf("%s: commutes: %s->%d %s->%d\n",
+                 fstests[i].testname,
+                 fstests[i].call0name, ra0, fstests[i].call1name, ra1);
       } else {
-        printf("test %d: diverges: %s->%d %s->%d vs %s->%d %s->%d\n",
-               i, fstests[i].call0name, ra0, fstests[i].call1name, ra1,
-                  fstests[i].call0name, rb0, fstests[i].call1name, rb1);
+        printf("%s: diverges: %s->%d %s->%d vs %s->%d %s->%d\n",
+               fstests[i].testname,
+               fstests[i].call0name, ra0, fstests[i].call1name, ra1,
+               fstests[i].call1name, rb1, fstests[i].call0name, rb0);
       }
     }
 
@@ -162,7 +164,7 @@ main(int ac, char** av)
       ;
 
     char mtname[64];
-    snprintf(mtname, sizeof(mtname), "fstest-%d", i);
+    snprintf(mtname, sizeof(mtname), "%s", fstests[i].testname);
     mtenable_type(mtrace_record_ascope, mtname);
 
     ready = 1;
