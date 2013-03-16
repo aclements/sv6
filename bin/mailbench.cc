@@ -222,6 +222,7 @@ thread(void* x)
 #endif
   if (separate) {
     snprintf(path, MAXPATH, "%s%ld", SERVER, id);
+    unlink(path);
     sock = make_named_socket (path);
   } else {
     sock = sharedsock;
@@ -341,6 +342,7 @@ client(int id)
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
   snprintf(spath, MAXPATH, "%s%d", SERVER, id);
 
+  unlink(path);
   sock = make_named_socket (path);
      
   name.sun_family = AF_LOCAL;
