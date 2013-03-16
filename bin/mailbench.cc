@@ -53,6 +53,7 @@ int isMultithreaded;
 int doExec;
 int separate;
 int sharedsock;  // socket on which server threads receive
+int content;
 long *clientid;
 long *serverid;
 uint64_t clienttimes[MAXCPU];
@@ -209,7 +210,7 @@ void *
 thread(void* x)
 {
   long id = (long)x;
-  char message[MAXMSG];
+  char request[MAXMSG];
   char path[MAXPATH];
   struct sockaddr_un name;
   socklen_t size;
@@ -236,26 +237,27 @@ thread(void* x)
     if (trace) printf("server %d: wait\n", (int) id);
 
     size = sizeof (name);
-    nbytes = recvfrom (sock, message, MAXMSG, 0,
+    nbytes = recvfrom (sock, request, MAXMSG, 0,
                        (struct sockaddr *) & name, &size);
     if (nbytes < 0) {
       die ("recfrom (server)");
     }
 
-    if (strcmp(message, DIE) == 0) {
+    if (strcmp(request, DIE) == 0) {
       // printf("server %ld done\n", id);
       break;
     }
 
-    if ((filter && isOk(message, nbytes)) || deliver) {
-      store(message, nbytes);
+    if ((filter && isOk(request, nbytes)) || deliver) {
+      store(request, nbytes);
     }
-    
-    strcpy(message, SMESSAGE);
+
+    if (content) strcpy(request, SMESSAGE);
+    else strcpy(request, "");
 
     if (trace) printf("server %d: respond\n", (int) id);
 
-    nbytes = sendto(sock, message, strlen(SMESSAGE)+1, 0,
+    nbytes = sendto(sock, request, strlen(request)+1, 0,
                     (struct sockaddr *) & name, size);
     if (nbytes < 0)
     {
@@ -320,9 +322,8 @@ void
 client(int id)
 {
   int sock;
-  char message[MAXMSG];
-  char cmessage[MAXMSG];
-  char cspam[MAXMSG];
+  char request[MAXMSG];
+  char reply[MAXMSG];
   char mailbox[MAXMSG];
   struct sockaddr_un name;
   char path[MAXPATH];
@@ -337,10 +338,14 @@ client(int id)
   }
   close(fd);
 
-  snprintf(cmessage, MAXMSG, CMESSAGE, mailbox);
-  snprintf(cspam, MAXMSG, CMSGSPAM, mailbox);
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
   snprintf(spath, MAXPATH, "%s%d", SERVER, id);
+  if (content) {
+    snprintf(request, MAXMSG, CMESSAGE, mailbox);
+    // snprintf(cspam, MAXMSG, CMSGSPAM, mailbox);
+  } else {
+    strcpy(request, "");
+  }
 
   unlink(path);
   sock = make_named_socket (path);
@@ -357,7 +362,7 @@ client(int id)
 
     if (trace) printf("%d: client send\n", i);
 
-    nbytes = sendto(sock, (void *) cmessage, strlen (cmessage) + 1, 0,
+    nbytes = sendto(sock, (void *) request, strlen (request) + 1, 0,
                     (struct sockaddr *) & name, size);
     if (nbytes < 0) {
       die ("sendto (client) failed");
@@ -365,14 +370,13 @@ client(int id)
 
     if (trace) printf("%d: client wait\n", i);
 
-    nbytes = recvfrom (sock, message, MAXMSG, 0, NULL, 0);
+    nbytes = recvfrom (sock, reply, MAXMSG, 0, NULL, 0);
     if (nbytes < 0) {
       die ("recfrom (client) failed");
     }
 
-
-    if (strcmp(message, SMESSAGE) != 0) {
-      printf("client: message %s\n", message);
+    if (content && strcmp(reply, SMESSAGE) != 0) {
+      printf("client: message %s\n", reply);
       die ("data is incorrect (client)");
     }
 
@@ -443,7 +447,7 @@ void clients()
 static void
 usage(const char* prog)
 {
-  fprintf(stderr, "Usage: %s nserver nclient nmsg [-e(exec&fork)] [-f(ork)] [-p(rocesses] [-w(rite)\n", prog);
+  fprintf(stderr, "Usage: %s nserver nclient nmsg [-e(exec&fork)] [-f(ork)] [-m(ail)] [-p(rocesses] [-w(rite)] [-s(eparate socket)]\n", prog);
 }
      
 int
@@ -455,7 +459,7 @@ main (int argc, char *argv[])
   doExec = 0;
   separate = 0;
   for (;;) {
-    int opt = getopt(argc, argv, "efpsw");
+    int opt = getopt(argc, argv, "efmpsw");
     if (opt == -1)
       break;
 
@@ -468,6 +472,10 @@ main (int argc, char *argv[])
 
     case 'f':
       filter = true;
+      break;
+
+    case 'm':
+      content = 1;
       break;
 
     case 'p':
@@ -498,7 +506,7 @@ main (int argc, char *argv[])
   }
 
 
-  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %d threaded %d exec filter %d separate %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec, separate);
+  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %d threaded %d exec filter %d separate %d email %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec, separate, content);
 
   if (!separate) {
     // open a shared server socket before clients run
