@@ -360,6 +360,9 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
     if (!md || md->as_dir()->killed())
       return sref<mnode>();
 
+    if (excl && md->as_dir()->exists(name))
+      return sref<mnode>();
+
     sref<mnode> mf = md->as_dir()->lookup(name);
     if (mf) {
       if (type != T_FILE || mf->type() != mnode::types::file || excl)
