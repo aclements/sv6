@@ -64,6 +64,42 @@ sys_dup2(int ofd, int nfd)
 }
 
 //SYSCALL
+off_t
+sys_lseek(int fd, off_t offset, int whence)
+{
+  sref<file> f = getfile(fd);
+  if (!f)
+    return -1;
+
+  file* ff = f.get();
+  if (&typeid(*ff) != &typeid(file_inode))
+    return -1;
+
+  file_inode* fi = static_cast<file_inode*>(ff);
+  auto l = fi->off_lock.guard();
+  switch (whence) {
+  case SEEK_SET:
+    fi->off = offset;
+    break;
+
+  case SEEK_CUR:
+    fi->off += offset;
+    break;
+
+  case SEEK_END:
+    if (fi->ip->type() != mnode::types::file)
+      return -1;
+    fi->off = offset + *fi->ip->as_file()->read_size();
+    break;
+
+  default:
+    return -1;
+  }
+
+  return fi->off;
+}
+
+//SYSCALL
 int
 sys_close(int fd)
 {

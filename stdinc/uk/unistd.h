@@ -10,3 +10,8 @@ enum stat_flags {
   STAT_NO_FLAGS = 0,
   STAT_OMIT_NLINK = 1<<0
 };
+
+// lseek flags
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
