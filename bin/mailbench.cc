@@ -278,13 +278,13 @@ void multithreaded()
   pthread_t tid[MAXCPU];
 
   for (int i = 0; i < nthread; i++) {
-#if defined(XV6_USER) && NOFDSHARE
-    pthread_createflags(&tid[i], 0, thread, (void*)(long)i 0);
-#else
-    // printf("create thread %d\n", i);
     struct arg *a = (struct arg *) malloc(sizeof(struct arg));
     a->id = i;
     a->sock = sharedsock;
+    // printf("create thread %d\n", i);
+#if defined(XV6_USER) && NOFDSHARE
+    pthread_createflags(&tid[i], 0, server, (void*)a, 0);
+#else
     xthread_create(&tid[i], 0, server, (void *)a);
 #endif
   }
