@@ -15,7 +15,6 @@ public:
   sref<filetable> copy() {
     filetable* t = new filetable(false);
 
-    scoped_gc_epoch gc;
     for(int cpu = 0; cpu < NCPU; cpu++) {
       for(int fd = 0; fd < NOFILE; fd++) {
         file *f = ofile_[cpu][fd];
@@ -41,7 +40,6 @@ public:
     if (fd < 0 || fd >= NOFILE)
       return false;
 
-    scoped_gc_epoch gc;
     file* f = ofile_[cpu][fd];
     if (!f || !sf->init_nonzero(f))
       return false;
