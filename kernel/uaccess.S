@@ -9,6 +9,9 @@
 // rdi user src
 // rsi kernel dst
 ENTRY(__uaccess_int64)
+        push    %rbp            // For stack traces
+        mov     %rsp, %rbp
+
         mov     %gs:0x8, %r11
         movl    $1, PROC_UACCESS(%r11)
         mov     (%rdi), %r10
@@ -20,6 +23,9 @@ ENTRY(__uaccess_int64)
 // rsi src
 // rdx dst len
 ENTRY(__uaccess_str)
+        push    %rbp            // For stack traces
+        mov     %rsp, %rbp
+
         mov     %gs:0x8, %r11
         movl    $1, PROC_UACCESS(%r11)
 
@@ -44,6 +50,9 @@ ENTRY(__uaccess_str)
 // rsi src
 // rdx len
 ENTRY(__uaccess_mem)
+        push    %rbp            // For stack traces
+        mov     %rsp, %rbp
+
         mov     %gs:0x8, %r11
         movl    $1, PROC_UACCESS(%r11)
 
@@ -63,6 +72,7 @@ ENTRY(__uaccess_mem)
 .align 8
 __uaccess_end:
         movl $0, PROC_UACCESS(%r11)
+        pop     %rbp
         ret
 
 .globl zpage
