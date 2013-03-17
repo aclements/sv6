@@ -60,7 +60,7 @@ usage(const char* prog)
 int
 main(int ac, char** av)
 {
-  setaffinity(0);
+  setaffinity(2);
 
   uint32_t min = 0;
   uint32_t max = UINT_MAX;
@@ -158,7 +158,7 @@ main(int ac, char** av)
     pthread_create(&tid0, 0, callthread, (void*) fstests[i].call0);
     setaffinity(1);
     pthread_create(&tid1, 0, callthread, (void*) fstests[i].call1);
-    setaffinity(0);
+    setaffinity(2);
 
     while (waiters.load() != 2)
       ;
