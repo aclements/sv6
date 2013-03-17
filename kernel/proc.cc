@@ -34,7 +34,7 @@ enum { sched_debug = 0 };
 proc::proc(int npid) :
   rcu_freed("proc", this, sizeof(*this)), vmap(0), kstack(0),
   pid(npid), parent(0), tf(0), context(0), killed(0),
-  ftable(0), tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
+  tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
   cpu_pin(0), oncv(0), cv_wakeup(0),
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
   user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
@@ -156,12 +156,9 @@ exit(int status)
   if(myproc() == bootproc)
     panic("init exiting");
 
-  if (myproc()->ftable)
-    myproc()->ftable->decref();
+  myproc()->ftable.reset();
 
-  // Kernel threads might not have a cwd
-  if (myproc()->cwd != nullptr)
-      myproc()->cwd.reset();
+  myproc()->cwd.reset();
 
   myproc()->status = status;
 
@@ -478,7 +475,6 @@ fork(int flags)
   np->tf->rax = 0;
 
   if (flags & FORK_SHARE_FD) {
-    myproc()->ftable->incref();
     np->ftable = myproc()->ftable;
   } else {
     np->ftable = myproc()->ftable->copy();

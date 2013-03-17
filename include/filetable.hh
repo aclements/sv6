@@ -1,17 +1,18 @@
 #include <atomic>
 #include "percpu.hh"
+#include "ref.hh"
 
-class filetable {
+class filetable : public referenced {
 private:
   static const int cpushift = 16;
   static const int fdmask = (1 << cpushift) - 1;
 
 public:
-  static filetable* alloc() {
-    return new filetable();
+  static sref<filetable> alloc() {
+    return sref<filetable>::transfer(new filetable());
   }
 
-  filetable* copy() {
+  sref<filetable> copy() {
     filetable* t = new filetable(false);
 
     scoped_gc_epoch gc;
@@ -27,7 +28,7 @@ public:
       }
     }
     std::atomic_thread_fence(std::memory_order_release);
-    return t;
+    return sref<filetable>::transfer(t);
   }
   
   bool getfile(int fd, sref<file> *sf) {
@@ -100,17 +101,8 @@ public:
     return true;
   }
 
-  void decref() {
-    if (--ref_ == 0)
-      delete this;
-  }
-
-  void incref() {
-    ref_++;
-  }
-
 private:
-  filetable(bool clear = true) : ref_(1) {
+  filetable(bool clear = true) {
     if (!clear)
       return;
     for(int cpu = 0; cpu < NCPU; cpu++)
@@ -135,5 +127,4 @@ private:
   NEW_DELETE_OPS(filetable);  
 
   percpu<std::atomic<file*>[NOFILE]> ofile_;
-  std::atomic<u64> ref_;
 };

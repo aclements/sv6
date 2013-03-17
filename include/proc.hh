@@ -65,7 +65,7 @@ struct proc : public rcu_freed, public sched_link {
   struct trapframe *tf;        // Trap frame for current syscall
   struct context *context;     // swtch() here to run process
   int killed;                  // If non-zero, have been killed
-  filetable *ftable;
+  sref<filetable> ftable;      // File descriptor table
   sref<inode> cwd;             // Current directory
   sref<mnode> cwd_m;           // Current directory
   char name[16];               // Process name (debugging)
