@@ -75,7 +75,7 @@ dosegment(sref<mnode> ip, vmap* vmp, u64 off, u64 *load_addr)
     // ends.
     if (vmp->insert(vmdesc::anon_desc, mapped_end, backed_end - mapped_end) < 0)
       return -1;
-    size_t seg_pos = mapped_end - va_start;
+    size_t seg_pos = mapped_end >= ph.vaddr ? mapped_end - ph.vaddr : 0;
     char buf[512];
     while (seg_pos < ph.filesz) {
       size_t to_read = ph.filesz - seg_pos;
