@@ -56,15 +56,13 @@ ENTRY(__uaccess_mem)
         mov     %gs:0x8, %r11
         movl    $1, PROC_UACCESS(%r11)
 
-        // %rcx is loop instruction counter
+        // %rcx is rep counter
         mov     %rdx, %rcx
         xor     %rax, %rax
-1:   
-        movb    (%rsi), %r10b
-        movb    %r10b, (%rdi)
-        inc     %rdi
-        inc     %rsi
-        loop    1b
+
+        // Copy
+        rep movsb
+
         // Done
         jmp     __uaccess_end
         
