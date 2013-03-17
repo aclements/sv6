@@ -121,6 +121,33 @@ main(int ac, char** av)
     printf(" %d-%d", min, max);
   printf("\n");
 
+  /* Warm up to avoid sharing due to startup effects */
+  if (fstests[0].setup) {
+    fstests[0].setup();
+
+    waiters = 0;
+    ready = 0;
+    pthread_t tid0, tid1;
+    setaffinity(0);
+    pthread_create(&tid0, 0, callthread, (void*) fstests[0].call0);
+    setaffinity(1);
+    pthread_create(&tid1, 0, callthread, (void*) fstests[0].call1);
+    setaffinity(2);
+
+    while (waiters.load() != 2)
+      ;
+
+    ready = 1;
+    while (waiters.load() != 0)
+      ;
+ 
+    ready = 2;
+    pthread_join(tid0, 0);
+    pthread_join(tid1, 0);
+
+    fstests[0].cleanup();
+  }
+
   for (uint32_t i = min; i <= max && fstests[i].setup; i++) {
     if (check_commutativity) {
       fstests[i].setup();
