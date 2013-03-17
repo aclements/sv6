@@ -131,12 +131,6 @@ file_inode::pwrite(const char *addr, size_t n, off_t off)
   return writei(ip, addr, off, n);
 }
 
-void
-file_inode::onzero()
-{
-  gc_delayed(this);
-}
-
 
 ssize_t
 file_pipe_reader::read(char *addr, size_t n)
@@ -148,7 +142,7 @@ void
 file_pipe_reader::onzero(void)
 {
   pipeclose(pipe, false);
-  gc_delayed(this);
+  delete this;
 }
 
 
@@ -162,7 +156,7 @@ void
 file_pipe_writer::onzero(void)
 {
   pipeclose(pipe, true);
-  gc_delayed(this);
+  delete this;
 }
 
 
@@ -184,5 +178,5 @@ void
 file_socket::onzero()
 {
   sockclose(this);
-  gc_delayed(this);
+  delete this;
 }

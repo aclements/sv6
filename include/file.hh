@@ -16,7 +16,7 @@ class dirns;
 
 u64 namehash(const strbuf<DIRSIZ>&);
 
-struct file : public rcu_freed {
+struct file {
   virtual int stat(struct stat*, enum stat_flags) { return -1; }
   virtual ssize_t read(char *addr, size_t n) { return -1; }
   virtual ssize_t write(const char *addr, size_t n) { return -1; }
@@ -27,7 +27,7 @@ struct file : public rcu_freed {
   virtual void dec() = 0;
 
 protected:
-  file() : rcu_freed("file", this, sizeof(*this)) {}
+  file() {}
 };
 
 struct file_inode : public refcache::referenced, public file {
@@ -51,10 +51,10 @@ public:
   ssize_t write(const char *addr, size_t n) override;
   ssize_t pread(char* addr, size_t n, off_t off) override;
   ssize_t pwrite(const char *addr, size_t n, off_t offset) override;
-  void onzero() override;
-
-protected:
-  void do_gc(void) override { delete this; }
+  void onzero() override
+  {
+    delete this;
+  }
 };
 
 struct file_socket : public refcache::referenced, public file {
@@ -74,9 +74,6 @@ public:
   ssize_t write(const char *addr, size_t n) override;
   void onzero() override;
 
-protected:
-  void do_gc(void) override { delete this; }
-
 private:
   // XXX This locking should be handled in net, not here.
   semaphore wsem, rsem;
@@ -93,9 +90,6 @@ public:
   ssize_t read(char *addr, size_t n) override;
   void onzero() override;
 
-protected:
-  void do_gc(void) override { delete this; }
-
 private:
   struct pipe* const pipe;
 };
@@ -110,9 +104,6 @@ public:
 
   ssize_t write(const char *addr, size_t n) override;
   void onzero() override;
-
-protected:
-  void do_gc(void) override { delete this; }
 
 private:
   struct pipe* const pipe;
