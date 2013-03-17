@@ -457,4 +457,23 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
   return len;
 }
 
- 
+//SYSCALL
+int
+sys_connect(int sockfd, const struct sockaddr* addr, u32 addrlen)
+{
+  return -1;
+}
+
+//SYSCALL
+ssize_t
+sys_send(int sockfd, userptr<void> buf, size_t len, int flags)
+{
+  return -1;
+}
+
+//SYSCALL
+ssize_t
+sys_recv(int sockfd, userptr<void> buf, size_t len, int flags)
+{
+  return -1;
+}
