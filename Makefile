@@ -181,7 +181,7 @@ mscan.kern: $(KERN)
 	cp $< $@
 
 MTRACEOPTS = -rtc clock=vm -mtrace-enable -mtrace-file mtrace.out \
-	     -mtrace-quantum 100 -mtrace-calls
+	     -mtrace-calls
 mtrace.out: mscan.kern mscan.syms 
 	$(Q)rm -f mtrace.out
 	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel mscan.kern -s

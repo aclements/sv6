@@ -162,12 +162,42 @@ writei(sref<mnode> m, const char* buf, u64 start, u64 nbytes,
         /* Raced with truncate; assume our data would have been blown away */
         break;
 
+      /*
+       * What happens when writing past the end of the file but within
+       * the file's last page?  One worry might be that we're exposing
+       * some non-zero bytes left over in the part of the last page that
+       * is past the end of the file.  Our plan is to ensure that any
+       * file truncate zeroes out any partial pages.  Currently, we only
+       * have O_TRUNC, which discards all pages.
+       */
+
       memmove((char*) pi->va() + pgoff, buf + off, pgend - pgoff);
       if (resize && *resize)
         resize->resize_nogrow(pos + pgend - pgoff);
     } else {
       /* File does not yet have the page we are about to update */
       assert(resize && *resize);
+
+      /*
+       * If this is a write past the end of the file, we may need
+       * to first zero out some memory locations, or even fill in
+       * a few zero pages.  We do not support sparse files -- the
+       * holes are filled in with zeroed pages.
+       */
+      while (msize < pgbase) {
+        if (msize % PGSIZE) {
+          resize->resize_nogrow(msize - (msize % PGSIZE) + PGSIZE);
+        } else {
+          char* p = zalloc("file page");
+          if (!p)
+            break;
+
+          pi = sref<page_info>::transfer(new (page_info::of(p)) page_info());
+          resize->resize_append(msize + PGSIZE, pi);
+        }
+
+        msize = resize->read_size();
+      }
 
       char* p = zalloc("file page");
       if (!p)

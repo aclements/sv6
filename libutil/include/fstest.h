@@ -1,6 +1,7 @@
 #pragma once
 
 struct fstest {
+  const char* testname;
   void (*setup)(void);
   int (*call0)(void);
   int (*call1)(void);
