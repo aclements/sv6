@@ -56,9 +56,15 @@ file_inode::read(char *addr, size_t n)
     } else {
       return -1;
     }
+  } else if (ip->type() != mnode::types::file) {
+    return -1;
   } else {
-    l = off_lock.guard();
-    r = readi(ip, addr, off, n);
+    if (off >= *ip->as_file()->read_size()) {
+      r = 0;
+    } else {
+      l = off_lock.guard();
+      r = readi(ip, addr, off, n);
+    }
   }
   if (r > 0)
     off += r;
