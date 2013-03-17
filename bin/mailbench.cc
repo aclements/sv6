@@ -46,7 +46,7 @@
 int nthread;
 int nclient;
 int nmsg;
-int trace;;
+int trace;
 int filter;
 int deliver;
 int isMultithreaded;
@@ -229,7 +229,7 @@ server(void *x)
     die("setaffinity err");
 #endif
 
-  printf("server proc/thread %d(%d) using fd %d\n", getpid(), id, sock);
+  // printf("server proc/thread %d(%d) using fd %d\n", getpid(), id, sock);
 
   int n = 0;
   while (1)
@@ -328,6 +328,7 @@ void multiproced()
         a->sock = sock;
       }
       server((void *) a);
+      exit(0);
     } else {
       tid[i] = pid;
     }
