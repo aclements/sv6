@@ -260,6 +260,17 @@ sys_rename(userptr_str old_path, userptr_str new_path)
   if (!mdold)
     return -1;
 
+  if (!mdold->as_dir()->exists(oldname))
+    return -1;
+
+  strbuf<DIRSIZ> newname;
+  sref<mnode> mdnew = nameiparent(myproc()->cwd_m, newn, &newname);
+  if (!mdnew)
+    return -1;
+
+  if (mdold == mdnew && oldname == newname)
+    return 0;
+
   mlinkref mflink = mdold->as_dir()->lookup_link(oldname);
   if (!mflink.mn() || mflink.mn()->type() == mnode::types::dir)
     /*
@@ -274,14 +285,6 @@ sys_rename(userptr_str old_path, userptr_str new_path)
      * checking for "." and "..".
      */
     return -1;
-
-  strbuf<DIRSIZ> newname;
-  sref<mnode> mdnew = nameiparent(myproc()->cwd_m, newn, &newname);
-  if (!mdnew)
-    return -1;
-
-  if (mdold == mdnew && oldname == newname)
-    return 0;
 
   for (;;) {
     sref<mnode> mroadblock = mdnew->as_dir()->lookup(newname);
