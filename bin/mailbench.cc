@@ -46,7 +46,7 @@
 int nthread;
 int nclient;
 int nmsg;
-int trace = 0;
+int trace;;
 int filter;
 int deliver;
 int isMultithreaded;
@@ -54,6 +54,7 @@ int doExec;
 int separate;
 int sharedsock;  // socket on which server threads receive
 int content;
+int connected;
 long *clientid;
 long *serverid;
 uint64_t clienttimes[MAXCPU];
@@ -119,7 +120,7 @@ make_named_socket(const char *filename)
   int sock;
   size_t size;
 
-  sock = socket (PF_LOCAL, SOCK_DGRAM, 0);
+  sock = socket (PF_LOCAL, connected ? SOCK_STREAM : SOCK_DGRAM, 0);
   if (sock < 0) {
     die ("socket");
   }
@@ -138,6 +139,11 @@ make_named_socket(const char *filename)
 //
 // Server side
 //
+
+struct arg {
+  int id;
+  int sock;
+};
 
 static int
 isOk(char *message, int n) 
@@ -207,29 +213,23 @@ store(char *message, int n)
 }
 
 void *
-thread(void* x)
+server(void *x)
 {
-  long id = (long)x;
+  struct arg *a = (struct arg *) x;
+  int id = a->id;
+  int sock = a->sock;
   char request[MAXMSG];
   char path[MAXPATH];
   struct sockaddr_un name;
   socklen_t size;
   int nbytes;
-  int sock;
 
 #if AFFINITY
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
 #endif
-  if (separate) {
-    snprintf(path, MAXPATH, "%s%ld", SERVER, id);
-    unlink(path);
-    sock = make_named_socket (path);
-  } else {
-    sock = sharedsock;
-  }
 
-  // printf("server proc/thread %d(%d) running\n", getpid(), (int) id);
+  printf("server proc/thread %d(%d) using fd %d\n", getpid(), id, sock);
 
   int n = 0;
   while (1)
@@ -240,7 +240,7 @@ thread(void* x)
     nbytes = recvfrom (sock, request, MAXMSG, 0,
                        (struct sockaddr *) & name, &size);
     if (nbytes < 0) {
-      die ("recfrom (server)");
+      die ("recvfrom (server)");
     }
 
     if (strcmp(request, DIE) == 0) {
@@ -279,10 +279,13 @@ void multithreaded()
 
   for (int i = 0; i < nthread; i++) {
 #if defined(XV6_USER) && NOFDSHARE
-    pthread_createflags(&tid[i], 0, thread, (void*)(long)i, 0);
+    pthread_createflags(&tid[i], 0, thread, (void*)(long)i 0);
 #else
     // printf("create thread %d\n", i);
-    xthread_create(&tid[i], 0, thread, (void*)(long)i);
+    struct arg *a = (struct arg *) malloc(sizeof(struct arg));
+    a->id = i;
+    a->sock = sharedsock;
+    xthread_create(&tid[i], 0, server, (void *)a);
 #endif
   }
 
@@ -295,14 +298,36 @@ void multithreaded()
 void multiproced() 
 {
   pthread_t tid[MAXCPU];
+  char path[MAXPATH];
+  int sock;
+
+  if (connected && (listen(sharedsock, nthread) != 0)) {
+    die("multiproced: listen failed\n");
+  }
 
   for (int i = 0; i < nthread; i++) {
+    if (connected) {
+      if ((sock = accept(sharedsock, NULL, 0)) < 0) {
+        die("multiproced: accept failed\n");
+      }
+    } else {
+      sock = sharedsock;
+    }
     int pid = xfork();
     if (pid < 0) {
       die("fork failed");
     }
     if (pid == 0) {
-      thread((void*)(long)i);
+      struct arg *a = (struct arg *) malloc(sizeof(struct arg));
+      a->id = i;
+      if (separate) {
+        snprintf(path, MAXPATH, "%s%d", SERVER, i);
+        unlink(path);
+        a->sock = make_named_socket (path);
+      } else {
+        a->sock = sock;
+      }
+      server((void *) a);
     } else {
       tid[i] = pid;
     }
@@ -347,9 +372,6 @@ client(int id)
     strcpy(request, "");
   }
 
-  unlink(path);
-  sock = make_named_socket (path);
-     
   name.sun_family = AF_LOCAL;
   if (separate) {
     strcpy (name.sun_path, spath);
@@ -358,19 +380,40 @@ client(int id)
   }
   size = strlen (name.sun_path) + sizeof (name.sun_family);
 
+  if (connected) {
+    if ((sock = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0) {
+      die("client: socket() failed\n");
+    }
+    if ((connect(sock, (struct sockaddr *) &name, size)) != 0) {
+      die("client: connect failed() failed\n");
+    }
+  }  else {
+    unlink(path);
+    sock = make_named_socket (path);
+  }
+     
+
   for (int i = 0; i < nmsg; i++) {
 
     if (trace) printf("%d: client send\n", i);
 
-    nbytes = sendto(sock, (void *) request, strlen (request) + 1, 0,
-                    (struct sockaddr *) & name, size);
+    if (connected) {
+      nbytes = send(sock, (void *) request, strlen (request) + 1, 0);
+    } else {
+      nbytes = sendto(sock, (void *) request, strlen (request) + 1, 0,
+                      (struct sockaddr *) & name, size);
+    }
     if (nbytes < 0) {
       die ("sendto (client) failed");
     }
 
     if (trace) printf("%d: client wait\n", i);
 
-    nbytes = recvfrom (sock, reply, MAXMSG, 0, NULL, 0);
+    if (connected) {
+      nbytes = recv (sock, reply, MAXMSG, 0);
+    } else {
+      nbytes = recvfrom (sock, reply, MAXMSG, 0, NULL, 0);
+    }
     if (nbytes < 0) {
       die ("recfrom (client) failed");
     }
@@ -383,8 +426,12 @@ client(int id)
     if (trace) printf("%d: done\n", i);
 
   }
-  nbytes = sendto(sock, (void *) DIE, strlen (DIE) + 1, 0,
+  if (connected) {
+    nbytes = send(sock, (void *) DIE, strlen (DIE) + 1, 0);
+  } else {
+    nbytes = sendto(sock, (void *) DIE, strlen (DIE) + 1, 0,
                   (struct sockaddr *) & name, size);
+  }
   if (nbytes < 0) {
     die ("sendto (client) failed");
   }
@@ -392,7 +439,6 @@ client(int id)
   close (sock);
   unlink (path);
   unlink (mailbox);
-
 }
 
 static void*
@@ -447,7 +493,7 @@ void clients()
 static void
 usage(const char* prog)
 {
-  fprintf(stderr, "Usage: %s nserver nclient nmsg [-e(exec&fork)] [-f(ork)] [-m(ail)] [-p(rocesses] [-w(rite)] [-s(eparate socket)]\n", prog);
+  fprintf(stderr, "Usage: %s nserver nclient nmsg [-c(onnect)] [-e(exec&fork)] [-f(ork)] [-m(ail)] [-p(rocesses] [-w(rite)] [-s(eparate socket)]\n", prog);
 }
      
 int
@@ -459,11 +505,16 @@ main (int argc, char *argv[])
   doExec = 0;
   separate = 0;
   for (;;) {
-    int opt = getopt(argc, argv, "efmpsw");
+    int opt = getopt(argc, argv, "cefmpsw");
     if (opt == -1)
       break;
 
     switch (opt) {
+
+    case 'c':
+      connected = 1;
+      isMultithreaded = false;
+      break;
 
     case 'e':
       filter = true;
@@ -484,6 +535,7 @@ main (int argc, char *argv[])
 
     case 's':
       separate = true;
+      isMultithreaded = false;
       break;
 
     case 'w':
@@ -506,7 +558,7 @@ main (int argc, char *argv[])
   }
 
 
-  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %d threaded %d exec filter %d separate %d email %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec, separate, content);
+  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %d threaded %d exec filter %d separate %d email %d connect %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec, separate, content, connected);
 
   if (!separate) {
     // open a shared server socket before clients run
