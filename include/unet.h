@@ -26,6 +26,7 @@ ipaddr(struct sockaddr_in *sin)
 #else // !LWIP
 // Support local sockets
 typedef u32 socklen_t;
+#define SOCK_STREAM 1
 #define SOCK_DGRAM 2
 #endif
 
