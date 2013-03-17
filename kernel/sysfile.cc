@@ -271,42 +271,44 @@ sys_rename(userptr_str old_path, userptr_str new_path)
   if (mdold == mdnew && oldname == newname)
     return 0;
 
-  mlinkref mflink = mdold->as_dir()->lookup_link(oldname);
-  if (!mflink.mn() || mflink.mn()->type() == mnode::types::dir)
-    /*
-     * Renaming directories not currently supported.
-     * Would require checking for loops.  This can be
-     * complicated by concurrent renames of the same
-     * source directory when one of the renames has
-     * already added a new name for the directory,
-     * but not removed the previous name yet.  Would
-     * also require changing ".." in the subdirectory,
-     * dealing with a possible rmdir / rename race, and
-     * checking for "." and "..".
-     */
-    return -1;
-
   for (;;) {
-    sref<mnode> mroadblock = mdnew->as_dir()->lookup(newname);
-    if (!mroadblock) {
-      if (mdnew->as_dir()->insert(newname, &mflink)) {
-        mdold->as_dir()->remove(oldname, mflink.mn());
-        return 0;
-      }
-    } else {
-      if (mroadblock->type() == mnode::types::dir)
-        /*
-         * POSIX says rename should replace a directory only with another
-         * directory, and we currently don't support directory rename (see
-         * above).
-         */
-        return -1;
+    sref<mnode> mfold = mdold->as_dir()->lookup(oldname);
+    if (!mfold || mfold->type() == mnode::types::dir)
+      /*
+       * Renaming directories not currently supported.
+       * Would require checking for loops.  This can be
+       * complicated by concurrent renames of the same
+       * source directory when one of the renames has
+       * already added a new name for the directory,
+       * but not removed the previous name yet.  Would
+       * also require changing ".." in the subdirectory,
+       * dealing with a possible rmdir / rename race, and
+       * checking for "." and "..".
+       */
+      return -1;
 
-      if (mdnew->as_dir()->replace(newname, mroadblock, &mflink)) {
-        mdold->as_dir()->remove(oldname, mflink.mn());
+    sref<mnode> mfroadblock = mdnew->as_dir()->lookup(newname);
+    if (mfroadblock && mfroadblock->type() == mnode::types::dir)
+      /*
+       * POSIX says rename should replace a directory only with another
+       * directory, and we currently don't support directory rename (see
+       * above).
+       */
+      return -1;
+
+    if (mfroadblock == mfold) {
+      if (mdold->as_dir()->remove(oldname, mfold))
         return 0;
-      }
+    } else {
+      if (mdnew->as_dir()->replace_from(newname, mfroadblock,
+                                        mdold->as_dir(), oldname, mfold))
+        return 0;
     }
+
+    /*
+     * The inodes for the source and/or the destination file names
+     * must have changed.  Retry.
+     */
   }
 }
 

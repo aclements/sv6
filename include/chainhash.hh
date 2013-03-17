@@ -95,24 +95,69 @@ public:
     }
   }
 
-  bool replace(const K& k, const V& vold, const V& vnew) {
-    if (!lookup(k))
-      return false;
+  bool replace_from(const K& kdst, const V* vpdst,
+                    chainhash* src, const K& ksrc,
+                    const V& vsrc)
+  {
+    /*
+     * A special API used by rename.  Atomically performs the following
+     * steps, returning false if any of the checks fail:
+     *
+     *  - if vpdst!=nullptr, checks this[kdst]==*vpdst
+     *  - if vpdst==nullptr, checks this[kdst] is not set
+     *  - checks src[ksrc]==vsrc
+     *  - removes src[ksrc]
+     *  - sets this[kdst] = vsrc
+     */
+    bucket* bdst = &buckets_[hash(kdst) % nbuckets_];
+    bucket* bsrc = &src->buckets_[hash(ksrc) % src->nbuckets_];
 
-    bucket* b = &buckets_[hash(k) % nbuckets_];
-    scoped_acquire l(&b->lock);
+    scoped_acquire lsrc, ldst;
+    if (bsrc == bdst) {
+      lsrc = bsrc->lock.guard();
+    } else if (bsrc < bdst) {
+      lsrc = bsrc->lock.guard();
+      ldst = bdst->lock.guard();
+    } else {
+      ldst = bdst->lock.guard();
+      lsrc = bsrc->lock.guard();
+    }
 
-    for (item& i: b->chain) {
-      if (i.key == k) {
-        if (i.val != vold)
+    auto srci = bsrc->chain.before_begin();
+    auto srcend = bsrc->chain.end();
+    auto srcprev = srci;
+    for (;;) {
+      ++srci;
+      if (srci == srcend)
+        return false;
+      if (srci->key != ksrc) {
+        srcprev = srci;
+        continue;
+      }
+      if (srci->val != vsrc)
+        return false;
+      break;
+    }
+
+    for (item& i: bdst->chain) {
+      if (i.key == kdst) {
+        if (vpdst == nullptr || i.val != *vpdst)
           return false;
         auto w = i.seq.write_begin(); 
-        i.val = vnew;
+        i.val = vsrc;
+        bsrc->chain.erase_after(srcprev);
+        gc_delayed(&*srci);
         return true;
       }
     }
 
-    return false;
+    if (vpdst != nullptr)
+      return false;
+
+    bsrc->chain.erase_after(srcprev);
+    gc_delayed(&*srci);
+    bdst->chain.push_front(new item(kdst, vsrc));
+    return true;
   }
 
   bool enumerate(const K* prev, K* out) const {

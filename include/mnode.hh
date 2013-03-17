@@ -160,14 +160,14 @@ public:
     return true;
   }
 
-  bool replace(const strbuf<DIRSIZ>& name, sref<mnode> mold, mlinkref* ilinknew) {
-    if (mold->inum_ == ilinknew->mn()->inum_)
-      return true;
-    if (!map_.replace(name, mold->inum_, ilinknew->mn()->inum_))
+  bool replace_from(const strbuf<DIRSIZ>& dstname, sref<mnode> mdst,
+                    mdir* src, const strbuf<DIRSIZ>& srcname, sref<mnode> msrc) {
+    u64 dstinum = mdst ? mdst->inum_ : 0;
+    if (!map_.replace_from(dstname, mdst ? &dstinum : nullptr,
+                           &src->map_, srcname, msrc->inum_))
       return false;
-    assert(ilinknew->held());
-    ilinknew->mn()->nlink_.inc();
-    mold->nlink_.dec();
+    if (mdst)
+      mdst->nlink_.dec();
     return true;
   }
 
