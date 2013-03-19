@@ -543,7 +543,7 @@ usage(const char* prog)
 int
 main (int argc, char *argv[])
 {
-  const char *deliver = "none";
+  const char *deliver = nullptr;
 
   isMultithreaded = 1;
   filter = 0;
@@ -600,6 +600,11 @@ main (int argc, char *argv[])
   } else {
     usage(argv[0]);
     return -1;
+  }
+
+  if (!deliver) {
+    fprintf(stderr, "-d is required");
+    usage(argv[0]);
   }
 
   if (strcmp(deliver, "none") == 0)
