@@ -140,6 +140,13 @@ mkdir(const char *path, mode_t mode)
 }
 
 int
+lstat(const char *path, struct stat *buf)
+{
+  // xv6 has no symlinks
+  return stat(path, buf);
+}
+
+int
 fstat(int fd, struct stat *st)
 {
   return fstatx(fd, st, 0);
