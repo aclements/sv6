@@ -149,13 +149,21 @@ make_named_socket(const char *filename)
 class mailbox
 {
 public:
-  virtual void deliver(const char *data, size_t len) = 0;
+  virtual ~mailbox() { };
+  virtual void deliver(const char *data, size_t len) const = 0;
 };
+
+typedef mailbox *(*mailbox_factory)(const string &path, bool create);
 
 class mailbox_none : public mailbox
 {
 public:
-  void deliver(const char *data, size_t len) override
+  static mailbox *create(const string &path, bool create)
+  {
+    return new mailbox_none{};
+  }
+
+  void deliver(const char *data, size_t len) const override
   {
   }
 };
@@ -173,17 +181,27 @@ class mailbox_maildir : public mailbox
     return (((uint64_t)thread_id) << 32) | (thread_nonce++);
   }
 
+  mailbox_maildir(const string &base) : base_(base) { }
+
 public:
-  mailbox_maildir(const string &base) : base_(base)
+  static mailbox *create(const string &path, bool create)
   {
-    if (mkdir(base.c_str(), 0777) < 0 ||
-        mkdir((base + "/tmp").c_str(), 0777) < 0 ||
-        mkdir((base + "/new").c_str(), 0777) < 0 ||
-        mkdir((base + "/cur").c_str(), 0777))
-      edie("failed to create maildir %s", base.c_str());
+    if (create) {
+      if (mkdir(path.c_str(), 0777) < 0 ||
+          mkdir((path + "/tmp").c_str(), 0777) < 0 ||
+          mkdir((path + "/new").c_str(), 0777) < 0 ||
+          mkdir((path + "/cur").c_str(), 0777))
+        edie("failed to create maildir %s", path.c_str());
+    } else {
+      struct stat st;
+      if (stat(path.c_str(), &st) < 0 ||
+          (st.st_mode & S_IFMT) != S_IFDIR)
+        return nullptr;
+    }
+    return new mailbox_maildir{path};
   }
 
-  void deliver(const char *data, size_t len) override
+  void deliver(const char *data, size_t len) const override
   {
     // Generate unique tmp path
     char path_tmp[256], path_new[256];
@@ -207,7 +225,7 @@ public:
   }
 };
 
-static mailbox *the_mailbox;
+static mailbox_factory the_mailbox_factory;
 
 //
 // Server side
@@ -299,9 +317,14 @@ server(void *x)
       while (*p != ' ') p++;
       char *q = strstr(p, "ENDDATA");
 
-      // Filter and deliver
-      if (!filter || isOk(p, q - p))
-        the_mailbox->deliver(p, q - p);
+      // Find mailbox
+      mailbox *mb = the_mailbox_factory(MAILBOX, false);
+      if (mb) {
+        // Filter and deliver
+        if (!filter || isOk(p, q - p))
+          mb->deliver(p, q - p);
+        delete mb;
+      }
     }
 
     if (content) strcpy(request, SMESSAGE);
@@ -543,11 +566,10 @@ usage(const char* prog)
 int
 main (int argc, char *argv[])
 {
-  const char *deliver = nullptr;
+  const char *deliver_name = nullptr;
 
   isMultithreaded = 1;
   filter = 0;
-  deliver = 0;
   doExec = 0;
   separate = 0;
   for (;;) {
@@ -557,7 +579,15 @@ main (int argc, char *argv[])
 
     switch (opt) {
     case 'd':
-      deliver = optarg;
+      deliver_name = optarg;
+      if (strcmp(optarg, "none") == 0)
+        the_mailbox_factory = mailbox_none::create;
+      else if (strcmp(optarg, "maildir") == 0)
+        the_mailbox_factory = mailbox_maildir::create;
+      else {
+        fprintf(stderr, "Bad -d argument");
+        usage(argv[0]);
+      }
       break;
 
     case 'c':
@@ -602,19 +632,15 @@ main (int argc, char *argv[])
     return -1;
   }
 
-  if (!deliver) {
+  if (!the_mailbox_factory) {
     fprintf(stderr, "-d is required");
     usage(argv[0]);
   }
 
-  if (strcmp(deliver, "none") == 0)
-    the_mailbox = new mailbox_none{};
-  else if (strcmp(deliver, "maildir") == 0)
-    the_mailbox = new mailbox_maildir{MAILBOX};
-  else
-    usage(argv[0]);
+  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %s threaded %d exec filter %d separate %d email %d connect %d\n", nthread, nclient, nmsg, filter, deliver_name, isMultithreaded, doExec, separate, content, connected);
 
-  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %s threaded %d exec filter %d separate %d email %d connect %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec, separate, content, connected);
+  // Create mailbox
+  delete the_mailbox_factory(MAILBOX, true);
 
   if (!separate) {
     // open a shared server socket before clients run
