@@ -248,7 +248,7 @@ server(void *x)
       break;
     }
 
-    if ((filter && isOk(request, nbytes)) || deliver) {
+    if ((!filter || isOk(request, nbytes)) && deliver) {
       store(request, nbytes);
     }
 
