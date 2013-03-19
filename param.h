@@ -99,6 +99,9 @@
 #define NSOCKET       8
 #define PERFSIZE      (128<<20ull)
 #define UART_BAUD     115200
+// Disable the hardware stream and adjacent cache line prefetcher
+#define DISABLE_PREFETCH_STREAM 1
+#define DISABLE_PREFETCH_ADJ 1
 #elif defined(HW_user)
 #define NCPU          256
 #define PERFSIZE      (16<<20ull)

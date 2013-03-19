@@ -82,17 +82,17 @@
 #define MSR_INTEL_DS_AREA           0x600
 
 // Intel prefetch control registers.
-// See bits-767/boot/cfg/configure.nhm.common.cfg in
+// See bits-767/boot/cfg/configure.nhm.common.cfg and
+// bits-767/boot/cfg/cpu.cfg in
 // http://biosbits.org/downloads/bits-767.zip
-#define MSR_INTEL_PREFETCH  0x000001a4
+#define MSR_INTEL_MISC_FEATURE_CONTROL  0x000001a4
 // Set any of these to disable the corresponding prefetcher
-#define MSR_INTEL_PREFETCH_DISABLE_MLC_STREAMER   0x01
-#define MSR_INTEL_PREFETCH_DISABLE_MLC_SPATIAL    0x02
-#define MSR_INTEL_PREFETCH_DISABLE_DCU_STREAMER   0x04
-#define MSR_INTEL_PREFETCH_DISABLE_DCU_IP         0x08
-// Only for CPUID mode 0xc family 0x6 type 0 extmodel 0x2 extfamily 0
-// (CPUID_FEATURES eax 0x206c0, ignore stepping).
-#define MSR_INTEL_PREFETCH_DISABLE_DATA_REUSE     0x40
+#define MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_STREAMER   0x01
+#define MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_SPATIAL    0x02
+#define MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_DCU_STREAMER   0x04
+#define MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_DCU_IP         0x08
+// Only for CPUID 06_2c (CPUID_FEATURES eax&~0xf == 0x206c0)
+#define MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_DATA_REUSE     0x40
 
 // Common event-select bits
 #define PERF_SEL_USR        (1ULL << 16)

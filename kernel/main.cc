@@ -25,6 +25,7 @@ void initnmi(void);
 void initcodex(void);
 void inittrap(void);
 void initfpu(void);
+void initmsr(void);
 void initseg(struct cpu *);
 void initphysmem(paddr mbaddr);
 void initpercpu(void);
@@ -80,6 +81,7 @@ mpboot(void)
 
   initlapic();
   initfpu();
+  initmsr();
   initsamp();
   initidle();
   initnmi();
@@ -203,6 +205,7 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   inittrap();
   initfpu();               // Requires nothing
+  initmsr();               // Requires nothing
   initcmdline();
   initkalloc();
   initwq();        // (after kalloc)
