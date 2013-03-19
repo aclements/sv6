@@ -1,12 +1,16 @@
+#include "libutil.h"
+#include "amd64.h"
+#include "xsys.h"
+#include "spam.h"
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "libutil.h"
-#include "amd64.h"
-#include "xsys.h"
-#include "spam.h"
+
+#include <atomic>
+#include <string>
 
 // To build on Linux:
 //  make HW=linux
@@ -19,7 +23,7 @@
 #include <sys/un.h>
 #define SERVER  "/tmp/srvsck"
 #define CLIENT  "/tmp/mysck"
-#define MAILBOX "/tmp/u%d"
+#define MAILBOX "/tmp/mailbox"
 #else
 #include "types.h"
 #include "user.h"
@@ -29,7 +33,7 @@
 #include "unet.h"
 #define SERVER  "/srvsck"
 #define CLIENT  "/mysck"
-#define MAILBOX "u%d"
+#define MAILBOX "/mailbox"
 #endif
 
 #define MAXCPU 100
@@ -43,12 +47,14 @@
 #define NOFDSHARE 1
 #define AFFINITY 1
 
+using std::string;
+using std::atomic;
+
 int nthread;
 int nclient;
 int nmsg;
 int trace;
 int filter;
-int deliver;
 int isMultithreaded;
 int doExec;
 int separate;
@@ -137,6 +143,73 @@ make_named_socket(const char *filename)
 }
 
 //
+// Delivery
+//
+
+class mailbox
+{
+public:
+  virtual void deliver(const char *data, size_t len) = 0;
+};
+
+class mailbox_none : public mailbox
+{
+public:
+  void deliver(const char *data, size_t len) override
+  {
+  }
+};
+
+class mailbox_maildir : public mailbox
+{
+  string base_;
+
+  static uint64_t get_nonce()
+  {
+    static atomic<uint32_t> next_thread_id;
+    static __thread uint32_t thread_id, thread_nonce;
+    if (!thread_id)
+      thread_id = ++next_thread_id;
+    return (((uint64_t)thread_id) << 32) | (thread_nonce++);
+  }
+
+public:
+  mailbox_maildir(const string &base) : base_(base)
+  {
+    if (mkdir(base.c_str(), 0777) < 0 ||
+        mkdir((base + "/tmp").c_str(), 0777) < 0 ||
+        mkdir((base + "/new").c_str(), 0777) < 0 ||
+        mkdir((base + "/cur").c_str(), 0777))
+      edie("failed to create maildir %s", base.c_str());
+  }
+
+  void deliver(const char *data, size_t len) override
+  {
+    // Generate unique tmp path
+    char path_tmp[256], path_new[256];
+    int pid = getpid();
+    long long unsigned nonce = get_nonce();
+    snprintf(path_tmp, sizeof path_tmp, "%s/tmp/%d_%llx",
+             base_.c_str(), pid, nonce);
+    snprintf(path_new, sizeof path_new, "%s/new/%d_%llx",
+             base_.c_str(), pid, nonce);
+
+    // Write message
+    int fd = open(path_tmp, O_WRONLY|O_CREAT|O_EXCL, 0600);
+    if (fd < 0)
+      edie("open %s failed", path_tmp);
+    xwrite(fd, data, len);
+    close(fd);
+
+    // Deliver
+    if (rename(path_tmp, path_new) < 0)
+      edie("rename %s %s failed", path_tmp, path_new);
+  }
+};
+
+static mailbox *the_mailbox;
+
+//
 // Server side
 //
 
@@ -184,34 +257,6 @@ isOk(char *message, int n)
   return r;
 }
 
-static void
-store(char *message, int n)
-{
-  char filename[MAXPATH];
-  char *p = strstr(message, "TO:");
-  int i;
-  while (*p != ' ') p++;
-  while (*p == ' ') p++;
-  for (i = 0; *p != '@'; i++,p++) filename[i] = *p;
-  filename[i] = 0;
-  int fd = open(filename, O_APPEND|O_WRONLY, S_IRWXU);
-  if (fd < 0) {
-    printf("open %s failed\n", filename);
-    return;
-  }
-  p = strstr(message, "DATASTRING");
-  while (*p != ' ') p++;
-  char *q = strstr(p, "ENDDATA");
-  while (p != q) {
-    int n = write(fd, p, 1);
-    if (n != 1) {
-      die("write failed");
-    }
-    p++;
-  }
-  close(fd);
-}
-
 void *
 server(void *x)
 {
@@ -248,8 +293,15 @@ server(void *x)
       break;
     }
 
-    if ((!filter || isOk(request, nbytes)) && deliver) {
-      store(request, nbytes);
+    // Find message
+    char *p = strstr(request, "DATASTRING");
+    if (p) {
+      while (*p != ' ') p++;
+      char *q = strstr(p, "ENDDATA");
+
+      // Filter and deliver
+      if (!filter || isOk(p, q - p))
+        the_mailbox->deliver(p, q - p);
     }
 
     if (content) strcpy(request, SMESSAGE);
@@ -350,25 +402,16 @@ client(int id)
   int sock;
   char request[MAXMSG];
   char reply[MAXMSG];
-  char mailbox[MAXMSG];
   struct sockaddr_un name;
   char path[MAXPATH];
   char spath[MAXPATH];
   size_t size;
   int nbytes;
 
-  snprintf(mailbox, MAXMSG, MAILBOX, id);
-  int fd = open(mailbox, O_APPEND|O_WRONLY|O_CREAT, S_IRWXU);
-  if (fd < 0) {
-    die("open cmessage failed");
-  }
-  close(fd);
-
   snprintf(path, MAXPATH, "%s%d", CLIENT, getpid());
   snprintf(spath, MAXPATH, "%s%d", SERVER, id);
   if (content) {
-    snprintf(request, MAXMSG, CMESSAGE, mailbox);
-    // snprintf(cspam, MAXMSG, CMSGSPAM, mailbox);
+    snprintf(request, MAXMSG, CMESSAGE, MAILBOX);
   } else {
     strcpy(request, "");
   }
@@ -439,7 +482,6 @@ client(int id)
 
   close (sock);
   unlink (path);
-  unlink (mailbox);
 }
 
 static void*
@@ -494,23 +536,29 @@ void clients()
 static void
 usage(const char* prog)
 {
-  fprintf(stderr, "Usage: %s nserver nclient nmsg [-c(onnect)] [-e(exec&fork)] [-f(ork)] [-m(ail)] [-p(rocesses] [-w(rite)] [-s(eparate socket)]\n", prog);
+  fprintf(stderr, "Usage: %s nserver nclient nmsg [-d none,maildir] [-c(onnect)] [-e(exec&fork)] [-f(ork)] [-m(ail)] [-p(rocesses] [-w(rite)] [-s(eparate socket)]\n", prog);
+  exit(2);
 }
-     
+
 int
 main (int argc, char *argv[])
 {
+  const char *deliver = "none";
+
   isMultithreaded = 1;
   filter = 0;
   deliver = 0;
   doExec = 0;
   separate = 0;
   for (;;) {
-    int opt = getopt(argc, argv, "cefmpsw");
+    int opt = getopt(argc, argv, "d:cefmps");
     if (opt == -1)
       break;
 
     switch (opt) {
+    case 'd':
+      deliver = optarg;
+      break;
 
     case 'c':
       connected = 1;
@@ -539,10 +587,6 @@ main (int argc, char *argv[])
       isMultithreaded = false;
       break;
 
-    case 'w':
-      deliver = true;
-      break;
-
     default:
       usage(argv[0]);
       return -1;
@@ -558,8 +602,14 @@ main (int argc, char *argv[])
     return -1;
   }
 
+  if (strcmp(deliver, "none") == 0)
+    the_mailbox = new mailbox_none{};
+  else if (strcmp(deliver, "maildir") == 0)
+    the_mailbox = new mailbox_maildir{MAILBOX};
+  else
+    usage(argv[0]);
 
-  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %d threaded %d exec filter %d separate %d email %d connect %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec, separate, content, connected);
+  printf("nservers %d nclients %d nmsg %d fork filter %d write mailbox %s threaded %d exec filter %d separate %d email %d connect %d\n", nthread, nclient, nmsg, filter, deliver, isMultithreaded, doExec, separate, content, connected);
 
   if (!separate) {
     // open a shared server socket before clients run
