@@ -333,12 +333,6 @@ inittrap(void)
     idt[i] = INTDESC(KCSEG, entry, bits);
   }
 
-  // Construct initial FPU state
-  lcr0(rcr0() & ~(CR0_TS | CR0_EM));
-  fninit();
-  ldmxcsr(0x1f80);              // Mask all SSE exceptions
-  fxsave(&fpu_initial_state);
-
   // Conservatively reserve all legacy IRQs.  This might cause us to
   // not be able to configure a device.
   for (int i = 0; i < 16; ++i)
@@ -348,6 +342,22 @@ inittrap(void)
   // And reserve interrupt 255 (Intel SDM Vol. 3 suggests this can't
   // be used for MSI).
   irq_info[255 - T_IRQ0].in_use = true;
+}
+
+void
+initfpu(void)
+{
+  // Allow ourselves to use FPU instructions.  We'll clear this before
+  // we schedule anything.
+  lcr0(rcr0() & ~(CR0_TS | CR0_EM));
+  // Initialize FPU, ignoring pending FP exceptions
+  fninit();
+  // Don't generate interrupts for any SSE exceptions
+  ldmxcsr(0x1f80);
+  // Stash away the initial FPU state to use as each process' initial
+  // FPU state
+  if (myid() == 0)
+    fxsave(&fpu_initial_state);
 }
 
 void

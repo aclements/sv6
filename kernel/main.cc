@@ -24,6 +24,7 @@ void inittls(struct cpu *);
 void initnmi(void);
 void initcodex(void);
 void inittrap(void);
+void initfpu(void);
 void initseg(struct cpu *);
 void initphysmem(paddr mbaddr);
 void initpercpu(void);
@@ -78,6 +79,7 @@ mpboot(void)
       (*__percpuinit_array_start[i])(bcpuid);
 
   initlapic();
+  initfpu();
   initsamp();
   initidle();
   initnmi();
@@ -200,6 +202,7 @@ cmain(u64 mbmagic, u64 mbaddr)
       (*__init_array_start[i])(0, nullptr, nullptr);
 
   inittrap();
+  initfpu();               // Requires nothing
   initcmdline();
   initkalloc();
   initwq();        // (after kalloc)
