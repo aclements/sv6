@@ -617,7 +617,7 @@ sys_pipe(userptr<int> fd)
 
 //SYSCALL
 int
-sys_readdir(int dirfd, userptr<char> prevptr, userptr<char> nameptr)
+sys_readdir(int dirfd, const userptr<char> prevptr, userptr<char> nameptr)
 {
   sref<file> df = getfile(dirfd);
   if (!df)
