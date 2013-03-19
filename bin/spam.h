@@ -1,4 +1,7 @@
-int isLegit()
+#include <string.h>
+#include <unistd.h>
+
+static int isLegit()
 {
   char buf[1024];
 
