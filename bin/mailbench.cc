@@ -446,7 +446,7 @@ client(int id)
   } else {
     strcpy (name.sun_path, SERVER);
   }
-  size = strlen (name.sun_path) + sizeof (name.sun_family);
+  size = SUN_LEN(&name);
 
   if (connected) {
     if ((sock = socket(PF_LOCAL, SOCK_STREAM, 0)) < 0) {
