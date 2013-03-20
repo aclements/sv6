@@ -331,7 +331,7 @@ public:
     if (!userptr<char>(buf).store(m->data, m->len))
       goto done;
 
-    r = len;
+    r = m->len;
 
   done:
     kfree(m->data);
