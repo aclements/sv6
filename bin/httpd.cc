@@ -1,13 +1,15 @@
 #include "types.h"
 #include "user.h"
 #include "lib.h"
-#include "unet.h"
+
+#include "sockutil.h"
 
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
 
 #define VERSION "0.1"
 #define HTTP_VERSION "1.0"

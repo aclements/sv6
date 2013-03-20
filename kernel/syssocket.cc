@@ -13,7 +13,8 @@
 #include "dirns.hh"
 #include <uk/fcntl.h>
 #include <uk/stat.h>
-#include "unet.h"
+#include <uk/socket.h>
+#include <uk/un.h>
 #include "lb.hh"
 #include "ilist.hh"
 #include "kstats.hh"
@@ -301,7 +302,7 @@ sys_socket(int domain, int type, int protocol)
 
 //SYSCALL
 int
-sys_bind(int xsock, const struct sockaddr *xaddr, int xaddrlen)
+sys_bind(int xsock, const struct sockaddr *xaddr, uint32_t xaddrlen)
 {
   extern long netbind(int, const struct sockaddr*, int);
   int r;

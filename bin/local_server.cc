@@ -1,21 +1,22 @@
 #if defined(LINUX)
 #include <errno.h>
 #include <unistd.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #define die perror
 #define SERVER  "/tmp/serversocket"
 #else
 #include "types.h"
 #include "user.h"
-#include "unet.h"
 #include "pthread.h"
 #define SERVER  "/serversocket"
 #endif
-     
+
+#include "sockutil.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #define MAXMSG  512
 #define MESSAGE "ni hao"

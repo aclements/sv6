@@ -1,7 +1,10 @@
 #include "types.h"
 #include "user.h"
-#include "unet.h"
+
+#include "sockutil.h"
+
 #include <stdio.h>
+#include <sys/socket.h>
 
 int
 dfork(void)

@@ -2,12 +2,16 @@
 #include "amd64.h"
 #include "xsys.h"
 #include "spam.h"
+#include "sockutil.h"
 
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #include <atomic>
 #include <string>
@@ -19,8 +23,6 @@
 #include <errno.h>
 #include <pthread.h>
 #include <sys/wait.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #define SERVER  "/tmp/srvsck"
 #define CLIENT  "/tmp/mysck"
 #define MAILBOX "/tmp/mailbox"
@@ -30,7 +32,6 @@
 #include "pthread.h"
 #include "kstats.hh"
 #include "sched.h"
-#include "unet.h"
 #define SERVER  "/srvsck"
 #define CLIENT  "/mysck"
 #define MAILBOX "/mailbox"
