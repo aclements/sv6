@@ -24,6 +24,7 @@
 
 #if defined(XV6_USER)
 #include "pthread.h"
+#include <xv6/perf.h>
 #else
 #include <pthread.h>
 #endif

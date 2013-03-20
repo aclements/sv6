@@ -1,4 +1,5 @@
 #include "sched.hh"
+#include <xv6/perf.h>
 #include <fcntl.h>
 #include <stdlib.h>
 

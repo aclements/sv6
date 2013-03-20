@@ -2,6 +2,7 @@
 #include "user.h"
 #include <fcntl.h>
 #include "sampler.h"
+#include <xv6/perf.h>
 
 static int perf_fd = -1;
 

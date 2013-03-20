@@ -2,6 +2,7 @@
 #include "user.h"
 #include "amd64.h"
 #include "lib.h"
+#include <xv6/perf.h>
 
 #include <fcntl.h>
 #include <uk/gcstat.h>
