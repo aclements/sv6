@@ -280,6 +280,7 @@ public:
     msghdr *m = new msghdr();
     m->data = b;
     m->len = len;
+    m->uaddr.sun_family = AF_UNIX;
     strncpy(m->uaddr.sun_path, socketpath_, UNIX_PATH_MAX);
     strncpy(m->data, b, len);
 
