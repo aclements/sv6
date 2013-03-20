@@ -301,7 +301,6 @@ public:
     m->len = len;
     m->uaddr.sun_family = AF_UNIX;
     strncpy(m->uaddr.sun_path, socketpath_, UNIX_PATH_MAX);
-    strncpy(m->data, b, len);
 
     int r = ip->as_sock()->get_sock()->write(m);
     if (r < 0) {
