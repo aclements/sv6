@@ -17,9 +17,6 @@ void xwrite(int fd, const void *buf, size_t n);
 
 uint64_t now_usec(void);
 
-#if !defined(XV6_USER)
-// setaffinity is a syscall in xv6, but not standard in Linux
 int setaffinity(int c);
-#endif
 
 END_DECLS
