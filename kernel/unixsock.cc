@@ -213,6 +213,23 @@ struct file_unix_dgram : public refcache::referenced, public file
     delete localsock_;
   }
 
+  static const struct sockaddr_un *
+  check_sockaddr(const struct sockaddr *sa, size_t addrlen)
+  {
+    auto sun = reinterpret_cast<const struct sockaddr_un*>(sa);
+    if (!sun || addrlen < offsetof(struct sockaddr_un, sun_path) ||
+        sun->sun_family != AF_UNIX)
+      return nullptr;
+    // The syscall layer ensures that sun_path is NULL-terminated, but
+    // double check this.  The +1 may look weird, but the user may
+    // pass an addrlen that omits the terminated NULL and the syscall
+    // copy ensures there will be at least one extra byte.
+    assert(addrlen == offsetof(struct sockaddr_un, sun_path) ||
+           memchr(sun->sun_path, 0,
+                  addrlen - offsetof(struct sockaddr_un, sun_path) + 1));
+    return sun;
+  }
+
 public:
   file_unix_dgram() : localsock_(new localsock) {}
   NEW_DELETE_OPS(file_unix_dgram);
@@ -257,7 +274,9 @@ public:
     kstats::timer timer_fill(&kstats::socket_local_sendto_cycles);
     kstats::inc(&kstats::socket_local_sendto_cnt);
 
-    auto uaddr = reinterpret_cast<const struct sockaddr_un*>(dest_addr);
+    auto uaddr = check_sockaddr(dest_addr, addrlen);
+    if (!uaddr)
+      return -1;
 
     sref<mnode> ip = namei(myproc()->cwd_m, uaddr->sun_path);
     if (!ip)
