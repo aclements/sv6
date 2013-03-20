@@ -32,6 +32,7 @@
 #include "bits.hh"
 #include "kstats.hh"
 #include "xsys.h"
+#include <xv6/perf.h>
 #endif
 
 #define PGSIZE 4096

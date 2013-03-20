@@ -25,6 +25,7 @@
 #include "pthread.h"
 #include "bits.hh"
 #include "kstats.hh"
+#include <xv6/perf.h>
 #endif
 
 #define PGSIZE 4096
