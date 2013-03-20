@@ -23,6 +23,14 @@ struct file {
   virtual ssize_t pread(char *addr, size_t n, off_t offset) { return -1; }
   virtual ssize_t pwrite(const char *addr, size_t n, off_t offset) { return -1; }
 
+  // Socket operations
+  virtual int bind(const struct sockaddr *addr, uint32_t addrlen) { return -1; }
+  virtual int listen(int backlog) { return -1; }
+  // Unlike the syscall, the return is only an error status.  The
+  // caller will allocate an FD for *out on success.
+  virtual int accept(struct sockaddr *addr, uint32_t *addrlen, file **out)
+  { return -1; }
+
   virtual void inc() = 0;
   virtual void dec() = 0;
 
@@ -55,28 +63,6 @@ public:
   {
     delete this;
   }
-};
-
-struct file_socket : public refcache::referenced, public file {
-public:
-  file_socket() : socket(0), localsock(nullptr),
-                  wsem("file::wsem", 1), rsem("file::rsem", 1) {}
-  NEW_DELETE_OPS(file_socket);
-
-  void inc() override { referenced::inc(); }
-  void dec() override { referenced::dec(); }
-
-  int socket;
-  struct localsock *localsock;
-  char socketpath[UNIX_PATH_MAX];
-
-  ssize_t read(char *addr, size_t n) override;
-  ssize_t write(const char *addr, size_t n) override;
-  void onzero() override;
-
-private:
-  // XXX This locking should be handled in net, not here.
-  semaphore wsem, rsem;
 };
 
 struct file_pipe_reader : public refcache::referenced, public file {

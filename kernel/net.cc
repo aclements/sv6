@@ -57,6 +57,112 @@ nethwaddr(u8 *hwaddr)
 
 #ifdef LWIP
 
+class file_lwip_socket : public refcache::referenced, public file
+{
+  int socket_;
+  semaphore wsem_, rsem_;
+
+  ~file_lwip_socket()
+  {
+    lwip_core_lock();
+    lwip_close(socket_);
+    lwip_core_unlock();
+  }
+
+public:
+  file_lwip_socket(int socket)
+    : socket_(socket), wsem_("file_lwip_socket::wsem", 1),
+      rsem_("file_lwip_socket::rsem", 1) { }
+  NEW_DELETE_OPS(file_lwip_socket);
+
+  void inc() override { referenced::inc(); }
+  void dec() override { referenced::dec(); }
+
+  ssize_t read(char *buf, size_t n) override
+  {
+    auto l = rsem_.guard();
+    lwip_core_lock();
+    int r = lwip_read(socket_, buf, n);
+    lwip_core_unlock();
+    return r;
+  }
+
+  ssize_t write(const char *buf, size_t n) override
+  {
+    auto l = wsem_.guard();
+    lwip_core_lock();
+    int r = lwip_write(socket_, buf, n);
+    lwip_core_unlock();
+    return r;
+  }
+
+  int bind(const struct sockaddr *xaddr, uint32_t xaddrlen) override
+  {
+    struct sockaddr* addr;
+    long r;
+
+    addr = (sockaddr*) kmalloc(xaddrlen, "sockaddr");
+    if (addr == nullptr)
+      return -1;
+
+    if (fetchmem(addr, xaddr, xaddrlen))
+      return -1;
+
+    lwip_core_lock();
+    r = lwip_bind(socket_, addr, xaddrlen);
+    lwip_core_unlock();
+    kmfree(addr, xaddrlen);
+    return r;
+  }
+
+  int listen(int backlog) override
+  {
+    lwip_core_lock();
+    int r = lwip_listen(socket_, backlog);
+    lwip_core_unlock();
+    return r;
+  }
+
+  int accept(struct sockaddr* xaddr, uint32_t *xaddrlen, file **out) override
+  {
+    socklen_t len;
+    void *addr;
+    int ss;
+
+    if (fetchmem(&len, xaddrlen, sizeof(*xaddrlen)))
+      return -1;
+
+    addr = kmalloc(len, "sockaddr");
+    if (addr == nullptr)
+      return -1;
+
+    lwip_core_lock();
+    ss = lwip_accept(socket_, (sockaddr*) addr, &len);
+    lwip_core_unlock();
+    if (ss < 0) {
+      kmfree(addr, len);
+      return -1;
+    }
+
+    if (putmem(xaddrlen, &len, sizeof(len)) || putmem(xaddr, addr, len)) {
+      lwip_core_lock();
+      lwip_close(ss);
+      lwip_core_unlock();
+      kmfree(addr, len);
+      return -1;
+    }
+
+    *out = new file_lwip_socket{ss};
+
+    return 0;
+  }
+
+  void onzero() override
+  {
+    delete this;
+  }
+};
+
 static struct netif nif;
 
 struct timer_thread {
@@ -262,108 +368,17 @@ initnet(void)
   release(&t->lock);
 }
 
-long
-netsocket(int domain, int type, int protocol)
+int
+netsocket(int domain, int type, int protocol, file **out)
 {
   int r;
   lwip_core_lock();
   r = lwip_socket(domain, type, protocol);
   lwip_core_unlock();
-  return r;
-}
-
-long
-netbind(int sock, const sockaddr* xaddr, int xaddrlen)
-{
-  struct sockaddr* addr;
-  long r;
-  
-  addr = (sockaddr*) kmalloc(xaddrlen, "sockaddr");
-  if (addr == nullptr)
+  if (r < 0)
     return -1;
-
-  if (fetchmem(addr, xaddr, xaddrlen))
-    return -1;
-
-  lwip_core_lock();
-  r = lwip_bind(sock, addr, xaddrlen);
-  lwip_core_unlock();
-  kmfree(addr, xaddrlen);
-  return r;
-}
-
-long
-netlisten(int sock, int backlog)
-{
-  int r;
-  
-  lwip_core_lock();
-  r = lwip_listen(sock, backlog);
-  lwip_core_unlock();
-  return r;
-}
-
-long
-netaccept(int sock, struct sockaddr* xaddr, u32* xaddrlen)
-{
-  socklen_t len;
-  void *addr;
-  int ss;
-
-  if (fetchmem(&len, xaddrlen, sizeof(*xaddrlen)))
-    return -1;
-
-  addr = kmalloc(len, "sockaddr");
-  if (addr == nullptr)
-    return -1;
-
-  lwip_core_lock();
-  ss = lwip_accept(sock, (sockaddr*) addr, &len);
-  lwip_core_unlock();
-  if (ss < 0) {
-    kmfree(addr, len);
-    return ss;
-  }
-
-  if (putmem(xaddrlen, &len, sizeof(len)) || putmem(xaddr, addr, len)) {
-    lwip_core_lock();
-    lwip_close(ss);
-    lwip_core_unlock();
-    kmfree(addr, len);
-    return -1;
-  }
-
-  return ss;
-}
-
-void
-netclose(int sock)
-{
-  lwip_core_lock();
-  lwip_close(sock);
-  lwip_core_unlock();
-}
-
-int
-netwrite(int sock, const char *buf, int len)
-{
-  int r;
-
-  lwip_core_lock();
-  r = lwip_write(sock, buf, len);
-  lwip_core_unlock();
-  return r;
-}
-
-int
-netread(int sock, char *buf, int len)
-{
-  int r;
-
-  lwip_core_lock();
-  r = lwip_read(sock, buf, len);
-  lwip_core_unlock();
-  return r;
+  *out = new file_lwip_socket{r};
+  return 0;
 }
 
 #else
@@ -379,43 +394,8 @@ netrx(void *va, u16 len)
   netfree(va);
 }
 
-long
-netsocket(int domain, int type, int protocol)
-{
-  return -1;
-}
-
-long
-netbind(int sock, const struct sockaddr *xaddr, int xaddrlen)
-{
-  return -1;
-}
-
-long
-netlisten(int sock, int backlog)
-{
-  return -1;
-}
-
-long
-netaccept(int sock, struct sockaddr* xaddr, u32* xaddrlen)
-{
-  return -1;
-}
-
-void
-netclose(int sock)
-{
-}
-
 int
-netwrite(int sock, const char *buf, int len)
-{
-  return -1;
-}
-
-int
-netread(int sock, char *buf, int len)
+netsocket(int domain, int type, int protocol, file **out)
 {
   return -1;
 }

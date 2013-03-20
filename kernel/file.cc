@@ -164,25 +164,3 @@ file_pipe_writer::onzero(void)
   pipeclose(pipe, true);
   delete this;
 }
-
-
-ssize_t
-file_socket::read(char *addr, size_t n)
-{
-  auto l = rsem.guard();
-  return netread(socket, addr, n);
-}
-
-ssize_t
-file_socket::write(const char *addr, size_t n)
-{
-  auto l = wsem.guard();
-  return netwrite(socket, addr, n);
-}
-
-void
-file_socket::onzero()
-{
-  sockclose(this);
-  delete this;
-}

@@ -217,7 +217,6 @@ int             doexec(const char* upath,
 int             fdalloc(file *f, int omode);
 sref<file>      getfile(int fd);
 sref<mnode>     create(sref<mnode>, const char *, short, short, short, bool);
-void            sockclose(const struct file_socket *);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

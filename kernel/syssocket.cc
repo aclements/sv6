@@ -213,32 +213,43 @@ struct localsock {
   }
 };
 
+struct file_socket : public refcache::referenced, public file
+{
+  ~file_socket()
+  {
+    delete localsock;
+  }
+
+public:
+  file_socket() : localsock(nullptr) {}
+  NEW_DELETE_OPS(file_socket);
+
+  void inc() override { referenced::inc(); }
+  void dec() override { referenced::dec(); }
+
+  struct localsock *localsock;
+  char socketpath[UNIX_PATH_MAX];
+
+  ssize_t read(char *addr, size_t n) override
+  {
+    return -1;
+  }
+
+  ssize_t write(const char *addr, size_t n) override
+  {
+    return -1;
+  }
+
+  void onzero() override
+  {
+    delete this;
+  }
+};
+
 struct localsock*
 localsockalloc()
 {
   return new localsock();
-}
-
-void
-localsockclose(struct localsock *p)
-{
-  delete p;
-}
-
-void 
-sockclose(const struct file_socket *f)
-{
-  if (f->socket == PF_LOCAL) {
-    localsockclose(f->localsock);
-  } else {
-    netclose(f->socket);
-  }
-}
-
-static void
-freesocket(int fd)
-{
-  myproc()->ftable->close(fd);
 }
 
 static sref<file_socket>
@@ -277,41 +288,40 @@ allocsocket(struct file_socket **rf, int *rfd)
 int
 sys_socket(int domain, int type, int protocol)
 {
-  extern long netsocket(int domain, int type, int protocol);
-  struct file_socket *f;
-  int fd;
-  int s;
-
-  if (allocsocket(&f, &fd))
-    return -1;
-
   if (domain == PF_LOCAL) {
-    s = PF_LOCAL;
-    f->localsock = localsockalloc();
-  } else {
-    s = netsocket(domain, type, protocol);
-    if (s < 0) {
-      myproc()->ftable->close(fd);
-      return s;
-    }
-  }
+    struct file_socket *f;
+    int fd;
 
-  f->socket = s;
-  return fd;
+    if (allocsocket(&f, &fd))
+      return -1;
+
+    f->localsock = localsockalloc();
+
+    return fd;
+  } else {
+    file *f;
+    int r;
+    if ((r = netsocket(domain, type, protocol, &f)) < 0)
+      return r;
+    if ((r = fdalloc(f, 0)) < 0)
+      f->dec();
+    return r;
+  }
 }
 
 //SYSCALL
 int
 sys_bind(int xsock, const struct sockaddr *xaddr, uint32_t xaddrlen)
 {
-  extern long netbind(int, const struct sockaddr*, int);
-  int r;
-
   sref<file_socket> f = getsocket(xsock);
-  if (!f)
-    return -1;
+  if (!f) {
+    sref<file> f = getfile(xsock);
+    if (!f)
+      return -1;
+    return f->bind(xaddr, xaddrlen);
+  }
 
-  if (f->socket == PF_LOCAL) {
+  if (true) {
     sref<mnode> ip;
     struct sockaddr_un uaddr;
 
@@ -325,49 +335,37 @@ sys_bind(int xsock, const struct sockaddr *xaddr, uint32_t xaddrlen)
     strncpy(f->socketpath, uaddr.sun_path, UNIX_PATH_MAX);
 
     return 0;
-  }  else {
-    r = netbind(f->socket, xaddr, xaddrlen);
   }
-  return r;
 }
 
 //SYSCALL
 int
 sys_listen(int xsock, int backlog)
 {
-  extern long netlisten(int, int);
-  sref<file_socket> f = getsocket(xsock);
+  sref<file> f = getfile(xsock);
 
   if (!f)
     return -1;
 
-  return netlisten(f->socket, backlog);
+  return f->listen(backlog);
 }
 
 //SYSCALL
 int
 sys_accept(int xsock, struct sockaddr* xaddr, u32* xaddrlen)
 {
-  extern long netaccept(int, struct sockaddr*, u32*);
-  file_socket *cf;
-  int cfd;
-  int ss;
-
-  sref<file_socket> f = getsocket(xsock);
+  sref<file> f = getfile(xsock);
   if (!f)
     return -1;
 
-  if (allocsocket(&cf, &cfd))
+  file *newf;
+  int r = f->accept(xaddr, xaddrlen, &newf);
+  if (r < 0)
     return -1;
-
-  ss = netaccept(f->socket, xaddr, xaddrlen);
-  if (ss < 0) {
-    freesocket(cfd);
-    return ss;
-  }  
-
-  cf->socket = ss;
-  return cfd;
+  r = fdalloc(newf, 0);
+  if (r < 0)
+    newf->dec();
+  return r;
 }
 
 //SYSCALL
