@@ -250,19 +250,19 @@ public:
   }
 
   int
-  bind(const struct sockaddr *xaddr, uint32_t xaddrlen) override
+  bind(const struct sockaddr *addr, size_t addrlen) override
   {
-    sref<mnode> ip;
-    struct sockaddr_un uaddr;
-
-    if (fetchmem(&uaddr, xaddr, sizeof(sockaddr_un)) < 0) 
+    auto uaddr = check_sockaddr(addr, addrlen);
+    if (!uaddr)
       return -1;
 
-    if ((ip = create(myproc()->cwd_m, uaddr.sun_path, T_SOCKET, 0, 0, true)) == 0)
+    sref<mnode> ip = create(myproc()->cwd_m, uaddr->sun_path,
+                            T_SOCKET, 0, 0, true);
+    if (!ip)
       return -1;
 
     ip->as_sock()->init(localsock_);
-    strncpy(socketpath_, uaddr.sun_path, UNIX_PATH_MAX);
+    strncpy(socketpath_, uaddr->sun_path, UNIX_PATH_MAX);
 
     return 0;
   }

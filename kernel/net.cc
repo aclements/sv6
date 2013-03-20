@@ -96,22 +96,11 @@ public:
     return r;
   }
 
-  int bind(const struct sockaddr *xaddr, uint32_t xaddrlen) override
+  int bind(const struct sockaddr *addr, size_t addrlen) override
   {
-    struct sockaddr* addr;
-    long r;
-
-    addr = (sockaddr*) kmalloc(xaddrlen, "sockaddr");
-    if (addr == nullptr)
-      return -1;
-
-    if (fetchmem(addr, xaddr, xaddrlen))
-      return -1;
-
     lwip_core_lock();
-    r = lwip_bind(socket_, addr, xaddrlen);
+    int r = lwip_bind(socket_, addr, addrlen);
     lwip_core_unlock();
-    kmfree(addr, xaddrlen);
     return r;
   }
 

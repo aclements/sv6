@@ -67,12 +67,20 @@ sys_socket(int domain, int type, int protocol)
 
 //SYSCALL
 int
-sys_bind(int xsock, const struct sockaddr *xaddr, uint32_t xaddrlen)
+sys_bind(int xsock, const userptr<struct sockaddr> xaddr, uint32_t xaddrlen)
 {
   sref<file> f = getfile(xsock);
   if (!f)
     return -1;
-  return f->bind(xaddr, xaddrlen);
+
+  struct sockaddr_storage ss;
+  if (xaddr.null())
+    return -1;
+  int r = sockaddr_from_user(&ss, xaddr, xaddrlen);
+  if (r < 0)
+    return r;
+
+  return f->bind((struct sockaddr*)&ss, xaddrlen);
 }
 
 //SYSCALL

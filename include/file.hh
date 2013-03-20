@@ -24,7 +24,7 @@ struct file {
   virtual ssize_t pwrite(const char *addr, size_t n, off_t offset) { return -1; }
 
   // Socket operations
-  virtual int bind(const struct sockaddr *addr, uint32_t addrlen) { return -1; }
+  virtual int bind(const struct sockaddr *addr, size_t addrlen) { return -1; }
   virtual int listen(int backlog) { return -1; }
   // Unlike the syscall, the return is only an error status.  The
   // caller will allocate an FD for *out on success.
