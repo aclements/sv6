@@ -21,6 +21,26 @@ struct sockaddr
 };
 #endif
 
+struct __attribute__((__aligned__(__BIGGEST_ALIGNMENT__))) sockaddr_storage
+{
+  // Make sure ss_family is in the right place.  LWIP has fields
+  // before the family.
+  char __pad0[offsetof(struct sockaddr, sa_family)];
+
+  sa_family_t ss_family;
+
+  union
+  {
+#ifdef LWIP
+    char lwip_stuff[sizeof(struct sockaddr)];
+#endif
+    char sun_path[UNIX_PATH_MAX];
+  } __pad1;
+  // Make sure there's at least one extra byte so we can internally
+  // NUL-terminate sockaddr_un paths.
+  char __pad2;
+};
+
 #define AF_LOCAL (-2)
 #define AF_UNIX AF_LOCAL
 #define PF_LOCAL AF_LOCAL
