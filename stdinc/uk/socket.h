@@ -41,7 +41,7 @@ struct __attribute__((__aligned__(__BIGGEST_ALIGNMENT__))) sockaddr_storage
   char __pad2;
 };
 
-#define AF_LOCAL (-2)
+#define AF_LOCAL 1
 #define AF_UNIX AF_LOCAL
 #define PF_LOCAL AF_LOCAL
 #define PF_UNIX AF_UNIX
