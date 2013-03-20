@@ -97,19 +97,24 @@ sys_listen(int xsock, int backlog)
 
 //SYSCALL
 int
-sys_accept(int xsock, struct sockaddr* xaddr, u32* xaddrlen)
+sys_accept(int xsock, userptr<struct sockaddr> xaddr,
+           userptr<uint32_t> xaddrlen)
 {
   sref<file> f = getfile(xsock);
   if (!f)
     return -1;
 
+  struct sockaddr_storage ss;
+  size_t ss_len;
   file *newf;
-  int r = f->accept(xaddr, xaddrlen, &newf);
+  int r = f->accept(&ss, &ss_len, &newf);
   if (r < 0)
-    return -1;
-  r = fdalloc(newf, 0);
-  if (r < 0)
+    return r;
+  if ((r = sockaddr_to_user(xaddr, xaddrlen, &ss, ss_len)) < 0 ||
+      (r = fdalloc(newf, 0)) < 0) {
     newf->dec();
+    return r;
+  }
   return r;
 }
 

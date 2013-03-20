@@ -27,8 +27,9 @@ struct file {
   virtual int bind(const struct sockaddr *addr, size_t addrlen) { return -1; }
   virtual int listen(int backlog) { return -1; }
   // Unlike the syscall, the return is only an error status.  The
-  // caller will allocate an FD for *out on success.
-  virtual int accept(struct sockaddr *addr, uint32_t *addrlen, file **out)
+  // caller will allocate an FD for *out on success.  addrlen is only
+  // an out-argument.
+  virtual int accept(struct sockaddr_storage *addr, size_t *addrlen, file **out)
   { return -1; }
   // sendto and recvfrom take a userptr to the buf to avoid extra
   // copying in the kernel.  The other pointers will be kernel

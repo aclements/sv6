@@ -9,6 +9,7 @@
 #include "net.hh"
 #include "major.h"
 #include "netdev.hh"
+#include <uk/socket.h>
 
 #ifdef LWIP
 extern "C" {
@@ -112,37 +113,17 @@ public:
     return r;
   }
 
-  int accept(struct sockaddr* xaddr, uint32_t *xaddrlen, file **out) override
+  int accept(struct sockaddr_storage* addr, size_t *addrlen, file **out)
+    override
   {
-    socklen_t len;
-    void *addr;
-    int ss;
-
-    if (fetchmem(&len, xaddrlen, sizeof(*xaddrlen)))
-      return -1;
-
-    addr = kmalloc(len, "sockaddr");
-    if (addr == nullptr)
-      return -1;
-
     lwip_core_lock();
-    ss = lwip_accept(socket_, (sockaddr*) addr, &len);
+    socklen_t len = sizeof(*addr);
+    int ss = lwip_accept(socket_, (struct sockaddr*)addr, &len);
     lwip_core_unlock();
-    if (ss < 0) {
-      kmfree(addr, len);
+    if (ss < 0)
       return -1;
-    }
-
-    if (putmem(xaddrlen, &len, sizeof(len)) || putmem(xaddr, addr, len)) {
-      lwip_core_lock();
-      lwip_close(ss);
-      lwip_core_unlock();
-      kmfree(addr, len);
-      return -1;
-    }
-
+    *addrlen = len;
     *out = new file_lwip_socket{ss};
-
     return 0;
   }
 
