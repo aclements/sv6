@@ -1,10 +1,11 @@
-#include "types.h"
-#include "user.h"
-
+#include "libutil.h"
 #include "sockutil.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 int
 dfork(void)
