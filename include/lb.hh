@@ -2,6 +2,7 @@
 #define NCPU_PER_SOCKET (NCPU/NSOCKET)
 
 #include "rnd.hh"
+#include "percpu.hh"
 
 template<int N>
 struct random_permutation {

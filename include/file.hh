@@ -30,6 +30,19 @@ struct file {
   // caller will allocate an FD for *out on success.
   virtual int accept(struct sockaddr *addr, uint32_t *addrlen, file **out)
   { return -1; }
+  // sendto and recvfrom take a userptr to the buf to avoid extra
+  // copying in the kernel.  The other pointers will be kernel
+  // pointers.  dest_addr may be null.
+  virtual ssize_t sendto(userptr<void> buf, size_t len, int flags,
+                         const struct sockaddr *dest_addr, size_t addrlen)
+  { return -1; }
+  // Unlike the syscall, addrlen is only an out-argument, since
+  // src_addr will be big enough for any sockaddr.  src_addr may be
+  // null.
+  virtual ssize_t recvfrom(userptr<void> buf, size_t len, int flags,
+                           struct sockaddr_storage *src_addr,
+                           size_t *addrlen)
+  { return -1; }
 
   virtual void inc() = 0;
   virtual void dec() = 0;
