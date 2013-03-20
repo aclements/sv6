@@ -1,7 +1,7 @@
 #pragma once
+
+#include "compiler.h"
 #include <sys/types.h>
-#include "types.h"
-#include "user.h"
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1

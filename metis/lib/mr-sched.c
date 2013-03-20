@@ -12,6 +12,8 @@
 #include "presplitter.h"
 #include "apphelper.h"
 
+#include "sysstubs.h"           /* For xv6 pt_pages */
+
 enum { main_lcpu = 0 };
 enum { def_gr_tasks_per_cpu = 16 };
 enum { def_sample_reduce_tasks = 10000 };

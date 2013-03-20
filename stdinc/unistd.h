@@ -16,8 +16,11 @@ int close(int fd);
 int link(const char *oldpath, const char *newpath);
 int unlink(const char *pathname);
 int execv(const char *path, char *const argv[]);
+int dup(int oldfd);
 int dup2(int oldfd, int newfd);
 off_t lseek(int fd, off_t offset, int whence);
+int chdir(const char *path);
+int pipe(int pipefd[2]);
 
 unsigned sleep(unsigned);
 pid_t getpid(void);
@@ -32,5 +35,6 @@ int fstat(int fd, struct stat *buf);
 
 // xv6-specific
 int fstatx(int fd, struct stat *buf, enum stat_flags flags);
+pid_t fork(int flags);
 
 END_DECLS
