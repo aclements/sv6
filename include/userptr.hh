@@ -71,7 +71,7 @@ public:
   bool load(T *val) const
   {
     if (sizeof(T) == sizeof(uint64_t))
-      return !fetchint64(this, static_cast<uint64_t*>(val));
+      return !fetchint64(*this, reinterpret_cast<uint64_t*>(val));
     else
       return !fetchmem(val, unsafe_get(), sizeof(T));
   }
