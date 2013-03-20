@@ -65,6 +65,15 @@ mempcpy(void *dst, const void *src, size_t n)
   return memmove(dst, (void *)src, n) + n;
 }
 
+void*
+memchr(const void *s, int c, size_t n)
+{
+  for (size_t i = 0; i < n; ++i)
+    if (((unsigned char*)s)[i] == c)
+      return &((unsigned char*)s)[i];
+  return NULL;
+}
+
 int
 strncmp(const char *p, const char *q, size_t n)
 {

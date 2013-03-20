@@ -16,6 +16,7 @@ void *memcpy(void *s1, const void *s2, size_t n) XV6_STRING_NOEXCEPT;
 void *memmove(void *s1, const void *s2, size_t n) XV6_STRING_NOEXCEPT;
 int memcmp(const void *s1, const void *s2, size_t n);
 void *memset(void *s, int c, size_t n);
+void *memchr(const void *s, int c, size_t n);
 
 char *strchr(const char *s, int c);
 size_t strlen(const char *s);
