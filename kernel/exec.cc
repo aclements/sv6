@@ -266,6 +266,17 @@ exec(const char *path, const char * const *argv)
   myproc()->tf->r13 = elf->phnum;   // AT_PHNUM
   myproc()->run_cpuid_ = myid();
 
+  // Close O_CLOEXEC file descriptors.
+  //
+  // exec, CLOEXEC, and FD table sharing interact in strange ways.
+  // The easiest thing to do is make a new FD table for the new image,
+  // though in many cases the FD table will only have one reference,
+  // so it would be safe to close O_CLOEXEC descriptors in place.
+  {
+    sref<filetable> newftable(myproc()->ftable->copy(true));
+    myproc()->ftable = std::move(newftable);
+  }
+
   for(last=s=path; *s; s++)
     if(*s == '/')
       last = s+1;

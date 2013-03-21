@@ -29,7 +29,7 @@ getfile(int fd)
 int
 fdalloc(file *f, int omode)
 {
-  return myproc()->ftable->allocfd(f, omode & O_ANYFD);
+  return myproc()->ftable->allocfd(f, omode & O_ANYFD, omode & O_CLOEXEC);
 }
 
 //SYSCALL
