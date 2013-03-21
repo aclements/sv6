@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include <utility>
 
@@ -1111,14 +1112,14 @@ forktest(void)
     if(pid < 0)
       break;
     if(pid == 0)
-      exit(n);
+      exit(42);
   }
    
   for(; n > 0; n--){
     if(wait(&status) < 0)
       die("wait stopped early");
-    if (status < 0 || status >= NFORK)
-      die("invalid status");
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 42)
+      die("invalid status: %d", status);
   }
   
   if(wait(NULL) != -1)
@@ -1133,8 +1134,8 @@ forktest(void)
     exit(13);
   if(waitpid(pid, &status,0) < 0)
     die("wait failed");
-  if(status != 13)
-    die("strong status");
+  if(!WIFEXITED(status) || WEXITSTATUS(status) != 13)
+    die("wrong status");
   
   printf("fork test OK\n");
 }

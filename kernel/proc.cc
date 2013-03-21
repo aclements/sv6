@@ -15,6 +15,7 @@
 #include "wq.hh"
 #include <uk/fcntl.h>
 #include <uk/unistd.h>
+#include <uk/wait.h>
 
 u64
 proc::hash(const u32 &p)
@@ -160,7 +161,7 @@ exit(int status)
 
   myproc()->cwd.reset();
 
-  myproc()->status = status;
+  myproc()->status = (status & __WAIT_STATUS_VAL_MASK) | __WAIT_STATUS_EXITED;
 
   // Pass abandoned children to init.
   wakeupinit = 0;
