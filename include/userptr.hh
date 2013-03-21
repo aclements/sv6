@@ -20,6 +20,7 @@ class userptr
   T* ptr;
 
 public:
+  userptr(std::nullptr_t n) : ptr(nullptr) { }
   explicit userptr(T* p) : ptr(p) { }
   explicit userptr(uptr p) : ptr((T*)p) { }
   userptr() = default;
