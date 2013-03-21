@@ -1875,6 +1875,52 @@ writeprotecttest(void)
   munmap(buffer, 4 * 4096);
 }
 
+void
+cloexec(void)
+{
+  const char *argv[] = {"echo", "testing", nullptr};
+  int status;
+  struct stat st;
+
+  printf("cloexec\n");
+
+  // Test normal FD inheritance
+  if (fork(0) == 0) {
+    close(1);
+    int fd = open("cloexec", O_CREAT|O_WRONLY, 0666);
+    assert(fd == 1);
+    execv(argv[0], const_cast<char * const *>(argv));
+    die("exec echo failed");
+  }
+  wait(&status);
+  if (!WIFEXITED(status) || !WEXITSTATUS(status) == 0)
+    die("echo exited with status %d", status);
+  if (stat("cloexec", &st) < 0)
+    die("stat failed");
+  if (st.st_size != strlen(argv[1]) + 1)
+    die("wrong size file: %d, wanted %d", st.st_size, strlen(argv[1]) + 1);
+  unlink("cloexec");
+
+  // Test O_CLOEXEC
+  if (fork(0) == 0) {
+    close(1);
+    int fd = open("cloexec", O_CREAT|O_WRONLY|O_CLOEXEC, 0666);
+    assert(fd == 1);
+    execv(argv[0], const_cast<char * const *>(argv));
+    die("exec echo failed");
+  }
+  wait(&status);
+  if (!WIFEXITED(status) || !WEXITSTATUS(status) == 0)
+    die("echo exited with status %d", status);
+  if (stat("cloexec", &st) < 0)
+    die("stat failed");
+  if (st.st_size != 0)
+    die("wrong size file: %d, wanted 0 (O_CLOEXEC failed)", st.st_size);
+  unlink("cloexec");
+
+  printf("cloexec ok\n");
+}
+
 static int nenabled;
 static char **enabled;
 
@@ -1955,6 +2001,8 @@ main(int argc, char *argv[])
 
   TEST(floattest);
   TEST(writeprotecttest);
+
+  TEST(cloexec);
 
   TEST(exectest);               // Must be last
 
