@@ -181,5 +181,5 @@ sys_send(int sockfd, const userptr<void> buf, size_t len, int flags)
 ssize_t
 sys_recv(int sockfd, userptr<void> buf, size_t len, int flags)
 {
-  return -1;
+  return sys_recvfrom(sockfd, buf, len, flags, nullptr, nullptr);
 }
