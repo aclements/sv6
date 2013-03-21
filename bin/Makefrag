@@ -86,6 +86,9 @@ UPROGS_NATIVE := \
 	linkbench \
 	forktest \
 	fdbench \
+	mail-enqueue \
+	mail-qman \
+	mail-deliver \
 
 FSEXTRA += \
 	bin/linkbench-tom \
