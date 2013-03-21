@@ -3,9 +3,6 @@
 #include <stdio.h>
 #include <sys/socket.h>
 
-#define SUN_LEN(su) \
-  (offsetof(struct sockaddr_un, sun_path) + strlen((su)->sun_path));
-
 #ifdef LWIP
 static inline const char *
 ipaddr(struct sockaddr_in *sin)

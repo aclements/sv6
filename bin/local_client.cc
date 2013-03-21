@@ -11,8 +11,6 @@
 #define CLIENT  "/mysocket"
 #endif
 
-#include "sockutil.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

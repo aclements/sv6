@@ -10,8 +10,6 @@
 #define SERVER  "/serversocket"
 #endif
 
-#include "sockutil.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

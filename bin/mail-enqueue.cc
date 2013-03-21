@@ -1,7 +1,6 @@
 // mail-enqueue - queue a mail message for delivery
 
 #include "libutil.h"
-#include "sockutil.h"
 #include "shutil.h"
 
 #include <fcntl.h>

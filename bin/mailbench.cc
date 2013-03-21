@@ -2,7 +2,6 @@
 #include "amd64.h"
 #include "xsys.h"
 #include "spam.h"
-#include "sockutil.h"
 
 #include <fcntl.h>
 #include <stdio.h>
