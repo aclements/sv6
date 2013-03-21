@@ -119,7 +119,7 @@ sys_accept(int xsock, userptr<struct sockaddr> xaddr,
 }
 
 //SYSCALL
-int
+ssize_t
 sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,  
              userptr<struct sockaddr> src_addr, userptr<uint32_t> addrlen)
 {
@@ -142,8 +142,8 @@ sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,
 }
 
 //SYSCALL
-int 
-sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags, 
+ssize_t
+sys_sendto(int sockfd, const userptr<void> buf, size_t len, int flags,
            const userptr<struct sockaddr> dest_addr, uint32_t addrlen)
 {
   sref<file> f = getfile(sockfd);
@@ -165,14 +165,14 @@ sys_sendto(int sockfd, userptr<void> buf, size_t len, int flags,
 
 //SYSCALL
 int
-sys_connect(int sockfd, const struct sockaddr* addr, u32 addrlen)
+sys_connect(int sockfd, const userptr<struct sockaddr> addr, u32 addrlen)
 {
   return -1;
 }
 
 //SYSCALL
 ssize_t
-sys_send(int sockfd, userptr<void> buf, size_t len, int flags)
+sys_send(int sockfd, const userptr<void> buf, size_t len, int flags)
 {
   return -1;
 }
