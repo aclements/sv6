@@ -59,6 +59,9 @@ UPROGS_BIN= \
         ln \
 	forktest \
 	fdbench \
+	mail-enqueue \
+	mail-qman \
+	mail-deliver \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
