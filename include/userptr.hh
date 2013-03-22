@@ -96,15 +96,16 @@ class userptr_str
   userptr<const char> ptr;
 
 public:
+  userptr_str(std::nullptr_t n) : ptr(nullptr) { }
   explicit userptr_str(const char* p) : ptr(p) { }
   userptr_str() = default;
   userptr_str(const userptr_str &o) = default;
   userptr_str(userptr_str &&o) = default;
   userptr_str& operator=(const userptr_str& o) = default;
 
-  bool null() const
+  operator bool() const
   {
-    return ptr.null();
+    return !ptr.null();
   }
 
   bool load(char *dst, std::size_t size)
