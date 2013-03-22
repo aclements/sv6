@@ -48,10 +48,9 @@ sys_dup2(int ofd, int nfd)
   if (!f)
     return -1;
 
-  if (!myproc()->ftable->replace(nfd, f.get()))
+  if (!myproc()->ftable->replace(nfd, std::move(f)))
     return -1;
 
-  f->inc();
   return nfd;
 }
 

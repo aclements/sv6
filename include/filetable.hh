@@ -126,7 +126,7 @@ public:
       cprintf("filetable::close: bad fd %u\n", fd);
   }
 
-  bool replace(int fd, struct file* newf, bool cloexec = false) {
+  bool replace(int fd, sref<file>&& newf, bool cloexec = false) {
     assert(newf);
 
     int cpu = fd >> cpushift;
@@ -149,12 +149,13 @@ public:
     // Update to new info and unlock.  It's safe to update cloexec_
     // non-atomically with info even with concurrent lock-free readers
     // because any that care will double-check the fdinfo bit.
-    fdinfo newinfo(newf, cloexec);
+    file *newfptr = newf.transfer_to_ptr();
+    fdinfo newinfo(newfptr, cloexec);
     if (cloexec != cloexec_[cpu][fd])
       cloexec_[cpu][fd] = cloexec;
     infop->store(newinfo, std::memory_order_release);
 
-    if (oldinfo.get_file() && oldinfo.get_file() != newf)
+    if (oldinfo.get_file() && oldinfo.get_file() != newfptr)
       oldinfo.get_file()->dec();
     return true;
   }
