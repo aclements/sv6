@@ -7,11 +7,16 @@
 // * notify - a UNIX socket that receives an <inumber> when a message
 //   is added to the spool
 
+#define HAVE_POSIX_SPAWN 0
+
 #include "libutil.h"
 #include "shutil.h"
+#include "xsys.h"
 
 #include <fcntl.h>
+#if HAVE_POSIX_SPAWN
 #include <spawn.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -104,6 +109,7 @@ deliver(const char *mailroot, int msgfd, const string &recipient)
 
   // XXX Commutativity: fork/exec vs posix_spawn
   pid_t pid;
+#if HAVE_POSIX_SPAWN
   posix_spawn_file_actions_t actions;
   if ((errno = posix_spawn_file_actions_init(&actions)))
     edie("posix_spawn_file_actions_init failed");
@@ -114,6 +120,16 @@ deliver(const char *mailroot, int msgfd, const string &recipient)
     edie("posix_spawn failed");
   if ((errno = posix_spawn_file_actions_destroy(&actions)))
     edie("posix_spawn_file_actions_destroy failed");
+#else
+  pid = xfork();
+  if (pid < 0)
+    edie("fork failed");
+  if (pid == 0) {
+    dup2(msgfd, 0);
+    execv(argv[0], const_cast<char *const*>(argv));
+    edie("execv %s failed", argv[0]);
+  }
+#endif
 
   int status;
   if (waitpid(pid, &status, 0) < 0)
