@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 #include <utility>
 
 template <class T, typename = void>
@@ -8,15 +9,39 @@ class sref {
 private:
   constexpr explicit sref(T* p) noexcept : ptr_(p) { }
 
+  // Allow access to ptr_ from up-conversions
+  template<typename, typename>
+  friend class sref;
+
 public:
   constexpr sref() noexcept : ptr_(nullptr) { }
+
+  // Yes, we need to duplicate the standard and is_convertible
+  // constructors and assignment methods, even though the
+  // is_convertible ones logically suffice.  If we don't write the
+  // standard methods, C++ will helpfully give us default
+  // implementations for them.
 
   sref(const sref &o) : ptr_(o.ptr_) {
     if (ptr_)
       ptr_->inc();
   }
 
+  template<typename U, typename = typename
+           std::enable_if<std::is_convertible<U*, T*>::value>::type>
+  sref(const sref<U> &o) : ptr_(o.ptr_) {
+    if (ptr_)
+      ptr_->inc();
+  }
+
   sref(sref &&o) noexcept : ptr_(o.ptr_)
+  {
+    o.ptr_ = nullptr;
+  }
+
+  template<typename U, typename = typename
+           std::enable_if<std::is_convertible<U*, T*>::value>::type>
+  sref(sref<U> &&o) noexcept : ptr_(o.ptr_)
   {
     o.ptr_ = nullptr;
   }
@@ -38,7 +63,31 @@ public:
     return *this;
   }
 
+  template<typename U, typename = typename
+           std::enable_if<std::is_convertible<U*, T*>::value>::type>
+  sref& operator=(const sref<U>& o) {
+    T *optr = o.ptr_;
+    if (optr != ptr_) {
+      if (optr)
+        optr->inc();
+      if (ptr_)
+        ptr_->dec();
+      ptr_ = optr;
+    }
+    return *this;
+  }
+
   sref& operator=(sref&& o) {
+    if (ptr_)
+      ptr_->dec();
+    ptr_ = o.ptr_;
+    o.ptr_ = nullptr;
+    return *this;
+  }
+
+  template<typename U, typename = typename
+           std::enable_if<std::is_convertible<U*, T*>::value>::type>
+  sref& operator=(sref<U>&& o) {
     if (ptr_)
       ptr_->dec();
     ptr_ = o.ptr_;
