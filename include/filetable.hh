@@ -63,10 +63,13 @@ public:
     return sref<file>::newref(f);
   }
 
-  int allocfd(struct file *f, bool percpu = false, bool cloexec = false) {
+  int allocfd(sref<file>&& f, bool percpu = false, bool cloexec = false) {
     int cpu = percpu ? myid() : 0;
     fdinfo none(nullptr, false);
-    fdinfo newinfo(f, cloexec, true);
+    // Transfer f to manual reference counting since we can't store
+    // sref's in the info table.
+    file *fptr = f.transfer_to_ptr();
+    fdinfo newinfo(fptr, cloexec, true);
     for (int fd = 0; fd < NOFILE; fd++) {
       // Note that we skip over locked FDs because that means they're
       // either non-null or about to be.
@@ -83,6 +86,7 @@ public:
       }
     }
     cprintf("filetable::allocfd: failed\n");
+    fptr->dec();
     return -1;
   }
 

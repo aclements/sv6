@@ -60,9 +60,7 @@ sys_socket(int domain, int type, int protocol)
     r = netsocket(domain, type, protocol, &f);
   if (r < 0)
     return r;
-  if ((r = fdalloc(f, 0)) < 0)
-    f->dec();
-  return r;
+  return fdalloc(sref<file>::transfer(f), 0);
 }
 
 //SYSCALL
@@ -106,16 +104,14 @@ sys_accept(int xsock, userptr<struct sockaddr> xaddr,
 
   struct sockaddr_storage ss;
   size_t ss_len;
-  file *newf;
-  int r = f->accept(&ss, &ss_len, &newf);
+  file *newfp;
+  int r = f->accept(&ss, &ss_len, &newfp);
   if (r < 0)
     return r;
-  if ((r = sockaddr_to_user(xaddr, xaddrlen, &ss, ss_len)) < 0 ||
-      (r = fdalloc(newf, 0)) < 0) {
-    newf->dec();
+  sref<file> newf(sref<file>::transfer(newfp));
+  if ((r = sockaddr_to_user(xaddr, xaddrlen, &ss, ss_len)) < 0)
     return r;
-  }
-  return r;
+  return fdalloc(std::move(newf), 0);
 }
 
 //SYSCALL

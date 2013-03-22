@@ -25,25 +25,19 @@ getfile(int fd)
 // Allocate a file descriptor for the given file.
 // Takes over file reference from caller on success.
 int
-fdalloc(file *f, int omode)
+fdalloc(sref<file>&& f, int omode)
 {
-  return myproc()->ftable->allocfd(f, omode & O_ANYFD, omode & O_CLOEXEC);
+  if (!f)
+    return -1;
+  return myproc()->ftable->allocfd(
+    std::move(f), omode & O_ANYFD, omode & O_CLOEXEC);
 }
 
 //SYSCALL
 int
 sys_dup(int ofd)
 {
-  sref<file> f = getfile(ofd);
-  if (!f)
-    return -1;
-
-  int fd = fdalloc(f.get(), 0);
-  if (fd < 0)
-    return -1;
-
-  f->inc();
-  return fd;
+  return fdalloc(getfile(ofd), 0);
 }
 
 //SYSCALL
@@ -465,20 +459,9 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     if (*m->as_file()->read_size())
       m->as_file()->write_size().resize_nogrow(0);
 
-  file* f = new file_inode(m,
-                           !(rwmode == O_WRONLY),
-                           !(rwmode == O_RDONLY),
-                           !!(omode & O_APPEND));
-  if (!f)
-    return -1;
-
-  int fd = fdalloc(f, omode);
-  if (fd < 0) {
-    f->dec();
-    return -1;
-  }
-
-  return fd;
+  sref<file> f = make_sref<file_inode>(
+    m, !(rwmode == O_WRONLY), !(rwmode == O_RDONLY), !!(omode & O_APPEND));
+  return fdalloc(std::move(f), omode);
 }
 
 //SYSCALL
@@ -598,14 +581,9 @@ sys_pipe(userptr<int> fd)
   if (pipealloc(&rf, &wf) < 0)
     return -1;
 
-  int fd_buf[2] = { fdalloc(rf.get(), 0), fdalloc(wf.get(), 0) };
-  if (fd_buf[0])
-    rf->inc();
-  if (fd_buf[1])
-    wf->inc();
-  if (fd_buf[0] >= 0 && fd_buf[1] >= 0 && fd.store(fd_buf, 2)) {
+  int fd_buf[2] = { fdalloc(std::move(rf), 0), fdalloc(std::move(wf), 0) };
+  if (fd_buf[0] >= 0 && fd_buf[1] >= 0 && fd.store(fd_buf, 2))
     return 0;
-  }
 
   if (fd_buf[0] >= 0)
     myproc()->ftable->close(fd_buf[0]);

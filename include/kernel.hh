@@ -214,7 +214,7 @@ u64             syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 int             wait(int, userptr<int>);
 int             doexec(userptr_str upath,
                        userptr<userptr<char> const> uargv);
-int             fdalloc(file *f, int omode);
+int             fdalloc(sref<file>&& f, int omode);
 sref<file>      getfile(int fd);
 sref<mnode>     create(sref<mnode>, const char *, short, short, short, bool);
 
