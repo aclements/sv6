@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 
 template <class T, typename = void>
 class sref {
@@ -101,6 +102,12 @@ public:
 private:
   T *ptr_;
 };
+
+template<typename T, typename... Args>
+sref<T> make_sref(Args&&... args)
+{
+  return sref<T>::transfer(new T(std::forward<Args>(args)...));
+}
 
 class referenced {
 public:
