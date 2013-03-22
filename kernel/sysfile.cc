@@ -594,22 +594,23 @@ sys_execv(userptr_str upath, userptr<userptr<char> const> uargv)
 int
 sys_pipe(userptr<int> fd)
 {
-  struct file *rf, *wf;
+  sref<file> rf, wf;
   if (pipealloc(&rf, &wf) < 0)
     return -1;
 
-  int fd_buf[2] = { fdalloc(rf, 0), fdalloc(wf, 0) };
-  if (fd_buf[0] >= 0 && fd_buf[1] >= 0 && fd.store(fd_buf, 2))
+  int fd_buf[2] = { fdalloc(rf.get(), 0), fdalloc(wf.get(), 0) };
+  if (fd_buf[0])
+    rf->inc();
+  if (fd_buf[1])
+    wf->inc();
+  if (fd_buf[0] >= 0 && fd_buf[1] >= 0 && fd.store(fd_buf, 2)) {
     return 0;
+  }
 
   if (fd_buf[0] >= 0)
     myproc()->ftable->close(fd_buf[0]);
-  else
-    rf->dec();
   if (fd_buf[1] >= 0)
     myproc()->ftable->close(fd_buf[1]);
-  else
-    wf->dec();
   return -1;
 }
 

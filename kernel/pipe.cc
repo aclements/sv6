@@ -95,24 +95,19 @@ struct ordered : pipe {
 
 
 int
-pipealloc(struct file **f0, struct file **f1)
+pipealloc(sref<file> *f0, sref<file> *f1)
 {
-  *f0 = *f1 = 0;
-  struct pipe *p = new ordered();
-  if (!p)
-    goto bad;
-  if((*f0 = new file_pipe_reader(p)) == 0 || (*f1 = new file_pipe_writer(p)) == 0)
-    goto bad;
+  struct pipe *p = nullptr;
+  auto cleanup = scoped_cleanup([&](){delete p;});
+  try {
+    p = new ordered();
+    *f0 = make_sref<file_pipe_reader>(p);
+    *f1 = make_sref<file_pipe_writer>(p);
+  } catch (std::bad_alloc &e) {
+    return -1;
+  }
+  cleanup.dismiss();
   return 0;
-
- bad:
-  if(p)
-    delete p;
-  if(*f0)
-    (*f0)->dec();
-  if(*f1)
-    (*f1)->dec();
-  return -1;
 }
 
 void
