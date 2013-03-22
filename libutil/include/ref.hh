@@ -54,6 +54,15 @@ public:
     return sref(p);
   }
 
+  // Transfer ownership of this sref to a pointer, clearing this sref.
+  // This *does not* decrement the reference count and is meant for
+  // transitioning an automatic reference to a manual one.
+  T* transfer_to_ptr() {
+    T* res = ptr_;
+    ptr_ = nullptr;
+    return res;
+  }
+
   // Create a new reference to a pointer.  This *does* increment the
   // reference count and is primarily meant for transferring between
   // manual pointer-based reference counting and automatic counting.
