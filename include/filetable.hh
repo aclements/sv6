@@ -148,7 +148,7 @@ public:
       cloexec_[cpu][fd] = cloexec;
     infop->store(newinfo, std::memory_order_release);
 
-    if (oldinfo.get_file())
+    if (oldinfo.get_file() && oldinfo.get_file() != newf)
       oldinfo.get_file()->dec();
     return true;
   }
