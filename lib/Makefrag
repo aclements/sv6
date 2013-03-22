@@ -4,7 +4,7 @@ $(O)/lib/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER
 ULIB = ulib.o printf.o umalloc.o uthread.o fmt.o stdio.o \
        string.o threads.o crt.o sysstubs.o perf.o \
        getopt.o rand.o msort.o qsort.o ctype.o \
-       time.o timemath.o cpprt.o
+       time.o timemath.o cpprt.o thread.o
 ULIB := $(addprefix $(O)/lib/, $(ULIB))
 ULIBA = $(O)/lib/libu.a
 ULIB_BEGIN := $(O)/lib/crtbegin.o
