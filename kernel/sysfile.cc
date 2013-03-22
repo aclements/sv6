@@ -19,9 +19,7 @@
 sref<file>
 getfile(int fd)
 {
-  sref<file> f;
-  myproc()->ftable->getfile(fd, &f);
-  return f;
+  return myproc()->ftable->getfile(fd);
 }
 
 // Allocate a file descriptor for the given file.

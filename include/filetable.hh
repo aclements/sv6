@@ -45,20 +45,22 @@ public:
     return sref<filetable>::transfer(t);
   }
 
-  bool getfile(int fd, sref<file> *sf) {
+  // Return the file referenced by FD fd.  If fd is not open, returns
+  // sref<file>().
+  sref<file> getfile(int fd) {
     int cpu = fd >> cpushift;
     fd = fd & fdmask;
 
     if (cpu < 0 || cpu >= NCPU)
-      return false;
+      return sref<file>();
 
     if (fd < 0 || fd >= NOFILE)
-      return false;
+      return sref<file>();
 
+    // XXX This isn't safe: there could be a concurrent close that
+    // drops the reference count to zero.
     file* f = info_[cpu][fd].load().get_file();
-    if (!f || !sf->init_nonzero(f))
-      return false;
-    return true;
+    return sref<file>::newref(f);
   }
 
   int allocfd(struct file *f, bool percpu = false, bool cloexec = false) {

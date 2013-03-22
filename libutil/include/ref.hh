@@ -115,6 +115,8 @@ public:
   // Create a new reference to a pointer.  This *does* increment the
   // reference count and is primarily meant for transferring between
   // manual pointer-based reference counting and automatic counting.
+  // The caller must ensure that it is valid to increment the
+  // reference count (for example, the count is not currently zero).
   static sref newref(T* p) {
     if (p)
       p->inc();
@@ -132,16 +134,6 @@ public:
   bool init(T* p) {
     if (ptr_ || !p->tryinc())
       return false;
-    ptr_ = p;
-    return true;
-  }
-
-  // init_nonzero(p) can be called only if it is guaranteed that
-  // there is an existing reference to p.
-  bool init_nonzero(T* p) {
-    if (ptr_)
-      return false;
-    p->inc();
     ptr_ = p;
     return true;
   }
