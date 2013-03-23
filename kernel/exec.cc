@@ -211,33 +211,23 @@ int
 load_image(proc *p, const char *path, const char * const *argv,
            sref<vmap> *oldvmap_out)
 {
-  sref<mnode> ip;
-  sref<vmap> vmp, oldvmap;
-  const char *s, *last;
-  char buf[1024];
-  int sz;
-  struct elfhdr *elf;
-  struct proghdr ph;
-  u64 off;
-  int i;
-  long sp;
-  u64 load_addr = -1;
-  u64 phdr = 0;
-
-  if((ip = namei(p->cwd_m, path)) == 0)
+  sref<mnode> ip = namei(p->cwd_m, path);
+  if (!ip)
     return -1;
 
   scoped_gc_epoch rcu;
 
   // Check header
+  char buf[1024];
   if (ip->type() != mnode::types::file)
-    goto bad;
-  sz = readi(ip, buf, 0, sizeof(buf));
+    return -1;
+  size_t sz = readi(ip, buf, 0, sizeof(buf));
   if (sz < 0)
-    goto bad;
+    return -1;
 
   // Script?
   if (strncmp(buf, "#!", 2) == 0) {
+    int i;
     for (i = 2; i < sz; ++i) {
       if (buf[i] == '\n') {
         buf[i] = 0;
@@ -245,33 +235,35 @@ load_image(proc *p, const char *path, const char * const *argv,
       }
     }
     if (i == sz)
-      goto bad;
+      return -1;
     const char *argv[] = {&buf[2], path, NULL};
     return load_image(p, argv[0], argv, oldvmap_out);
   }
 
   // ELF?
+  struct elfhdr *elf = reinterpret_cast<elfhdr*>(&buf);
   static_assert(sizeof(elf) <= sizeof(buf), "buf too small for ELF header");
   if (sz < sizeof(elf))
-    goto bad;
-  elf = reinterpret_cast<elfhdr*>(&buf);
+    return -1;
   if(elf->magic != ELF_MAGIC)
-    goto bad;
+    return -1;
 
-  if (!(vmp = vmap::alloc()))
-    goto bad;
+  sref<vmap> vmp = vmap::alloc();
+  if (!vmp)
+    return -1;
 
-  for(i=0, off=elf->phoff; i<elf->phnum; i++, off+=sizeof(ph)){
+  u64 load_addr = -1;
+  for (size_t i=0, off=elf->phoff; i<elf->phnum; i++, off+=sizeof(proghdr)){
     Elf64_Word type;
     if(readi(ip, (char*)&type, 
              off+__offsetof(struct proghdr, type), 
              sizeof(type)) != sizeof(type))
-      goto bad;
+      return -1;
 
     switch (type) {
     case ELF_PROG_LOAD:
       if (dosegment(ip, vmp.get(), off, &load_addr) < 0)
-        goto bad;
+        return -1;
       break;
     default:
       continue;
@@ -279,14 +271,16 @@ load_image(proc *p, const char *path, const char * const *argv,
   }
 
   if (doheap(vmp.get()) < 0)
-    goto bad;
+    return -1;
 
   // dostack reads from the user vm space.  wq workers don't switch 
   // the user vm.
-  if ((sp = dostack(vmp.get(), argv, path)) < 0)
-    goto bad;
+  long sp = dostack(vmp.get(), argv, path);
+  if (sp < 0)
+    return -1;
 
   // for usetup
+  uintptr_t phdr = 0;
   if (load_addr != -1)
     phdr = load_addr + elf->phoff;
 
@@ -306,13 +300,11 @@ load_image(proc *p, const char *path, const char * const *argv,
   p->run_cpuid_ = myid();
   p->data_cpuid = myid();
 
+  const char *s, *last;
   for(last=s=path; *s; s++)
     if(*s == '/')
       last = s+1;
   safestrcpy(p->name, last, sizeof(p->name));
 
   return 0;
-
- bad:
-  return -1;
 }
