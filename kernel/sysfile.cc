@@ -537,7 +537,7 @@ doexec(userptr_str upath, userptr<userptr<char> const> uargv)
     if (i >= NELEM(argv))
       goto clean;
     u64 uarg;
-    if (fetchint64(uargv+8*i, &uarg) < 0)
+    if (fetchint64((uptr)uargv+8*i, &uarg) < 0)
       goto clean;
     if (uarg == 0)
       break;
@@ -608,11 +608,11 @@ sys_readdir(int dirfd, const userptr<char> prevptr, userptr<char> nameptr)
     return -1;
 
   strbuf<DIRSIZ> prev;
-  if (!prevptr.null() && !prevptr.load(prev.buf_, sizeof(prev.buf_)))
+  if (prevptr && !prevptr.load(prev.buf_, sizeof(prev.buf_)))
     return -1;
 
   strbuf<DIRSIZ> name;
-  if (!dfi->ip->as_dir()->enumerate(prevptr.null() ? nullptr : &prev, &name))
+  if (!dfi->ip->as_dir()->enumerate(prevptr ? &prev : nullptr, &name))
     return 0;
 
   if (!nameptr.store(name.buf_, sizeof(name.buf_)))

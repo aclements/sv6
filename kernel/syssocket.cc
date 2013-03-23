@@ -11,7 +11,7 @@ static int
 sockaddr_from_user(struct sockaddr_storage *ss,
                    const userptr<struct sockaddr> sa, uint32_t sa_len)
 {
-  assert(!sa.null());
+  assert(sa);
   // Make sure source sockaddr isn't too big.  -1 leaves room for the
   // final padding byte that we add in the kernel.
   if (sa_len > sizeof *ss - 1)
@@ -32,7 +32,7 @@ static int
 sockaddr_to_user(userptr<struct sockaddr> sa, userptr<socklen_t> sa_len,
                  const struct sockaddr_storage *ss, size_t ss_len)
 {
-  if (sa.null() || sa_len.null())
+  if (!sa || !sa_len)
     return 0;
   socklen_t addrlen;
   if (!sa_len.load(&addrlen))
@@ -72,7 +72,7 @@ sys_bind(int xsock, const userptr<struct sockaddr> xaddr, uint32_t xaddrlen)
     return -1;
 
   struct sockaddr_storage ss;
-  if (xaddr.null())
+  if (!xaddr)
     return -1;
   int r = sockaddr_from_user(&ss, xaddr, xaddrlen);
   if (r < 0)
@@ -126,7 +126,7 @@ sys_recvfrom(int sockfd, userptr<void> buf, size_t len, int flags,
   struct sockaddr_storage ss;
   size_t ss_len;
   ssize_t size = f->recvfrom(buf, len, flags,
-                             src_addr.null() ? nullptr : &ss, &ss_len);
+                             src_addr ? &ss : nullptr, &ss_len);
   if (size < 0)
     return size;
 
@@ -148,14 +148,14 @@ sys_sendto(int sockfd, const userptr<void> buf, size_t len, int flags,
 
   // Fetch sockaddr
   struct sockaddr_storage ss;
-  if (!dest_addr.null()) {
+  if (dest_addr) {
     int r = sockaddr_from_user(&ss, dest_addr, addrlen);
     if (r < 0)
       return r;
   }
 
   return f->sendto(buf, len, flags,
-                   dest_addr.null() ? nullptr : (struct sockaddr*)&ss,
+                   dest_addr ? (struct sockaddr*)&ss : nullptr,
                    addrlen);
 }
 

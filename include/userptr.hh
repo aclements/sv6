@@ -45,9 +45,9 @@ public:
     return ptr;
   }
 
-  bool null() const
+  explicit operator bool() const
   {
-    return ptr == nullptr;
+    return ptr != nullptr;
   }
 
   // Allow implicit casts to uptr.  Often it makes sense to treat a
@@ -119,9 +119,9 @@ public:
     return ptr;
   }
 
-  bool null() const
+  explicit operator bool() const
   {
-    return ptr == nullptr;
+    return ptr != nullptr;
   }
 
   // XXX Does having this allow for conversions between any userptr?
@@ -161,9 +161,9 @@ public:
   userptr_str(userptr_str &&o) = default;
   userptr_str& operator=(const userptr_str& o) = default;
 
-  operator bool() const
+  explicit operator bool() const
   {
-    return !ptr.null();
+    return (bool)ptr;
   }
 
   bool load(char *dst, std::size_t size)
