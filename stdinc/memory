@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 namespace std {
   // [C++11 20.6.12.1]
   template <class T>
@@ -10,4 +12,198 @@ namespace std {
   {
     return reinterpret_cast<T*>(&(char&)r);
   }
+
+  // [C++11 20.7.1.2] Deleters are not supported
+  template <class T>
+  class unique_ptr
+  {
+  public:
+    typedef T* pointer;
+    typedef T element_type;
+
+  private:
+    pointer ptr_;
+
+  public:
+    constexpr unique_ptr() noexcept : ptr_(nullptr) { }
+
+    explicit unique_ptr(pointer p) noexcept : ptr_(p) { }
+
+    unique_ptr(unique_ptr&& u) noexcept : ptr_(u.ptr_)
+    {
+      u.ptr_ = nullptr;
+    }
+
+    constexpr unique_ptr(nullptr_t) noexcept : unique_ptr() { }
+
+    template <class U, typename = typename
+              std::enable_if<std::is_convertible<U*, T*>::value>::type>
+    unique_ptr(unique_ptr<U>&& u) noexcept : ptr_(u.ptr_)
+    {
+      u.ptr_ = nullptr;
+    }
+
+    ~unique_ptr()
+    {
+      if (ptr_)
+        delete ptr_;
+    }
+
+    unique_ptr&
+    operator=(unique_ptr&& u) noexcept
+    {
+      reset(u.release());
+    }
+
+    template <class U, typename = typename
+              std::enable_if<std::is_convertible<U*, T*>::value>::type>
+    unique_ptr&
+    operator=(unique_ptr<U>&& u) noexcept
+    {
+      reset(u.release());
+    }
+
+    unique_ptr&
+    operator=(nullptr_t) noexcept
+    {
+      reset();
+    }
+
+    typename add_lvalue_reference<T>::type
+    operator*() const
+    {
+      return *get();
+    }
+
+    pointer
+    operator->() const noexcept
+    {
+      return get();
+    }
+
+    pointer
+    get() const noexcept
+    {
+      return ptr_;
+    }
+
+    explicit
+    operator bool() const noexcept
+    {
+      return get() != nullptr;
+    }
+
+    pointer
+    release() noexcept
+    {
+      pointer p = get();
+      ptr_ = nullptr;
+      return p;
+    }
+
+    void
+    reset(pointer p = pointer()) noexcept
+    {
+      pointer o = get();
+      ptr_ = p;
+      delete o;
+    }
+
+    void
+    swap(unique_ptr& u) noexcept
+    {
+      swap(ptr_, u.ptr_);
+    }
+  };
+
+  // [C++11 20.7.1.3] Deleters are not supported
+  template <class T>
+  class unique_ptr<T[]>
+  {
+  public:
+    typedef T* pointer;
+    typedef T element_type;
+
+  private:
+    pointer ptr_;
+
+  public:
+    constexpr unique_ptr() noexcept : ptr_(nullptr) { }
+
+    explicit unique_ptr(pointer p) noexcept : ptr_(p) { }
+
+    unique_ptr(unique_ptr&& u) noexcept : ptr_(u.ptr_)
+    {
+      u.ptr_ = nullptr;
+    }
+
+    constexpr unique_ptr(nullptr_t) noexcept : unique_ptr() { }
+
+    ~unique_ptr()
+    {
+      if (ptr_)
+        delete[] ptr_;
+    }
+
+    unique_ptr&
+    operator=(unique_ptr&& u) noexcept
+    {
+      reset(u.release());
+      return *this;
+    }
+
+    unique_ptr&
+    operator=(nullptr_t) noexcept
+    {
+      reset();
+      return *this;
+    }
+
+    T&
+    operator[](size_t i) const
+    {
+      return ptr_[i];
+    }
+
+    pointer
+    get() const noexcept
+    {
+      return ptr_;
+    }
+
+    explicit
+    operator bool() const noexcept
+    {
+      return get() != nullptr;
+    }
+
+    pointer
+    release() noexcept
+    {
+      pointer p = get();
+      ptr_ = nullptr;
+      return p;
+    }
+
+    void
+    reset(pointer p = pointer()) noexcept
+    {
+      pointer o = get();
+      ptr_ = p;
+      delete[] o;
+    }
+
+    void
+    reset(nullptr_t) noexcept
+    {
+      delete[] ptr_;
+      ptr_ = nullptr;
+    }
+
+    void
+    swap(unique_ptr& u) noexcept
+    {
+      swap(ptr_, u.ptr_);
+    }
+  };
 }
