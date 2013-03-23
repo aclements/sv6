@@ -91,6 +91,8 @@ void            printtrace(u64 rbp);
 
 // exec.c
 int             exec(const char*, const char* const*);
+int             load_image(proc *p, const char *path, const char * const *argv,
+                           sref<vmap> *oldvmap_out);
 
 // fs.c
 int             namecmp(const char*, const char*);

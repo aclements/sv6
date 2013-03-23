@@ -173,6 +173,44 @@ struct cleanup_work : public work
 int
 exec(const char *path, const char * const *argv)
 {
+  sref<vmap> oldvmap;
+  int r = load_image(myproc(), path, argv, &oldvmap);
+  if (r < 0) {
+    cprintf("exec failed\n");
+    return r;
+  }
+
+  // Close O_CLOEXEC file descriptors.
+  //
+  // exec, CLOEXEC, and FD table sharing interact in strange ways.
+  // The easiest thing to do is make a new FD table for the new image,
+  // though in many cases the FD table will only have one reference,
+  // so it would be safe to close O_CLOEXEC descriptors in place.
+  {
+    sref<filetable> newftable(myproc()->ftable->copy(true));
+    myproc()->ftable = std::move(newftable);
+  }
+
+  // Switch to the new address space
+  switchvm(myproc());
+
+  // Now it's safe to clean up the old address space
+  cleanup_work* w = new cleanup_work(std::move(oldvmap));
+  assert(wqcrit_push(w, myproc()->data_cpuid) >= 0);
+
+  return 0;
+}
+
+// Load an ELF image or script into the given process.  p->cwd_m must
+// be set (path is resolved relative to this) and p->tf must be a
+// valid pointer.  This sets p->vmap, *p->tf, p->run_cpuid_,
+// p->data_cpuid, and p->name.  If this fails, p will not be modified.
+// This does not switch to the new vmap.  If p already has a vmap and
+// this call succeeds, *oldvmap_out will be set to the old vmap.
+int
+load_image(proc *p, const char *path, const char * const *argv,
+           sref<vmap> *oldvmap_out)
+{
   sref<mnode> ip;
   sref<vmap> vmp, oldvmap;
   const char *s, *last;
@@ -182,12 +220,11 @@ exec(const char *path, const char * const *argv)
   struct proghdr ph;
   u64 off;
   int i;
-  cleanup_work* w;
   long sp;
   u64 load_addr = -1;
   u64 phdr = 0;
 
-  if((ip = namei(myproc()->cwd_m, path)) == 0)
+  if((ip = namei(p->cwd_m, path)) == 0)
     return -1;
 
   scoped_gc_epoch rcu;
@@ -210,7 +247,7 @@ exec(const char *path, const char * const *argv)
     if (i == sz)
       goto bad;
     const char *argv[] = {&buf[2], path, NULL};
-    return exec(argv[0], argv);
+    return load_image(p, argv[0], argv, oldvmap_out);
   }
 
   // ELF?
@@ -254,42 +291,28 @@ exec(const char *path, const char * const *argv)
     phdr = load_addr + elf->phoff;
 
   // Commit to the user image.
-  oldvmap = std::move(myproc()->vmap);
+  if (p->vmap)
+    assert(oldvmap_out);
+  if (oldvmap_out)
+    *oldvmap_out = std::move(p->vmap);
 
-  myproc()->vmap = vmp;
-  myproc()->tf->rip = elf->entry;
-  myproc()->tf->rsp = sp;
+  p->vmap = vmp;
+  p->tf->rip = elf->entry;
+  p->tf->rsp = sp;
   // Additional arguments.  We can't pass these in ABI argument
   // registers because the sysentry return path doesn't restore those.
-  myproc()->tf->r12 = phdr;         // AT_PHDR
-  myproc()->tf->r13 = elf->phnum;   // AT_PHNUM
-  myproc()->run_cpuid_ = myid();
-
-  // Close O_CLOEXEC file descriptors.
-  //
-  // exec, CLOEXEC, and FD table sharing interact in strange ways.
-  // The easiest thing to do is make a new FD table for the new image,
-  // though in many cases the FD table will only have one reference,
-  // so it would be safe to close O_CLOEXEC descriptors in place.
-  {
-    sref<filetable> newftable(myproc()->ftable->copy(true));
-    myproc()->ftable = std::move(newftable);
-  }
+  p->tf->r12 = phdr;         // AT_PHDR
+  p->tf->r13 = elf->phnum;   // AT_PHNUM
+  p->run_cpuid_ = myid();
+  p->data_cpuid = myid();
 
   for(last=s=path; *s; s++)
     if(*s == '/')
       last = s+1;
-  safestrcpy(myproc()->name, last, sizeof(myproc()->name));
-
-  switchvm(myproc());
-
-  w = new cleanup_work(std::move(oldvmap));
-  assert(wqcrit_push(w, myproc()->data_cpuid) >= 0);
-  myproc()->data_cpuid = myid();
+  safestrcpy(p->name, last, sizeof(p->name));
 
   return 0;
 
  bad:
-  cprintf("exec failed\n");
-  return 0;
+  return -1;
 }
