@@ -26,8 +26,19 @@ public:
   explicit userptr(uptr p) : ptr((T*)p) { }
   userptr() = default;
   userptr(const userptr<T> &o) = default;
-  userptr(userptr<T> &&o) = default;
   userptr& operator=(const userptr& o) = default;
+
+  // Up-conversion
+  template<typename U, typename = typename
+           std::enable_if<std::is_convertible<U*, T*>::value>::type>
+  userptr(const userptr<U> &o) : ptr(o.ptr) { }
+
+  template<typename U, typename = typename
+           std::enable_if<std::is_convertible<U*, T*>::value>::type>
+  userptr& operator=(const userptr<U>& o)
+  {
+    ptr = o.ptr;
+  }
 
   T* unsafe_get() const
   {
@@ -37,13 +48,6 @@ public:
   bool null() const
   {
     return ptr == nullptr;
-  }
-
-  // Allow implicit conversion to userptr<void> (mirroring C++'s
-  // implicit casts to void*)
-  operator userptr<void> () const
-  {
-    return userptr<void>{ptr};
   }
 
   // Allow implicit casts to uptr.  Often it makes sense to treat a
