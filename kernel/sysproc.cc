@@ -207,7 +207,7 @@ sys_futex(const u64* addr, int op, u64 val, u64 timer)
 {
   futexkey_t key;
 
-  if (futexkey(addr, myproc()->vmap, &key) < 0)
+  if (futexkey(addr, myproc()->vmap.get(), &key) < 0)
     return -1;
 
   mt_ascope ascope("%s(%p,%d,%lu,%lu)", __func__, addr, op, val, timer);

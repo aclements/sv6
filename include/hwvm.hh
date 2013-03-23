@@ -5,6 +5,8 @@
 #include "bitset.hh"
 #include "bits.hh"
 
+struct pgmap;
+
 // A TLB shootdown gatherer that doesn't track anything, but as a
 // result can be batched with other TLB shootdowns.
 class batched_shootdown

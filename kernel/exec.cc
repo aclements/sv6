@@ -157,15 +157,15 @@ doheap(vmap* vmp)
 
 struct cleanup_work : public work
 {
-  cleanup_work(vmap* oldvmap)
-    : work(), oldvmap_(oldvmap) {}
-  
+  cleanup_work(sref<vmap>&& oldvmap)
+    : work(), oldvmap_(std::move(oldvmap)) {}
+
   virtual void run() override {
-    oldvmap_->decref();
+    // The destructor will decref oldvmap_.
     delete this;
   }
 
-  vmap* oldvmap_;
+  sref<vmap> oldvmap_;
 
   NEW_DELETE_OPS(cleanup_work)
 };
@@ -174,7 +174,7 @@ int
 exec(const char *path, const char * const *argv)
 {
   sref<mnode> ip;
-  struct vmap *vmp = nullptr;
+  sref<vmap> vmp, oldvmap;
   const char *s, *last;
   char buf[1024];
   int sz;
@@ -182,7 +182,6 @@ exec(const char *path, const char * const *argv)
   struct proghdr ph;
   u64 off;
   int i;
-  vmap* oldvmap;
   cleanup_work* w;
   long sp;
   u64 load_addr = -1;
@@ -222,7 +221,7 @@ exec(const char *path, const char * const *argv)
   if(elf->magic != ELF_MAGIC)
     goto bad;
 
-  if((vmp = vmap::alloc()) == 0)
+  if (!(vmp = vmap::alloc()))
     goto bad;
 
   for(i=0, off=elf->phoff; i<elf->phnum; i++, off+=sizeof(ph)){
@@ -234,7 +233,7 @@ exec(const char *path, const char * const *argv)
 
     switch (type) {
     case ELF_PROG_LOAD:
-      if (dosegment(ip, vmp, off, &load_addr) < 0)
+      if (dosegment(ip, vmp.get(), off, &load_addr) < 0)
         goto bad;
       break;
     default:
@@ -242,12 +241,12 @@ exec(const char *path, const char * const *argv)
     }
   }
 
-  if (doheap(vmp) < 0)
+  if (doheap(vmp.get()) < 0)
     goto bad;
 
   // dostack reads from the user vm space.  wq workers don't switch 
   // the user vm.
-  if ((sp = dostack(vmp, argv, path)) < 0)
+  if ((sp = dostack(vmp.get(), argv, path)) < 0)
     goto bad;
 
   // for usetup
@@ -255,7 +254,7 @@ exec(const char *path, const char * const *argv)
     phdr = load_addr + elf->phoff;
 
   // Commit to the user image.
-  oldvmap = myproc()->vmap;
+  oldvmap = std::move(myproc()->vmap);
 
   myproc()->vmap = vmp;
   myproc()->tf->rip = elf->entry;
@@ -284,7 +283,7 @@ exec(const char *path, const char * const *argv)
 
   switchvm(myproc());
 
-  w = new cleanup_work(oldvmap);
+  w = new cleanup_work(std::move(oldvmap));
   assert(wqcrit_push(w, myproc()->data_cpuid) >= 0);
   myproc()->data_cpuid = myid();
 
@@ -292,7 +291,5 @@ exec(const char *path, const char * const *argv)
 
  bad:
   cprintf("exec failed\n");
-  if(vmp)
-    vmp->decref();
   return 0;
 }

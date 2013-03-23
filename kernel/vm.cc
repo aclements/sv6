@@ -108,15 +108,14 @@ public:
  * vmap
  */
 
-vmap*
+sref<vmap>
 vmap::alloc(void)
 {
-  return new vmap();
+  return sref<vmap>::transfer(new (std::nothrow) vmap());
 }
 
 vmap::vmap() : 
-  ref(1), brk_(0),
-  brklock_("brk_lock", LOCKSTAT_VM)
+  brk_(0), brklock_("brk_lock", LOCKSTAT_VM)
 {
 }
 
@@ -124,26 +123,13 @@ vmap::~vmap()
 {
 }
 
-void
-vmap::decref()
-{
-  if (--ref == 0)
-    delete this;
-}
-
-void
-vmap::incref()
-{
-  ++ref;
-}
-
-vmap*
+sref<vmap>
 vmap::copy()
 {
   if (SDEBUG)
     sdebug.println("vm: copy pid ", myproc()->pid);
 
-  vmap *nm = new vmap();
+  sref<vmap> nm = alloc();
   mmu::shootdown shootdown;
 
   {

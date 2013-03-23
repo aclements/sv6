@@ -1,3 +1,5 @@
+#pragma once
+
 #include "gc.hh"
 #include <atomic>
 #include "cpputil.hh"
@@ -115,16 +117,11 @@ void to_stream(class print_stream *s, const vmdesc &vmd);
 
 // An address space. This manages the mapping from virtual addresses
 // to virtual memory descriptors.
-struct vmap {
-  static vmap* alloc();
-
-  atomic<u64> ref;
-
-  void decref();
-  void incref();
+struct vmap : public referenced {
+  static sref<vmap> alloc();
 
   // Copy this vmap's structure and share pages copy-on-write.
-  vmap* copy();
+  sref<vmap> copy();
 
   // Map desc from virtual addresses start to start+len.  Returns
   // MAP_FAILED ((uptr)-1) if inserting the region fails.

@@ -63,7 +63,7 @@ do_pagefault(struct trapframe *tf)
       panic("do_pagefault: %lx", addr);
 
     sti();
-    if(pagefault(myproc()->vmap, addr, tf->err) >= 0){
+    if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
 #if MTRACE
       mtstop(myproc());
       if (myproc()->mtrace_stacks.curr >= 0)
@@ -77,7 +77,7 @@ do_pagefault(struct trapframe *tf)
     return 0;
   } else if (tf->err & FEC_U) {
       sti();
-      if(pagefault(myproc()->vmap, addr, tf->err) >= 0){
+      if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
 #if MTRACE
         mtstop(myproc());
         if (myproc()->mtrace_stacks.curr >= 0)

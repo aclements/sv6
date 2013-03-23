@@ -134,6 +134,10 @@ namespace locked_snzi
   };
 }
 
+// XXX This specialization is unfortunate because it means that,
+// unlike a regular pointer, sref cannot be applied to an incomplete
+// type because we can't evaluate is_base_of.
+
 template<class T>
 class sref<T, typename std::enable_if<std::is_base_of<locked_snzi::referenced, T>::value>::type>
 {

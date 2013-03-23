@@ -33,7 +33,7 @@ struct kstack_tag kstack_tag[NCPU];
 enum { sched_debug = 0 };
 
 proc::proc(int npid) :
-  rcu_freed("proc", this, sizeof(*this)), vmap(0), kstack(0),
+  rcu_freed("proc", this, sizeof(*this)), kstack(0),
   pid(npid), parent(0), tf(0), context(0), killed(0),
   tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
   cpu_pin(0), oncv(0), cv_wakeup(0),
@@ -181,12 +181,10 @@ exit(int status)
 
   // Release vmap
   if (myproc()->vmap != nullptr) {
-    auto vmap = myproc()->vmap;
+    sref<vmap> vmap = std::move(myproc()->vmap);
     // Switch to kernel page table, since we may be just about to
     // destroy the current page table.
-    myproc()->vmap = nullptr;
     switchvm(myproc());
-    vmap->decref();
   }
 
   // Lock the parent first, since otherwise we might deadlock.
@@ -460,7 +458,6 @@ doclone(clone_flags flags)
 
   if (flags & CLONE_SHARE_VMAP) {
     np->vmap = myproc()->vmap;
-    np->vmap->ref++;
   } else {
     // Copy process state from p.
     np->vmap = myproc()->vmap->copy();
