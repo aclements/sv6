@@ -88,6 +88,47 @@ public:
   }
 };
 
+// Specialization of userptr<void>
+template<>
+class userptr<void>
+{
+  void *ptr;
+
+public:
+  userptr(std::nullptr_t n) : ptr(nullptr) { }
+  explicit userptr(void* p) : ptr(p) { }
+  explicit userptr(uptr p) : ptr((void*)p) { }
+  userptr() = default;
+  userptr(const userptr<void> &o) = default;
+  userptr& operator=(const userptr& o) = default;
+
+  void *unsafe_get() const
+  {
+    return ptr;
+  }
+
+  bool null() const
+  {
+    return ptr == nullptr;
+  }
+
+  // XXX Does having this allow for conversions between any userptr?
+  operator uptr () const
+  {
+    return (uptr)ptr;
+  }
+
+  bool store_bytes(const void *val, std::size_t bytes) const
+  {
+    return !putmem(unsafe_get(), val, bytes);
+  }
+
+  bool load_bytes(void *val, std::size_t bytes) const
+  {
+    return !fetchmem(val, unsafe_get(), bytes);
+  }
+};
+
 // For userptr to be passed like a regular pointer, its representation
 // must be the same as a pointer (obviously) and, furthermore, the
 // AMD64 ABI requires that it have a trivial copy construct and

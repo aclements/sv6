@@ -146,7 +146,7 @@ sys_pread(int fd, void *ubuf, size_t count, off_t offset)
 
 //SYSCALL
 ssize_t
-sys_write(int fd, userptr<const void> p, size_t n)
+sys_write(int fd, const userptr<void> p, size_t n)
 {
   kstats::timer timer_fill(&kstats::write_cycles);
   kstats::inc(&kstats::write_count);

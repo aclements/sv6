@@ -27,7 +27,7 @@ def main():
     # Output
     if options.kvectors:
         print "#include \"types.h\""
-        print "#include \"userptr.hh\""
+        print "#include \"kernel.hh\""
         print "#include <uk/unistd.h>"
         print
         for syscall in syscalls:
