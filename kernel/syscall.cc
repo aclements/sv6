@@ -11,6 +11,7 @@
 
 extern "C" int __uaccess_mem(void* dst, const void* src, u64 size);
 extern "C" int __uaccess_str(char* dst, const char* src, u64 size);
+extern "C" uptr __uaccess_strend(uptr src, u64 limit);
 extern "C" int __uaccess_int64(uptr addr, u64* ip);
 
 // XXX(austin) Many of these functions should take userptr<void>
@@ -62,6 +63,38 @@ fetchint64(uptr addr, u64 *ip)
   if ((uintptr_t)addr >= USERTOP || (uintptr_t)addr + sizeof(*ip) >= USERTOP)
     return -1;
   return __uaccess_int64(addr, ip);
+}
+
+std::unique_ptr<char[]>
+userptr_str::load_alloc(std::size_t limit, std::size_t *len_out) const
+{
+  uptr addr = ptr;
+  if (addr >= USERTOP)
+    return nullptr;
+  // Find the length of the string
+  if (addr > USERTOP - limit)
+    limit = USERTOP - addr;
+  uptr nul = __uaccess_strend(addr, limit);
+  if (nul == (uptr)-1)
+    return nullptr;
+  size_t len = nul - addr;
+  assert(len <= limit);
+  // Allocate
+  std::unique_ptr<char[]> res(new char[len + 1]);
+  // Copy
+  if (!ptr.load(res.get(), len + 1))
+    return nullptr;
+  // Verify that it's still NUL terminated
+  if (res[len] != '\0') {
+    void *nul2 = memchr(res.get(), 0, len);
+    if (!nul2)
+      return nullptr;
+    len = (char*)nul2 - res.get();
+  }
+  // Done
+  if (len_out)
+    *len_out = len;
+  return res;
 }
 
 extern u64 (*syscalls[])(u64, u64, u64, u64, u64, u64);

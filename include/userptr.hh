@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 
 // XXX(Austin) Avoiding TOCTTOU bugs when dealing with user-provided
 // pointers in the presence of shared memory requires copying.  A
@@ -79,7 +80,7 @@ public:
 
   bool load(T *val, std::size_t count) const
   {
-    return fetchmem(val, unsafe_get(), sizeof(T) * count) >= 0;
+    return fetchmem((void*)val, unsafe_get(), sizeof(T) * count) >= 0;
   }
 };
 
@@ -113,4 +114,12 @@ public:
     extern int fetchstr(char* dst, const char* usrc, u64 size);
     return !fetchstr(dst, ptr.unsafe_get(), size);
   }
+
+  // Allocate memory for this string and copy into it.  If the pointer
+  // is out of bounds or the string is longer than limit returns
+  // nullptr.  If memory allocation fails, throws bad_alloc.  If
+  // len_out is not nullptr, it will be set to strlen of the returned
+  // string.
+  std::unique_ptr<char[]> load_alloc(
+    std::size_t limit, std::size_t *len_out = nullptr) const;
 };

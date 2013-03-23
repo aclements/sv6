@@ -46,6 +46,32 @@ ENTRY(__uaccess_str)
 2:      // Done
         jmp     __uaccess_end
 
+// rdi user src
+// rsi max len
+// Returns pointer to NUL or (char*)-1 on failure
+ENTRY(__uaccess_strend)
+        push    %rbp            // For stack traces
+        mov     %rsp, %rbp
+
+        mov     %gs:0x8, %r11
+        movl    $1, PROC_UACCESS(%r11)
+
+        // %rcx limits scas
+        // XXX Is this off by one?  We want the limit to include the NUL.
+        mov     %rsi, %rcx
+        // Search for NUL
+        xor     %rax, %rax
+        // Scan string
+        repne   scasb
+        jne     2f
+        // RDI points to NUL
+        mov     %rdi, %rax
+        jmp     __uaccess_end
+2:
+        // No NUL found
+        movq    $-1, %rax
+        jmp     __uaccess_end
+
 // rdi dst
 // rsi src
 // rdx len
