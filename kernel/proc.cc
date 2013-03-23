@@ -441,7 +441,7 @@ procdumpall(void)
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
 int
-fork(int flags)
+doclone(clone_flags flags)
 {
   int pid;
   struct proc *np;
@@ -458,7 +458,7 @@ fork(int flags)
     freeproc(np);
   });
 
-  if(flags & FORK_SHARE_VMAP) {
+  if (flags & CLONE_SHARE_VMAP) {
     np->vmap = myproc()->vmap;
     np->vmap->ref++;
   } else {
@@ -476,7 +476,7 @@ fork(int flags)
   // Clear %eax so that fork returns 0 in the child.
   np->tf->rax = 0;
 
-  if (flags & FORK_SHARE_FD) {
+  if (flags & CLONE_SHARE_FTABLE) {
     np->ftable = myproc()->ftable;
   } else {
     np->ftable = myproc()->ftable->copy();

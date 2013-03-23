@@ -19,7 +19,12 @@
 int
 sys_fork(int flags)
 {
-  return fork(flags);
+  clone_flags cflags = clone_flags::CLONE_ALL;
+  if (flags & FORK_SHARE_VMAP)
+    cflags |= CLONE_SHARE_VMAP;
+  if (flags & FORK_SHARE_FD)
+    cflags |= CLONE_SHARE_FTABLE;
+  return doclone(cflags);
 }
 
 //SYSCALL NORET

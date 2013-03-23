@@ -9,6 +9,7 @@ extern "C" {
 #include <stdarg.h>
 #include <cassert>
 #include "ref.hh"
+#include "enumbitset.hh"
 
 #define KCSEG (2<<3)  /* kernel code segment */
 #define KDSEG (3<<3)  /* kernel data segment */
@@ -172,11 +173,18 @@ struct pipe*    pipesockalloc();
 void            pipesockclose(struct pipe *);
 
 // proc.c
+enum clone_flags
+{
+  CLONE_ALL = 0,
+  CLONE_SHARE_VMAP = 1<<0,
+  CLONE_SHARE_FTABLE = 1<<1,
+};
+ENUM_BITSET_OPS(clone_flags);
 struct proc*    copyproc(struct proc*);
 void            finishproc(struct proc*, bool removepid = true);
 void            execswitch(proc* p);
 void            exit(int);
-int             fork(int);
+int             doclone(clone_flags);
 int             growproc(int);
 void            pinit(void);
 void            procdumpall(void);
