@@ -86,6 +86,18 @@ public:
   {
     return fetchmem((void*)val, unsafe_get(), sizeof(T) * count) >= 0;
   }
+
+  // Allocate memory for T[count] and copy into it.  If the pointer is
+  // out of bounds, returns nullptr.  If memory allocation fails,
+  // throws bad_alloc.
+  std::unique_ptr<T[]>
+  load_alloc(std::size_t count) const
+  {
+    std::unique_ptr<T[]> res(new T[count]);
+    if (!load(res.get(), count))
+      return nullptr;
+    return res;
+  }
 };
 
 // Specialization of userptr<void>
