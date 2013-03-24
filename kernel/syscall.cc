@@ -68,7 +68,7 @@ fetchint64(uptr addr, u64 *ip)
 std::unique_ptr<char[]>
 userptr_str::load_alloc(std::size_t limit, std::size_t *len_out) const
 {
-  uptr addr = ptr;
+  uptr addr = (uptr)ptr;
   if (addr >= USERTOP)
     return nullptr;
   // Find the length of the string

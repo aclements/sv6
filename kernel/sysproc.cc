@@ -122,10 +122,10 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
     return MAP_FAILED;
   }
 
-  uptr start = PGROUNDDOWN(addr);
-  uptr end = PGROUNDUP(addr + len);
+  uptr start = PGROUNDDOWN((uptr)addr);
+  uptr end = PGROUNDUP((uptr)addr + len);
 
-  if ((flags & MAP_FIXED) && start != addr)
+  if ((flags & MAP_FIXED) && start != (uptr)addr)
     return MAP_FAILED;
 
 #if MTRACE
@@ -153,8 +153,8 @@ sys_munmap(userptr<void> addr, size_t len)
     mtwriteavar("pte:%p.%#lx", myproc()->vmap, i);
 #endif
 
-  uptr align_addr = PGROUNDDOWN(addr);
-  uptr align_len = PGROUNDUP(addr + len) - align_addr;
+  uptr align_addr = PGROUNDDOWN((uptr)addr);
+  uptr align_len = PGROUNDUP((uptr)addr + len) - align_addr;
   if (myproc()->vmap->remove(align_addr, align_len) < 0)
     return -1;
 
@@ -262,5 +262,5 @@ sys_uname(userptr<struct utsname> buf)
 int
 sys_dup_page(userptr<void> dest, userptr<void> src)
 {
-  return myproc()->vmap->dup_page(dest, src);
+  return myproc()->vmap->dup_page((uptr)dest, (uptr)src);
 }

@@ -23,7 +23,6 @@ class userptr
 public:
   userptr(std::nullptr_t n) : ptr(nullptr) { }
   explicit userptr(T* p) : ptr(p) { }
-  explicit userptr(uptr p) : ptr((T*)p) { }
   userptr() = default;
   userptr(const userptr<T> &o) = default;
   userptr& operator=(const userptr& o) = default;
@@ -45,17 +44,14 @@ public:
     return ptr;
   }
 
+  // Note that this has to be explicit or C++ will use this as the
+  // conversion to *any* integral type, first converting through bool.
   explicit operator bool() const
   {
     return ptr != nullptr;
   }
 
-  // Allow implicit casts to uptr.  Often it makes sense to treat a
-  // user pointer as an opaque number and a lot of existing code uses
-  // this convention.  (XXX(austin) this means we can't have things
-  // like operator+, which would probably subsume our current uses of
-  // uptr anyway.)
-  operator uptr () const
+  explicit operator uptr () const
   {
     return (uptr)ptr;
   }
@@ -77,7 +73,7 @@ public:
   bool load(T *val) const
   {
     if (sizeof(T) == sizeof(uint64_t))
-      return !fetchint64(*this, reinterpret_cast<uint64_t*>(val));
+      return !fetchint64((uptr)*this, reinterpret_cast<uint64_t*>(val));
     else
       return !fetchmem(val, unsafe_get(), sizeof(T));
   }
@@ -109,7 +105,6 @@ class userptr<void>
 public:
   userptr(std::nullptr_t n) : ptr(nullptr) { }
   explicit userptr(void* p) : ptr(p) { }
-  explicit userptr(uptr p) : ptr((void*)p) { }
   userptr() = default;
   userptr(const userptr<void> &o) = default;
   userptr& operator=(const userptr& o) = default;
@@ -124,8 +119,7 @@ public:
     return ptr != nullptr;
   }
 
-  // XXX Does having this allow for conversions between any userptr?
-  operator uptr () const
+  explicit operator uptr () const
   {
     return (uptr)ptr;
   }

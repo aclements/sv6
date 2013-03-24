@@ -40,7 +40,7 @@ proc::proc(int npid) :
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
   user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
   uaccess_(0), yield_(false),
-  upath(nullptr), uargv(userptr<const char>(nullptr)),
+  upath(nullptr), uargv(nullptr),
   exception_inuse(0), magic(PROC_MAGIC), unmapped_hint(0), state_(EMBRYO)
 {
   snprintf(lockname, sizeof(lockname), "cv:proc:%d", pid);
