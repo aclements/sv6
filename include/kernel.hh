@@ -182,7 +182,6 @@ enum clone_flags
   CLONE_SHARE_FTABLE = 1<<1,
 };
 ENUM_BITSET_OPS(clone_flags);
-struct proc*    copyproc(struct proc*);
 void            finishproc(struct proc*, bool removepid = true);
 void            execswitch(proc* p);
 void            exit(int);
