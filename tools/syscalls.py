@@ -94,6 +94,13 @@ class Syscall(object):
 
         # Construct user space prototype
         self.uname = self.basename
+        if "uargs" in flags:
+            self.uargs = flags["uargs"]
+        else:
+            self.uargs = self.__make_uargs(kargs)
+
+    @staticmethod
+    def __make_uargs(kargs):
         uargs = []
         for karg in kargs:
             m = re.match("(.*?) *[a-z_]+$", karg)
@@ -111,7 +118,7 @@ class Syscall(object):
             if atype == "userptr_str":
                 atype = "const char *"
             uargs.append(atype)
-        self.uargs = uargs
+        return uargs
 
     def types(self):
         for uarg in self.uargs:
