@@ -435,9 +435,9 @@ procdumpall(void)
   }
 }
 
-// Create a new process copying p as the parent.
-// Sets up stack to return as if from system call.
-// Caller must set state of returned proc to RUNNABLE.
+// Create a new process copying p as the parent.  Sets up stack to
+// return as if from system call.  By default, the new process shares
+// nothing with its parent and it is made RUNNABLE.
 struct proc*
 doclone(clone_flags flags)
 {
