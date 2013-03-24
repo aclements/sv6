@@ -1,5 +1,5 @@
 from optparse import OptionParser
-import sys, re
+import sys, re, json
 
 def main():
     parser = OptionParser(usage="usage: %prog [options] source...")
@@ -80,7 +80,7 @@ SYS_%(uname)s = %(num)d
             print typ + ";"
         for syscall in syscalls:
             extra = ""
-            if "NORET" in syscall.flags:
+            if syscall.flags.get("noret"):
                 extra = " __attribute__((noreturn))"
             print "%s %s(%s)%s;" % (syscall.rettype, syscall.uname,
                                     ", ".join(syscall.uargs), extra)
@@ -139,7 +139,13 @@ def parse(fp):
         rettype, name, kargs = m.groups()
         kargs = re.split(" *, *", kargs)
 
-        res.append(Syscall(fp, name, rettype, kargs, flags.split()))
+        # Parse the flags
+        if flags.strip():
+            flags = json.loads(flags)
+        else:
+            flags = {}
+
+        res.append(Syscall(fp, name, rettype, kargs, flags))
 
     return res
 

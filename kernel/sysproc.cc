@@ -27,7 +27,7 @@ sys_fork(int flags)
   return doclone(cflags);
 }
 
-//SYSCALL NORET
+//SYSCALL {"noret":true}
 void
 sys_exit(int status)
 {
@@ -168,7 +168,7 @@ sys_pt_pages(void)
   return myproc()->vmap->internal_pages();
 }
 
-//SYSCALL NORET
+//SYSCALL {"noret":true}
 void
 sys_halt(void)
 {
