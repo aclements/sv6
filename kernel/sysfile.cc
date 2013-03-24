@@ -15,6 +15,7 @@
 #include <uk/fcntl.h>
 #include <uk/stat.h>
 #include "kstats.hh"
+#include <vector>
 
 sref<file>
 getfile(int fd)
@@ -524,36 +525,31 @@ sys_chdir(userptr_str path)
 int
 doexec(userptr_str upath, userptr<userptr_str> uargv)
 {
-  char path[DIRSIZ+1];
-  if (!upath.load(path, sizeof path))
+  std::unique_ptr<char[]> path;
+  if (!(path = upath.load_alloc(DIRSIZ+1)))
     return -1;
 
-  char *argv[MAXARG];
-  memset(argv, 0, sizeof(argv));
-
-  int r = -1;
-  int i;
-  for (i = 0; ; i++) {
-    if (i >= NELEM(argv))
-      goto clean;
-    u64 uarg;
-    if (fetchint64((uptr)uargv+8*i, &uarg) < 0)
-      goto clean;
-    if (uarg == 0)
+  std::vector<std::unique_ptr<char[]> > xargv;
+  for (int i = 0; ; ++i) {
+    if (i == MAXARG)
+      return -1;
+    userptr_str uarg;
+    if (!(uargv + (ptrdiff_t)i).load(&uarg))
+      return -1;
+    if (!uarg)
       break;
-
-    argv[i] = (char*) kmalloc(MAXARGLEN, "execbuf");
-    if (!argv[i] || fetchstr(argv[i], (char*)uarg, MAXARGLEN) < 0)
-      goto clean;
+    auto arg = uarg.load_alloc(MAXARGLEN);
+    if (!arg)
+      return -1;
+    xargv.push_back(std::move(arg));
   }
 
-  argv[i] = 0;
-  r = exec(path, argv);
+  std::vector<char*> argv;
+  for (auto &p : xargv)
+    argv.push_back(p.get());
+  argv.push_back(nullptr);
 
-clean:
-  for (i = i-1; i >= 0; i--)
-    kmfree(argv[i], MAXARGLEN);
-  return r;
+  return exec(path.get(), argv.data());
 }
 
 //SYSCALL {"uargs":["const char *upath", "char * const uargv[]"]}
