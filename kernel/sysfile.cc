@@ -522,6 +522,30 @@ sys_chdir(userptr_str path)
   return 0;
 }
 
+// Load NULL-terminated char** list, such as the argv argument to
+// exec.
+static int
+load_str_list(userptr<userptr_str> list, size_t listmax, size_t strmax,
+              std::vector<std::unique_ptr<char[]> > *out)
+{
+  std::vector<std::unique_ptr<char[]> > argv;
+  for (int i = 0; ; ++i) {
+    if (i == listmax)
+      return -1;
+    userptr_str uarg;
+    if (!(list + (ptrdiff_t)i).load(&uarg))
+      return -1;
+    if (!uarg)
+      break;
+    auto arg = uarg.load_alloc(strmax);
+    if (!arg)
+      return -1;
+    argv.push_back(std::move(arg));
+  }
+  *out = std::move(argv);
+  return 0;
+}
+
 int
 doexec(userptr_str upath, userptr<userptr_str> uargv)
 {
@@ -530,19 +554,8 @@ doexec(userptr_str upath, userptr<userptr_str> uargv)
     return -1;
 
   std::vector<std::unique_ptr<char[]> > xargv;
-  for (int i = 0; ; ++i) {
-    if (i == MAXARG)
-      return -1;
-    userptr_str uarg;
-    if (!(uargv + (ptrdiff_t)i).load(&uarg))
-      return -1;
-    if (!uarg)
-      break;
-    auto arg = uarg.load_alloc(MAXARGLEN);
-    if (!arg)
-      return -1;
-    xargv.push_back(std::move(arg));
-  }
+  if (load_str_list(uargv, MAXARG, MAXARGLEN, &xargv) < 0)
+    return -1;
 
   std::vector<char*> argv;
   for (auto &p : xargv)
