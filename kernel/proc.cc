@@ -228,7 +228,7 @@ freeproc(struct proc *p)
 void
 execstub(void)
 {
-  userptr<userptr<char> const> uargv;
+  userptr<userptr_str> uargv;
   userptr_str upath;
 
   upath = myproc()->upath;

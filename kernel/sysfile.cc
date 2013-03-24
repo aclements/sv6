@@ -522,7 +522,7 @@ sys_chdir(userptr_str path)
 }
 
 int
-doexec(userptr_str upath, userptr<userptr<char> const> uargv)
+doexec(userptr_str upath, userptr<userptr_str> uargv)
 {
   char path[DIRSIZ+1];
   if (!upath.load(path, sizeof path))
@@ -556,9 +556,9 @@ clean:
   return r;
 }
 
-//SYSCALL
+//SYSCALL {"uargs":["const char *upath", "char * const uargv[]"]}
 int
-sys_execv(userptr_str upath, userptr<userptr<char> const> uargv)
+sys_execv(userptr_str upath, userptr<userptr_str> uargv)
 {
   myproc()->data_cpuid = myid();
 #if EXECSWITCH
