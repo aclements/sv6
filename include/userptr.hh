@@ -56,6 +56,11 @@ public:
     return (uptr)ptr;
   }
 
+  userptr operator+(ptrdiff_t x) const
+  {
+    return userptr(unsafe_get() + x);
+  }
+
   // Store a value to this pointer.  Returns true if successful, false
   // if the user pointer is illegal.
   bool store(const T *val) const
