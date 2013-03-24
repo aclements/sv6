@@ -24,7 +24,10 @@ sys_fork(int flags)
     cflags |= CLONE_SHARE_VMAP;
   if (flags & FORK_SHARE_FD)
     cflags |= CLONE_SHARE_FTABLE;
-  return doclone(cflags);
+  proc *p = doclone(cflags);
+  if (!p)
+    return -1;
+  return p->pid;
 }
 
 //SYSCALL {"noret":true}

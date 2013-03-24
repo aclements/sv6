@@ -438,17 +438,16 @@ procdumpall(void)
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
-int
+struct proc*
 doclone(clone_flags flags)
 {
-  int pid;
   struct proc *np;
 
   //cprintf("%d: fork\n", myproc()->pid);
 
   // Allocate process.
   if((np = proc::alloc()) == 0)
-    return -1;
+    return nullptr;
 
   auto proc_cleanup = scoped_cleanup([&np]() {
     if (!xnspid->remove(np->pid, &np))
@@ -481,7 +480,6 @@ doclone(clone_flags flags)
 
   np->cwd = myproc()->cwd;
   np->cwd_m = myproc()->cwd_m;
-  pid = np->pid;
   safestrcpy(np->name, myproc()->name, sizeof(myproc()->name));
   acquire(&myproc()->lock);
   SLIST_INSERT_HEAD(&myproc()->childq, np, child_next);
@@ -493,7 +491,7 @@ doclone(clone_flags flags)
   release(&np->lock);
 
   proc_cleanup.dismiss();
-  return pid;
+  return np;
 }
 
 void

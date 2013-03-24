@@ -186,7 +186,7 @@ struct proc*    copyproc(struct proc*);
 void            finishproc(struct proc*, bool removepid = true);
 void            execswitch(proc* p);
 void            exit(int);
-int             doclone(clone_flags);
+struct proc*    doclone(clone_flags);
 int             growproc(int);
 void            pinit(void);
 void            procdumpall(void);
