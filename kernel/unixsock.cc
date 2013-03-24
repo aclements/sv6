@@ -291,7 +291,7 @@ public:
 
     if (len > PGSIZE)
       len = PGSIZE;
-    if (!userptr<char>(buf).load(b, len)) {
+    if (!buf.load_bytes(b, len)) {
       kfree(b);
       return -1;
     }
@@ -328,7 +328,7 @@ public:
     if (m->len > len)
       goto done;
 
-    if (!userptr<char>(buf).store(m->data, m->len))
+    if (!buf.store_bytes(m->data, m->len))
       goto done;
 
     r = m->len;

@@ -16,7 +16,7 @@ sockaddr_from_user(struct sockaddr_storage *ss,
   // final padding byte that we add in the kernel.
   if (sa_len > sizeof *ss - 1)
     return -1;
-  if (!userptr<char>(sa).load((char*)ss, sa_len))
+  if (!userptr<void>(sa.unsafe_get()).load_bytes(ss, sa_len))
     return -1;
   // Make sure there's a terminating NUL just past the end of what the
   // user passed.  This matters for sockaddr_un and does no harm for
@@ -39,7 +39,7 @@ sockaddr_to_user(userptr<struct sockaddr> sa, userptr<socklen_t> sa_len,
     return -1;
   if (addrlen > ss_len)
     addrlen = ss_len;
-  if (!userptr<char>(sa).store((const char*)ss, addrlen))
+  if (!userptr<void>(sa.unsafe_get()).store_bytes(ss, addrlen))
     return -1;
   socklen_t ss_len_2 = ss_len;
   if (!sa_len.store(&ss_len_2))

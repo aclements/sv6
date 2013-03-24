@@ -120,7 +120,7 @@ sys_read(int fd, userptr<void> p, size_t n)
   ssize_t res = f->read(b, n);
   if (res < 0)
     return -1;
-  if (!userptr<char>(p).store(b, res))
+  if (!p.store_bytes(b, res))
     return -1;
   return res;
 }
@@ -161,7 +161,7 @@ sys_write(int fd, const userptr<void> p, size_t n)
   // XXX(Austin) Too bad
   if (n > PGSIZE)
     n = PGSIZE;
-  if (!userptr<char>(p).load(b, n))
+  if (!p.load_bytes(b, n))
     return -1;
   return f->write(b, n);
 }
