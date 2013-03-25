@@ -73,7 +73,10 @@ SYS_%(uname)s = %(num)d
 """ % syscall.__dict__
 
     if options.udecls:
+        print "#include \"types.h\""
         print "#include <uk/unistd.h>"
+        print
+        print "BEGIN_DECLS"
         print
         types = set(typ for syscall in syscalls for typ in syscall.types())
         for typ in types:
@@ -84,6 +87,8 @@ SYS_%(uname)s = %(num)d
                 extra = " __attribute__((noreturn))"
             print "%s %s(%s)%s;" % (syscall.rettype, syscall.uname,
                                     ", ".join(syscall.uargs), extra)
+        print
+        print "END_DECLS"
 
 class Syscall(object):
     def __init__(self, fp, kname, rettype, kargs, flags, num=None):
