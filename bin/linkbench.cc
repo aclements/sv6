@@ -155,53 +155,6 @@ rdpmc(uint32_t ecx)
 }
 #endif
 
-void*
-do_both(void *opaque)
-{
-  uintptr_t cpu = (uintptr_t)opaque;
-  setaffinity(cpu);
-
-  char path[32];
-  snprintf(path, sizeof(path), "%d", (int)cpu);
-  mkdir(path, 0777);
-  snprintf(path, sizeof(path), "%d/link", (int)cpu);
-
-  pthread_barrier_wait(&bar);
-  pthread_barrier_wait(&bar2);
-
-  bool mywarmup = true;
-  uint64_t mycount = 0, ltsc_stat = 0, ltsc_link = 0, lpmc_stat = 0;
-  while (!stop) {
-    if (__builtin_expect(warmup != mywarmup, 0)) {
-      mywarmup = warmup;
-      mycount = ltsc_stat = ltsc_link = lpmc_stat = 0;
-      start_usec[cpu] = now_usec();
-      start_tsc[cpu] = rdtsc();
-    }
-    uint64_t pmc1 = record_pmc ? rdpmc(RECORD_PMC) : 0;
-    uint64_t tsc1 = rdtsc();
-    mystat();
-    uint64_t tsc2 = rdtsc();
-    uint64_t pmc2 = record_pmc ? rdpmc(RECORD_PMC) : 0;
-    lpmc_stat += pmc2 - pmc1;
-    ltsc_stat += tsc2 - tsc1;
-    tsc_hist[cpu] += tsc2 - tsc1;
-    link("0/file", path);
-    unlink(path);
-    uint64_t tsc3 = rdtsc();
-    ltsc_link += tsc3 - tsc2;
-    ++mycount;
-  }
-
-  stop_usec[cpu] = now_usec();
-  stop_tsc[cpu] = rdtsc();
-  count[cpu] = mycount;
-  tsc_stat[cpu] = ltsc_stat;
-  tsc_link[cpu] = ltsc_link;
-  pmc_stat[cpu] = lpmc_stat;
-  return NULL;
-}
-
 uint64_t
 summarize_ts(const char *label, uint64_t ts[], unsigned count)
 {
@@ -230,11 +183,10 @@ sum(T v[], unsigned count)
 void
 usage(const char *argv0)
 {
-  fprintf(stderr, "Usage: %s [options] {-b nthreads|nstat nlink}\n", argv0);
+  fprintf(stderr, "Usage: %s [options] nstat nlink\n", argv0);
   fprintf(stderr, "  -e perfevent  Measure perfevent\n");
   fprintf(stderr, "  -l true       Get st_nlink\n");
   fprintf(stderr, "     false      Omit st_nlink\n");
-  fprintf(stderr, "  -b            Alternate between stat and link\n");
   exit(2);
 }
 
@@ -242,11 +194,10 @@ int
 main(int argc, char **argv)
 {
   char *pmc = nullptr;
-  bool both = false;
   omit_nlink = false;
 
   int opt;
-  while ((opt = getopt(argc, argv, "e:l:b")) != -1) {
+  while ((opt = getopt(argc, argv, "e:l:")) != -1) {
     switch (opt) {
     case 'e':
       pmc = optarg;
@@ -259,20 +210,16 @@ main(int argc, char **argv)
       else
         usage(argv[0]);
       break;
-    case 'b':
-      both = true;
-      break;
     default:
       usage(argv[0]);
     }
   }
 
-  if ((both && argc - optind != 1) ||
-      (!both && argc - optind != 2))
+  if (argc - optind != 2)
     usage(argv[0]);
 
   int nstats = atoi(argv[optind]);
-  int nlinks = both ? 0 : atoi(argv[optind+1]);
+  int nlinks = atoi(argv[optind+1]);
 #if !defined(XV6_USER)
   if (omit_nlink)
     die("-l false not supported on Linux");
@@ -282,10 +229,7 @@ main(int argc, char **argv)
 
   printf("# --cores=%d --duration=%ds --st_nlink=%s", nstats+nlinks, duration,
          omit_nlink ? "false" : "true");
-  if (both)
-    printf("\n");
-  else
-    printf(" --stats=%d --links=%d\n", nstats, nlinks);
+  printf(" --stats=%d --links=%d\n", nstats, nlinks);
 
 #if defined(XV6_USER)
   // Configure PMC
@@ -317,9 +261,7 @@ main(int argc, char **argv)
   pthread_t *threads = (pthread_t*)malloc(sizeof(*threads) * (nstats + nlinks));
   for (uintptr_t i = 0; i < nstats + nlinks; ++i)
     pthread_create(&threads[i], NULL,
-                   both ? do_both :
-                   i < nstats ? do_stat :
-                   do_link, (void*)i);
+                   i < nstats ? do_stat : do_link, (void*)i);
 
   pthread_barrier_wait(&bar);
 
@@ -354,10 +296,7 @@ main(int argc, char **argv)
   printf("%f secs\n", (double)usec / 1e6);
 
   uint64_t stats, links;
-  if (both)
-    stats = links = sum(count, nstats + nlinks);
-  else
-    stats = sum(count, nstats), links = sum(count + nstats, nlinks);
+  stats = sum(count, nstats), links = sum(count + nstats, nlinks);
   printf("%lu stats\n", stats);
   if (stats) {
     printf("%lu cycles/stat\n", sum(tsc_stat, nstats + nlinks) / stats);
