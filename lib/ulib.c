@@ -7,6 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
+char **environ;
+
 char*
 gets(char *buf, int max)
 {
