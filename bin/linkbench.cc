@@ -21,6 +21,7 @@
 #include "libutil.h"
 #include "xsys.h"
 #include "pmcdb.hh"
+#include "distribution.hh"
 
 #if defined(XV6_USER)
 #include "pthread.h"
@@ -41,10 +42,10 @@ enum { duration = 5 };
 static bool omit_nlink, record_pmc;
 static pthread_barrier_t bar, bar2;
 static int filefd;
-static uint64_t start_tsc[256], stop_tsc[256];
-static uint64_t start_usec[256], stop_usec[256];
-static uint64_t tsc_stat[256], tsc_link[256], pmc_stat[256];
-static uint64_t count[256];
+static concurrent_distribution<uint64_t> start_tsc, stop_tsc;
+static concurrent_distribution<uint64_t> start_usec, stop_usec;
+static concurrent_distribution<uint64_t> tsc_stat, tsc_link, pmc_stat;
+static concurrent_distribution<uint64_t> count_stat, count_link;
 static volatile bool stop __mpalign__;
 static volatile bool warmup;
 static __padout__ __attribute__((unused));
@@ -86,13 +87,13 @@ do_stat(void *opaque)
 
   bool mywarmup = true;
   uint64_t mycount = 0;
-  uint64_t pmc1 = 0, pmc2 = 0;
+  uint64_t tsc1 = 0, tsc2, pmc1 = 0, pmc2 = 0;
   while (!stop) {
     if (__builtin_expect(warmup != mywarmup, 0)) {
       mywarmup = warmup;
       mycount = 0;
-      start_usec[cpu] = now_usec();
-      start_tsc[cpu] = rdtsc();
+      start_usec.add(now_usec());
+      tsc1 = start_tsc.add(rdtsc());
       if (record_pmc)
         pmc1 = rdpmc(RECORD_PMC);
     }
@@ -102,11 +103,11 @@ do_stat(void *opaque)
   if (record_pmc)
     pmc2 = rdpmc(RECORD_PMC);
 
-  stop_usec[cpu] = now_usec();
-  stop_tsc[cpu] = rdtsc();
-  count[cpu] = mycount;
-  tsc_stat[cpu] = stop_tsc[cpu] - start_tsc[cpu];
-  pmc_stat[cpu] = pmc2 - pmc1;
+  stop_usec.add(now_usec());
+  tsc2 = stop_tsc.add(rdtsc());
+  count_stat.add(mycount);
+  tsc_stat.add(tsc2 - tsc1);
+  pmc_stat.add(pmc2 - pmc1);
   return NULL;
 }
 
@@ -126,22 +127,23 @@ do_link(void *opaque)
 
   bool mywarmup = true;
   uint64_t mycount = 0;
+  uint64_t tsc1 = 0, tsc2;
   while (!stop) {
     if (__builtin_expect(warmup != mywarmup, 0)) {
       mywarmup = warmup;
       mycount = 0;
-      start_usec[cpu] = now_usec();
-      start_tsc[cpu] = rdtsc();
+      start_usec.add(now_usec());
+      tsc1 = start_tsc.add(rdtsc());
     }
     link("0/file", path);
     unlink(path);
     ++mycount;
   }
 
-  stop_usec[cpu] = now_usec();
-  stop_tsc[cpu] = rdtsc();
-  count[cpu] = mycount;
-  tsc_link[cpu] = stop_tsc[cpu] - start_tsc[cpu];
+  stop_usec.add(now_usec());
+  tsc2 = stop_tsc.add(rdtsc());
+  count_link.add(mycount);
+  tsc_link.add(tsc2 - tsc1);
   return NULL;
 }
 
@@ -154,31 +156,6 @@ rdpmc(uint32_t ecx)
   return ((uint64_t) lo) | (((uint64_t) hi) << 32);
 }
 #endif
-
-uint64_t
-summarize_ts(const char *label, uint64_t ts[], unsigned count)
-{
-  uint64_t min = ts[0], max = ts[0], total = 0;
-  for (unsigned i = 0; i < count; ++i) {
-    if (ts[i] < min)
-      min = ts[i];
-    if (ts[i] > max)
-      max = ts[i];
-    total += ts[i];
-  }
-  printf("%lu %s skew\n", max - min, label);
-  return total/count;
-}
-
-template<class T>
-T
-sum(T v[], unsigned count)
-{
-  T res{};
-  for (unsigned i = 0; i < count; ++i)
-    res += v[i];
-  return res;
-}
 
 void
 usage(const char *argv0)
@@ -286,29 +263,28 @@ main(int argc, char **argv)
 #endif
 
   // Summarize
-  uint64_t start_tsc_avg = summarize_ts("start cycles", start_tsc, nstats + nlinks);
-  uint64_t stop_tsc_avg = summarize_ts("stop cycles", stop_tsc, nstats + nlinks);
-  printf("%lu cycles\n", stop_tsc_avg - start_tsc_avg);
+  printf("%lu start cycles skew\n", start_tsc.span());
+  printf("%lu stop cycles skew\n", stop_tsc.span());
+  printf("%lu cycles\n", stop_tsc.mean() - start_tsc.mean());
 
-  uint64_t start_usec_avg = summarize_ts("start usec", start_usec, nstats + nlinks);
-  uint64_t stop_usec_avg = summarize_ts("stop usec", stop_usec, nstats + nlinks);
-  uint64_t usec = stop_usec_avg - start_usec_avg;
+  printf("%lu start usec skew\n", start_usec.span());
+  printf("%lu stop usec skew\n", stop_usec.span());
+  uint64_t usec = stop_usec.mean() - start_usec.mean();
   printf("%f secs\n", (double)usec / 1e6);
 
-  uint64_t stats, links;
-  stats = sum(count, nstats), links = sum(count + nstats, nlinks);
+  uint64_t stats = count_stat.sum(), links = count_link.sum();
   printf("%lu stats\n", stats);
   if (stats) {
-    printf("%lu cycles/stat\n", sum(tsc_stat, nstats + nlinks) / stats);
+    printf("%lu cycles/stat\n", tsc_stat.sum() / stats);
     printf("%lu stats/sec\n", stats * 1000000 / usec);
     if (record_pmc) {
-      printf("%lu %s\n", sum(pmc_stat, nstats + nlinks), pmc);
-      printf("%f %s/stat\n", sum(pmc_stat, nstats + nlinks) / (double)stats, pmc);
+      printf("%lu %s\n", pmc_stat.sum(), pmc);
+      printf("%f %s/stat\n", pmc_stat.sum() / (double)stats, pmc);
     }
   }
   printf("%lu links\n", links);
   if (links) {
-    printf("%lu cycles/link\n", sum(tsc_link, nstats + nlinks) / links);
+    printf("%lu cycles/link\n", tsc_link.sum() / links);
     printf("%lu links/sec\n", links * 1000000 / usec);
   }
 
