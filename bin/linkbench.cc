@@ -23,12 +23,10 @@
 #include "xsys.h"
 #include "pmcdb.hh"
 #include "distribution.hh"
+#include "spinbarrier.hh"
 
 #if defined(XV6_USER)
-#include "pthread.h"
 #include <xv6/perf.h>
-#else
-#include <pthread.h>
 #endif
 
 #define RECORD_PMC 0
@@ -41,7 +39,7 @@ enum { warmup_secs = 1 };
 enum { duration = 5 };
 
 static bool omit_nlink, record_pmc;
-static pthread_barrier_t bar, bar2;
+static spin_barrier bar;
 static int filefd;
 static concurrent_distribution<uint64_t> start_tsc, stop_tsc;
 static concurrent_distribution<uint64_t> start_usec, stop_usec;
@@ -68,8 +66,8 @@ void
 timer_thread(void)
 {
   warmup = true;
-  pthread_barrier_wait(&bar);
-  pthread_barrier_wait(&bar2);
+  bar.join();
+  bar.join();
   sleep(warmup_secs);
   warmup = false;
   sleep(duration);
@@ -81,8 +79,8 @@ do_stat(int cpu)
 {
   setaffinity(cpu);
 
-  pthread_barrier_wait(&bar);
-  pthread_barrier_wait(&bar2);
+  bar.join();
+  bar.join();
 
   bool mywarmup = true;
   uint64_t mycount = 0;
@@ -119,8 +117,8 @@ do_link(int cpu)
   mkdir(path, 0777);
   snprintf(path, sizeof(path), "%d/link", (int)cpu);
 
-  pthread_barrier_wait(&bar);
-  pthread_barrier_wait(&bar2);
+  bar.join();
+  bar.join();
 
   bool mywarmup = true;
   uint64_t mycount = 0;
@@ -224,8 +222,7 @@ main(int argc, char **argv)
   if (filefd < 0)
     die("openat failed");
 
-  pthread_barrier_init(&bar, 0, nstats + nlinks + 2);
-  pthread_barrier_init(&bar2, 0, nstats + nlinks + 2);
+  bar.init(nstats + nlinks + 2);
 
   // Run benchmark
   std::thread timer(timer_thread);
@@ -234,13 +231,13 @@ main(int argc, char **argv)
   for (int i = 0; i < nstats + nlinks; ++i)
     threads[i] = std::thread(i < nstats ? do_stat : do_link, i);
 
-  pthread_barrier_wait(&bar);
+  bar.join();
 
 #if MTRACE
   mtenable_type(mtrace_record_ascope, "xv6-linkbench");
 #endif
 
-  pthread_barrier_wait(&bar2);
+  bar.join();
 
   // Wait
   timer.join();
