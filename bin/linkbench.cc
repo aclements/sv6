@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 
 #include <stdexcept>
+#include <thread>
 
 #include "amd64.h"
 #include "histogram.hh"
@@ -63,8 +64,8 @@ mystat()
 #endif
 }
 
-void*
-timer_thread(void *)
+void
+timer_thread(void)
 {
   warmup = true;
   pthread_barrier_wait(&bar);
@@ -73,13 +74,11 @@ timer_thread(void *)
   warmup = false;
   sleep(duration);
   stop = true;
-  return NULL;
 }
 
-void*
-do_stat(void *opaque)
+void
+do_stat(int cpu)
 {
-  uintptr_t cpu = (uintptr_t)opaque;
   setaffinity(cpu);
 
   pthread_barrier_wait(&bar);
@@ -108,13 +107,11 @@ do_stat(void *opaque)
   count_stat.add(mycount);
   tsc_stat.add(tsc2 - tsc1);
   pmc_stat.add(pmc2 - pmc1);
-  return NULL;
 }
 
-void*
-do_link(void *opaque)
+void
+do_link(int cpu)
 {
-  uintptr_t cpu = (uintptr_t)opaque;
   setaffinity(cpu);
 
   char path[32];
@@ -144,7 +141,6 @@ do_link(void *opaque)
   tsc2 = stop_tsc.add(rdtsc());
   count_link.add(mycount);
   tsc_link.add(tsc2 - tsc1);
-  return NULL;
 }
 
 #ifdef LINUX
@@ -232,13 +228,11 @@ main(int argc, char **argv)
   pthread_barrier_init(&bar2, 0, nstats + nlinks + 2);
 
   // Run benchmark
-  pthread_t timer;
-  pthread_create(&timer, NULL, timer_thread, NULL);
+  std::thread timer(timer_thread);
 
-  pthread_t *threads = (pthread_t*)malloc(sizeof(*threads) * (nstats + nlinks));
-  for (uintptr_t i = 0; i < nstats + nlinks; ++i)
-    pthread_create(&threads[i], NULL,
-                   i < nstats ? do_stat : do_link, (void*)i);
+  std::thread *threads = new std::thread[nstats + nlinks];
+  for (int i = 0; i < nstats + nlinks; ++i)
+    threads[i] = std::thread(i < nstats ? do_stat : do_link, i);
 
   pthread_barrier_wait(&bar);
 
@@ -249,9 +243,9 @@ main(int argc, char **argv)
   pthread_barrier_wait(&bar2);
 
   // Wait
-  xpthread_join(timer);
+  timer.join();
   for (int i = 0; i < nstats + nlinks; ++i)
-    xpthread_join(threads[i]);
+    threads[i].join();
 
 #if MTRACE
   mtdisable("xv6-linkbench");
