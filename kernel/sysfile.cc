@@ -16,6 +16,8 @@
 #include <uk/stat.h>
 #include "kstats.hh"
 #include <vector>
+#include "kstream.hh"
+#include <uk/spawn.h>
 
 sref<file>
 getfile(int fd)
@@ -628,4 +630,109 @@ sys_readdir(int dirfd, const userptr<char> prevptr, userptr<char> nameptr)
     return -1;
 
   return 1;
+}
+
+//SYSCALL {"uargs":["const char *upath", "char * const uargv[]", "const void *actions", "size_t actions_len"]}
+int
+sys_sys_spawn(userptr_str upath, userptr<userptr_str> uargv,
+              const userptr<void> uactions, size_t actions_len)
+{
+  sref<filetable> newftable;
+
+  // Build a new file table by executing actions
+  if (uactions && actions_len) {
+    // Copy actions buffer
+    if (actions_len > 1024 * 1024) {
+      uerr.println(__func__, ": actions_len too large (", actions_len, ")");
+      return -1;
+    }
+    char *actions = (char*)kmalloc(actions_len, "file_actions");
+    if (!actions) {
+      console.println("Out of memory allocating file_actions");
+      return -1;
+    }
+    // Copy 'actions' into the lambda since we move it later
+    auto cleanup = scoped_cleanup([=](){kmfree(actions, actions_len);});
+    char *actions_end = actions + actions_len;
+    if (!uactions.load_bytes(actions, actions_len)) {
+      uerr.println(__func__, ": failed to copy actions");
+      return -1;
+    }
+
+    // We don't follow the file actions algorithm described by POSIX
+    // because it would induce unnecessary sharing in the presence of
+    // O_CLOEXEC file descriptors.  Instead, we first clone the
+    // parent's file table *without* O_CLOEXEC descriptors.  We then
+    // fill this in following the actions, but falling back to the
+    // parent's file table if a dup2 refers to an FD that isn't found
+    // in the clone.  There are two subtle cases: 1) if a dup2
+    // action's source was closed by an earlier close action, we must
+    // not fall back to the parent table; 2) if an open action
+    // specifies O_CLOEXEC and that flag isn't overwritten by a later
+    // action, we must close it before the exec.
+    //
+    // Since we only support dup2 actions at the moment, we don't have
+    // to deal with either subtle case.
+
+    newftable = myproc()->ftable->copy(true);
+    while (actions < actions_end) {
+      auto hdr = (__posix_spawn_file_action_hdr*)actions;
+      if (hdr->type == __posix_spawn_file_action_hdr::TYPE_DUP2) {
+        auto a = (__posix_spawn_file_action_dup2*)actions;
+
+        sref<file> f = newftable->getfile(a->fildes);
+        if (!f) {
+          // Try the parent FD table
+          f = getfile(a->fildes);
+          if (!f) {
+            uerr.println(__func__, ": dup2 failed, unknown FD ", a->fildes);
+            return -1;
+          }
+        }
+
+        if (!newftable->replace(a->newfildes, std::move(f))) {
+          uerr.println(__func__, ": dup2 failed to replace FD ", a->newfildes);
+          return -1;
+        }
+      } else {
+        uerr.println(__func__, ": unimplemented action type");
+        return -1;
+      }
+      actions += hdr->len;
+    }
+  } else {
+    newftable = myproc()->ftable->copy(true);
+  }
+
+  // Create the new process
+  proc *p = doclone(CLONE_NO_VMAP | CLONE_NO_FTABLE | CLONE_NO_RUN);
+  if (!p)
+    return -1;
+
+  // Load the new image
+  {
+    std::unique_ptr<char[]> path;
+    if (!(path = upath.load_alloc(DIRSIZ+1)))
+      return -1;
+    std::vector<std::unique_ptr<char[]> > xargv;
+    if (load_str_list(uargv, MAXARG, MAXARGLEN, &xargv) < 0)
+      return -1;
+    std::vector<char*> argv;
+    for (auto &p : xargv)
+      argv.push_back(p.get());
+    argv.push_back(nullptr);
+    if (load_image(p, path.get(), argv.data(), nullptr) < 0)
+      return -1;
+  }
+
+  // Install ftable
+  p->ftable = std::move(newftable);
+
+  // Make p runnable (normally doclone would do this)
+  {
+    scoped_acquire l(&p->lock);
+    addrun(p);
+  }
+
+  return p->pid;
 }

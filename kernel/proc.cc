@@ -457,7 +457,7 @@ doclone(clone_flags flags)
 
   if (flags & CLONE_SHARE_VMAP) {
     np->vmap = myproc()->vmap;
-  } else {
+  } else if (!(flags & CLONE_NO_VMAP)) {
     // Copy process state from p.
     np->vmap = myproc()->vmap->copy();
   }
@@ -474,7 +474,7 @@ doclone(clone_flags flags)
 
   if (flags & CLONE_SHARE_FTABLE) {
     np->ftable = myproc()->ftable;
-  } else {
+  } else if (!(flags & CLONE_NO_FTABLE)) {
     np->ftable = myproc()->ftable->copy();
   }
 
@@ -485,10 +485,12 @@ doclone(clone_flags flags)
   SLIST_INSERT_HEAD(&myproc()->childq, np, child_next);
   release(&myproc()->lock);
 
-  acquire(&np->lock);
   np->cpuid = mycpu()->id;
-  addrun(np);
-  release(&np->lock);
+  if (!(flags & CLONE_NO_RUN)) {
+    acquire(&np->lock);
+    addrun(np);
+    release(&np->lock);
+  }
 
   proc_cleanup.dismiss();
   return np;

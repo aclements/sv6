@@ -180,6 +180,9 @@ enum clone_flags
   CLONE_ALL = 0,
   CLONE_SHARE_VMAP = 1<<0,
   CLONE_SHARE_FTABLE = 1<<1,
+  CLONE_NO_VMAP = 1<<2,
+  CLONE_NO_FTABLE = 1<<3,
+  CLONE_NO_RUN = 1<<4,
 };
 ENUM_BITSET_OPS(clone_flags);
 void            finishproc(struct proc*, bool removepid = true);
