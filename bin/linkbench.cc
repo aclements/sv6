@@ -263,14 +263,11 @@ main(int argc, char **argv)
 #endif
 
   // Summarize
-  printf("%lu start cycles skew\n", start_tsc.span());
-  printf("%lu stop cycles skew\n", stop_tsc.span());
-  printf("%lu cycles\n", stop_tsc.mean() - start_tsc.mean());
-
   printf("%lu start usec skew\n", start_usec.span());
   printf("%lu stop usec skew\n", stop_usec.span());
   uint64_t usec = stop_usec.mean() - start_usec.mean();
   printf("%f secs\n", (double)usec / 1e6);
+  printf("%lu cycles\n", stop_tsc.mean() - start_tsc.mean());
 
   uint64_t stats = count_stat.sum(), links = count_link.sum();
   printf("%lu stats\n", stats);
