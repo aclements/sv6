@@ -26,7 +26,7 @@ struct __bind_call<0, F, Res, TArgs, list...> {
 template <typename F, typename Res, typename... Args>
 struct __bind_helper
 {
-  typedef std::tuple<Args...> TArgs;
+  typedef std::tuple<typename std::decay<Args>::type...> TArgs;
 
   F f_;
   TArgs args_;
