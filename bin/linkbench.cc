@@ -141,16 +141,6 @@ do_link(int cpu)
   tsc_link.add(tsc2 - tsc1);
 }
 
-#ifdef LINUX
-static inline uint64_t
-rdpmc(uint32_t ecx)
-{
-  uint32_t hi, lo;
-  __asm volatile("rdpmc" : "=a" (lo), "=d" (hi) : "c" (ecx));
-  return ((uint64_t) lo) | (((uint64_t) hi) << 32);
-}
-#endif
-
 void
 usage(const char *argv0)
 {
