@@ -80,6 +80,7 @@ bucket(u64 nbytes)
   if (b < 6)
     b = 6;
   assert((1<<b) >= nbytes);
+  assert(b <= KMMAX);
   return b;
 }
 
@@ -124,12 +125,15 @@ void *
 kmalloc(u64 nbytes, const char *name)
 {
   void *h;
-  int b = bucket(nbytes);
 
-  if (b >= PGSHIFT)
-    h = kalloc(name, (size_t)1 << b);
-  else
+  if (nbytes > PGSIZE / 2) {
+    // Full page allocation
+    h = kalloc(name, round_up_to_pow2(nbytes));
+  } else {
+    // Sub-page allocation
+    int b = bucket(nbytes);
     h = kmalloc_small(b, name);
+  }
   if (!h)
     return nullptr;
 
@@ -141,14 +145,16 @@ kmalloc(u64 nbytes, const char *name)
 void
 kmfree(void *ap, u64 nbytes)
 {
-  int b = bucket(nbytes);
-
   struct header *h = (struct header *) ap;
   mtunlabel(mtrace_label_heap, ap);
 
-  if (b >= PGSHIFT) {
-    kfree(ap, (size_t)1 << b);
+  if (nbytes > PGSIZE / 2) {
+    // Free full page allocation
+    kfree(ap, round_up_to_pow2(nbytes));
   } else {
+    // Free sub-page allocation
+    int b = bucket(nbytes);
+
     if (ALLOC_MEMSET)
       memset(ap, 3, (1<<b));
 
