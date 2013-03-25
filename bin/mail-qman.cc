@@ -7,7 +7,7 @@
 // * notify - a UNIX socket that receives an <inumber> when a message
 //   is added to the spool
 
-#define HAVE_POSIX_SPAWN 0
+#define HAVE_POSIX_SPAWN 1
 
 #include "libutil.h"
 #include "shutil.h"
@@ -30,6 +30,8 @@
 
 using std::string;
 using std::thread;
+
+extern char **environ;
 
 class spool_reader
 {
@@ -110,6 +112,10 @@ deliver(const char *mailroot, int msgfd, const string &recipient)
   // XXX Commutativity: fork/exec vs posix_spawn
   pid_t pid;
 #if HAVE_POSIX_SPAWN
+#if defined(XV6_USER)
+  // xv6 doesn't define errno.
+  int errno = 0;
+#endif
   posix_spawn_file_actions_t actions;
   if ((errno = posix_spawn_file_actions_init(&actions)))
     edie("posix_spawn_file_actions_init failed");
