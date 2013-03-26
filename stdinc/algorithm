@@ -105,7 +105,7 @@ namespace std {
     // Partition
     auto store = first;
     for (auto it = first; it != pivot; ++it) {
-      if (*it < *pivot) {
+      if (comp(*it, *pivot)) {
         std::swap(*store, *it);
         ++store;
       }
