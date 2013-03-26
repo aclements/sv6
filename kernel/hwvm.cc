@@ -545,6 +545,13 @@ namespace mmu_shared_page_table {
 }
 
 namespace mmu_per_core_page_table {
+  page_map_cache::~page_map_cache()
+  {
+    for (size_t i = 0; i < ncpu; ++i) {
+      delete pml4[i];
+    }
+  }
+
   void
   page_map_cache::insert(uintptr_t va, page_tracker *t, pme_t pte)
   {

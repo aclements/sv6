@@ -216,6 +216,7 @@ namespace mmu_per_core_page_table {
     page_map_cache(page_map_cache&&) = delete;
     page_map_cache &operator=(const page_map_cache&) = delete;
     page_map_cache &operator=(page_map_cache&&) = delete;
+    ~page_map_cache();
 
     void insert(uintptr_t va, page_tracker *t, pme_t pte);
 
