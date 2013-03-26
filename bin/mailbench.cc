@@ -252,11 +252,12 @@ main(int argc, char **argv)
   printf("%f secs\n", (double)usec / 1e6);
   printf("%lu cycles\n", stop_tsc.mean() - start_tsc.mean());
 
-  uint64_t iters = count.sum();
-  printf("%lu iters\n", iters);
-  if (iters) {
-    printf("%lu cycles/iter\n", (stop_tsc.sum() - start_tsc.sum()) / iters);
-    printf("%lu iters/sec\n", iters * 1000000 / usec);
+  uint64_t messages = count.sum();
+  printf("%lu messages\n", messages);
+  if (messages) {
+    printf("%lu cycles/message\n",
+           (stop_tsc.sum() - start_tsc.sum()) / messages);
+    printf("%lu messages/sec\n", messages * 1000000 / usec);
   }
 
   printf("\n");
