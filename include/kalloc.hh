@@ -48,7 +48,7 @@ class versioned {
  public:
   VPTR load() { return VPTR(_a.load()); }
   bool compare_exchange(const VPTR &expected, typename VPTR::__ptrtype desired) {
-    VPTR n(desired, expected.v());
+    VPTR n(desired, expected.v() + 1);
     return cmpxch(&_a, expected._a, n._a);
   }
 };
