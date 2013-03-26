@@ -18,6 +18,11 @@
 #define xthread_create(ptr, x, fn, arg) \
   pthread_create((ptr), 0, (fn), (arg))
 
+#define O_ANYFD 0
+
+#define STAT_OMIT_NLINK 0
+#define fstatx(a, b, c) fstat((a), (b))
+
 #else // Must be xv6
 
 #define xfork() fork(0)
