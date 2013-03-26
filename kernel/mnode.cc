@@ -58,6 +58,7 @@ sref<mnode>
 mnode::alloc(u8 type)
 {
   scoped_cli cli;
+  // XXX The lookup in mnode::get is pointless for this.
   return mnode::get(inumber(type, myid(), (*next_inumber)++).v_);
 }
 
