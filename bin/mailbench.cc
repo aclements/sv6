@@ -122,6 +122,9 @@ do_mua(int cpu, string spooldir, string msgpath)
       start_tsc.add(rdtsc());
     }
 
+    if (lseek(msgfd, 0, SEEK_SET) < 0)
+      edie("lseek failed");
+
     pid_t pid;
     posix_spawn_file_actions_t actions;
     if ((errno = posix_spawn_file_actions_init(&actions)))
