@@ -64,7 +64,7 @@ main(int argc, char *argv[])
 
   for(i = 1; i < argc; i++){
     if (recursive)
-      rmtree(argv[1]);
+      rmtree(argv[i]);
     else if(unlink(argv[i]) < 0)
       die("rm: %s failed to delete\n", argv[i]);
   }
