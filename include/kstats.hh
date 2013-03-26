@@ -73,9 +73,11 @@
   X(uint64_t, socket_local_recvfrom_cycles)   \
   X(uint64_t, socket_local_recvfrom_cnt)   \
 
-#define KSTATS_FILE(X)\
-  X(uint64_t, write_cycles) \
-  X(uint64_t, write_count)   \
+#define KSTATS_FILE(X)                          \
+  X(uint64_t, write_cycles)                     \
+  X(uint64_t, write_count)                      \
+  X(uint64_t, mnode_alloc)                      \
+  X(uint64_t, mnode_free)                       \
 
 #define KSTATS_SCHED(X)                         \
   X(uint64_t, sched_tick_count)                 \

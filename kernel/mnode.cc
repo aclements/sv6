@@ -64,6 +64,7 @@ mnode::alloc(u8 type)
 
 mnode::mnode(u64 inum) : inum_(inum), cache_pin_(false), valid_(false)
 {
+  kstats::inc(&kstats::mnode_alloc);
 }
 
 void
@@ -82,6 +83,7 @@ void
 mnode::onzero()
 {
   mnode_cache.cleanup(weakref_);
+  kstats::inc(&kstats::mnode_free);
   delete this;
 }
 
