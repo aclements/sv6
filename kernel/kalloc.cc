@@ -775,6 +775,8 @@ kalloc(const char *name, size_t size)
     return (char*)res;
   } else {
     cprintf("kalloc: out of memory\n");
+    if (KERNEL_HEAP_PROFILE)
+      heap_profile_print(&console);
     return nullptr;
   }
 }
