@@ -9,6 +9,14 @@
 template<class K, class V, size_t MaxSize>
 class weakcache
 {
+public:
+  struct stats
+  {
+    size_t items;
+    size_t total_buckets, used_buckets;
+    size_t max_chain;
+  };
+
 private:
   class bucket;
 
@@ -75,6 +83,19 @@ private:
         }
       }
     }
+
+    void
+    update_stats(struct stats *stats) const
+    {
+      size_t my_items = 0;
+      for (auto it = chain_.begin(), end = chain_.end(); it != end; ++it)
+        ++my_items;
+      stats->items += my_items;
+      if (my_items)
+        stats->used_buckets += 1;
+      if (my_items > stats->max_chain)
+        stats->max_chain = my_items;
+    }
   };
 
   static constexpr size_t Buckets =
@@ -102,4 +123,14 @@ public:
     item* i = container_from_member(vrefp, &item::weakref_);
     i->parent_->remove(i);
   }
+
+  struct stats
+  get_stats() const
+  {
+    struct stats res{};
+    res.total_buckets = Buckets;
+    for (auto &b : buckets_)
+      b.update_stats(&res);
+    return res;
+  };
 };
