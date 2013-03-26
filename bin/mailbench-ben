@@ -3,24 +3,11 @@
 benchhdr "--bench=mailbench"
 echo
 
-MINCORE=10
-for ncore in 1 {$MINCORE..80..10}; do
-    mailbench -p $ncore $ncore 100000
-    sleep 5
+NTRIAL=1
+for ncore in 1 {10..80..10}; do
+    for trial in {1..$NTRIAL}; do
+        mailbench / $ncore
+        rm -r spool mail
+        sleep 5
+    done
 done
-
-for ncore in 1 {$MINCORE..80..10}; do
-    mailbench -f -p $ncore $ncore 1000
-    sleep 5
-done
-
-for ncore in 1 {$MINCORE..80..10}; do
-    mailbench -f -p -w $ncore $ncore 1000
-    sleep 5
-done
-
-for ncore in 1 {$MINCORE..80..10}; do
-    mailbench -e -p -w $ncore $ncore 1000
-    sleep 5
-done
-
