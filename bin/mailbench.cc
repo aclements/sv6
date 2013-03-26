@@ -15,6 +15,11 @@
 #include <string>
 #include <thread>
 
+// Set to 1 to manage the queue manager's life time from this program.
+// Set to 0 if the queue manager is started and stopped outside of
+// mailbench.
+#define START_QMAN 1
+
 using std::string;
 
 enum { warmup_secs = 1 };
@@ -82,6 +87,16 @@ timer_thread(void)
 }
 
 static void
+xwaitpid(int pid, const char *cmd)
+{
+  int status;
+  if (waitpid(pid, &status, 0) < 0)
+    edie("waitpid %s failed", cmd);
+  if (!WIFEXITED(status) || WEXITSTATUS(status))
+    die("status %d from %s", status, cmd);
+}
+
+static void
 do_mua(int cpu, string spooldir, string msgpath)
 {
   const char *argv[] = {"./mail-enqueue", spooldir.c_str(), "user", nullptr};
@@ -117,12 +132,7 @@ do_mua(int cpu, string spooldir, string msgpath)
       edie("posix_spawn failed");
     if ((errno = posix_spawn_file_actions_destroy(&actions)))
       edie("posix_spawn_file_actions_destroy failed");
-
-    int status;
-    if (waitpid(pid, &status, 0) < 0)
-      edie("waitpid failed");
-    if (!WIFEXITED(status) || WEXITSTATUS(status))
-      die("deliver failed: status %d", status);
+    xwaitpid(pid, argv[0]);
 
     ++mycount;
   }
@@ -180,19 +190,22 @@ main(int argc, char **argv)
   // XXX This terminology is wrong.  The spool is where mail
   // ultimately gets delivered to.
   string spooldir = basedir + "/spool";
-  create_spool(spooldir);
+  if (START_QMAN)
+    create_spool(spooldir);
   string mailroot = basedir + "/mail";
   xmkdir(mailroot);
   create_maildir(mailroot + "/user");
 
-  // Start queue manager
-  const char *qman[] = {"./mail-qman", spooldir.c_str(), mailroot.c_str(),
-                        nthreads_str, nullptr};
   pid_t qman_pid;
-  if (posix_spawn(&qman_pid, qman[0], nullptr, nullptr,
-                  const_cast<char *const*>(qman), environ) != 0)
-    die("posix_spawn %s failed", qman[0]);
-  sleep(1);
+  if (START_QMAN) {
+    // Start queue manager
+    const char *qman[] = {"./mail-qman", spooldir.c_str(), mailroot.c_str(),
+                          nthreads_str, nullptr};
+    if (posix_spawn(&qman_pid, qman[0], nullptr, nullptr,
+                    const_cast<char *const*>(qman), environ) != 0)
+      die("posix_spawn %s failed", qman[0]);
+    sleep(1);
+  }
 
   // Write message to a file
   int fd = open((basedir + "/msg").c_str(), O_CREAT|O_WRONLY, 0666);
@@ -217,7 +230,16 @@ main(int argc, char **argv)
   for (int i = 0; i < nthreads; ++i)
     threads[i].join();
 
-  // XXX Kill qman and wait for it to exit
+  if (START_QMAN) {
+    // Kill qman and wait for it to exit
+    const char *enq[] = {"./mail-enqueue", "--exit", spooldir.c_str(), nullptr};
+    pid_t enq_pid;
+    if (posix_spawn(&enq_pid, enq[0], nullptr, nullptr,
+                    const_cast<char *const*>(enq), environ) != 0)
+      die("posix_spawn %s failed", enq[0]);
+    xwaitpid(enq_pid, "mail-enqueue --exit");
+    xwaitpid(qman_pid, "mail-qman");
+  }
 
   // Summarize
   printf("%lu start usec skew\n", start_usec.span());
@@ -232,4 +254,6 @@ main(int argc, char **argv)
     printf("%lu cycles/iter\n", (stop_tsc.sum() - start_tsc.sum()) / iters);
     printf("%lu iters/sec\n", iters * 1000000 / usec);
   }
+
+  printf("\n");
 }
