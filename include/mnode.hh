@@ -14,6 +14,7 @@ class mdir;
 class mfile;
 class mdev;
 class msock;
+class mlinkref;
 
 class mnode : public refcache::weak_referenced
 {
@@ -47,7 +48,7 @@ public:
   };
 
   static sref<mnode> get(u64 n);
-  static sref<mnode> alloc(u8 type);
+  static mlinkref alloc(u8 type);
 
   void cache_pin(bool flag);
   u8 type() const { return inumber(inum_).type(); }
@@ -63,7 +64,7 @@ public:
 
   class linkcount : public FS_NLINK_REFCOUNT referenced {
   public:
-    linkcount() : referenced(0) {};
+    linkcount() {};
     void onzero() override;
   };
 
@@ -138,7 +139,7 @@ class mdir : public mnode {
 private:
   mdir(u64 inum) : mnode(inum), map_(257) {}
   NEW_DELETE_OPS(mdir);
-  friend sref<mnode> mnode::get(u64);
+  friend class mnode;
 
   chainhash<strbuf<DIRSIZ>, u64> map_;
 
@@ -301,7 +302,7 @@ class mfile : public mnode {
 private:
   mfile(u64 inum) : mnode(inum), size_(0) {}
   NEW_DELETE_OPS(mfile);
-  friend sref<mnode> mnode::get(u64);
+  friend class mnode;
 
   struct page_state {
     enum {
@@ -381,7 +382,7 @@ class mdev : public mnode {
 private:
   mdev(u64 inum) : mnode(inum), major_(0), minor_(0) {}
   NEW_DELETE_OPS(mdev);
-  friend sref<mnode> mnode::get(u64);
+  friend class mnode;
 
   u16 major_;
   u16 minor_;
@@ -416,7 +417,7 @@ class msock : public mnode {
 private:
   msock(u64 inum) : mnode(inum), localsock_(nullptr) {}
   NEW_DELETE_OPS(msock);
-  friend sref<mnode> mnode::get(u64);
+  friend class mnode;
 
   localsock* localsock_;
 

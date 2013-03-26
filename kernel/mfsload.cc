@@ -52,9 +52,9 @@ load_file(sref<inode> i, sref<mnode> m)
 static sref<mnode>
 mnode_alloc(u64 inum, u8 mtype)
 {
-  sref<mnode> m = mnode::alloc(mtype);
-  inum_to_mnode->insert(inum, m);
-  return m;
+  auto m = mnode::alloc(mtype);
+  inum_to_mnode->insert(inum, m.mn());
+  return m.mn();
 }
 
 static sref<mnode>

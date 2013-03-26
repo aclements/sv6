@@ -378,13 +378,8 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
     default:     cprintf("unhandled type %d\n", type);
     }
 
-    mf = mnode::alloc(mtype);
-    if (!mf)
-      return sref<mnode>();
-
-    /* Safe to increment nlink_ because this file has just been created */
-    mlinkref ilink(mf);
-    ilink.acquire();
+    auto ilink = mnode::alloc(mtype);
+    mf = ilink.mn();
 
     if (mtype == mnode::types::dir) {
       /*

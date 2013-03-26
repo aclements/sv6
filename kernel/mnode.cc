@@ -24,42 +24,46 @@ mnode::get(u64 inum)
       return m;
     }
 
-    switch (inumber(inum).type()) {
-    case types::dir:
-      m = sref<mnode>::transfer(new mdir(inum));
-      break;
-
-    case types::file:
-      m = sref<mnode>::transfer(new mfile(inum));
-      break;
-
-    case types::dev:
-      m = sref<mnode>::transfer(new mdev(inum));
-      break;
-
-    case types::sock:
-      m = sref<mnode>::transfer(new msock(inum));
-      break;
-
-    default:
-      panic("unknown type in inum 0x%lx", inum);
-    }
-
-    if (mnode_cache.insert(inum, m.get())) {
-      m->cache_pin(true);
-      // XXX read from disk
-      m->valid_ = true;
-      return m;
-    }
+    panic("read in from disk not implemented");
   }
 }
 
-sref<mnode>
+mlinkref
 mnode::alloc(u8 type)
 {
   scoped_cli cli;
-  // XXX The lookup in mnode::get is pointless for this.
-  return mnode::get(inumber(type, myid(), (*next_inumber)++).v_);
+  auto inum = inumber(type, myid(), (*next_inumber)++).v_;
+
+  sref<mnode> m;
+  switch (type) {
+  case types::dir:
+    m = sref<mnode>::transfer(new mdir(inum));
+    break;
+
+  case types::file:
+    m = sref<mnode>::transfer(new mfile(inum));
+    break;
+
+  case types::dev:
+    m = sref<mnode>::transfer(new mdev(inum));
+    break;
+
+  case types::sock:
+    m = sref<mnode>::transfer(new msock(inum));
+    break;
+
+  default:
+    panic("unknown type in inum 0x%lx", inum);
+  }
+
+  if (!mnode_cache.insert(inum, m.get()))
+    panic("mnode_cache insert failed (duplicate inumber?)");
+
+  m->cache_pin(true);
+  m->valid_ = true;
+  mlinkref mlink(std::move(m));
+  mlink.transfer();
+  return mlink;
 }
 
 mnode::mnode(u64 inum) : inum_(inum), cache_pin_(false), valid_(false)
