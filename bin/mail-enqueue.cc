@@ -80,18 +80,33 @@ public:
                (struct sockaddr*)&notify_addr_, notify_len_) < 0)
       edie("send failed");
   }
+
+  void queue_exit()
+  {
+    const char *msg = "EXIT";
+    if (sendto(notifyfd_, msg, strlen(msg), 0,
+               (struct sockaddr*)&notify_addr_, notify_len_) < 0)
+      edie("send failed");
+  }
 };
 
 static void
 usage(const char *argv0)
 {
   fprintf(stderr, "Usage: %s spooldir recipient <message\n", argv0);
+  fprintf(stderr, "       %s --exit spooldir\n", argv0);
   exit(2);
 }
 
 int
 main(int argc, char **argv)
 {
+  if (argc == 3 && strcmp(argv[1], "--exit") == 0) {
+    spool_writer spool{argv[2]};
+    spool.queue_exit();
+    return 0;
+  }
+
   if (argc != 3)
     usage(argv[0]);
 
