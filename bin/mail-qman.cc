@@ -25,6 +25,7 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 
+#include <stdexcept>
 #include <string>
 #include <thread>
 
@@ -37,6 +38,7 @@ class spool_reader
 {
   string spooldir_;
   int notifyfd_;
+  struct sockaddr_un notify_sun_;
 
 public:
   spool_reader(const string &spooldir) : spooldir_(spooldir)
@@ -49,9 +51,19 @@ public:
     struct sockaddr_un sun{};
     sun.sun_family = AF_UNIX;
     snprintf(sun.sun_path, sizeof sun.sun_path, "%s/notify", spooldir.c_str());
+
+    // Normally we would just unlink(sun.sun_path), but since there's
+    // no way to kill mail-qman on xv6 right now, if it exists, it
+    // means this is a duplicate.
+    struct stat st;
+    if (stat(sun.sun_path, &st) == 0)
+      die("%s exists; mail-qman already running?", sun.sun_path);
+
     unlink(sun.sun_path);
     if (bind(notifyfd_, (struct sockaddr*)&sun, SUN_LEN(&sun)) < 0)
       edie("bind failed");
+
+    notify_sun_ = sun;
   }
 
   string dequeue()
@@ -102,6 +114,30 @@ public:
     x.append(spooldir_).append("/mess/").append(id);
     unlink(x.c_str());
   }
+
+  void exit_others(int mycpu, int nthread)
+  {
+    // xv6 doesn't have an easy way to kill processes, so cascade the
+    // exit message to all other threads. We have to affinitize
+    // ourselves around in case socket load balancing is off.
+    int notifyfd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if (notifyfd < 0)
+      edie("%s: socket failed", __func__);
+
+    const char *killmsg = "EXIT2";
+    for (int i = 0; i < nthread; ++i) {
+      if (i == mycpu)
+        continue;
+      setaffinity(i);
+      if (sendto(notifyfd, killmsg, strlen(killmsg), 0,
+                 (struct sockaddr*)&notify_sun_, SUN_LEN(&notify_sun_)) < 0)
+        edie("%s: sendto failed", __func__);
+    }
+
+    close(notifyfd);
+
+    setaffinity(mycpu);
+  }
 };
 
 static void
@@ -145,10 +181,16 @@ deliver(const char *mailroot, int msgfd, const string &recipient)
 }
 
 static void
-do_process(spool_reader *spool, const char *mailroot)
+do_process(spool_reader *spool, const char *mailroot, int nthread, int cpu)
 {
   while (true) {
     string id = spool->dequeue();
+    if (id == "EXIT") {
+      spool->exit_others(cpu, nthread);
+      return;
+    }
+    if (id == "EXIT2")
+      return;
     string recip = spool->get_recipient(id);
     int msgfd = spool->open_message(id);
     deliver(mailroot, msgfd, recip);
@@ -182,7 +224,7 @@ main(int argc, char **argv)
 
   for (int i = 0; i < nthread; ++i) {
     setaffinity(i);
-    threads[i] = std::move(thread(do_process, &reader, mailroot));
+    threads[i] = std::move(thread(do_process, &reader, mailroot, nthread, i));
   }
 
   for (int i = 0; i < nthread; ++i)
