@@ -18,6 +18,7 @@ file_inode::stat(struct stat *st, enum stat_flags flags)
   case mnode::types::dir:  stattype = T_DIR;  break;
   case mnode::types::file: stattype = T_FILE; break;
   case mnode::types::dev:  stattype = T_DEV;  break;
+  case mnode::types::sock: stattype = T_SOCKET;  break;
   default:                 cprintf("Unknown type %d\n", ip->type());
   }
 
