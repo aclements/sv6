@@ -152,6 +152,7 @@ do_process(spool_reader *spool, const char *mailroot)
     string recip = spool->get_recipient(id);
     int msgfd = spool->open_message(id);
     deliver(mailroot, msgfd, recip);
+    close(msgfd);
     spool->remove(id);
   }
 }
