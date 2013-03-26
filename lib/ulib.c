@@ -33,7 +33,7 @@ stat(const char *n, struct stat *st)
   int fd;
   int r;
 
-  fd = open(n, O_RDONLY | O_ANYFD);
+  fd = open(n, O_RDONLY | O_ANYFD | O_CLOEXEC);
   if(fd < 0)
     return -1;
   r = fstat(fd, st);
