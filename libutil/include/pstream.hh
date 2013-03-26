@@ -124,7 +124,7 @@ void to_stream(print_stream *s, long long v);
 void to_stream(print_stream *s, unsigned long long v);
 
 void to_stream(print_stream *s, const char *str);
-void to_stream(print_stream *s, void *ptr);
+void to_stream(print_stream *s, const void *ptr);
 
 class integer_formatter
 {

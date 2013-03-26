@@ -66,7 +66,7 @@ void to_stream(print_stream *s, const char *str)
   to_stream(s, sbuf(str, strlen(str)));
 }
 
-void to_stream(print_stream *s, void *ptr)
+void to_stream(print_stream *s, const void *ptr)
 {
   to_stream(s, sbuf("0x", 2));
   streamnum(s, (unsigned long long)ptr, false, 16);
