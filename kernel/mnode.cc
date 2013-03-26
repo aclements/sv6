@@ -142,3 +142,18 @@ mfile::get_page(u64 pageidx)
   page_info* pi = it->pg.get();
   return sref<page_info>::newref(pi);
 }
+
+void
+mfsprint(print_stream *s)
+{
+  auto stats = mnode_cache.get_stats();
+  s->println("mnode cache:");
+  s->println("  ", stats.items, " items");
+  s->println("  ", stats.used_buckets, " used / ",
+             stats.total_buckets, " total buckets (",
+             stats.used_buckets * 100 / stats.total_buckets, "%)");
+  s->println("  ", stats.max_chain, " max chain length");
+  s->println("  ", stats.items / stats.total_buckets, " avg chain length");
+  if (stats.used_buckets)
+    s->println("  ", stats.items / stats.used_buckets, " avg used chain length");
+}
