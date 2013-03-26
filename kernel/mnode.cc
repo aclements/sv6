@@ -6,7 +6,8 @@
 #include "percpu.hh"
 
 namespace {
-  weakcache<u64, mnode, 257> mnode_cache;
+  // 32MB icache (XXX make this proportional to physical RAM)
+  weakcache<u64, mnode, 32 << 20> mnode_cache;
   DEFINE_PERCPU(u64, next_inumber);
 };
 

@@ -4,8 +4,9 @@
 #include "spinlock.h"
 #include "refcache.hh"
 #include "hash.hh"
+#include "log2.hh"
 
-template<class K, class V, size_t Buckets>
+template<class K, class V, size_t MaxSize>
 class weakcache
 {
 private:
@@ -75,6 +76,9 @@ private:
       }
     }
   };
+
+  static constexpr size_t Buckets =
+    round_down_to_pow2_const(MaxSize / sizeof(bucket));
 
   bucket buckets_[Buckets];
 
