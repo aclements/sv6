@@ -1,5 +1,7 @@
 #pragma once
 
+#include "compiler.h"
+
 #include <atomic>
 #include <cstdint>
 
