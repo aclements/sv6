@@ -58,6 +58,7 @@ void initwd(void);
 void initdev(void);
 void inithpet(void);
 void initrtc(void);
+void initmfs(void);
 void idleloop(void);
 
 #define IO_RTC  0x70
@@ -228,6 +229,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   inithpet();              // Requires initacpitables
   initrtc();               // Requires inithpet
   initdev();               // Misc /dev nodes
+  initmfs();
 
   if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);

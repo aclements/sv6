@@ -1,6 +1,9 @@
 #include "types.h"
 #include "kernel.hh"
 #include "mfs.hh"
+#include "major.h"
+#include "kstream.hh"
+#include "file.hh"
 
 u64 root_inum;
 
@@ -212,4 +215,18 @@ writei(sref<mnode> m, const char* buf, u64 start, u64 nbytes,
   }
 
   return off ?: -1;
+}
+
+static int
+mfsstatsread(mdev*, char *dst, u32 off, u32 n)
+{
+  window_stream s(dst, off, n);
+  mfsprint(&s);
+  return s.get_used();
+}
+
+void
+initmfs(void)
+{
+  devsw[MAJ_MFSSTATS].pread = mfsstatsread;
 }

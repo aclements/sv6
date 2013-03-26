@@ -30,6 +30,7 @@ static struct {
   { "/dev/kconfig",   MAJ_KCONFIG},
   { "/dev/kstats",    MAJ_KSTATS},
   { "/dev/kmemstats",    MAJ_KMEMSTATS},
+  { "/dev/mfsstats",    MAJ_MFSSTATS},
 };
 
 static int
