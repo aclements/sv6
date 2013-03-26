@@ -137,10 +137,15 @@ private:
 
 class mdir : public mnode {
 private:
-  mdir(u64 inum) : mnode(inum), map_(257) {}
+  // ~32K cache
+  mdir(u64 inum) : mnode(inum), map_(1367) {}
   NEW_DELETE_OPS(mdir);
   friend class mnode;
 
+  // XXX We should deal with varying directory sizes better.  One way
+  // would be to make this a resizable hash table.  Linux uses a
+  // unified directory cache hash table, but that would make
+  // serializing a directory much harder for us.
   chainhash<strbuf<DIRSIZ>, u64> map_;
 
 public:
