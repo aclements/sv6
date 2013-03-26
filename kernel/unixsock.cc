@@ -71,13 +71,16 @@ struct coresocket : public balance_pool<coresocket> {
 };
 
 struct localsock {
+  bool ordered_;
   atomic<coresocket*> pipes[NCPU];
   balancer<localsock, coresocket> b;
   atomic<int> nreader;
 
-  localsock() : b(this), nreader(0) {
+  localsock(bool ordered) : ordered_(ordered), b(this), nreader(0) {
     for (int i = 0; i < NCPU; i++)
       pipes[i] = 0;
+    if (ordered)
+      pipes[0] = new coresocket;
   }
 
   ~localsock() {
@@ -98,9 +101,13 @@ struct localsock {
     return NULL;
   }
 
-  coresocket* mycoresocket(int id) {
+  coresocket* mycoresocket() {
+    if (ordered_)
+      return pipes[0];
+
     // XXX not right; if we have a single reader that is rescheduled
     // to another core, we get two readers ...
+    int id = myid();
     for (;;) {
       coresocket* c = pipes[id];
       if (c)
@@ -131,13 +138,12 @@ struct localsock {
       if (myproc()->killed)
         return -1;
 
-      int id = mycpu()->id;
       coresocket *cp;
 #if 0
       // if there is only reader, deliver message to reader
       // perhaps useful if sender and receiver are not on the same core
       if (nreader > 1) {
-        cp = mycoresocket(id);
+        cp = mycoresocket();
         if (cp->len >= QUEUELEN)
           balance();
       } else {
@@ -146,7 +152,7 @@ struct localsock {
       if (cp == NULL)
         continue;
 #else
-      cp = mycoresocket(id);
+      cp = mycoresocket();
       if (cp->len >= QUEUELEN && toyield) {
         yield();
         toyield = false;
@@ -173,8 +179,7 @@ struct localsock {
       if (myproc()->killed)
         return NULL;
 
-      int id = mycpu()->id;
-      coresocket* cp = mycoresocket(id);
+      coresocket* cp = mycoresocket();
 
       if (cp->len <= 0 && toyield) {
         // in case another proc is running on hopefully this processor,
@@ -231,7 +236,7 @@ struct file_unix_dgram : public refcache::referenced, public file
   }
 
 public:
-  file_unix_dgram() : localsock_(new localsock) {}
+  file_unix_dgram(bool ordered) : localsock_(new localsock(ordered)) {}
   NEW_DELETE_OPS(file_unix_dgram);
 
   void inc() override { referenced::inc(); }
@@ -349,8 +354,11 @@ public:
 int
 unixsocket(int domain, int type, int protocol, file **out)
 {
-  if (type != SOCK_DGRAM)
+  if (type == SOCK_DGRAM)
+    *out = new file_unix_dgram{true};
+  else if (type == SOCK_DGRAM_UNORDERED)
+    *out = new file_unix_dgram{false};
+  else
     return -1;
-  *out = new file_unix_dgram{};
   return 0;
 }

@@ -45,3 +45,11 @@ struct __attribute__((__aligned__(__BIGGEST_ALIGNMENT__))) sockaddr_storage
 #define AF_UNIX AF_LOCAL
 #define PF_LOCAL AF_LOCAL
 #define PF_UNIX AF_UNIX
+
+#define SOCK_DGRAM_UNORDERED 3
+#ifdef __cplusplus
+static_assert(SOCK_DGRAM_UNORDERED != SOCK_STREAM,
+              "SOCK_DGRAM_UNORDERED == SOCK_STREAM");
+static_assert(SOCK_DGRAM_UNORDERED != SOCK_DGRAM,
+              "SOCK_DGRAM_UNORDERED == SOCK_DGRAM");
+#endif

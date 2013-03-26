@@ -45,7 +45,7 @@ public:
   {
     // Create notification socket
     // XXX Commutativity: Unordered
-    notifyfd_ = socket(AF_UNIX, SOCK_DGRAM, 0);
+    notifyfd_ = socket(AF_UNIX, SOCK_DGRAM_UNORDERED, 0);
     if (notifyfd_ < 0)
       edie("socket failed");
     struct sockaddr_un sun{};

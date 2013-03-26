@@ -23,6 +23,8 @@
 #define STAT_OMIT_NLINK 0
 #define fstatx(a, b, c) fstat((a), (b))
 
+#define SOCK_DGRAM_UNORDERED SOCK_DGRAM
+
 #else // Must be xv6
 
 #define xfork() fork(0)
