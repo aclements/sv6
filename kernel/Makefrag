@@ -75,6 +75,7 @@ OBJS = \
 	cpuid.o \
 	ctype.o \
 	unixsock.o \
+	heapprof.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 

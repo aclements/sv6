@@ -13,6 +13,10 @@
 #include "log2.hh"
 #include "rnd.hh"
 #include "amd64.h"
+#include "page_info.hh"
+#include "heapprof.hh"
+
+#include <type_traits>
 
 // allocate in power-of-two sizes up to 2^KMMAX (PGSIZE)
 #define KMMAX 12
@@ -125,17 +129,28 @@ void *
 kmalloc(u64 nbytes, const char *name)
 {
   void *h;
+  uint64_t mbytes = alloc_debug_info::expand_size(nbytes);
 
-  if (nbytes > PGSIZE / 2) {
+  if (mbytes > PGSIZE / 2) {
     // Full page allocation
-    h = kalloc(name, round_up_to_pow2(nbytes));
+    h = kalloc(name, round_up_to_pow2(mbytes));
   } else {
     // Sub-page allocation
-    int b = bucket(nbytes);
+    int b = bucket(mbytes);
     h = kmalloc_small(b, name);
   }
   if (!h)
     return nullptr;
+
+  // Update debug_info
+  alloc_debug_info *adi = alloc_debug_info::of(h, nbytes);
+  if (KERNEL_HEAP_PROFILE) {
+    auto alloc_rip = __builtin_return_address(0);
+    if (heap_profile_update(HEAP_PROFILE_KMALLOC, alloc_rip, nbytes))
+      adi->set_kmalloc_rip(alloc_rip);
+    else
+      adi->set_kmalloc_rip(nullptr);
+  }
 
   mtlabel(mtrace_label_heap, (void*) h, nbytes, name, strlen(name));
 
@@ -147,6 +162,14 @@ kmfree(void *ap, u64 nbytes)
 {
   struct header *h = (struct header *) ap;
   mtunlabel(mtrace_label_heap, ap);
+
+  // Update debug_info
+  alloc_debug_info *adi = alloc_debug_info::of(ap, nbytes);
+  if (KERNEL_HEAP_PROFILE) {
+    auto alloc_rip = adi->kmalloc_rip();
+    if (alloc_rip)
+      heap_profile_update(HEAP_PROFILE_KMALLOC, alloc_rip, -nbytes);
+  }
 
   if (nbytes > PGSIZE / 2) {
     // Free full page allocation
@@ -183,4 +206,49 @@ void kmalignfree(void *mem, int align, u64 size)
 {
   u64 msz = size + (align-1) + sizeof(void*);
   kmfree(((void**)mem)[-1], msz);
+}
+
+// Expand an allocation size to include its alloc_debug_info
+size_t
+alloc_debug_info::expand_size(size_t size)
+{
+  if (std::is_empty<alloc_debug_info>::value)
+    return size;
+
+  static_assert(round_up_to_pow2_const(alignof(alloc_debug_info)) ==
+                alignof(alloc_debug_info),
+                "alignof(alloc_debug_info) isn't a power of two");
+  size_t aligned = (size + (alignof(alloc_debug_info) - 1)) &
+    ~(alignof(alloc_debug_info) - 1);
+  size_t want = aligned + sizeof(alloc_debug_info);
+  if (want > PGSIZE / 2) {
+    // Store alloc_debug_info in page_info.  Round the size up
+    // enough to make sure it allocates a whole page (we can't just
+    // return size, because that may be <= PGSIZE / 2)
+    if (size <= PGSIZE / 2)
+      // We can't just return size because that would cause a
+      // sub-page allocation, so make it just big enough to force a
+      // full page allocation.
+      return PGSIZE / 2;
+    return size;
+  }
+  // Sub-page allocations store the alloc_debug_info at the end
+  return want;
+}
+
+// Given an allocated pointer and the allocation's original size (not
+// its expanded size), return the alloc_debug_info for the allocation.
+alloc_debug_info *
+alloc_debug_info::of(void *p, size_t size)
+{
+  if (std::is_empty<alloc_debug_info>::value)
+    return nullptr;
+
+  size_t aligned = (size + (alignof(alloc_debug_info) - 1)) &
+    ~(alignof(alloc_debug_info) - 1);
+  size_t want = aligned + sizeof(alloc_debug_info);
+
+  if (want > PGSIZE / 2)
+    return page_info::of(p);
+  return (alloc_debug_info*)((char*)p + aligned);
 }

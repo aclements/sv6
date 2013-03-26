@@ -8,6 +8,27 @@
 
 #include <cstddef>
 
+// Per-allocation debug information
+struct alloc_debug_info
+{
+#if KERNEL_HEAP_PROFILE
+  // Instruction pointer of allocation
+  const void *kalloc_rip_, *kmalloc_rip_;
+  void set_kalloc_rip(const void *kalloc_rip) { kalloc_rip_ = kalloc_rip; }
+  const void *kalloc_rip() const { return kalloc_rip_; }
+  void set_kmalloc_rip(const void *kmalloc_rip) { kmalloc_rip_ = kmalloc_rip; }
+  const void *kmalloc_rip() const { return kmalloc_rip_; }
+#else
+  void set_kalloc_rip(const void *kalloc_rip) { }
+  const void *kalloc_rip() const { return nullptr; }
+  void set_kmalloc_rip(const void *kmalloc_rip) { }
+  const void *kmalloc_rip() const { return nullptr; }
+#endif
+
+  static size_t expand_size(size_t size);
+  static alloc_debug_info *of(void *p, size_t size);
+};
+
 // The page_info_map maps from physical address to page_info array.
 // The map is indexed by
 //   ((phys + page_info_map_add) >> page_info_map_shift)
@@ -27,7 +48,11 @@ extern size_t page_info_map_add, page_info_map_shift;
 // One past the last used entry of page_info_map.
 extern page_info_map_entry *page_info_map_end;
 
-class page_info : public PAGE_REFCOUNT referenced
+// Physical page metadata
+//
+// This inherits from alloc_debug_info to exploit empty base class
+// optimization.
+class page_info : public PAGE_REFCOUNT referenced, public alloc_debug_info
 {
 protected:
   void onzero()

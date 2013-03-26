@@ -22,6 +22,7 @@
 #include "lb.hh"
 #include "file.hh"
 #include "major.h"
+#include "heapprof.hh"
 
 #include <algorithm>
 #include <iterator>
@@ -759,6 +760,17 @@ kalloc(const char *name, size_t size)
     }
     if (!name)
       name = "kmem";
+
+    // Update debug_info
+    alloc_debug_info *adi = alloc_debug_info::of(res, size);
+    if (KERNEL_HEAP_PROFILE) {
+      auto alloc_rip = __builtin_return_address(0);
+      if (heap_profile_update(HEAP_PROFILE_KALLOC, alloc_rip, size))
+        adi->set_kalloc_rip(alloc_rip);
+      else
+        adi->set_kalloc_rip(nullptr);
+    }
+
     mtlabel(mtrace_label_block, res, size, name, strlen(name));
     return (char*)res;
   } else {
@@ -1090,6 +1102,14 @@ kfree(void *v, size_t size)
 
   if (kinited)
     mtunlabel(mtrace_label_block, v);
+
+  // Update debug_info
+  alloc_debug_info *adi = alloc_debug_info::of(v, size);
+  if (KERNEL_HEAP_PROFILE) {
+    auto alloc_rip = adi->kalloc_rip();
+    if (alloc_rip)
+      heap_profile_update(HEAP_PROFILE_KALLOC, alloc_rip, -size);
+  }
 
   auto mem = mycpu()->mem;
   if (size == PGSIZE) {
