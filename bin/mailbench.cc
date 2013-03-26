@@ -2,6 +2,7 @@
 #include "distribution.hh"
 #include "spinbarrier.hh"
 #include "libutil.h"
+#include "xsys.h"
 
 #include <fcntl.h>
 #include <spawn.h>
@@ -107,7 +108,7 @@ do_mua(int cpu, string spooldir, string msgpath)
 
   // Open message file (alternatively, we could use an open spawn
   // action)
-  int msgfd = open(msgpath.c_str(), O_RDONLY|O_CLOEXEC);
+  int msgfd = open(msgpath.c_str(), O_RDONLY|O_CLOEXEC|O_ANYFD);
   if (msgfd < 0)
     edie("open %s failed", msgpath.c_str());
 
