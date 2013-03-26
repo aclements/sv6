@@ -11,7 +11,8 @@ template<>
 inline u64
 hash(const u64& v)
 {
-  return v;
+  u64 x = v ^ (v >> 32) ^ (v >> 20) ^ (v >> 12);
+  return x ^ (x >> 7) ^ (x >> 4);
 }
 
 template<>
