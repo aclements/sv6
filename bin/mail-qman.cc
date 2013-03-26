@@ -68,12 +68,12 @@ public:
     char path[256];
     snprintf(path, sizeof path, "%s/todo/%s", spooldir_.c_str(), id.c_str());
     // XXX Commutativity: O_ANYFD
-    int fd = open(path, O_RDONLY|O_CLOEXEC);
+    int fd = open(path, O_RDONLY|O_CLOEXEC|O_ANYFD);
     if (fd < 0)
       edie("open %s failed", path);
     struct stat st;
     // XXX Commutativity: STAT_OMIT_NLINK
-    if (fstat(fd, &st) < 0)
+    if (fstatx(fd, &st, STAT_OMIT_NLINK) < 0)
       edie("fstat %s failed", path);
     string res(st.st_size, 0);
     if (readall(fd, &res.front(), res.size()) != res.size())
@@ -87,7 +87,7 @@ public:
     char path[256];
     snprintf(path, sizeof path, "%s/mess/%s", spooldir_.c_str(), id.c_str());
     // XXX Commutativity: O_ANYFD
-    int fd = open(path, O_RDONLY|O_CLOEXEC);
+    int fd = open(path, O_RDONLY|O_CLOEXEC|O_ANYFD);
     if (fd < 0)
       edie("open %s failed", path);
     return fd;
