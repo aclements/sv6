@@ -174,18 +174,32 @@ create_maildir(const string &base)
 void
 usage(const char *argv0)
 {
-  fprintf(stderr, "Usage: %s basedir nthreads\n", argv0);
+  fprintf(stderr, "Usage: %s [options] basedir nthreads\n", argv0);
+  fprintf(stderr, "  -a none   Use regular APIs (default)\n");
+  fprintf(stderr, "     all    Use alternate APIs\n");
   exit(2);
 }
 
 int
 main(int argc, char **argv)
 {
-  if (argc != 3)
+  const char *alt_str = "false";
+  int opt;
+  while ((opt = getopt(argc, argv, "a:")) != -1) {
+    switch (opt) {
+    case 'a':
+      alt_str = optarg;
+      break;
+    default:
+      usage(argv[0]);
+    }
+  }
+
+  if (argc - optind != 2)
     usage(argv[0]);
 
-  string basedir(argv[1]);
-  const char *nthreads_str = argv[2];
+  string basedir(argv[optind]);
+  const char *nthreads_str = argv[optind+1];
   int nthreads = atoi(nthreads_str);
   if (nthreads <= 0)
     usage(argv[0]);
@@ -203,7 +217,8 @@ main(int argc, char **argv)
   pid_t qman_pid;
   if (START_QMAN) {
     // Start queue manager
-    const char *qman[] = {"./mail-qman", spooldir.c_str(), mailroot.c_str(),
+    const char *qman[] = {"./mail-qman", "-a", alt_str,
+                          spooldir.c_str(), mailroot.c_str(),
                           nthreads_str, nullptr};
     if (posix_spawn(&qman_pid, qman[0], nullptr, nullptr,
                     const_cast<char *const*>(qman), environ) != 0)
@@ -218,7 +233,7 @@ main(int argc, char **argv)
   xwrite(fd, message, strlen(message));
   close(fd);
 
-  printf("# --cores=%d --duration=%ds\n", nthreads, duration);
+  printf("# --cores=%d --duration=%ds --alt=%s\n", nthreads, duration, alt_str);
 
   // Run benchmark
   bar.init(nthreads + 1);

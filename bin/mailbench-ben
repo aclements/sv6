@@ -4,10 +4,12 @@ benchhdr "--bench=mailbench"
 echo
 
 NTRIAL=1
-for ncore in 1 {10..80..10}; do
-    for trial in {1..$NTRIAL}; do
-        mailbench / $ncore
-        rm -r spool mail
-        sleep 5
+for alt in none all; do
+    for ncore in 1 {10..80..10}; do
+        for trial in {1..$NTRIAL}; do
+            mailbench -a $alt / $ncore
+            rm -r spool mail
+            sleep 5
+        done
     done
 done
