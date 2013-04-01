@@ -27,3 +27,17 @@ hash(const strbuf<DIRSIZ>& v)
   }
   return h;
 }
+
+template<class A>
+inline u64
+hash(A* const& v)
+{
+  return hash((uintptr_t) v);
+}
+
+template<class A, class B>
+inline u64
+hash(const pair<A, B>& v)
+{
+  return hash(v.first) ^ hash(v.second);
+}

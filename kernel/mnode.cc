@@ -7,14 +7,14 @@
 
 namespace {
   // 32MB icache (XXX make this proportional to physical RAM)
-  weakcache<u64, mnode, 32 << 20> mnode_cache;
+  weakcache<pair<mfs*, u64>, mnode, 32 << 20> mnode_cache;
 };
 
 sref<mnode>
 mfs::get(u64 inum)
 {
   for (;;) {
-    sref<mnode> m = mnode_cache.lookup(inum);
+    sref<mnode> m = mnode_cache.lookup(make_pair(this, inum));
     if (m) {
       // wait for the mnode to be loaded from disk
       while (!m->valid_) {
@@ -55,7 +55,7 @@ mfs::alloc(u8 type)
     panic("unknown type in inum 0x%lx", inum);
   }
 
-  if (!mnode_cache.insert(inum, m.get()))
+  if (!mnode_cache.insert(make_pair(this, inum), m.get()))
     panic("mnode_cache insert failed (duplicate inumber?)");
 
   m->cache_pin(true);
