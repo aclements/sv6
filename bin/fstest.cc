@@ -73,8 +73,15 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
   for (int i = 0; i < 2; i++)
     new (&tf[i]) testfunc(t->func[i].call);
 
-  pid_t pids[2];
+  pid_t pids[2] = { 0, 0 };
   for (int p = 0; p < 2; p++) {
+    bool needed = false;
+    for (int f = 0; f < 2; f++)
+      if (t->func[f].callproc == p)
+        needed = true;
+    if (!needed)
+      continue;
+
     pids[p] = fork();
     assert(pids[p] >= 0);
 
@@ -103,10 +110,10 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
   }
 
   t->setup_common();
-  for (int i = 0; i < 2; i++) tp[i].setup.sync();
+  for (int p = 0; p < 2; p++) if (pids[p]) tp[p].setup.sync();
   t->setup_final();
 
-  for (int i = 0; i < 2; i++) tp[i].test.enter();
+  for (int p = 0; p < 2; p++) if (pids[p]) tp[p].test.enter();
   for (int i = 0; i < 2; i++) tf[i].start.enter();
 
   char mtname[64];
@@ -121,10 +128,11 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
   mtdisable(mtname);
 
   for (int i = 0; i < 2; i++) tf[i].stop.exit();
-  for (int i = 0; i < 2; i++) tp[i].test.exit();
+  for (int p = 0; p < 2; p++) if (pids[p]) tp[p].test.exit();
 
   for (int p = 0; p < 2; p++)
-    assert(waitpid(pids[p], nullptr, 0) >= 0);
+    if (pids[p])
+      assert(waitpid(pids[p], nullptr, 0) >= 0);
 
   t->cleanup();
 }
