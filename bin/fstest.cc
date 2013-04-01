@@ -1,55 +1,137 @@
+#include <assert.h>
 #include <stdio.h>
-#include "pthread.h"
 #include <atomic>
+#include <new>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
-#ifdef XV6_USER
-#include "types.h"
-#include "user.h"
-#endif
+#include <pthread.h>
+#include <sys/wait.h>
+#include <sys/mman.h>
 #include "mtrace.h"
 #include "fstest.h"
+#include "libutil.h"
+#include "spinbarrier.hh"
 
-#ifndef XV6_USER
-#include <stdlib.h>
-#include <sched.h>
+class double_barrier {
+  spin_barrier enter_;
+  spin_barrier exit_;
 
-int
-setaffinity(int cpu)
+public:
+  double_barrier() : enter_(2), exit_(2) {}
+  void sync() { enter(); exit(); }
+  void enter() { enter_.join(); }
+  void exit() { exit_.join(); }
+};
+
+struct testproc {
+  double_barrier setup;
+  double_barrier test;
+  std::atomic<void (*)(void)> setupf;
+
+  testproc(void (*s)(void)) : setupf(s) {}
+  void run() {
+    setup.enter();
+    setupf();
+    setup.exit();
+  }
+};
+
+struct testfunc {
+  double_barrier start;
+  double_barrier stop;
+
+  std::atomic<int (*)(void)> func;
+  std::atomic<int> retval;
+
+  testfunc(int (*f)(void)) : func(f) {}
+  void run() {
+    start.sync();
+    retval = func();
+    stop.sync();
+  }
+};
+
+static void*
+testfunc_thread(void* arg)
 {
-  cpu_set_t mask;
-  CPU_ZERO(&mask);
-  CPU_SET(cpu, &mask);
-  return sched_setaffinity(0, sizeof(mask), &mask);
+  testfunc* f = (testfunc*) arg;
+  f->run();
+  return nullptr;
 }
-#endif
+
+static void
+run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
+{
+  assert(first_func == 0 || first_func == 1);
+  if (do_pin)
+    setaffinity(2);
+
+  for (int i = 0; i < 2; i++)
+    new (&tp[i]) testproc(t->proc[i].setup_proc);
+  for (int i = 0; i < 2; i++)
+    new (&tf[i]) testfunc(t->func[i].call);
+
+  pid_t pids[2];
+  for (int p = 0; p < 2; p++) {
+    pids[p] = fork();
+    assert(pids[p] >= 0);
+
+    if (pids[p] == 0) {
+      tp[p].run();
+
+      pthread_t tid[2];
+      for (int f = 0; f < 2; f++) {
+        if (t->func[f].callproc == p) {
+          if (do_pin)
+            setaffinity(f);
+          pthread_create(&tid[f], 0, testfunc_thread, (void*) &tf[f]);
+        }
+      }
+
+      if (do_pin)
+        setaffinity(2);
+      tp[p].test.sync();
+
+      for (int f = 0; f < 2; f++)
+        if (t->func[f].callproc == p)
+          pthread_join(tid[f], 0);
+
+      exit(0);
+    }
+  }
+
+  t->setup_common();
+  for (int i = 0; i < 2; i++) tp[i].setup.sync();
+  t->setup_final();
+
+  for (int i = 0; i < 2; i++) tp[i].test.enter();
+  for (int i = 0; i < 2; i++) tf[i].start.enter();
+
+  char mtname[64];
+  snprintf(mtname, sizeof(mtname), "%s", t->testname);
+  mtenable_type(mtrace_record_ascope, mtname);
+
+  for (int i = 0; i < 2; i++) {
+    tf[first_func ^ i].start.exit();
+    tf[first_func ^ i].stop.enter();
+  }
+
+  mtdisable(mtname);
+
+  for (int i = 0; i < 2; i++) tf[i].stop.exit();
+  for (int i = 0; i < 2; i++) tp[i].test.exit();
+
+  for (int p = 0; p < 2; p++)
+    assert(waitpid(pids[p], nullptr, 0) >= 0);
+
+  t->cleanup();
+}
 
 static bool verbose = false;
 static bool check_commutativity = false;
 static bool run_threads = false;
-
-static std::atomic<int> waiters;
-static std::atomic<int> ready;
-
-static void*
-callthread(void* arg)
-{
-  int (*callf)(void) = (int (*)(void)) arg;
-
-  waiters++;
-  while (ready.load() == 0)
-    ;
-
-  callf();
-
-  waiters--;
-  while (ready.load() == 1)
-    ;
-
-  return 0;
-}
 
 static void
 usage(const char* prog)
@@ -60,8 +142,6 @@ usage(const char* prog)
 int
 main(int ac, char** av)
 {
-  setaffinity(2);
-
   uint32_t min = 0;
   uint32_t max = UINT_MAX;
 
@@ -121,93 +201,41 @@ main(int ac, char** av)
     printf(" %d-%d", min, max);
   printf("\n");
 
-  /* Warm up to avoid sharing due to startup effects */
-  if (fstests[0].setup) {
-    fstests[0].setup();
+  testproc* tp = (testproc*) mmap(nullptr, 4096, PROT_READ | PROT_WRITE,
+                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  assert(tp != MAP_FAILED);
+  assert(2*sizeof(*tp) <= 4096);
 
-    waiters = 0;
-    ready = 0;
-    pthread_t tid0, tid1;
-    setaffinity(0);
-    pthread_create(&tid0, 0, callthread, (void*) fstests[0].call0);
-    setaffinity(1);
-    pthread_create(&tid1, 0, callthread, (void*) fstests[0].call1);
-    setaffinity(2);
+  testfunc* tf = (testfunc*) mmap(nullptr, 4096, PROT_READ | PROT_WRITE,
+                                  MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  assert(tf != MAP_FAILED);
+  assert(2*sizeof(*tf) <= 4096);
 
-    while (waiters.load() != 2)
-      ;
-
-    ready = 1;
-    while (waiters.load() != 0)
-      ;
- 
-    ready = 2;
-    pthread_join(tid0, 0);
-    pthread_join(tid1, 0);
-
-    fstests[0].cleanup();
-  }
-
-  for (uint32_t i = min; i <= max && fstests[i].setup; i++) {
+  for (uint32_t t = min; t <= max && fstests[t].testname; t++) {
     if (check_commutativity) {
-      fstests[i].setup();
-      int ra0 = fstests[i].call0();
-      int ra1 = fstests[i].call1();
-      fstests[i].cleanup();
+      run_test(tp, tf, &fstests[t], 0, false);
+      int ra0 = tf[0].retval;
+      int ra1 = tf[1].retval;
 
-      fstests[i].setup();
-      int rb1 = fstests[i].call1();
-      int rb0 = fstests[i].call0();
-      fstests[i].cleanup();
+      run_test(tp, tf, &fstests[t], 1, false);
+      int rb0 = tf[0].retval;
+      int rb1 = tf[1].retval;
 
       if (ra0 == rb0 && ra1 == rb1) {
         if (verbose)
           printf("%s: commutes: %s->%d %s->%d\n",
-                 fstests[i].testname,
-                 fstests[i].call0name, ra0, fstests[i].call1name, ra1);
+                 fstests[t].testname,
+                 fstests[t].func[0].callname, ra0, fstests[t].func[1].callname, ra1);
       } else {
         printf("%s: diverges: %s->%d %s->%d vs %s->%d %s->%d\n",
-               fstests[i].testname,
-               fstests[i].call0name, ra0, fstests[i].call1name, ra1,
-               fstests[i].call1name, rb1, fstests[i].call0name, rb0);
+               fstests[t].testname,
+               fstests[t].func[0].callname, ra0, fstests[t].func[1].callname, ra1,
+               fstests[t].func[1].callname, rb1, fstests[t].func[0].callname, rb0);
       }
     }
 
-    if (!run_threads)
-      continue;
-
-    fstests[i].setup();
-
-    waiters = 0;
-    ready = 0;
-    pthread_t tid0, tid1;
-    setaffinity(0);
-    pthread_create(&tid0, 0, callthread, (void*) fstests[i].call0);
-    setaffinity(1);
-    pthread_create(&tid1, 0, callthread, (void*) fstests[i].call1);
-    setaffinity(2);
-
-    while (waiters.load() != 2)
-      ;
-
-    char mtname[64];
-    snprintf(mtname, sizeof(mtname), "%s", fstests[i].testname);
-    mtenable_type(mtrace_record_ascope, mtname);
-
-    ready = 1;
-
-    while (waiters.load() != 0)
-      ;
- 
-    mtdisable(mtname);
-
-    ready = 2;
-
-    pthread_join(tid0, 0);
-    pthread_join(tid1, 0);
-
-    fstests[i].cleanup();
-
-    printf("test %d completed threads\n", i);
+    if (run_threads) {
+      run_test(tp, tf, &fstests[t], 0, true);
+    }
   }
 }
