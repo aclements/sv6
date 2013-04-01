@@ -51,7 +51,7 @@ public:
     }
 
     // Wait until the barrier switches to the exit phase
-    while (!(entered_.load(std::memory_order_relaxed)) & phase_mask)
+    while (!(entered_.load(std::memory_order_relaxed) & phase_mask))
       /* spin */;
 
     // Exit the batter
