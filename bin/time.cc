@@ -2,13 +2,14 @@
 #include "user.h"
 #include "amd64.h"
 #include <stdio.h>
+#include <unistd.h>
 
 int
 main(int ac, char * const av[])
 {
   u64 t0 = rdtsc();
 
-  int pid = fork(0);
+  int pid = fork();
   if (pid < 0) {
     die("time: fork failed");
   }

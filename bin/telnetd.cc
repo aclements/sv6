@@ -11,7 +11,7 @@ int
 dfork(void)
 {
   // First fork
-  int pid = fork(0);
+  int pid = fork();
   if (pid < 0) {
     fprintf(stderr, "telnetd fork 1: %d\n", pid);
     return pid;
@@ -22,7 +22,7 @@ dfork(void)
   }
 
   // Second fork
-  pid = fork(0);
+  pid = fork();
   if (pid == 0) {
     // Second child does the real work
     return 0;

@@ -160,7 +160,7 @@ deliver(const char *mailroot, int msgfd, const string &recipient)
     if ((errno = posix_spawn_file_actions_destroy(&actions)))
       edie("posix_spawn_file_actions_destroy failed");
   } else {
-    pid = xfork();
+    pid = fork();
     if (pid < 0)
       edie("fork failed");
     if (pid == 0) {

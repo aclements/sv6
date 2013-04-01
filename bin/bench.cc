@@ -6,13 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static u64
 time_this(const char *av[])
 {
   u64 t0 = rdtsc();
 
-  int pid = fork(0);
+  int pid = fork();
   if (pid < 0)
     die("time_this: fork failed %s", av[0]);
 

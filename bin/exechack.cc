@@ -3,6 +3,7 @@
 #include "mtrace.h"
 #include "amd64.h"
 #include <stdio.h>
+#include <unistd.h>
 
 #define NITERS 100
 
@@ -33,7 +34,7 @@ master(void)
   while (i < NITERS) {
     while (pcount < PROCMAX) {
       int pid;
-      pid = fork(0);
+      pid = fork();
       if (pid < 0)
         die("master fork");
       if (pid == 0)

@@ -10,7 +10,7 @@ forkt:
         movq %rsi, 0x08(%r12)   # function ptr
 
         movq %rcx, %rdi         # flag for sys_fork
-        movq $SYS_fork, %rax
+        movq $SYS_fork_flags, %rax
         syscall
 
         cmpq $0, %rax           # pid/tid

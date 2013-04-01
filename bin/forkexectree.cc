@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define NCHILD 2
 #define NDEPTH 5
@@ -18,7 +19,7 @@ forktree(int depth)
     exit(0);
 
   for (int i = 0; i < NCHILD; i++) {
-    int pid = fork(0);
+    int pid = fork();
     if (pid < 0) {
       die("fork error");
     }

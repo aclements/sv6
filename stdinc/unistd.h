@@ -24,6 +24,7 @@ int pipe(int pipefd[2]);
 
 unsigned sleep(unsigned);
 pid_t getpid(void);
+pid_t fork(void);
 
 extern char* optarg;
 extern int optind;
@@ -35,6 +36,5 @@ int fstat(int fd, struct stat *buf);
 
 // xv6-specific
 int fstatx(int fd, struct stat *buf, enum stat_flags flags);
-pid_t fork(int flags);
 
 END_DECLS

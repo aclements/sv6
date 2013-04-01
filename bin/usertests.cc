@@ -180,7 +180,7 @@ pipe1(void)
   if(pipe(fds) != 0){
     die("pipe() failed");
   }
-  pid = fork(0);
+  pid = fork();
   seq = 0;
   if(pid == 0){
     close(fds[0]);
@@ -214,7 +214,7 @@ pipe1(void)
     close(fds[0]);
     wait(NULL);
   } else {
-    die("fork(0) failed");
+    die("fork() failed");
   }
   printf("pipe1 ok\n");
 }
@@ -227,18 +227,18 @@ preempt(void)
   int pfds[2];
 
   printf("preempt: ");
-  pid1 = fork(0);
+  pid1 = fork();
   if(pid1 == 0)
     for(;;)
       ;
 
-  pid2 = fork(0);
+  pid2 = fork();
   if(pid2 == 0)
     for(;;)
       ;
 
   pipe(pfds);
-  pid3 = fork(0);
+  pid3 = fork();
   if(pid3 == 0){
     close(pfds[0]);
     if(write(pfds[1], "x", 1) != 1)
@@ -272,7 +272,7 @@ exitwait(void)
   int i, pid;
 
   for(i = 0; i < 100; i++){
-    pid = fork(0);
+    pid = fork();
     if(pid < 0){
       printf("fork failed\n");
       return;
@@ -297,7 +297,7 @@ mem(void)
 
   printf("mem test\n");
   ppid = getpid();
-  if((pid = fork(0)) == 0){
+  if((pid = fork()) == 0){
     m1 = 0;
     while((m2 = malloc(10001)) != 0){
       *(char**)m2 = (char*) m1;
@@ -337,7 +337,7 @@ sharedfd(void)
   if(fd < 0){
     die("fstests: cannot open sharedfd for writing");
   }
-  pid = fork(0);
+  pid = fork();
   memset(buf, pid==0?'c':'p', sizeof(buf));
   for(i = 0; i < 1000; i++){
     if(write(fd, buf, sizeof(buf)) != sizeof(buf)){
@@ -383,7 +383,7 @@ twofiles(void)
   unlink("f1");
   unlink("f2");
 
-  pid = fork(0);
+  pid = fork();
   if(pid < 0){
     printf("fork failed\n");
     return;
@@ -435,7 +435,7 @@ createdelete(void)
   char name[32];
 
   printf("createdelete test\n");
-  pid = fork(0);
+  pid = fork();
   if(pid < 0)
     die("fork failed");
 
@@ -586,7 +586,7 @@ concreate(void)
   for(i = 0; i < 40; i++){
     file[1] = '0' + i;
     unlink(file);
-    pid = fork(0);
+    pid = fork();
     if(pid && (i % 3) == 1){
       link("C0", file);
     } else if(pid == 0 && (i % 5) == 1){
@@ -626,7 +626,7 @@ concreate(void)
 
   for(i = 0; i < 40; i++){
     file[1] = '0' + i;
-    pid = fork(0);
+    pid = fork();
     if(pid < 0)
       die("fork failed");
     if(((i % 3) == 0 && pid == 0) ||
@@ -1108,7 +1108,7 @@ forktest(void)
 
   #define NFORK 1000
   for(n=0; n<1000; n++){
-    pid = fork(0);
+    pid = fork();
     if(pid < 0)
       break;
     if(pid == 0)
@@ -1127,7 +1127,7 @@ forktest(void)
 
 
   // tests return status from exit
-  pid = fork(0);
+  pid = fork();
   if(pid < 0)
     die("fork failed");
   if(pid == 0)
@@ -1191,7 +1191,7 @@ sbrktest(void)
     *b = 1;
     a = b + 1;
   }
-  pid = fork(0);
+  pid = fork();
   if(pid < 0)
     die("sbrk test fork failed");
   c = sbrk(1);
@@ -1249,7 +1249,7 @@ sbrktest(void)
   // can we read the kernel's memory?
   for(a = (char*)(640*1024); a < (char*)2000000; a += 50000){
     ppid = getpid();
-    pid = fork(0);
+    pid = fork();
     if(pid < 0)
       die("fork failed");
     if(pid == 0)
@@ -1266,7 +1266,7 @@ sbrktest(void)
   if(pipe(fds) != 0)
     die("pipe() failed");
   for(i = 0; i < sizeof(pids)/sizeof(pids[0]); i++){
-    if((pids[i] = fork(0)) == 0){
+    if((pids[i] = fork()) == 0){
       // allocate the full 632K
       sbrk((632 * 1024) - (uptr)sbrk(0));
       write(fds[1], "x", 1);
@@ -1307,7 +1307,7 @@ validatetest(void)
   hi = 0xFFFFFF0000000000ull + 16*4096;
 
   for(p = lo; p <= hi; p += 4096){
-    if((pid = fork(0)) == 0){
+    if((pid = fork()) == 0){
       // try to crash the kernel by passing in a badly placed integer
       if (pipe((int*)p) == 0)
         fprintf(stdout, "validatetest failed (pipe succeeded)\n");
@@ -1348,7 +1348,7 @@ bigargtest(void)
 {
   int pid;
 
-  pid = fork(0);
+  pid = fork();
   if(pid == 0){
     const char *args[32+1];
     int i;
@@ -1381,7 +1381,7 @@ unopentest(void)
 {
   fprintf(stdout, "concurrent unlink/open\n");
 
-  int pid = fork(0);
+  int pid = fork();
   if(pid == 0){
     while(1){
       for(int i = 0; i < 1; i++){
@@ -1455,7 +1455,7 @@ preads(void)
   close(fd);
 
   for (int i = 0; i < nprocs; i++) {
-    pid = fork(0);
+    pid = fork();
     if (pid < 0)
       die("preads: fork failed");
     if (pid == 0)
@@ -1629,7 +1629,7 @@ test_fault(char *p)
 
   if (pipe(fds) != 0)
     die("test_fault: pipe failed");
-  if ((pid = fork(0)) < 0)
+  if ((pid = fork()) < 0)
     die("test_fault: fork failed");
 
   if (pid == 0) {
@@ -1833,7 +1833,7 @@ writeprotecttest(void)
   if (res == MAP_FAILED)
     die("writeprotecttest: mmap failed");
 
-  int pid = fork(0);
+  int pid = fork();
   if (pid == 0)
   {
     buffer[1]++;
@@ -1849,7 +1849,7 @@ writeprotecttest(void)
   else if (pid > 0)
   {
     wait(NULL);
-    int pid = fork(0);
+    int pid = fork();
     if (pid == 0)
     {
       buffer[1]++;
@@ -1885,7 +1885,7 @@ cloexec(void)
   printf("cloexec\n");
 
   // Test normal FD inheritance
-  if (fork(0) == 0) {
+  if (fork() == 0) {
     close(1);
     int fd = open("cloexec", O_CREAT|O_WRONLY, 0666);
     assert(fd == 1);
@@ -1902,7 +1902,7 @@ cloexec(void)
   unlink("cloexec");
 
   // Test O_CLOEXEC
-  if (fork(0) == 0) {
+  if (fork() == 0) {
     close(1);
     int fd = open("cloexec", O_CREAT|O_WRONLY|O_CLOEXEC, 0666);
     assert(fd == 1);

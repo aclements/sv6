@@ -52,7 +52,7 @@ void child(int id)
     die("setaffinity err");
   uint64_t t0 = rdtsc();
   for (int i = 0; i < nfork; i++) {
-    int pid = xfork();
+    int pid = fork();
     if (pid < 0) {
       die("fork in child failed\n");
     }
@@ -84,7 +84,7 @@ main(int argc, char *argv[])
   uint64_t t0 = rdtsc();
   uint64_t usec0 = now_usec();
   for (int i = 0; i < ncore; i++) {
-    int pid = xfork();
+    int pid = fork();
     if (pid < 0) {
       die("fork failed");
     }

@@ -3,7 +3,6 @@
 #include <pthread.h>
 #include "user/util.h"
 #include <sys/wait.h>
-#include <unistd.h>
 #else
 #include "types.h"
 #include "pthread.h"
@@ -18,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 // That's ~1GB or so? Somewhere plenty high in the address space,
 // but a good bajillion bytes or so below USERTOP.
@@ -162,7 +162,7 @@ main(int argc, char * argv[])
     if (!consumers[i]) {
       continue;
     }
-    int pid = xfork();
+    int pid = fork();
     if (pid < 0)
       die("time_this: fork failed %s", argv[0]);
     if (pid == 0) {

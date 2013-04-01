@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static int cpu = 0;
 static int sec = 2;
@@ -165,7 +166,7 @@ main(int argc, char *argv[])
   ctrl_done();
 
   for (int i = 0; i < nproc; i++) {
-    int pid = fork(0);
+    int pid = fork();
     if (pid < 0)
       die("time_this: fork failed %s", argv[0]);
     if (pid == 0) {

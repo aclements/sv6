@@ -1,7 +1,6 @@
 #if defined(LINUX)
 #include "user/util.h"
 #include "types.h"
-#include <unistd.h>
 #include <assert.h>
 #include <sys/wait.h>
 #include "xsys.h"
@@ -15,6 +14,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/stat.h>
 
 #define CHUNKSZ 512
@@ -93,7 +93,7 @@ main(int ac, char **av)
   //mtenable("xv6-filebench");
   u64 t0 = rdtsc();
   for (int i = 0; i < nthread; i++) {
-    int pid = xfork();
+    int pid = fork();
     if (pid == 0) {
       bench(i, nloop, path);
     }

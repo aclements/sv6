@@ -4,8 +4,6 @@
 
 #if !defined(XV6_USER)
 
-#define xfork() fork()
-
 #if MTRACE
 #include "mtrace.h"
 #else
@@ -27,7 +25,6 @@
 
 #else // Must be xv6
 
-#define xfork() fork(0)
 #define xpthread_join(tid) waitpid(tid, NULL,0)
 
 #endif

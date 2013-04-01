@@ -105,7 +105,7 @@ main(int ac, char** av)
 
   uint64_t t0 = rdtsc();
   for(uint32_t i = 0; i < nthread; i++) {
-    int pid = xfork();
+    int pid = fork();
     if (pid == 0) {
       bench(i, nloop, path);
     } else if (pid < 0)

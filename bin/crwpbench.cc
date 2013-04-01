@@ -78,7 +78,7 @@ main(int ac, char** av)
 
   uint64_t t0 = rdtsc();
   for(int i = 0; i < nproc; i++) {
-    int pid = xfork();
+    int pid = fork();
     if (pid == 0) {
       bench(i, nloop);
     } else if (pid < 0)

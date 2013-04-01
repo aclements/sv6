@@ -4,6 +4,7 @@
 #include "pmc.hh"
 #include "bits.hh"
 #include <stdio.h>
+#include <unistd.h>
 
 #define CMN PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE
 
@@ -54,7 +55,7 @@ main(int ac, char * const av[])
   pmc_count pmc0 = pmc_count::read(0);
   u64 t0 = rdtsc();
 
-  int pid = fork(0);
+  int pid = fork();
   if (pid < 0)
     die("xtime: fork failed");
   

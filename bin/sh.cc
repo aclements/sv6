@@ -868,7 +868,7 @@ fork1(void)
 {
   int pid;
   
-  pid = xfork();
+  pid = fork();
   if (pid == -1)
     die("fork");
   return pid;

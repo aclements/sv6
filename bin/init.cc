@@ -8,6 +8,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 static const char *sh_argv[] = { "sh", 0 };
 static const char *app_argv[][MAXARG] = {
@@ -38,7 +39,7 @@ startone(const char * const *argv)
 {
   int pid;
 
-  pid = fork(0);
+  pid = fork();
   if(pid < 0){
     die("init: fork failed");
   }

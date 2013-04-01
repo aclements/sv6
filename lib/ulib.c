@@ -55,6 +55,12 @@ fstatat(int dirfd, const char *n, struct stat *st)
   return r;
 }
 
+pid_t
+fork(void)
+{
+  return fork_flags(0);
+}
+
 int
 atoi(const char *s)
 {

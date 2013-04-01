@@ -17,7 +17,7 @@
 
 //SYSCALL
 int
-sys_fork(int flags)
+sys_fork_flags(int flags)
 {
   clone_flags cflags = clone_flags::CLONE_ALL;
   if (flags & FORK_SHARE_VMAP)

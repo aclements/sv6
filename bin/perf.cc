@@ -82,7 +82,7 @@ main(int ac, char *av[])
   if (fd < 0)
     die("perf: open failed");
 
-  int pid = fork(0);
+  int pid = fork();
   if (pid < 0)
     die("perf: fork failed");
 

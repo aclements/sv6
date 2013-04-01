@@ -5,6 +5,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h>
 
 static void
 read_kstats(kstats *out)
@@ -25,7 +26,7 @@ main(int ac, char * const av[])
 
   read_kstats(&kstats_before);
 
-  int pid = fork(0);
+  int pid = fork();
   if (pid < 0)
     die("monkstats: fork failed");
 

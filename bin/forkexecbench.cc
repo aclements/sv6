@@ -3,6 +3,7 @@
 #include "mtrace.h"
 #include "amd64.h"
 #include <stdio.h>
+#include <unistd.h>
 
 #define NITERS 1024
 
@@ -12,7 +13,7 @@ execbench(void)
   u64 s = rdtsc();
   mtenable("xv6-forkexecbench");
   for (int i = 0; i < NITERS; i++) {
-    int pid = fork(0);
+    int pid = fork();
     if (pid < 0) {
       die("fork error");
     }

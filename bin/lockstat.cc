@@ -4,6 +4,7 @@
 #include "amd64.h"
 #include "uk/lockstat.h"
 #include <stdio.h>
+#include <unistd.h>
 
 static void
 xwrite(int fd, char c)
@@ -70,7 +71,7 @@ main(int ac, char * const av[])
   xwrite(fd, '2');
   xwrite(fd, '3');
 
-  int pid = fork(0);
+  int pid = fork();
   if (pid < 0)
     die("lockstat: fork failed");
 
