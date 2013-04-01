@@ -15,10 +15,12 @@ class mfile;
 class mdev;
 class msock;
 class mlinkref;
+class mfs;
 
 class mnode : public refcache::weak_referenced
 {
 private:
+  friend class mfs;
   struct inumber {
     u64 v_;
     static const int type_bits = 8;
@@ -47,9 +49,6 @@ public:
     };
   };
 
-  static sref<mnode> get(u64 n);
-  static mlinkref alloc(u8 type);
-
   void cache_pin(bool flag);
   u8 type() const { return inumber(inum_).type(); }
 
@@ -68,12 +67,13 @@ public:
     void onzero() override;
   };
 
+  mfs* const fs_;
   const u64 inum_;
   linkcount nlink_ __mpalign__;
   __padout__;
 
 protected:
-  mnode(u64 inum);
+  mnode(mfs* fs, u64 inum);
 
 private:
   void onzero() override;
@@ -134,13 +134,26 @@ private:
   sref<mnode::linkcount> l_;
 };
 
+class mfs {
+private:
+  friend class mnode;
+  percpu<u64> next_inum_;
+
+public:
+  NEW_DELETE_OPS(mfs);
+
+  sref<mnode> get(u64 n);
+  mlinkref alloc(u8 type);
+};
+
 
 class mdir : public mnode {
 private:
   // ~32K cache
-  mdir(u64 inum) : mnode(inum), map_(1367) {}
+  mdir(mfs* fs, u64 inum) : mnode(fs, inum), map_(1367) {}
   NEW_DELETE_OPS(mdir);
   friend class mnode;
+  friend class mfs;
 
   // XXX We should deal with varying directory sizes better.  One way
   // would be to make this a resizable hash table.  Linux uses a
@@ -186,7 +199,7 @@ public:
 
   sref<mnode> lookup(const strbuf<DIRSIZ>& name) const {
     if (name == ".")
-      return mnode::get(inum_);
+      return fs_->get(inum_);
 
     u64 iprev = -1;
     for (;;) {
@@ -194,7 +207,7 @@ public:
       if (!map_.lookup(name, &inum))
         return sref<mnode>();
 
-      sref<mnode> m = mnode::get(inum);
+      sref<mnode> m = fs_->get(inum);
       if (m)
         return m;
 
@@ -305,9 +318,10 @@ mnode::as_dir() const
 
 class mfile : public mnode {
 private:
-  mfile(u64 inum) : mnode(inum), size_(0) {}
+  mfile(mfs* fs, u64 inum) : mnode(fs, inum), size_(0) {}
   NEW_DELETE_OPS(mfile);
   friend class mnode;
+  friend class mfs;
 
   struct page_state {
     enum {
@@ -385,9 +399,10 @@ mnode::as_file() const
 
 class mdev : public mnode {
 private:
-  mdev(u64 inum) : mnode(inum), major_(0), minor_(0) {}
+  mdev(mfs* fs, u64 inum) : mnode(fs, inum), major_(0), minor_(0) {}
   NEW_DELETE_OPS(mdev);
   friend class mnode;
+  friend class mfs;
 
   u16 major_;
   u16 minor_;
@@ -420,9 +435,10 @@ mnode::as_dev() const
 
 class msock : public mnode {
 private:
-  msock(u64 inum) : mnode(inum), localsock_(nullptr) {}
+  msock(mfs* fs, u64 inum) : mnode(fs, inum), localsock_(nullptr) {}
   NEW_DELETE_OPS(msock);
   friend class mnode;
+  friend class mfs;
 
   localsock* localsock_;
 

@@ -378,7 +378,7 @@ create(sref<mnode> cwd, const char *path, short type, short major, short minor, 
     default:     cprintf("unhandled type %d\n", type);
     }
 
-    auto ilink = mnode::alloc(mtype);
+    auto ilink = md->fs_->alloc(mtype);
     mf = ilink.mn();
 
     if (mtype == mnode::types::dir) {

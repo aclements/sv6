@@ -6,6 +6,7 @@
 #include "file.hh"
 
 u64 root_inum;
+mfs* root_fs;
 
 // Copy the next path element from path into name.
 // Update the pointer to the element following the copied one.
@@ -58,7 +59,7 @@ namex(sref<mnode> cwd, const char* path, bool nameiparent, strbuf<DIRSIZ>* name)
   sref<mnode> m;
 
   if (*path == '/')
-    m = mnode::get(root_inum);
+    m = root_fs->get(root_inum);
   else
     m = cwd;
 

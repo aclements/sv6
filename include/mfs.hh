@@ -3,6 +3,7 @@
 #include "mnode.hh"
 
 extern u64 root_inum;
+extern mfs* root_fs;
 sref<mnode> namei(sref<mnode> cwd, const char* path);
 sref<mnode> nameiparent(sref<mnode> cwd, const char* path, strbuf<DIRSIZ>* buf);
 s64 readi(sref<mnode> m, char* buf, u64 start, u64 nbytes);

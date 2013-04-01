@@ -23,7 +23,7 @@ file_inode::stat(struct stat *st, enum stat_flags flags)
   }
 
   st->st_mode = stattype << __S_IFMT_SHIFT;
-  st->st_dev = 1;
+  st->st_dev = (uintptr_t) ip->fs_;
   st->st_ino = ip->inum_;
   if (!(flags & STAT_OMIT_NLINK))
     st->st_nlink = ip->nlink_.get_consistent();

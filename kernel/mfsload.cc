@@ -52,7 +52,7 @@ load_file(sref<inode> i, sref<mnode> m)
 static sref<mnode>
 mnode_alloc(u64 inum, u8 mtype)
 {
-  auto m = mnode::alloc(mtype);
+  auto m = root_fs->alloc(mtype);
   inum_to_mnode->insert(inum, m.mn());
   return m.mn();
 }
@@ -86,6 +86,8 @@ load_inum(u64 inum)
 void
 mfsload()
 {
+  root_fs = new mfs();
+
   inum_to_mnode = new linearhash<u64, sref<mnode>>(4099);
   root_inum = load_inum(1)->inum_;
   /* the root inode gets an extra reference because of its own ".." */

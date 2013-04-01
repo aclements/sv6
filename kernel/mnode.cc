@@ -8,11 +8,10 @@
 namespace {
   // 32MB icache (XXX make this proportional to physical RAM)
   weakcache<u64, mnode, 32 << 20> mnode_cache;
-  DEFINE_PERCPU(u64, next_inumber);
 };
 
 sref<mnode>
-mnode::get(u64 inum)
+mfs::get(u64 inum)
 {
   for (;;) {
     sref<mnode> m = mnode_cache.lookup(inum);
@@ -29,27 +28,27 @@ mnode::get(u64 inum)
 }
 
 mlinkref
-mnode::alloc(u8 type)
+mfs::alloc(u8 type)
 {
   scoped_cli cli;
-  auto inum = inumber(type, myid(), (*next_inumber)++).v_;
+  auto inum = mnode::inumber(type, myid(), (*next_inum_)++).v_;
 
   sref<mnode> m;
   switch (type) {
-  case types::dir:
-    m = sref<mnode>::transfer(new mdir(inum));
+  case mnode::types::dir:
+    m = sref<mnode>::transfer(new mdir(this, inum));
     break;
 
-  case types::file:
-    m = sref<mnode>::transfer(new mfile(inum));
+  case mnode::types::file:
+    m = sref<mnode>::transfer(new mfile(this, inum));
     break;
 
-  case types::dev:
-    m = sref<mnode>::transfer(new mdev(inum));
+  case mnode::types::dev:
+    m = sref<mnode>::transfer(new mdev(this, inum));
     break;
 
-  case types::sock:
-    m = sref<mnode>::transfer(new msock(inum));
+  case mnode::types::sock:
+    m = sref<mnode>::transfer(new msock(this, inum));
     break;
 
   default:
@@ -66,7 +65,8 @@ mnode::alloc(u8 type)
   return mlink;
 }
 
-mnode::mnode(u64 inum) : inum_(inum), cache_pin_(false), valid_(false)
+mnode::mnode(mfs* fs, u64 inum)
+  : fs_(fs), inum_(inum), cache_pin_(false), valid_(false)
 {
   kstats::inc(&kstats::mnode_alloc);
 }
