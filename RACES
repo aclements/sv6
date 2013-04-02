@@ -19,3 +19,6 @@ c88e0de458a0da84c559e89586102dc3b1403fb8
 afbbc8342a1518805d2b094483f0ccc4629bd26a
   reading size_ in file_inode::stat leaked out of the seqlock reader
 
+46147734a78f6f21d69eceb97a3f58c9f867cfdf
+  refcache must start from a non-zero value
+
