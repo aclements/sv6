@@ -244,6 +244,7 @@ main(int ac, char** av)
 
     if (run_threads) {
       run_test(tp, tf, &fstests[t], 0, true);
+      printf("%s: threads done\n", fstests[t].testname);
     }
   }
 }
