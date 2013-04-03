@@ -158,7 +158,7 @@ struct vmap : public referenced {
   u64 internal_pages() const { return cache.internal_pages(); }
 
   // Set write permission bit in vmdesc
-  int set_write_permission(uptr start, uptr len, bool is_readonly = false);
+  int set_write_permission(uptr start, uptr len, bool is_readonly, bool is_cow);
 
   uptr brk_;                    // Top of heap
 

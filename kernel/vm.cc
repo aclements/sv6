@@ -35,7 +35,8 @@ void to_stream(class print_stream *s, const vmdesc &vmd)
         {"LOCK", vmdesc::FLAG_LOCK},
         {"MAPPED", vmdesc::FLAG_MAPPED},
         {"COW", vmdesc::FLAG_COW},
-        {"ANON", vmdesc::FLAG_ANON}}), " ");
+        {"ANON", vmdesc::FLAG_ANON},
+        {"WRITE", vmdesc::FLAG_WRITE}}), " ");
   if (vmd.page)
     s->print((void*)vmd.page->pa(), "}");
   else
@@ -337,9 +338,6 @@ vmap::pagefault(uptr va, u32 err)
     if (!page)
       return -1;
 
-    // Record that we wrote this physical page
-    mtwriteavar("ppn:%#lx", va >> PGSHIFT);
-
     // If this is a read COW fault, we can reuse the COW page, but
     // don't mark it writable!
     if (desc.flags & vmdesc::FLAG_COW)
@@ -396,7 +394,11 @@ vmap::pagelookup(uptr va)
   if (!it.is_set())
     return nullptr;
 
-  char* kptr = (char*)(ensure_page(it, access_type::READ)->va());
+  page_info* pi = ensure_page(it, access_type::READ);
+  if (!pi)
+    return nullptr;
+
+  char* kptr = (char*)pi->va();
   return &kptr[va & (PGSIZE-1)];
 }
 
@@ -434,7 +436,10 @@ vmap::copyout(uptr va, const void *p, u64 len)
     if (!it.is_set())
       return -1;
     uptr va0 = (uptr)PGROUNDDOWN(va);
-    char *p0 = (char*)ensure_page(it, access_type::READ)->va();
+    page_info* pi = ensure_page(it, access_type::READ);
+    if (!pi)
+      return -1;
+    char *p0 = (char*)pi->va();
     uptr n = PGSIZE - (va - va0);
     if(n > len)
       n = len;
@@ -447,7 +452,7 @@ vmap::copyout(uptr va, const void *p, u64 len)
 }
 
 int
-vmap::set_write_permission(uptr start, uptr len, bool is_readonly)
+vmap::set_write_permission(uptr start, uptr len, bool is_readonly, bool is_cow)
 {
   assert(start % PGSIZE == 0);
   assert(len % PGSIZE == 0);
@@ -462,6 +467,10 @@ vmap::set_write_permission(uptr start, uptr len, bool is_readonly)
       desc.flags &= ~vmdesc::FLAG_WRITE;
     else
       desc.flags |= vmdesc::FLAG_WRITE;
+    if (is_cow)
+      desc.flags |= vmdesc::FLAG_COW;
+    else
+      desc.flags &= ~vmdesc::FLAG_COW;
   }
   return 0;
 }
@@ -547,58 +556,64 @@ page_info *
 vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
                   bool *allocated)
 {
+  if (allocated)
+    *allocated = false;
+
   auto &desc = *it;
   bool need_copy = (type == access_type::WRITE &&
                     (desc.flags & vmdesc::FLAG_COW));
-  if (desc.page && !need_copy) {
-    if (allocated)
-      *allocated = false;
+  if (desc.page && !need_copy)
     return desc.page.get();
+
+  sref<page_info> page = desc.page;
+  if (!page) {
+    if (desc.flags & vmdesc::FLAG_ANON) {
+      assert(!(desc.flags & vmdesc::FLAG_COW));
+      if (allocated)
+        *allocated = true;
+      char *p = zalloc("(vmap::pagelookup)");
+      if (!p)
+        throw_bad_alloc();
+      page = sref<page_info>::transfer(new(page_info::of(p)) page_info());
+    } else {
+      u64 page_idx = (it.index() * PGSIZE - desc.start) / PGSIZE;
+      page = desc.inode->as_file()->get_page(page_idx);
+      if (!page)
+        return nullptr;
+    }
   }
 
-  // Allocate a new page
-  if (allocated)
-    *allocated = true;
-  // XXX(austin) No need to zalloc if this is a file mapping and we
-  // memset the tail
-  char *p = zalloc("(vmap::pagelookup)");
-  if (!p)
-    throw_bad_alloc();
-  page_info *page = new(page_info::of(p)) page_info();
-
   if (need_copy) {
-    // This is a COW fault; copy in to the new page
+    // This is a COW fault; copy in to a new page
+    if (allocated)
+      *allocated = true;
+    char *p = zalloc("(vmap::pagelookup)");
+    if (!p)
+      throw_bad_alloc();
+
     if (SDEBUG)
-      sdebug.println("vm: COW copy to ", (void*)p, " from ", desc.page->va(),
-                     ' ', desc.page.get());
-    assert(desc.page);
-    memmove(p, desc.page->va(), PGSIZE);
-  } else if (!(desc.flags & vmdesc::FLAG_ANON)) {
-    // This is a file mapping; read in the page
-    // XXX(austin) readi can sleep, but we're holding a spinlock
-    if (readi(desc.inode, p, it.index() * PGSIZE - desc.start,
-              PGSIZE) < 0) {
-      kfree(p);
-      return nullptr;
-    }
+      sdebug.println("vm: COW copy to ", (void*)p, " from ", page->va(),
+                     ' ', page.get());
+    memmove(p, page->va(), PGSIZE);
+    page = sref<page_info>::transfer(new(page_info::of(p)) page_info());
   }
 
   // Install the page in the canonical page table
   if (it.base_span() == 1) {
     // Safe to update in place
-    desc.page = sref<page_info>::transfer(page);
+    desc.page = page;
     if (need_copy)
       desc.flags &= ~vmdesc::FLAG_COW;
   } else {
     vmdesc n(desc);
-    n.page = sref<page_info>::transfer(page);
+    n.page = page;
     if (need_copy)
       n.flags &= ~vmdesc::FLAG_COW;
     // XXX(austin) Fill could do a move in this case, which would
     // save extraneous reference counting
     vpfs_.fill(it, std::move(n));
   }
-  return page;
+  return page.get();
 }
 
 void
