@@ -14,6 +14,8 @@
 #include "libutil.h"
 #include "spinbarrier.hh"
 
+extern char _end[];
+
 class double_barrier {
   spin_barrier enter_;
   spin_barrier exit_;
@@ -56,6 +58,7 @@ struct testfunc {
 static void*
 testfunc_thread(void* arg)
 {
+  madvise(0, (size_t) _end, MADV_WILLNEED);
   testfunc* f = (testfunc*) arg;
   f->run();
   return nullptr;
@@ -86,6 +89,7 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
     assert(pids[p] >= 0);
 
     if (pids[p] == 0) {
+      madvise(0, (size_t) _end, MADV_WILLNEED);
       tp[p].run();
 
       pthread_t tid[2];
@@ -218,6 +222,8 @@ main(int ac, char** av)
                                   MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   assert(tf != MAP_FAILED);
   assert(2*sizeof(*tf) <= 4096);
+
+  madvise(0, (size_t) _end, MADV_WILLNEED);
 
   for (uint32_t t = min; t <= max && fstests[t].testname; t++) {
     if (check_commutativity) {
