@@ -7,5 +7,6 @@ BEGIN_DECLS
 void *mmap(void *addr, size_t length, int prot, int flags,
            int fd, off_t offset);
 int munmap(void *addr, size_t length);
+int madvise(void *addr, size_t length, int advice);
 
 END_DECLS

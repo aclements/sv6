@@ -176,6 +176,24 @@ sys_munmap(userptr<void> addr, size_t len)
 }
 
 //SYSCALL
+int
+sys_madvise(userptr<void> addr, size_t len, int advice)
+{
+  uptr align_addr = PGROUNDDOWN((uptr)addr);
+  uptr align_len = PGROUNDUP((uptr)addr + len) - align_addr;
+
+  switch (advice) {
+  case MADV_WILLNEED:
+    if (myproc()->vmap->willneed(align_addr, align_len) < 0)
+      return -1;
+    return 0;
+
+  default:
+    return -1;
+  }
+}
+
+//SYSCALL
 long
 sys_pt_pages(void)
 {

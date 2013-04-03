@@ -260,6 +260,42 @@ vmap::remove(uptr start, uptr len)
 }
 
 int
+vmap::willneed(uptr start, uptr len)
+{
+  auto begin = vpfs_.find(start / PGSIZE);
+  auto end = vpfs_.find((start + len) / PGSIZE);
+  auto lock = vpfs_.acquire(begin, end);
+
+  page_holder pages;
+  mmu::shootdown shootdown;
+
+  for (auto it = begin; it < end; it += it.span()) {
+    if (!it.is_set())
+      continue;
+
+    bool writable = (it->flags & vmdesc::FLAG_WRITE);
+    if (writable && (it->flags & vmdesc::FLAG_COW)) {
+      sref<page_info> old_page = it->page;
+      pages.add(std::move(old_page));
+      cache.invalidate(it.index() * PGSIZE, PGSIZE, it, &shootdown);
+    }
+
+    page_info *page = ensure_page(it, writable ? access_type::WRITE
+                                               : access_type::READ);
+    if (!page)
+      continue;
+
+    if (it->flags & vmdesc::FLAG_COW || !writable)
+      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U);
+    else
+      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+  }
+
+  shootdown.perform();
+  return 0;
+}
+
+int
 vmap::dup_page(uptr dest, uptr src)
 {
   auto srcit = vpfs_.find(src / PGSIZE);

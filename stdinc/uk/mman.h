@@ -12,3 +12,5 @@
 #define MAP_ANONYMOUS 0x8
 
 #define MAP_FAILED ((void*)-1)
+
+#define MADV_WILLNEED 3
