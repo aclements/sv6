@@ -45,6 +45,8 @@ struct file {
                            size_t *addrlen)
   { return -1; }
 
+  virtual sref<mnode> get_mnode() { return sref<mnode>(); }
+
   virtual void inc() = 0;
   virtual void dec() = 0;
 
@@ -77,6 +79,8 @@ public:
   {
     delete this;
   }
+
+  sref<mnode> get_mnode() override { return ip; }
 };
 
 struct file_pipe_reader : public refcache::referenced, public file {

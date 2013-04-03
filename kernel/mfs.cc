@@ -7,6 +7,7 @@
 
 u64 root_inum;
 mfs* root_fs;
+mfs* anon_fs;
 
 // Copy the next path element from path into name.
 // Update the pointer to the element following the copied one.

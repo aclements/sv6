@@ -36,7 +36,9 @@ void to_stream(class print_stream *s, const vmdesc &vmd)
         {"MAPPED", vmdesc::FLAG_MAPPED},
         {"COW", vmdesc::FLAG_COW},
         {"ANON", vmdesc::FLAG_ANON},
-        {"WRITE", vmdesc::FLAG_WRITE}}), " ");
+        {"WRITE", vmdesc::FLAG_WRITE},
+        {"SHARED", vmdesc::FLAG_SHARED},
+      }), " ");
   if (vmd.page)
     s->print((void*)vmd.page->pa(), "}");
   else
@@ -150,7 +152,7 @@ vmap::copy()
 
       // If the original vmdesc isn't COW, mark it so and fix the page
       // table.
-      if (it->page && !(it->flags & vmdesc::FLAG_COW)) {
+      if (it->page && !(it->flags & vmdesc::FLAG_SHARED) && !(it->flags & vmdesc::FLAG_COW)) {
         if (SDEBUG)
           sdebug.println("vm: mark COW");
         it->flags |= vmdesc::FLAG_COW;
@@ -216,7 +218,13 @@ again:
 
     cache.invalidate(start, len, begin, &shootdown);
 
-    vpfs_.fill(begin, end, desc, !fixed);
+    if (!fixed) {
+      vmdesc d2(desc);
+      d2.start += start;
+      vpfs_.fill(begin, end, d2, true);
+    } else {
+      vpfs_.fill(begin, end, desc);
+    }
 
     shootdown.perform();
   }

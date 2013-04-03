@@ -40,6 +40,9 @@ struct vmdesc : public mmu::page_tracker
 
     // Set if the page is writeable
     FLAG_WRITE = 1<<4,
+
+    // Set if the page should be shared across fork().
+    FLAG_SHARED = 1<<5,
   };
 
   // Flags

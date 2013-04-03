@@ -87,6 +87,7 @@ void
 mfsload()
 {
   root_fs = new mfs();
+  anon_fs = new mfs();
 
   inum_to_mnode = new linearhash<u64, sref<mnode>>(4099);
   root_inum = load_inum(1)->inum_;

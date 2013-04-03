@@ -109,20 +109,36 @@ void *
 sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
          off_t offset)
 {
-  mt_ascope ascope("%s(%p,%lu,%#x,%#x,%d,%#lx)",
-                   __func__, addr.unsafe_get(), len, prot, flags, fd, offset);
+  sref<mnode> m;
 
   if (!(prot & (PROT_READ | PROT_WRITE))) {
     cprintf("not implemented: !(prot & (PROT_READ | PROT_WRITE))\n");
     return MAP_FAILED;
   }
-  if (flags & MAP_SHARED) {
-    cprintf("not implemented: (flags & MAP_SHARED)\n");
-    return MAP_FAILED;
-  }
-  if (!(flags & MAP_ANONYMOUS)) {
-    cprintf("not implemented: !(flags & MAP_ANONYMOUS)\n");
-    return MAP_FAILED;
+
+  if (flags & MAP_ANONYMOUS) {
+    if (offset)
+      return MAP_FAILED;
+
+    if (flags & MAP_SHARED) {
+      m = anon_fs->alloc(mnode::types::file).mn();
+      auto resizer = m->as_file()->write_size();
+      for (size_t i = 0; i < len; i += PGSIZE) {
+        void* p = zalloc("MAP_ANON|MAP_SHARED");
+        if (!p)
+          throw_bad_alloc();
+        auto pi = sref<page_info>::transfer(new (page_info::of(p)) page_info());
+        resizer.resize_append(i + PGSIZE, pi);
+      }
+    }
+  } else {
+    sref<file> f = myproc()->ftable->getfile(fd);
+    if (!f)
+      return MAP_FAILED;
+
+    m = f->get_mnode();
+    if (!m || m->type() != mnode::types::file)
+      return MAP_FAILED;
   }
 
   uptr start = PGROUNDDOWN((uptr)addr);
@@ -131,18 +147,19 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
   if ((flags & MAP_FIXED) && start != (uptr)addr)
     return MAP_FAILED;
 
-#if MTRACE
-  if (addr != 0) {
-    for (uptr i = start / PGSIZE; i < end / PGSIZE; i++)
-      mtwriteavar("pte:%p.%#lx", myproc()->vmap, i);
+  vmdesc desc;
+  if (!m) {
+    desc = vmdesc::anon_desc;
+  } else {
+    desc = vmdesc(m, start - offset);
   }
-#endif
-
-  uptr r;
-  vmdesc desc = vmdesc::anon_desc;
   if (!(prot & PROT_WRITE))
     desc.flags &= ~vmdesc::FLAG_WRITE;
-  r = myproc()->vmap->insert(desc, start, end - start);
+  if (flags & MAP_SHARED)
+    desc.flags |= vmdesc::FLAG_SHARED;
+  if (m && (flags & MAP_PRIVATE))
+    desc.flags |= vmdesc::FLAG_COW;
+  uptr r = myproc()->vmap->insert(desc, start, end - start);
   return (void*)r;
 }
 
@@ -150,12 +167,6 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
 int
 sys_munmap(userptr<void> addr, size_t len)
 {
-#if MTRACE
-  mt_ascope ascope("%s(%p,%#lx)", __func__, addr.unsafe_get(), len);
-  for (uptr i = addr / PGSIZE; i < PGROUNDUP(addr + len) / PGSIZE; i++)
-    mtwriteavar("pte:%p.%#lx", myproc()->vmap, i);
-#endif
-
   uptr align_addr = PGROUNDDOWN((uptr)addr);
   uptr align_len = PGROUNDUP((uptr)addr + len) - align_addr;
   if (myproc()->vmap->remove(align_addr, align_len) < 0)
