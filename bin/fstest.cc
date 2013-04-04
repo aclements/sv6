@@ -29,7 +29,6 @@ public:
 
 struct testproc {
   double_barrier setup;
-  double_barrier test;
   std::atomic<void (*)(void)> setupf;
 
   testproc(void (*s)(void)) : setupf(s) {}
@@ -78,11 +77,11 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
 
   pid_t pids[2] = { 0, 0 };
   for (int p = 0; p < 2; p++) {
-    bool needed = false;
+    int nfunc = 0;
     for (int f = 0; f < 2; f++)
       if (t->func[f].callproc == p)
-        needed = true;
-    if (!needed)
+        nfunc++;
+    if (nfunc == 0)
       continue;
 
     pids[p] = fork();
@@ -92,23 +91,22 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
       madvise(0, (size_t) _end, MADV_WILLNEED);
       tp[p].run();
 
+      int ndone = 0;
       pthread_t tid[2];
       for (int f = 0; f < 2; f++) {
         if (t->func[f].callproc == p) {
           if (do_pin)
             setaffinity(f);
-          pthread_create(&tid[f], 0, testfunc_thread, (void*) &tf[f]);
+          ndone++;
+          if (ndone == nfunc)
+            testfunc_thread(&tf[f]);
+          else
+            pthread_create(&tid[f], 0, testfunc_thread, (void*) &tf[f]);
         }
       }
 
-      if (do_pin)
-        setaffinity(2);
-      tp[p].test.sync();
-
-      for (int f = 0; f < 2; f++)
-        if (t->func[f].callproc == p)
-          pthread_join(tid[f], 0);
-
+      if (nfunc == 2)
+        pthread_join(tid[0], nullptr);
       exit(0);
     }
   }
@@ -117,7 +115,6 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
   for (int p = 0; p < 2; p++) if (pids[p]) tp[p].setup.sync();
   t->setup_final();
 
-  for (int p = 0; p < 2; p++) if (pids[p]) tp[p].test.enter();
   for (int i = 0; i < 2; i++) tf[i].start.enter();
 
   char mtname[64];
@@ -132,7 +129,6 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
   mtdisable(mtname);
 
   for (int i = 0; i < 2; i++) tf[i].stop.exit();
-  for (int p = 0; p < 2; p++) if (pids[p]) tp[p].test.exit();
 
   for (int p = 0; p < 2; p++)
     if (pids[p])
