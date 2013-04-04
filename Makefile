@@ -15,7 +15,11 @@ O  	   = o.$(HW)
 ifeq ($(HW),linux)
 PLATFORM   := native
 else
+ifeq ($(HW),linuxmtrace)
+PLATFORM   := native
+else
 PLATFORM   := xv6
+endif
 endif
 
 ifeq ($(HW),codex)

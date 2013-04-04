@@ -118,6 +118,9 @@
 #define NCPU          256
 #define MTRACE        0
 // No kernel, so other options aren't set
+#elif defined(HW_linuxmtrace)
+#define NCPU          256
+#define MTRACE        1
 #else
 #error "Unknown HW"
 #endif
