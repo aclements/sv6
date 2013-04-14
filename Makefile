@@ -165,7 +165,7 @@ $(O)/fs.img: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
 QEMUOPTS = -smp $(QEMUSMP) -m 512 -serial mon:stdio -nographic \
 	-numa node -numa node \
 	-net user -net nic,model=e1000 \
-	-redir tcp:2323::23 -redir tcp:8080::80 \
+	$(if $(QEMUNOREDIR),,-redir tcp:2323::23 -redir tcp:8080::80) \
 	$(if $(RUN),-append "\$$ $(RUN)",)
 
 qemu: $(KERN)
@@ -190,7 +190,10 @@ MTRACEOPTS = -rtc clock=vm -mtrace-enable -mtrace-file $(MTRACEOUT) \
 $(MTRACEOUT): mscan.kern mscan.syms 
 	$(Q)rm -f $(MTRACEOUT)
 	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel mscan.kern -s
-.PHONY: $(MTRACEOUT)
+$(MTRACEOUT)-scripted:
+	$(Q)rm -f $(MTRACEOUT)
+	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel mscan.kern
+.PHONY: $(MTRACEOUT) $(MTRACEOUT)-scripted
 
 mscan.out: $(QEMUSRC)/mtrace-tools/mscan $(MTRACEOUT)
 	$(QEMUSRC)/mtrace-tools/mscan > $@ || (rm -f $@; exit 2)
