@@ -184,14 +184,15 @@ mscan.syms: $(KERN)
 mscan.kern: $(KERN)
 	cp $< $@
 
-MTRACEOPTS = -rtc clock=vm -mtrace-enable -mtrace-file mtrace.out \
+MTRACEOUT ?= mtrace.out
+MTRACEOPTS = -rtc clock=vm -mtrace-enable -mtrace-file $(MTRACEOUT) \
 	     -mtrace-calls
-mtrace.out: mscan.kern mscan.syms 
-	$(Q)rm -f mtrace.out
+$(MTRACEOUT): mscan.kern mscan.syms 
+	$(Q)rm -f $(MTRACEOUT)
 	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel mscan.kern -s
-.PHONY: mtrace.out
+.PHONY: $(MTRACEOUT)
 
-mscan.out: $(QEMUSRC)/mtrace-tools/mscan mtrace.out
+mscan.out: $(QEMUSRC)/mtrace-tools/mscan $(MTRACEOUT)
 	$(QEMUSRC)/mtrace-tools/mscan > $@ || (rm -f $@; exit 2)
 
 mscan.sorted: mscan.out $(QEMUSRC)/mtrace-tools/sersec-sort
