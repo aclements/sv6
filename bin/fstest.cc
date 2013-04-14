@@ -144,7 +144,7 @@ static bool run_threads = false;
 static void
 usage(const char* prog)
 {
-  fprintf(stderr, "Usage: %s [-v] [-c] [-t] [min[-max]]\n", prog);
+  fprintf(stderr, "Usage: %s [-v] [-c] [-t] [-n NPARTS] [-p THISPART] [min[-max]]\n", prog);
 }
 
 int
@@ -152,9 +152,15 @@ main(int ac, char** av)
 {
   uint32_t min = 0;
   uint32_t max = UINT_MAX;
+  int nparts = -1;
+  int thispart = -1;
+
+  uint32_t ntests = 0;
+  for (ntests = min; fstests[ntests].testname; ntests++)
+    ;
 
   for (;;) {
-    int opt = getopt(ac, av, "vct");
+    int opt = getopt(ac, av, "vctp:n:");
     if (opt == -1)
       break;
 
@@ -169,6 +175,14 @@ main(int ac, char** av)
 
     case 't':
       run_threads = true;
+      break;
+
+    case 'n':
+      nparts = atoi(optarg);
+      break;
+
+    case 'p':
+      thispart = atoi(optarg);
       break;
 
     default:
@@ -186,6 +200,15 @@ main(int ac, char** av)
       min = atoi(av[optind]);
       max = atoi(dash + 1);
     }
+  } else if (nparts >= 0 || thispart >= 0) {
+    if (nparts < 0 || thispart < 0) {
+      usage(av[0]);
+      return -1;
+    }
+
+    uint32_t partsize = (ntests + nparts - 1) /nparts;
+    min = partsize * thispart;
+    max = partsize * (thispart + 1) - 1;
   }
 
   if (!check_commutativity && !run_threads) {
@@ -221,7 +244,7 @@ main(int ac, char** av)
 
   madvise(0, (size_t) _end, MADV_WILLNEED);
 
-  for (uint32_t t = min; t <= max && fstests[t].testname; t++) {
+  for (uint32_t t = min; t <= max && t < ntests; t++) {
     if (check_commutativity) {
       run_test(tp, tf, &fstests[t], 0, false);
       int ra0 = tf[0].retval;
