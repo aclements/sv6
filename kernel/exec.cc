@@ -295,6 +295,7 @@ load_image(proc *p, const char *path, const char * const *argv,
   p->tf->r13 = elf->phnum;   // AT_PHNUM
   p->run_cpuid_ = myid();
   p->data_cpuid = myid();
+  memset(p->sig, 0, sizeof(p->sig));
 
   const char *s, *last;
   for(last=s=path; *s; s++)

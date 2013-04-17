@@ -9,6 +9,7 @@
 #include "sched.hh"
 #include "mnode.hh"
 #include "vm.hh"
+#include <uk/signal.h>
 
 struct pgmap;
 struct gc_handle;
@@ -107,6 +108,7 @@ struct proc : public rcu_freed, public sched_link {
   u8 exception_buf[256];
   u64 magic;
   uptr unmapped_hint;
+  sigaction sig[NSIG];
 
   static proc* alloc();
   void         set_state(procstate_t s);
@@ -118,6 +120,8 @@ struct proc : public rcu_freed, public sched_link {
   static u64   hash(const u32& p);
 
   void do_gc(void) override { delete this; }
+
+  bool deliver_signal(int signo);
 
 private:
   proc(int npid);

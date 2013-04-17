@@ -280,8 +280,14 @@ trap(struct trapframe *tf)
       goto out;
     }
 
-    if (tf->trapno == T_PGFLT && do_pagefault(tf) == 0)
-      return;
+    if (tf->trapno == T_PGFLT) {
+      if (do_pagefault(tf) == 0)
+        return;
+
+      // XXX distinguish between SIGSEGV and SIGBUS?
+      if (myproc()->deliver_signal(SIGSEGV))
+        return;
+    }
 
     if (myproc() == 0 || (tf->cs&3) == 0)
       kerneltrap(tf);

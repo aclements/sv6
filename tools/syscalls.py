@@ -29,6 +29,7 @@ def main():
         print "#include \"types.h\""
         print "#include \"kernel.hh\""
         print "#include <uk/unistd.h>"
+        print "#include <uk/signal.h>"
         print
         for syscall in syscalls:
             print "extern %s %s(%s);" % (syscall.rettype, syscall.kname,

@@ -303,3 +303,16 @@ sys_dup_page(userptr<void> dest, userptr<void> src)
 {
   return myproc()->vmap->dup_page((uptr)dest, (uptr)src);
 }
+
+//SYSCALL
+int
+sys_sigaction(int signo, userptr<struct sigaction> act, userptr<struct sigaction> oact)
+{
+  if (signo < 0 || signo >= NSIG)
+    return -1;
+  if (oact && !oact.store(&myproc()->sig[signo]))
+    return -1;
+  if (act && !act.load(&myproc()->sig[signo]))
+    return -1;
+  return 0;
+}

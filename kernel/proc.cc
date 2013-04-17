@@ -52,6 +52,7 @@ proc::proc(int npid) :
   memset(&cv_waiters, 0, sizeof(cv_waiters));
   memset(&cv_sleep, 0, sizeof(cv_sleep));
   memset(__cxa_eh_global, 0, sizeof(__cxa_eh_global));
+  memset(sig, 0, sizeof(sig));
 }
 
 proc::~proc(void)
@@ -468,6 +469,7 @@ doclone(clone_flags flags)
   np->data_cpuid = myproc()->data_cpuid;
   np->run_cpuid_ = myproc()->run_cpuid_;
   np->user_fs_ = myproc()->user_fs_;
+  memcpy(np->sig, myproc()->sig, sizeof(np->sig));
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->rax = 0;
@@ -625,4 +627,28 @@ threadpin(void (*fn)(void*), void *arg, const char *name, int cpu)
   addrun(p);
   release(&p->lock);
   return p;
+}
+
+bool
+proc::deliver_signal(int signo)
+{
+  if (signo < 0 || signo >= NSIG)
+    return false;
+
+  if (sig[signo].sa_handler == 0)
+    return false;
+
+  trapframe tf_save = *tf;
+  tf->rsp -= 128;   // skip redzone
+  tf->rsp -= sizeof(tf_save);
+  if (putmem((void*) tf->rsp, &tf_save, sizeof(tf_save)) < 0)
+    return false;
+
+  tf->rsp -= 8;
+  if (putmem((void*) tf->rsp, &sig[signo].sa_restorer, 8) < 0)
+    return false;
+
+  tf->rip = (u64) sig[signo].sa_handler;
+  tf->rdi = signo;
+  return true;
 }

@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <setjmp.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
@@ -1326,6 +1328,53 @@ validatetest(void)
   fprintf(stdout, "validate ok\n");
 }
 
+sigjmp_buf sigbuf;
+volatile int *sigptr;
+
+static void
+sighand0(int signo)
+{
+  fprintf(stderr, "sighand0\n");
+  if (signo != SIGSEGV)
+    die("sighand0: wrong signal");
+  siglongjmp(sigbuf, 1);
+}
+
+static void
+sighand1(int signo)
+{
+  fprintf(stderr, "sighand1\n");
+  if (mmap((void*) sigptr, 4096, PROT_READ | PROT_WRITE,
+           MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
+           -1, 0) != sigptr)
+    die("sighand1: cannot mmap");
+}
+
+void
+sigtest(void)
+{
+  if (signal(SIGSEGV, sighand0) == SIG_ERR)
+    die("failed to set SIGSEGV handler 0");
+
+  if (sigsetjmp(sigbuf, 1) == 0) {
+    *sigptr = 1;
+  }
+
+  sigptr = (volatile int*) 0xdeadbeef000;
+  if (signal(SIGSEGV, sighand1) == SIG_ERR)
+    die("failed to set SIGSEGV handler 1");
+
+  *sigptr = 1;
+  if (*sigptr != 1)
+    die("sigtest: wrong value in sigptr");
+  munmap((void*) sigptr, 4096);
+
+  if (signal(SIGSEGV, SIG_DFL) == SIG_ERR)
+    die("failed to reset SIGSEGV");
+
+  fprintf(stderr, "sigtest ok\n");
+}
+
 // does unintialized data start out zero?
 char uninit[10000];
 void
@@ -1967,6 +2016,7 @@ main(int argc, char *argv[])
   TEST(tlb);
 
   TEST(validatetest);
+  TEST(sigtest);
 
   TEST(opentest);
   TEST(writetest);
