@@ -194,6 +194,13 @@ sys_madvise(userptr<void> addr, size_t len, int advice)
 }
 
 //SYSCALL
+int
+sys_mprotect(userptr<void> addr, size_t len, int prot)
+{
+  return -1;
+}
+
+//SYSCALL
 long
 sys_pt_pages(void)
 {
