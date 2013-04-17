@@ -15,6 +15,8 @@
 #include "spinbarrier.hh"
 
 extern char _end[];
+__thread sigjmp_buf pf_jmpbuf;
+__thread int pf_active;
 
 class double_barrier {
   spin_barrier enter_;
@@ -137,6 +139,13 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
   t->cleanup();
 }
 
+static void
+pf_handler(int signo)
+{
+  if (pf_active)
+    siglongjmp(pf_jmpbuf, 1);
+}
+
 static bool verbose = false;
 static bool check_commutativity = false;
 static bool run_threads = false;
@@ -243,6 +252,9 @@ main(int ac, char** av)
   assert(2*sizeof(*tf) <= 4096);
 
   madvise(0, (size_t) _end, MADV_WILLNEED);
+
+  signal(SIGBUS, pf_handler);
+  signal(SIGSEGV, pf_handler);
 
   for (uint32_t t = min; t <= max && t < ntests; t++) {
     if (check_commutativity) {

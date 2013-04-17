@@ -1,5 +1,10 @@
 #pragma once
 
+#include <setjmp.h>
+
+extern __thread sigjmp_buf pf_jmpbuf;
+extern __thread int pf_active;
+
 struct fstestproc {
   void (*setup_proc)(void);
 };
