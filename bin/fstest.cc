@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <limits.h>
 #include <pthread.h>
+#include <signal.h>
+#include <setjmp.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include "mtrace.h"
