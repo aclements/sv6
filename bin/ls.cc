@@ -2,11 +2,14 @@
 #include <sys/stat.h>
 #include "user.h"
 #include "fs.h"
+#include "cpputil.hh"
 
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <vector>
 
 char
 filetype(mode_t m)
@@ -79,11 +82,18 @@ ls(const char *path)
     p = buf+strlen(buf);
     *p++ = '/';
 
-    char namebuf[DIRSIZ];
+    std::vector<strbuf<DIRSIZ>> names;
+    strbuf<DIRSIZ> namebuf;
     char *prev = nullptr;
-    while(readdir(fd, prev, namebuf) > 0) {
-      prev = namebuf;
-      memmove(p, namebuf, DIRSIZ);
+    while(readdir(fd, prev, namebuf.buf_) > 0) {
+      prev = namebuf.buf_;
+      names.push_back(namebuf);
+    }
+
+    std::sort(names.begin(), names.end());
+
+    for (auto &n: names) {
+      memmove(p, n.buf_, DIRSIZ);
       p[DIRSIZ] = 0;
       if (stat(buf, &st) < 0){
         fprintf(stderr, "ls: cannot stat %s\n", buf);

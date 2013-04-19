@@ -1,6 +1,8 @@
 #pragma once
 
+#ifdef XV6_KERNEL
 #include "kernel.hh"
+#endif
 
 #include <string.h>
 #include <type_traits>
@@ -37,6 +39,7 @@ class strbuf {
   }
 };
 
+#ifdef XV6_KERNEL
 namespace std {
   struct ostream { int next_width; };
   extern ostream cout;
@@ -87,6 +90,7 @@ namespace std {
     return s;
   }
 }
+#endif
 
 /* C++ runtime */
 /* Ref: http://sourcery.mentor.com/public/cxx-abi/abi.html */
