@@ -8,12 +8,15 @@ endif
 LIBUTIL_OBJS := \
 	libgc.o \
 	pstream.o \
-	testgen.o \
 	urnd.o \
 	libutil.o \
 	cpuid.o \
 	pmcdb.o \
 	shutil.o \
+
+ifeq ($(HAVE_TESTGEN),y)
+LIBUTIL_OBJS += testgen.o
+endif
 
 LIBUTIL_OBJS := $(addprefix $(O)/libutil/, $(LIBUTIL_OBJS))
 LIBUTIL_A = $(O)/libutil/libutil.a

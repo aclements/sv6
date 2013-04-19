@@ -53,7 +53,6 @@ UPROGS_BIN= \
 	local_client \
 	mailbench \
 	mailfilter\
-        fstest \
 	base64 \
 	tee \
         ln \
@@ -69,19 +68,11 @@ UPROGS_BIN += \
        httpd
 endif
 
-UPROGS := $(UPROGS_BIN) \
-          metis_string_match \
-          metis_matrix_mult \
-	  metis_wrmem
-
-UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
-
 # Binaries that are known to build on PLATFORM=native
 UPROGS_NATIVE := \
 	benchhdr \
 	mapbench \
 	tee \
-        fstest \
         dirbench \
 	mailbench \
 	mailfilter \
@@ -92,6 +83,18 @@ UPROGS_NATIVE := \
 	mail-enqueue \
 	mail-qman \
 	mail-deliver \
+
+ifeq ($(HAVE_TESTGEN),y)
+UPROGS_BIN    += fstest
+UPROGS_NATIVE += fstest
+endif
+
+UPROGS := $(UPROGS_BIN) \
+          metis_string_match \
+          metis_matrix_mult \
+	  metis_wrmem
+
+UPROGS := $(addprefix $(O)/bin/, $(UPROGS))
 
 FSEXTRA += \
 	bin/linkbench-tom \

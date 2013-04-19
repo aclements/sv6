@@ -28,3 +28,4 @@ mscan.*.out
 *.swp
 *.log
 cscope.*
+/libutil/testgen.c

@@ -87,6 +87,8 @@ else
   CXXFLAGS += -fno-exceptions -fno-rtti -DEXCEPTIONS=0
 endif
 
+HAVE_TESTGEN = $(shell (test -e libutil/testgen.c && echo y) || echo n)
+
 ALL := 
 all:
 
