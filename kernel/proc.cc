@@ -376,10 +376,12 @@ proc::kill(void)
     //   would make some condvar->waiters a dangling reference,
     //   and the non-zero p->cv_next will cause a future panic.
     // can't call p->oncv.wake_all() since that results in
-    //   deadlock (addrun() acquires p->lock).
+    //   deadlock (wake_all() acquires p->lock).
     // can't release p->lock then call wake_all() since the
     //   cv might be deallocated while we're using it
     //   (pipes dynamically allocate condvars).
+ 
+    // oncv->wake_all();   // tell wake_all, we already have to lock on p?
   }
   release(&lock);
   return 0;

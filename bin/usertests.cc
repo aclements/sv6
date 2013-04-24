@@ -292,6 +292,38 @@ exitwait(void)
 }
 
 void
+killtest(void)
+{
+  printf("killtest\n");
+  int pid;
+  int fd[2];
+  if (pipe(fd) < 0) {
+    printf("pipe failed\n");
+    return;
+  }
+
+  pid = fork();
+  if (fork < 0) {
+    printf("fork failed\n");
+    return;
+  }
+  if (pid == 0) {
+    char buf[1];
+    int r = read(fd[0], buf, 1);
+    if (r < 0) {
+      printf("read error\n");
+      return;
+    }
+    printf("returned from read\n");
+    return;
+  }
+  sleep(1);
+  kill(pid);
+  sleep(1);
+  printf("killtest ok\n");
+}
+
+void
 mem(void)
 {
   void *m1, *m2;
@@ -2003,12 +2035,13 @@ main(int argc, char *argv[])
 #define TEST(name) run_test(#name, name)
 
   TEST(memtest);
-  TEST(unopentest);
+  // TEST(unopentest);
   TEST(bigargtest);
   TEST(bsstest);
   TEST(sbrktest);
 
   // we should be able to grow a user process to consume all phys mem
+  // TEST(mem);
 
   TEST(unmappedtest);
   TEST(vmoverlap);
@@ -2024,10 +2057,10 @@ main(int argc, char *argv[])
   TEST(createtest);
   TEST(preads);
 
-  // TEST(mem);
   TEST(pipe1);
   TEST(preempt);
   TEST(exitwait);
+  TEST(killtest);
 
   TEST(rmdot);
   TEST(thirteen);
