@@ -15,6 +15,7 @@
 #include "wq.hh"
 #include "kmtrace.hh"
 #include "mfs.hh"
+#include "work.hh"
 
 #define BRK (USERTOP >> 1)
 
@@ -151,14 +152,14 @@ doheap(vmap* vmp)
   return 0;
 }
 
-struct cleanup_work : public work
+struct cleanup_work : public dwork
 {
   cleanup_work(sref<vmap>&& oldvmap)
-    : work(), oldvmap_(std::move(oldvmap)) {}
+    : dwork(), oldvmap_(std::move(oldvmap)) {}
 
   virtual void run() override {
     // The destructor will decref oldvmap_.
-    delete this;
+     delete this;
   }
 
   sref<vmap> oldvmap_;
@@ -192,7 +193,7 @@ exec(const char *path, const char * const *argv)
 
   // Now it's safe to clean up the old address space
   cleanup_work* w = new cleanup_work(std::move(oldvmap));
-  assert(wqcrit_push(w, myproc()->data_cpuid) >= 0);
+  assert(dwork_push(w, myproc()->data_cpuid) >= 0);
 
   return 0;
 }

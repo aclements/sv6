@@ -6,6 +6,7 @@
 #include "cpputil.hh"
 #include "ilist.hh"
 #include "mtrace.h"
+#include "work.hh"
 
 extern "C" void zpage(void*);
 extern "C" void zpage_nc(void*);
@@ -23,12 +24,12 @@ struct zallocator {
   // be accessed with interrupts disabled.
   free_page::list_t pages;
   unsigned nPages;
-  wframe frame;
+  dwframe frame;
 };
 DEFINE_PERCPU(zallocator, z_);
 
-struct zwork : public work {
-  zwork(wframe* frame)
+struct zwork : public dwork {
+  zwork(dwframe* frame)
     : frame_(frame)
   {
     frame_->inc();
@@ -48,7 +49,7 @@ struct zwork : public work {
     delete this;
   }
 
-  wframe* frame_;
+  dwframe* frame_;
 
   NEW_DELETE_OPS(zwork);
 };
@@ -59,7 +60,7 @@ tryrefill(void)
   int cpu = myid();
   if (prezero && z_[cpu].nPages < 16 && z_[cpu].frame.zero()) {
     zwork* w = new zwork(&z_[cpu].frame);
-    if (wqcrit_push(w, cpu) < 0)
+    if (dwork_push(w, cpu) < 0)
       delete w;
   }
 }

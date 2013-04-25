@@ -1,7 +1,15 @@
+#pragma once
+
 struct sched_link
 {
   sched_link* prev;
   sched_link* next;
+};
+
+struct work_link
+{
+  work_link* prev;
+  work_link* next;
 };
 
 struct sched_stat

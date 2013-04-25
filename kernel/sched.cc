@@ -14,6 +14,7 @@
 #include "major.h"
 #include "rnd.hh"
 #include "lb.hh"
+#include "work.hh"
 
 // To get good performance on a single core on ben with 79 cores idling set
 // SINGLE to 1.  XXX To fix this we need adopt LB to avoid cores ganging up on
@@ -38,6 +39,10 @@ public:
   proc* deq();
   void dump();
 
+  void enq_dwork(dwork *w);
+  dwork *pop_dwork();
+  void try_dwork();
+
   void balance_move_to(schedule *other);
   u64 balance_count() const;
 
@@ -48,6 +53,7 @@ private:
 
   struct spinlock lock_ __mpalign__;
   sched_link head_;
+  work_link work_;
   volatile bool cansteal_ __mpalign__;
   __padout__;
 };
@@ -67,6 +73,8 @@ schedule::schedule(int id)
   stats_.idle = 0;
   stats_.busy = 0;
   stats_.schedstart = 0;
+  work_.next = &work_;
+  work_.prev = &work_;
 }
 
 u64 
@@ -198,6 +206,42 @@ schedule::sanity(void)
 #endif
 }
 
+void
+schedule::enq_dwork(dwork *w)
+{
+  work_link* entry = w;
+  scoped_acquire x(&lock_);
+  entry->next = &work_;
+  entry->prev = work_.prev;
+  work_.prev->next = entry;
+  work_.prev = entry;
+}
+
+dwork *
+schedule::pop_dwork(void)
+{
+  if (work_.next == &work_)
+    return nullptr;
+  scoped_acquire x(&lock_);
+  work_link* entry = work_.next;
+  if (entry == &work_)
+    return nullptr;
+  
+  entry->next->prev = entry->prev;
+  entry->prev->next = entry->next;
+  return (dwork *) entry;
+}
+
+void
+schedule::try_dwork(void)
+{
+  while (1) {   // XXX right thing to do?
+    auto w = pop_dwork();
+    if (w == nullptr) return;
+    w->run();
+  }
+}
+
 struct sched_dir {
 private:
   balancer<sched_dir, schedule> b_;
@@ -226,6 +270,14 @@ public:
   void addrun(struct proc* p) {
     p->set_state(RUNNABLE);
     schedule_[p->cpuid]->enq(p);
+  }
+
+  void pushwork(struct dwork *w, int cpu) {
+    schedule_[cpu]->enq_dwork(w);
+  }
+
+  void trywork() {
+    schedule_[mycpu()->id]->try_dwork();
   }
 
   proc* next() {
@@ -371,6 +423,7 @@ post_swtch(void)
     addrun(mycpu()->prev);
   release(&mycpu()->prev->lock);
   wqcrit_trywork();
+  thesched_dir.trywork();
 }
 
 void
@@ -383,6 +436,13 @@ void
 addrun(struct proc* p)
 {
   thesched_dir.addrun(p);
+}
+
+int
+dwork_push(struct dwork *w, int cpu)
+{
+  thesched_dir.pushwork(w, cpu);
+  return 0;
 }
 
 static int

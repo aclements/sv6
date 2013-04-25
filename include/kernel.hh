@@ -40,6 +40,7 @@ struct vmap;
 struct pipe;
 struct localsock;
 struct work;
+struct dwork;
 struct irq;
 class print_stream;
 class mnode;
@@ -211,6 +212,7 @@ void            post_swtch(void);
 void            scheddump(void);
 int             steal(void);
 void            addrun(struct proc*);
+int             dwork_push(struct dwork*, int);
 
 // syscall.c
 int             fetchint64(uptr, u64*);

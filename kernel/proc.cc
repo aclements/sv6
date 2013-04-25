@@ -13,6 +13,7 @@
 #include "vm.hh"
 #include "ns.hh"
 #include "wq.hh"
+#include "work.hh"
 #include <uk/fcntl.h>
 #include <uk/unistd.h>
 #include <uk/wait.h>
@@ -441,6 +442,22 @@ finishproc(struct proc *p, bool removepid)
 #endif
 }
 
+struct cleanup_work : public dwork
+{
+  cleanup_work(proc *p)
+    : dwork(), p_(p) {}
+
+  virtual void run() override {
+    cprintf("=== finishproc\n");
+    finishproc(p_);
+  };
+
+  proc* p_;
+
+  NEW_DELETE_OPS(cleanup_work)
+};
+
+
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
@@ -470,12 +487,9 @@ wait(int wpid,  userptr<int> status)
           if (!xnspid->remove(pid, &p))
             panic("wait: ns_remove");
 
-          cwork *w = new cwork();
-          assert(w);
-          w->rip = (void*) finishproc;
-          w->arg0 = p;
-          w->arg1 = 0;
-          if (wqcrit_push(w, p->run_cpuid_) < 0) {
+          // XXX is this worth doing for zombies?
+          cleanup_work *w = new cleanup_work(p);
+          if (dwork_push(w, p->run_cpuid_) < 0) {
             delete w;
             finishproc(p, 0);
           }
