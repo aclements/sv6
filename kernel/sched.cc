@@ -224,8 +224,6 @@ public:
   }
 
   void addrun(struct proc* p) {
-    if (p->upath)
-      execswitch(p);
     p->set_state(RUNNABLE);
     schedule_[p->cpuid]->enq(p);
   }

@@ -567,14 +567,6 @@ int
 sys_execv(userptr_str upath, userptr<userptr_str> uargv)
 {
   myproc()->data_cpuid = myid();
-#if EXECSWITCH
-  myproc()->uargv = uargv;
-  barrier();
-  // upath serves as a flag to the scheduler
-  myproc()->upath = upath;
-  yield();
-  myproc()->upath = nullptr;
-#endif
   return doexec(upath, uargv);
 }
 

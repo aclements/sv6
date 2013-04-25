@@ -186,7 +186,6 @@ enum clone_flags
 };
 ENUM_BITSET_OPS(clone_flags);
 void            finishproc(struct proc*, bool removepid = true);
-void            execswitch(proc* p);
 void            exit(int);
 struct proc*    doclone(clone_flags);
 int             growproc(int);

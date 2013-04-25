@@ -24,7 +24,6 @@
 #define REFCACHE_DEBUG DEBUG
 #define RADIX_DEBUG   DEBUG
 #define USTACKPAGES   8
-#define EXECSWITCH    1
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
 #define GC_GLOBAL     true
 // The MMU scheme.  One of:
@@ -57,7 +56,7 @@
 #define FS_NLINK_REFCOUNT refcache::
 #define RANDOMIZE_KMALLOC 1
 // Track kernel memory usage
-#define KERNEL_HEAP_PROFILE 0
+#define KERNEL_HEAP_PROFILE 1
 
 #if defined(HW_qemu)
 #define DEBUG         1
