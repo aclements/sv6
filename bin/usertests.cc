@@ -102,6 +102,14 @@ writetest1(void)
   if(fd < 0)
     die("error: open big failed!");
 
+  struct stat st;
+  if (fstat(fd, &st) < 0)
+    die("error: stat big failed!");
+
+  if (st.st_size != MAXFILE * 512)
+    die("error: wrong stat size: %ld != %ld (%ld * 512)",
+        st.st_size, MAXFILE * 512, MAXFILE);
+
   n = 0;
   for(;;){
     u32 i = read(fd, buf, 512);

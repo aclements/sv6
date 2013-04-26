@@ -323,28 +323,92 @@ private:
   friend class mnode;
   friend class mfs;
 
-  struct page_state {
+public:
+  class page_state {
     enum {
       FLAG_LOCK_BIT = 0,
       FLAG_LOCK = 1 << FLAG_LOCK_BIT,
-      FLAG_SET = 1 << 1,
+      FLAG_PARTIAL_PAGE_BIT = 1,
+      FLAG_PARTIAL_PAGE = 1 << FLAG_PARTIAL_PAGE_BIT,
     };
 
-    page_state() : flags(0) {}
-    page_state(sref<page_info> p) : flags(FLAG_SET), pg(p) {}
+    /*
+     * Low bits are flags, as above.  High bits are page_info pointer.
+     */
+    u64 value_;
+
+    page_info* get_page_info_raw() const {
+      return (page_info*) (value_ & ~0x7);
+    }
+
+  public:
+    page_state() : value_(0) {}
+
+    page_state(sref<page_info> p) : value_((u64) p.get()) {
+      page_info* pi = get_page_info_raw();
+      if (pi)
+        pi->inc();
+    }
+
+    ~page_state() {
+      page_info* pi = get_page_info_raw();
+      if (pi)
+        pi->dec();
+    }
+
+    page_state(const page_state &other) {
+      *this = other;
+    }
+
+    page_state &operator=(const page_state &other) {
+      value_ = other.value_;
+      page_info* pi = get_page_info_raw();
+      if (pi)
+        pi->inc();
+      return *this;
+    }
+
+    page_state copy_consistent() {
+      /*
+       * Ensure the page_info object is not garbage-collected by refcache,
+       * between copying value_ and bumping the refcount.  We do this by
+       * preventing the local core from going through a refcache epoch.
+       */
+      scoped_cli cli;
+
+      page_state copy;
+      copy.value_ = value_;
+      page_info* pi = copy.get_page_info_raw();
+      if (pi)
+        pi->inc();
+      return copy;
+    }
+
+    sref<page_info> get_page_info() const {
+      return sref<page_info>::newref(get_page_info_raw());
+    }
 
     bool is_set() const {
-      return flags & FLAG_SET;
+      return get_page_info_raw() != nullptr;
     }
 
     bit_spinlock get_lock() {
-      return bit_spinlock(&flags, FLAG_LOCK_BIT);
+      return bit_spinlock(&value_, FLAG_LOCK_BIT);
     }
 
-    u64 flags;
-    sref<page_info> pg;
+    bool is_partial_page() {
+      return !!(value_ & FLAG_PARTIAL_PAGE);
+    }
+
+    void set_partial_page(bool flag) {
+      if (flag)
+        locked_set_bit(FLAG_PARTIAL_PAGE_BIT, &value_);
+      else
+        locked_reset_bit(FLAG_PARTIAL_PAGE_BIT, &value_);
+    }
   };
 
+private:
   enum { maxidx = ULONG_MAX / PGSIZE + 1 };
   radix_array<page_state, maxidx, PGSIZE,
               kalloc_allocator<page_state>> pages_;
@@ -379,7 +443,7 @@ public:
     return seq_reader<u64>(&size_, &size_seq_);
   }
 
-  sref<page_info> get_page(u64 pageidx);
+  page_state get_page(u64 pageidx);
 };
 
 inline mfile*
