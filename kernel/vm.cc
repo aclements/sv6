@@ -218,6 +218,8 @@ again:
 
     cache.invalidate(start, len, begin, &shootdown);
 
+    // XXX If this is a large fill, we could actively re-fold already
+    // expanded regions.
     if (!fixed) {
       vmdesc d2(desc);
       d2.start += start;
@@ -252,6 +254,8 @@ vmap::remove(uptr start, uptr len)
       if (it.is_set())
         pages.add(std::move(it->page));
     cache.invalidate(start, len, begin, &shootdown);
+    // XXX If this is a large unset, we could actively re-fold already
+    // expanded regions.
     vpfs_.unset(begin, end);
     shootdown.perform();
   }
