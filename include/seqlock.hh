@@ -133,7 +133,7 @@ public:
    * of mutual exclusion before this and releasing it after ending the
    * write section.
    *
-   * Another thread attempting to start a reads will spin until this
+   * Another thread attempting to start a read will spin until this
    * write section ends.  If another thread is currently in a read
    * section, it will be forced to retry.
    */
