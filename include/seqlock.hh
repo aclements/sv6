@@ -45,6 +45,22 @@ public:
       barrier();
       return sc_->seq_.load(std::memory_order_relaxed) != init_;
     }
+
+    /**
+     * A variant of need_retry that refreshes this reader if a retry
+     * is needed.  This is handy for do {} while loops; for example:
+     *   auto reader = seq.read_begin();
+     *   do {
+     *     // ...
+     *   } while (reader.do_retry());
+     */
+    bool do_retry()
+    {
+      if (!need_retry())
+        return false;
+      *this = sc_->read_begin();
+      return true;
+    }
   };
 
   /**
