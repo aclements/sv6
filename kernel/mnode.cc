@@ -135,6 +135,9 @@ mfile::resizer::resize_append(u64 size, sref<page_info> pi)
   }
 
   auto it = mf_->pages_.find(PGROUNDUP(mf_->size_) / PGSIZE);
+  // XXX This is rather unfortunate for the first write to a file
+  // since the fill will expand the lock to a huge range.  This would
+  // be a great place to use lock_for_fill if we had it.
   auto lock = mf_->pages_.acquire(it);
   page_state ps(pi);
   if (PGOFFSET(size))
