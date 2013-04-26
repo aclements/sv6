@@ -1216,14 +1216,16 @@ private:
           // Copy to new externals for each child node
           value_type *orig = src.as_external();
           for (auto &c : child)
-            // XXX Relaxed store?
             // XXX Use allocator?
-            c = node_ptr(new value_type(*orig), is_locked);
+            // Relaxed stores are safe because this upper_node will be
+            // installed with an atomic operation that will act as a
+            // barrier for these writes.
+            c.store(node_ptr(new value_type(*orig), is_locked),
+                    std::memory_order_relaxed);
         } else if (is_locked) {
           // Propagate lock
           for (auto &c : child)
-            // XXX Relaxed store?
-            c = node_ptr(nullptr, true);
+            c.store(node_ptr(nullptr, true), std::memory_order_relaxed);
         }
       } catch (...) {
         // XXX If we didn't zalloc it, some of the pointers might be
