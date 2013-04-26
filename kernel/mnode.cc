@@ -7,7 +7,7 @@
 
 namespace {
   // 32MB icache (XXX make this proportional to physical RAM)
-  weakcache<pair<mfs*, u64>, mnode, 32 << 20> mnode_cache;
+  weakcache<pair<mfs*, u64>, mnode> mnode_cache(32 << 20);
 };
 
 sref<mnode>

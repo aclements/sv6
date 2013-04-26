@@ -197,10 +197,12 @@ cmain(u64 mbmagic, u64 mbaddr)
   initpageinfo();          // Requires initnuma
 
   // Some global constructors require mycpu()->id (via myid()) which
-  // we setup in inittls.  (Note that gcc 4.7 eliminated the .ctors
-  // section entirely, but gcc has supported .init_array for some
-  // time.)  Note that this will implicitly initialize CPU 0's per-CPU
-  // objects as well.
+  // we setup in inittls.  Some require dynamic allocation of large
+  // memory regions (e.g., for hash tables), which requires
+  // initpageinfo and needs to happen *before* initkalloc.  (Note that
+  // gcc 4.7 eliminated the .ctors section entirely, but gcc has
+  // supported .init_array for some time.)  Note that this will
+  // implicitly initialize CPU 0's per-CPU objects as well.
   extern void (*__init_array_start[])(int, char **, char **);
   extern void (*__init_array_end[])(int, char **, char **);
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)

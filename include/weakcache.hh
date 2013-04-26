@@ -6,7 +6,7 @@
 #include "hash.hh"
 #include "log2.hh"
 
-template<class K, class V, size_t MaxSize>
+template<class K, class V>
 class weakcache
 {
 public:
@@ -98,22 +98,46 @@ private:
     }
   };
 
-  static constexpr size_t Buckets =
-    round_down_to_pow2_const(MaxSize / sizeof(bucket));
-
-  bucket buckets_[Buckets];
+  const uintptr_t mask_;
+  bucket *buckets_;
 
 public:
+  // Construct a weak cache whose bucket array fits in size bytes.
+  weakcache(std::size_t size)
+    : mask_(round_down_to_pow2(size / sizeof *buckets_) - 1)
+  {
+    // Allocate buckets_ by hand to avoid the size header of new'd
+    // arrays, since this is likely to be a nice power of two.
+    buckets_ = (bucket*)kmalloc((mask_ + 1) * sizeof *buckets_,
+                                "weakcache::buckets");
+    if (!buckets_)
+      throw_bad_alloc();
+    new (buckets_) bucket[mask_ + 1];
+  }
+
+  ~weakcache()
+  {
+    // XXX Tear down buckets
+    panic("~weakcache not implemented");
+    if (buckets_)
+      kmfree(buckets_, (mask_ + 1) * sizeof *buckets_);
+  }
+
+  weakcache(const weakcache &o) = delete;
+  weakcache(weakcache &&o) = delete;
+  weakcache &operator=(const weakcache &o) = delete;
+  weakcache &operator=(weakcache &&o) = delete;
+
   sref<V>
   lookup(const K& k) const
   {
-    return buckets_[hash(k) % Buckets].lookup(k);
+    return buckets_[hash(k) & mask_].lookup(k);
   }
 
   bool
   insert(const K& k, V* v)
   {
-    return buckets_[hash(k) % Buckets].insert(k, v);
+    return buckets_[hash(k) & mask_].insert(k, v);
   }
 
   void
@@ -128,9 +152,9 @@ public:
   get_stats() const
   {
     struct stats res{};
-    res.total_buckets = Buckets;
-    for (auto &b : buckets_)
-      b.update_stats(&res);
+    res.total_buckets = mask_ + 1;
+    for (std::size_t i = 0; i < mask_ + 1; ++i)
+      buckets_[i].update_stats(&res);
     return res;
   };
 };
