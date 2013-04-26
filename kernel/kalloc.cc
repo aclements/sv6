@@ -837,7 +837,7 @@ initpercpu(void)
 }
 
 // Initialize the page_info arrays and page_info_map
-static void
+void
 initpageinfo(void)
 {
   struct page_info_area
@@ -971,9 +971,6 @@ initphysmem(paddr mbaddr)
 void
 initkalloc(void)
 {
-  // Reserve the page_info arrays
-  initpageinfo();
-
   if (VERBOSE)
     cprintf("%lu mbytes\n", mem.bytes() / (1<<20));
 
