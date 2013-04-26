@@ -2,7 +2,6 @@
 #include "amd64.h"
 #include "kernel.hh"
 #include "percpu.hh"
-#include "wq.hh"
 #include "cpputil.hh"
 #include "ilist.hh"
 #include "mtrace.h"

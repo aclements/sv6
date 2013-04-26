@@ -92,8 +92,7 @@ struct proc : public rcu_freed, public sched_link {
   struct spinlock futex_lock;
   u64 user_fs_;
   u64 unmap_tlbreq_;
-  int data_cpuid;              // Where vmap, kstack, and uwq is likely
-                               // to be cached
+  int data_cpuid;              // Where vmap and kstack is likely to be cached
   int run_cpuid_;
   int in_exec_;
   int uaccess_;

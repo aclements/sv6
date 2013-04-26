@@ -12,7 +12,6 @@
 #include "vm.hh"
 #include "elf.hh"
 #include "cpu.hh"
-#include "wq.hh"
 #include "kmtrace.hh"
 #include "mfs.hh"
 #include "work.hh"
@@ -270,8 +269,7 @@ load_image(proc *p, const char *path, const char * const *argv,
   if (doheap(vmp.get()) < 0)
     return -1;
 
-  // dostack reads from the user vm space.  wq workers don't switch 
-  // the user vm.
+  // dostack reads from the user vm space. 
   long sp = dostack(vmp.get(), argv, path);
   if (sp < 0)
     return -1;

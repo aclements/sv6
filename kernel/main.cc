@@ -42,7 +42,6 @@ void initpci(void);
 void initnet(void);
 void initsched(void);
 void initlockstat(void);
-void initwq(void);
 void initidle(void);
 void initcpprt(void);
 void initfutex(void);
@@ -209,8 +208,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initmsr();               // Requires nothing
   initcmdline();
   initkalloc();
-  initwq();        // (after kalloc)
-  initz();         // (after wq)
+  initz();
   initproc();      // process table
   initsched();     // scheduler run queues
   initidle();

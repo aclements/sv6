@@ -16,7 +16,6 @@
 #include "lib.h"
 #include <stdarg.h>
 #include "fmt.hh"
-#include "wq.hh"
 #include "major.h"
 #include "apic.hh"
 #include "irq.hh"
@@ -315,9 +314,6 @@ consoleintr(int (*getc)(void))
         input.e--;
         consputc(BACKSPACE);
       }
-      break;
-    case C('W'):
-      wq_dump();
       break;
     case C('S'):
       scheddump();

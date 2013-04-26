@@ -6,7 +6,6 @@
 #include "proc.hh"
 #include "cpu.hh"
 #include "spercpu.hh"
-#include "wq.hh"
 #include "kmtrace.hh"
 #include "bits.hh"
 #include "codex.hh"
@@ -83,7 +82,7 @@ idleloop(void)
     if (steal() == 0) {
         // XXX(Austin) This will prevent us from immediately picking
         // up work that's trying to push itself to this core (pinned
-        // thread or wqcrit).  Use an IPI to poke idle cores.
+        // thread).  Use an IPI to poke idle cores.
         asm volatile("hlt");
     }
   }

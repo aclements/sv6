@@ -12,7 +12,6 @@
 #include "kalloc.hh"
 #include "vm.hh"
 #include "ns.hh"
-#include "wq.hh"
 #include "work.hh"
 #include <uk/fcntl.h>
 #include <uk/unistd.h>

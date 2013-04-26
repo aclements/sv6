@@ -11,7 +11,6 @@
 #include "mtrace.h"
 #include "cpu.hh"
 #include "multiboot.hh"
-#include "wq.hh"
 #include "page_info.hh"
 #include "kstream.hh"
 #include "buddy.hh"
@@ -1078,9 +1077,6 @@ initkalloc(void)
 
   strncpy(slabmem[slab_perf].name, "kperf", MAXNAME);
   slabmem[slab_perf].order = ceil_log2(PERFSIZE);
-
-  strncpy(slabmem[slab_wq].name, "wq", MAXNAME);
-  slabmem[slab_wq].order = ceil_log2(PGROUNDUP(wq_size()));
 
   kminit();
   kinited = 1;

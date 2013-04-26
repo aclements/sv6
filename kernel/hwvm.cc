@@ -10,7 +10,6 @@
 #include "condvar.h"
 #include "proc.hh"
 #include "vm.hh"
-#include "wq.hh"
 #include "apic.hh"
 #include "kstream.hh"
 #include "ipi.hh"

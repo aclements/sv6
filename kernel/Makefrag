@@ -49,8 +49,6 @@ OBJS = \
 	trap.o \
         uaccess.o \
 	trapasm.o \
-        wqkern.o \
-	wqlib.o \
 	xapic.o \
 	x2apic.o \
         zalloc.o \
