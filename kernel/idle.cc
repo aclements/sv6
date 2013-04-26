@@ -15,7 +15,6 @@
 
 struct idle {
   struct proc *cur;
-  struct proc *heir;
   SLIST_HEAD(zombies, proc) zombies;
   struct spinlock lock;
 };
@@ -40,31 +39,6 @@ idlezombie(struct proc *p)
   release(&idlem[mycpu()->id].lock);
 }
 
-void
-idlebequeath(void)
-{
-  // Only the current idle thread may call this function
-
-  assert(mycpu()->ncli > 0);
-  assert(myproc() == idlem->cur);
-
-  assert(idlem->heir != nullptr);
-
-  idlem->cur = idlem->heir;
-  acquire(&idlem->heir->lock);
-  idlem->heir->set_state(RUNNABLE);
-  release(&idlem->heir->lock);
-}
-
-void
-idleheir(void *x)
-{
-  post_swtch();
-
-  idlem->heir = nullptr;
-  idleloop();
-}
-
 static inline void
 finishzombies(void)
 {
@@ -84,13 +58,6 @@ finishzombies(void)
 void
 idleloop(void)
 {
-  // Test the work queue
-  //extern void testwq(void);
-  //testwq();
-
-  //extern void benchwq(void);
-  //benchwq();
-
   // Enabling mtrace calls in scheduler generates many mtrace_call_entrys.
   // mtrace_call_set(1, cpu->id);
 #if CODEX
@@ -107,46 +74,13 @@ idleloop(void)
 //  }
 //#endif
 
-  // The scheduler ensures that each idle loop always runs on the same CPU
-  struct idle *myidle = idlem.get_unchecked();
-
   sti();
   for (;;) {
     acquire(&myproc()->lock);
     myproc()->set_state(RUNNABLE);
     sched();
-
     finishzombies();
-
     if (steal() == 0) {
-      int worked, did_work = 0;
-      do {
-        assert(mycpu()->ncli == 0);
-
-        // If we don't have an heir, try to allocate one
-        if (myidle->heir == nullptr) {
-          struct proc *p;
-          p = proc::alloc();
-          if (p == nullptr)
-            break;
-          snprintf(p->name, sizeof(p->name), "idle_%u", mycpu()->id);
-          p->cpuid = mycpu()->id;
-          p->cpu_pin = 1;
-          p->context->rip = (u64)idleheir;
-          p->cwd.reset();
-          myidle->heir = p;
-        }
-
-        worked = wq_trywork();
-        did_work += worked;
-        // If we are no longer the idle thread, exit
-        if (worked && myidle->cur != myproc())
-          exit(0);
-      } while(worked);
-      sti();
-      if (did_work)
-        nop_pause();
-      else
         // XXX(Austin) This will prevent us from immediately picking
         // up work that's trying to push itself to this core (pinned
         // thread or wqcrit).  Use an IPI to poke idle cores.

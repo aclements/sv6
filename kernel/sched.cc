@@ -24,8 +24,6 @@
 #define SINGLE 0  
 
 enum { sched_debug = 0 };
-enum { steal_nonexec = 1 };    // XXX why does this exist?
-// old scheme first stole process not in exec, and then ones in exec?
 
 struct schedule : public balance_pool<schedule> {
 public:
@@ -287,9 +285,7 @@ public:
   void
   sched(void)
   {
-    extern void threadstub(void);
     extern void forkret(void);
-    extern void idleheir(void *x);
     int intena;
     proc* prev;
     proc* next;
@@ -301,11 +297,6 @@ public:
     if(!holding(&myproc()->lock))
       panic("sched proc->lock");
 #endif
-    if (myproc() == idleproc() && 
-        myproc()->get_state() != RUNNABLE) {
-      extern void idlebequeath(void);
-      idlebequeath();
-    }
 
     if(mycpu()->ncli != 1)
       panic("sched locks (ncli = %d)", mycpu()->ncli);
@@ -356,10 +347,7 @@ public:
     next->set_state(RUNNING);
     next->tsc = rdtsc();
 
-    if (next->context->rip != (uptr)forkret && 
-        next->context->rip != (uptr)threadstub &&
-        next->context->rip != (uptr)idleheir)
-    {
+    if (next->context->rip != (uptr)threadstub && next->context->rip != (uptr)forkret) {
       mtresume(next);
     }
     mtrec();
@@ -422,7 +410,6 @@ post_swtch(void)
       mycpu()->prev != idleproc())
     addrun(mycpu()->prev);
   release(&mycpu()->prev->lock);
-  wqcrit_trywork();
   thesched_dir.trywork();
 }
 

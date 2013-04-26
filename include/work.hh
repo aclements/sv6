@@ -2,7 +2,8 @@
 
 #include "sched.hh"
 
-// Structures for deferring work
+// Structures for deferring work.  The deferrred work must not go to block/sleep.
+// If it goes to sleep, create a thread and pin it on the desired core.
 
 struct dwork : public work_link {
   dwork() {}

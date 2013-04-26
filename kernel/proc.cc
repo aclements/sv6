@@ -540,6 +540,7 @@ threadalloc(void (*fn)(void *), void *arg)
   if (p->vmap == nullptr)
     return 0;
 
+  // XXX can threadstub be deleted?
   p->context->rip = (u64)threadstub;
   p->context->r12 = (u64)fn;
   p->context->r13 = (u64)arg;
