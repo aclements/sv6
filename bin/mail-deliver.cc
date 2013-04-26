@@ -47,7 +47,7 @@ main(int argc, char **argv)
     edie("open %s failed", tmppath.c_str());
   if (copy_fd(fd, 0) < 0)
     edie("copy_fd failed");
-  if (fstat(fd, &st) < 0)
+  if (fstatx(fd, &st, STAT_OMIT_NLINK) < 0)
     edie("fstat %s failed", tmppath.c_str());
   close(fd);
 

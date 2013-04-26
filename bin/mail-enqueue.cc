@@ -50,7 +50,7 @@ public:
       edie("copy_fd message failed");
 
     struct stat st;
-    if (fstat(tmpfd, &st) < 0)
+    if (fstatx(tmpfd, &st, STAT_OMIT_NLINK) < 0)
       edie("fstat failed");
 
     close(tmpfd);
