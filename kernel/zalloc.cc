@@ -59,6 +59,8 @@ tryrefill(void)
   int cpu = myid();
   if (prezero && z_[cpu].nPages < 16 && z_[cpu].frame.zero()) {
     zwork* w = new zwork(&z_[cpu].frame);
+    // XXX This is higher priority than doing actual work.  We should
+    // only do background zeroing if we would otherwise be idle.
     if (dwork_push(w, cpu) < 0)
       delete w;
   }
