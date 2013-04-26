@@ -441,19 +441,19 @@ finishproc(struct proc *p, bool removepid)
 #endif
 }
 
-struct cleanup_work : public dwork
+struct finishproc_work : public dwork
 {
-  cleanup_work(proc *p)
+  finishproc_work(proc *p)
     : dwork(), p_(p) {}
 
   virtual void run() override {
-    cprintf("=== finishproc\n");
-    finishproc(p_);
+    finishproc(p_, 0);
+    delete this;
   };
 
   proc* p_;
 
-  NEW_DELETE_OPS(cleanup_work)
+  NEW_DELETE_OPS(finishproc_work)
 };
 
 
@@ -486,12 +486,8 @@ wait(int wpid,  userptr<int> status)
           if (!xnspid->remove(pid, &p))
             panic("wait: ns_remove");
 
-          // XXX is this worth doing for zombies?
-          cleanup_work *w = new cleanup_work(p);
-          if (dwork_push(w, p->run_cpuid_) < 0) {
-            delete w;
-            finishproc(p, 0);
-          }
+          finishproc_work *w = new finishproc_work(p);
+          assert(dwork_push(w, p->run_cpuid_) >= 0);
 	  return pid;
 	}
       }
@@ -591,3 +587,4 @@ proc::deliver_signal(int signo)
   tf->rdi = signo;
   return true;
 }
+
