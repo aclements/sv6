@@ -621,7 +621,7 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
       page = sref<page_info>::transfer(new(page_info::of(p)) page_info());
     } else {
       u64 page_idx = (it.index() * PGSIZE - desc.start) / PGSIZE;
-      page = desc.inode->as_file()->get_page(page_idx);
+      page = desc.inode->as_file()->get_page(page_idx).get_page_info();
       if (!page)
         return nullptr;
     }

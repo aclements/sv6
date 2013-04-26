@@ -107,22 +107,26 @@ readi(sref<mnode> m, char* buf, u64 start, u64 nbytes)
     return -1;
 
   u64 end = start + nbytes;
-  u64 msize = *m->as_file()->read_size();
-  if (end > msize)
-    end = msize;
-
   u64 off = 0;
   while (start + off < end) {
     u64 pos = start + off;
     u64 pgbase = PGROUNDDOWN(pos);
+
+    mfile::page_state ps = m->as_file()->get_page(pgbase / PGSIZE);
+    sref<page_info> pi = ps.get_page_info();
+    if (!pi)
+      break;
+
+    if (ps.is_partial_page()) {
+      u64 msize = *m->as_file()->read_size();
+      if (end > msize)
+        end = msize;
+    }
+
     u64 pgoff = pos - pgbase;
     u64 pgend = end - pgbase;
     if (pgend > PGSIZE)
       pgend = PGSIZE;
-
-    auto pi = m->as_file()->get_page(pgbase / PGSIZE);
-    if (!pi)
-      break;
 
     memmove(buf + off, (const char*) pi->va() + pgoff, pgend - pgoff);
     off += (pgend - pgoff);
@@ -150,22 +154,17 @@ writei(sref<mnode> m, const char* buf, u64 start, u64 nbytes,
 
     mfile::resizer *resize = parentresize;
     mfile::resizer scoped_resize;
-    u64 msize = resize ? resize->read_size() : *m->as_file()->read_size();
-    if (pos + pgend - pgoff > msize) {
-      if (resize == nullptr) {
-        scoped_resize = m->as_file()->write_size();
-        resize = &scoped_resize;
-      }
-      msize = resize->read_size();
-    }
 
-    sref<page_info> pi;
-    if (msize > pgbase) {
+    mfile::page_state ps = m->as_file()->get_page(pgbase / PGSIZE);
+    sref<page_info> pi = ps.get_page_info();
+    if (pi) {
       /* File already has the page we are about to update */
-      pi = m->as_file()->get_page(pgbase / PGSIZE);
-      if (!pi)
-        /* Raced with truncate; assume our data would have been blown away */
-        break;
+      if (ps.is_partial_page() && resize == nullptr) {
+        if (pos + pgend - pgoff > *m->as_file()->read_size()) {
+          scoped_resize = m->as_file()->write_size();
+          resize = &scoped_resize;
+        }
+      }
 
       /*
        * What happens when writing past the end of the file but within
@@ -181,7 +180,10 @@ writei(sref<mnode> m, const char* buf, u64 start, u64 nbytes,
         resize->resize_nogrow(pos + pgend - pgoff);
     } else {
       /* File does not yet have the page we are about to update */
-      assert(resize && *resize);
+      if (!resize) {
+        scoped_resize = m->as_file()->write_size();
+        resize = &scoped_resize;
+      }
 
       /*
        * If this is a write past the end of the file, we may need
@@ -189,6 +191,7 @@ writei(sref<mnode> m, const char* buf, u64 start, u64 nbytes,
        * a few zero pages.  We do not support sparse files -- the
        * holes are filled in with zeroed pages.
        */
+      u64 msize = resize->read_size();
       while (msize < pgbase) {
         if (msize % PGSIZE) {
           resize->resize_nogrow(msize - (msize % PGSIZE) + PGSIZE);

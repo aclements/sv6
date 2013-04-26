@@ -112,19 +112,38 @@ mfile::resizer::resize_nogrow(u64 newsize)
   auto end = mf_->pages_.find(PGROUNDUP(oldsize) / PGSIZE);
   auto lock = mf_->pages_.acquire(begin, end);
   mf_->pages_.unset(begin, end);
+
+  if (PGROUNDDOWN(newsize) > PGROUNDDOWN(oldsize)) {
+    /* Grew to a multiple of PGSIZE */
+    mf_->pages_.find(oldsize / PGSIZE)->set_partial_page(false);
+  }
+
+  if (PGROUNDDOWN(newsize) < PGROUNDDOWN(oldsize) && PGOFFSET(newsize)) {
+    /* Shrunk, and last page is partial */
+    mf_->pages_.find(newsize / PGSIZE)->set_partial_page(true);
+  }
 }
 
 void
 mfile::resizer::resize_append(u64 size, sref<page_info> pi)
 {
   assert(PGROUNDUP(mf_->size_) / PGSIZE + 1 == PGROUNDUP(size) / PGSIZE);
+
+  if (PGOFFSET(mf_->size_)) {
+    /* Also filled out last partial page */
+    mf_->pages_.find(mf_->size_ / PGSIZE)->set_partial_page(false);
+  }
+
   auto it = mf_->pages_.find(PGROUNDUP(mf_->size_) / PGSIZE);
   auto lock = mf_->pages_.acquire(it);
-  mf_->pages_.fill(it, page_state(pi));
+  page_state ps(pi);
+  if (PGOFFSET(size))
+    ps.set_partial_page(true);
+  mf_->pages_.fill(it, ps);
   mf_->size_ = size;
 }
 
-sref<page_info>
+mfile::page_state
 mfile::get_page(u64 pageidx)
 {
   auto it = pages_.find(pageidx);
@@ -133,18 +152,10 @@ mfile::get_page(u64 pageidx)
       // XXX read from disk
     }
 
-    return sref<page_info>();
+    return mfile::page_state();
   }
 
-  /*
-   * Ensure the page_info object is not garbage-collected by refcache,
-   * by preventing the local core from going through a refcache epoch.
-   * Here, we assume that all stores to sref::ptr_ are atomic, and we
-   * will either see a valid pointer or nullptr.
-   */
-  scoped_cli cli;
-  page_info* pi = it->pg.get();
-  return sref<page_info>::newref(pi);
+  return it->copy_consistent();
 }
 
 void
