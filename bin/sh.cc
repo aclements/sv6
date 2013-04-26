@@ -58,6 +58,7 @@ getvar(const string &name)
 // Commands
 //
 
+// XXX xv6 now supports O_CLOEXEC.  Use it.
 class savefd
 {
   static vector<int> cloexec;
@@ -158,6 +159,7 @@ public:
       argstrs.push_back(arg.c_str());
     argstrs.push_back(nullptr);
 
+    // XXX posix_spawn
     int child;
     if ((child = fork1()) == 0) {
       savefd::preexec();
