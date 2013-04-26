@@ -14,6 +14,11 @@ struct padded_length;
 
 using std::atomic;
 
+// XXX(Austin) If we needed to store significantly more per-region
+// metadata, it would be better to keep it in a heap-allocated and
+// reference counted immutable object pointed to by vmdesc.  At it's
+// present size, this actually works out to a wash.
+
 // A virtual memory descriptor that maintains metadata for pages in an
 // address space.  This plays a similar role to the more traditional
 // "virtual memory area," but this does not know its size (it could
