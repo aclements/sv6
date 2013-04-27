@@ -39,11 +39,10 @@ struct ordered : pipe {
   NEW_DELETE_OPS(ordered);
 
   virtual int write(const char *addr, int n) override {
-    acquire(&lock);
+    scoped_acquire l(&lock);
     for(int i = 0; i < n; i++){
       while(nwrite == nread + PIPESIZE){ 
         if(readopen == 0 || myproc()->killed){
-          release(&lock);
           return -1;
         }
         cv.wake_all();
@@ -52,16 +51,14 @@ struct ordered : pipe {
       data[nwrite++ % PIPESIZE] = addr[i];
     }
     cv.wake_all();
-    release(&lock);
     return n;
   }
 
   virtual int read(char *addr, int n) override {
     int i;
-    acquire(&lock);
+    scoped_acquire l(&lock);
     while(nread == nwrite && writeopen) { 
       if(myproc()->killed){
-        release(&lock);
         return -1;
       }
       cv.sleep(&lock);
@@ -72,12 +69,11 @@ struct ordered : pipe {
       addr[i] = data[nread++ % PIPESIZE];
     }
     cv.wake_all();
-    release(&lock);
     return i;
   }
 
   virtual int close(int writable) override {
-    acquire(&lock);
+    scoped_acquire l(&lock);
     if(writable){
       writeopen = 0;
     } else {
@@ -85,10 +81,8 @@ struct ordered : pipe {
     }
     cv.wake_all();
     if(readopen == 0 && writeopen == 0){
-      release(&lock);
       return 1;
-    } else
-      release(&lock);
+    }
     return 0;
   }
 };
