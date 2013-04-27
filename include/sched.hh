@@ -1,11 +1,5 @@
 #pragma once
 
-struct sched_link
-{
-  sched_link* prev;
-  sched_link* next;
-};
-
 struct sched_stat
 {
   u64 enqs;
