@@ -142,6 +142,5 @@ private:
 
 class KillException : public std::runtime_error {
 public:
-    KillException() 
-        : std::runtime_error("killed") { };
+    KillException() : std::runtime_error("killed") { };
 };
