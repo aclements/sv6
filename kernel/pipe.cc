@@ -8,7 +8,6 @@
 #include "fs.h"
 #include "file.hh"
 #include "cpu.hh"
-#include "ilist.hh"
 #include "uk/unistd.h"
 
 #define PIPESIZE 512
