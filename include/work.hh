@@ -1,13 +1,15 @@
 #pragma once
 
 #include "sched.hh"
+#include "ilist.hh"
 
 // Structures for deferring work.  The deferrred work must not go to block/sleep.
 // If it goes to sleep, create a thread and pin it on the desired core.
 
-struct dwork : public work_link {
+struct dwork {
   dwork() {}
   virtual void run() = 0;
+  islink<dwork> link_;
 };
 
 struct dwframe {

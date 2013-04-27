@@ -14,6 +14,7 @@
 #include "rnd.hh"
 #include "lb.hh"
 #include "work.hh"
+#include "ilist.hh"
 
 // To get good performance on a single core on ben with 79 cores idling set
 // SINGLE to 1.  XXX To fix this we need adopt LB to avoid cores ganging up on
@@ -36,7 +37,6 @@ public:
   void dump();
 
   void enq_dwork(dwork *w);
-  dwork *pop_dwork();
   void try_dwork();
 
   void balance_move_to(schedule *other);
@@ -49,7 +49,7 @@ private:
 
   struct spinlock lock_ __mpalign__;
   sched_link head_;
-  work_link work_;
+  isqueue<dwork, &dwork::link_> work_;
   volatile bool cansteal_ __mpalign__;
   __padout__;
 };
@@ -69,8 +69,6 @@ schedule::schedule(int id)
   stats_.idle = 0;
   stats_.busy = 0;
   stats_.schedstart = 0;
-  work_.next = &work_;
-  work_.prev = &work_;
 }
 
 u64 
@@ -205,36 +203,17 @@ schedule::sanity(void)
 void
 schedule::enq_dwork(dwork *w)
 {
-  work_link* entry = w;
   scoped_acquire x(&lock_);
-  entry->next = &work_;
-  entry->prev = work_.prev;
-  work_.prev->next = entry;
-  work_.prev = entry;
-}
-
-dwork *
-schedule::pop_dwork(void)
-{
-  if (work_.next == &work_)
-    return nullptr;
-  scoped_acquire x(&lock_);
-  work_link* entry = work_.next;
-  if (entry == &work_)
-    return nullptr;
-  
-  entry->next->prev = entry->prev;
-  entry->prev->next = entry->next;
-  return (dwork *) entry;
+  work_.push_back(w);
 }
 
 void
 schedule::try_dwork(void)
 {
-  while (1) {   // XXX right thing to do?
-    auto w = pop_dwork();
-    if (w == nullptr) return;
-    w->run();
+  while (!work_.empty()) {
+    auto &w = work_.front();
+    work_.pop_front();
+    w.run();
   }
 }
 
