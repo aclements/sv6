@@ -10,6 +10,7 @@
 #include "mnode.hh"
 #include "vm.hh"
 #include <uk/signal.h>
+#include "ilist.hh"
 
 struct pgmap;
 struct gc_handle;
@@ -58,7 +59,7 @@ typedef enum procstate {
 #define PROC_MAGIC 0xfeedfacedeadd00dULL
 
 // Per-process state
-struct proc : public rcu_freed, public sched_link {
+struct proc : public rcu_freed {
   sref<vmap> vmap;             // va -> vma
   char *kstack;                // Bottom of kernel stack for this process
   volatile int pid;            // Process ID
@@ -78,6 +79,7 @@ struct proc : public rcu_freed, public sched_link {
   struct spinlock lock;
   SLIST_HEAD(childlist, proc) childq;
   SLIST_ENTRY(proc) child_next;
+  ilink<proc> sched_link;
   struct condvar cv;
   struct gc_handle *gc;
   char lockname[16];
@@ -115,6 +117,12 @@ struct proc : public rcu_freed, public sched_link {
   int          set_cpu_pin(int cpu);
   static int   kill(int pid);
   int          kill();
+  bool         cansteal(bool nonexec) {
+    return (get_state() == RUNNABLE && !cpu_pin && 
+          (in_exec_ || nonexec) &&
+          curcycles != 0 && curcycles > VICTIMAGE);
+  };
+
 
   static u64   hash(const u32& p);
 

@@ -48,19 +48,15 @@ private:
   void sanity(void);
 
   struct spinlock lock_ __mpalign__;
-  sched_link head_;
+  ilist<proc, &proc::sched_link> proc_;
   isqueue<dwork, &dwork::link_> work_;
   volatile bool cansteal_ __mpalign__;
   __padout__;
 };
 
-static bool cansteal(proc* p, bool nonexec);
-
 schedule::schedule(int id)
   : balance_pool(1), id_(id), lock_("schedule::lock_", LOCKSTAT_SCHED)
 {
-  head_.next = &head_;
-  head_.prev = &head_;
   ncansteal_ = 0;
   stats_.enqs = 0;
   stats_.deqs = 0;
@@ -90,16 +86,15 @@ schedule::balance_move_to(schedule* target)
   if (!cansteal_ || !tryacquire(&lock_))
     return;
 
-  for (sched_link* ptr = head_.next; ptr != &head_; ptr = ptr->next)
-    if (cansteal((proc*)ptr, true)) {
-      ptr->next->prev = ptr->prev;
-      ptr->prev->next = ptr->next;
+  for (auto it = proc_.begin(); it != proc_.end(); ++it) {
+    if ((*it).cansteal(true)) {
+      proc_.erase(it);
       if (--ncansteal_ == 0)
         cansteal_ = false;
       sanity();
-      victim = (proc*) ptr;
-      break;
+      victim = &(*it);
     }
+  }
   release(&lock_);
   if (!victim) {
     ++stats_.misses;
@@ -134,14 +129,9 @@ schedule::balance_move_to(schedule* target)
 void
 schedule::enq(proc* p)
 {
-  sched_link* entry = p;
-  // Add to tail
   scoped_acquire x(&lock_);
-  entry->next = &head_;
-  entry->prev = head_.prev;
-  head_.prev->next = entry;
-  head_.prev = entry;
-  if (cansteal((proc*)entry, true))
+  proc_.push_back(p);
+  if (p->cansteal(true))
     if (ncansteal_++ == 0) {
       cansteal_ = true;
     }
@@ -152,22 +142,20 @@ schedule::enq(proc* p)
 proc*
 schedule::deq(void)
 {   
-  if (head_.next == &head_)
+  if (proc_.empty())
     return nullptr;
   // Remove from head
   scoped_acquire x(&lock_);
-  sched_link* entry = head_.next;
-  if (entry == &head_)
+  if (proc_.empty()) 
     return nullptr;
-  
-  entry->next->prev = entry->prev;
-  entry->prev->next = entry->next;
-  if (cansteal((proc*)entry, true))
+  proc &p = proc_.front();
+  proc_.pop_front();
+  if (p.cansteal(true))
     if (--ncansteal_ == 0)
       cansteal_ = false;
   sanity();
   stats_.deqs++;
-  return (proc*)entry;
+  return &p;
 }
 
 void
@@ -191,8 +179,8 @@ schedule::sanity(void)
 #if DEBUG
   u64 n = 0;
 
-  for (sched_link* ptr = head_.next; ptr != &head_; ptr = ptr->next)
-    if (cansteal((proc*)ptr, true))
+  for (auto &p : proc_) 
+    if (p.cansteal(true))
       n++;
   
   if (n != ncansteal_)
@@ -371,14 +359,6 @@ public:
 };
 
 sched_dir thesched_dir __mpalign__;
-
-static bool
-cansteal(proc* p, bool nonexec)
-{
-  return (p->get_state() == RUNNABLE && !p->cpu_pin && 
-          (p->in_exec_ || nonexec) &&
-          p->curcycles != 0 && p->curcycles > VICTIMAGE);
-}
 
 void
 post_swtch(void)
