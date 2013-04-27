@@ -6,12 +6,6 @@ struct sched_link
   sched_link* next;
 };
 
-struct work_link
-{
-  work_link* prev;
-  work_link* next;
-};
-
 struct sched_stat
 {
   u64 enqs;
