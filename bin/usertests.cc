@@ -328,7 +328,35 @@ killtest(void)
   sleep(1);
   kill(pid);
   sleep(1);
+  if(wait(NULL) < 0)
+    die("wait should have return the killed child");
   printf("killtest ok\n");
+}
+
+void zombietest(void)
+{
+  printf("zombietest\n");
+  int pid = fork();
+  if (fork < 0) {
+    printf("fork failed\n");
+    return;
+  }
+  if (pid == 0) {  // child forks again
+    int pid = fork();
+    if (pid < 0) {
+      printf("child fork failed\n");
+      exit(-1);
+    }
+    if (pid == 0) {  // grandchild
+      sleep(1);
+      exit(0);
+    } else {
+      exit(0);  
+    }
+  }
+  wait(NULL);
+  sleep(2);
+  printf("zombietest ok\n");
 }
 
 void
@@ -2068,7 +2096,8 @@ main(int argc, char *argv[])
   TEST(pipe1);
   TEST(preempt);
   TEST(exitwait);
-  // TEST(killtest);   // Makes forktest fail
+  TEST(zombietest);
+  TEST(killtest); 
 
   TEST(rmdot);
   TEST(thirteen);
