@@ -107,6 +107,12 @@ condvar::sleep_to(struct spinlock *lk, u64 timeout)
   sched();
   // Reacquire original lock.
   lk->acquire();
+  if (myproc()->killed) {
+    // Callers should use scoped locks to ensure locks are released as the stack
+    // is unwinded.  But, callers don't have to check for p->killed to ensure
+    // that they don't call wait() again after being killed.
+    throw KillException();
+  }
 }
 
 void
@@ -115,27 +121,37 @@ condvar::sleep(struct spinlock *lk)
   sleep_to(lk, 0);
 }
 
+void
+condvar::wake_one(proc *p)
+{
+  if (p->get_state() != SLEEPING)
+    panic("condvar::wake_all: pid %u name %s state %u",
+          p->pid, p->name, p->get_state());
+  if (p->oncv != this)
+    panic("condvar::wake_all: pid %u name %s p->cv %p cv %p",
+          p->pid, p->name, p->oncv, this);
+  if (p->cv_wakeup) {
+    scoped_acquire s_l(&sleepers_lock);
+    LIST_REMOVE(p, cv_sleep);
+    p->cv_wakeup = 0;
+  }
+  wakeup(p);
+}
+
 // Wake up all processes sleeping on this condvar.
 void
-condvar::wake_all(int yield)
+condvar::wake_all(int yield, proc *callerproc)
 {
   struct proc *p, *tmp;
 
   scoped_acquire cv_l(&lock);
   myproc()->yield_ = yield;
   LIST_FOREACH_SAFE(p, &waiters, cv_waiters, tmp) {
-    scoped_acquire p_l(&p->lock);
-    if (p->get_state() != SLEEPING)
-      panic("condvar::wake_all: pid %u name %s state %u",
-            p->pid, p->name, p->get_state());
-    if (p->oncv != this)
-      panic("condvar::wake_all: pid %u name %s p->cv %p cv %p",
-            p->pid, p->name, p->oncv, this);
-    if (p->cv_wakeup) {
-      scoped_acquire s_l(&sleepers_lock);
-      LIST_REMOVE(p, cv_sleep);
-      p->cv_wakeup = 0;
+    if (p == callerproc) {
+      wake_one(p);
+    } else {
+      scoped_acquire p_l(&p->lock);   
+      wake_one(p);
     }
-    wakeup(p);
   }
 }

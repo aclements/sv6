@@ -293,18 +293,17 @@ proc::kill(void)
   acquire(&lock);
   killed = 1;
   if(get_state() == SLEEPING) {
-    // XXX
     // we need to wake p up if it is condvar::sleep()ing.
     // can't change p from SLEEPING to RUNNABLE since that
     //   would make some condvar->waiters a dangling reference,
     //   and the non-zero p->cv_next will cause a future panic.
-    // can't call p->oncv.wake_all() since that results in
-    //   deadlock (wake_all() acquires p->lock).
     // can't release p->lock then call wake_all() since the
     //   cv might be deallocated while we're using it
     //   (pipes dynamically allocate condvars).
- 
-    // oncv->wake_all();   // tell wake_all, we already have to lock on p?
+    // can't call p->oncv.wake_all() since that results in
+    //   deadlock (wake_all() acquires p->lock).
+    // changed the wake_all API to avoid double locking of p.
+    oncv->wake_all(0, this);
   }
   release(&lock);
   return 0;
