@@ -56,7 +56,7 @@
 #define FS_NLINK_REFCOUNT refcache::
 #define RANDOMIZE_KMALLOC 1
 // Track kernel memory usage
-#define KERNEL_HEAP_PROFILE 1
+#define KERNEL_HEAP_PROFILE 0
 
 #if defined(HW_qemu)
 #define DEBUG         1
