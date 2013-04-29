@@ -23,11 +23,11 @@ namespace std {
 
   template <class T, size_t N> T* begin(T (&array)[N])
   {
-    return array[0];
+    return &array[0];
   }
 
   template <class T, size_t N> T* end(T (&array)[N])
   {
-    return array[N];
+    return &array[N];
   }
 }
