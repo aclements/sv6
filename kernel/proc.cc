@@ -58,7 +58,6 @@ proc::~proc(void)
   if (fpu_state)
     kmfree(fpu_state, FXSAVE_BYTES);
   fpu_state = nullptr;
-  // delete gc;
 }
 
 void
@@ -430,9 +429,6 @@ finishproc(struct proc *p, bool removepid)
   p->name[0] = 0;
   p->killed = 0;
   freeproc(p);
-#if DEBUG
-  gc_wakeup();
-#endif
 }
 
 struct finishproc_work : public dwork
