@@ -9,8 +9,6 @@
 
 using namespace std;
 
-#include "kernel.hh"
-
 buddy_allocator::buddy_allocator(void *base, size_t len,
                                  void *track_base, size_t track_len)
 {
