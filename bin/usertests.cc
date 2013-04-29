@@ -341,17 +341,17 @@ void zombietest(void)
     printf("fork failed\n");
     return;
   }
-  if (pid == 0) {  // child forks again
-    int pid = fork();
+  if (pid == 0) { 
+    int pid = fork();  // child forks again
     if (pid < 0) {
       printf("child fork failed\n");
       exit(-1);
     }
-    if (pid == 0) {  // grandchild
-      sleep(1);
+    if (pid == 0) {  
+      sleep(1);   // make grandchild exit after child
       exit(0);
     } else {
-      exit(0);  
+      exit(0);   // child exits
     }
   }
   wait(NULL);
@@ -2069,6 +2069,10 @@ main(int argc, char *argv[])
   enabled = argv + 1;
 
 #define TEST(name) run_test(#name, name)
+
+  TEST(zombietest);
+
+  exit(0);
 
   TEST(memtest);
   // TEST(unopentest);
