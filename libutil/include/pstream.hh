@@ -322,3 +322,23 @@ public:
 };
 
 void to_stream(print_stream *s, const shexdump &f);
+
+/**
+ * Size pretty-printer.
+ *
+ * This pretty prints sizes using binary prefixes (KB, MB, etc.)  This
+ * retains two to three significant digits.
+ */
+class ssize
+{
+  uintptr_t val_;
+  friend void to_stream(print_stream *s, const ssize &f);
+
+public:
+  /**
+   * Construct a size pretty-printed for the given value.
+   */
+  ssize(uintptr_t val) : val_(val) { }
+};
+
+void to_stream(print_stream *s, const ssize &f);

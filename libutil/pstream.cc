@@ -1,6 +1,7 @@
 #include "pstream.hh"
 
 #include <string.h>
+#include <iterator>
 
 static void
 streamnum (print_stream *s, unsigned long long num,
@@ -165,4 +166,26 @@ void to_stream(print_stream *s, const shexdump &f)
     else
       to_stream(s, ' ');
   }
+}
+
+void
+to_stream(print_stream *s, const ssize &f)
+{
+  auto val = f.val_, pval = val;
+  static const char *prefixes[] =
+    {" bytes", " kB", " MB", " GB", " TB", " PB", " EB", " ZB", " YB"};
+  const char **prefix = &prefixes[0];
+  while (val >= 1024 && prefix + 1 < std::end(prefixes)) {
+    pval = val;
+    val /= 1024;
+    ++prefix;
+  }
+  if (val >= 10 || prefix == &prefixes[0]) {
+    to_stream(s, val);
+  } else {
+    to_stream(s, val);
+    to_stream(s, ".");
+    to_stream(s, ((pval % 1024) * 10) / 1024);
+  }
+  to_stream(s, *prefix);
 }
