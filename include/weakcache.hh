@@ -103,13 +103,12 @@ private:
 
 public:
   // Construct a weak cache whose bucket array fits in size bytes.
+  // This must be called before initkalloc since it requires large,
+  // raw allocations from the boot allocator.
   weakcache(std::size_t size)
     : mask_(round_down_to_pow2(size / sizeof *buckets_) - 1)
   {
-    // Allocate buckets_ by hand to avoid the size header of new'd
-    // arrays, since this is likely to be a nice power of two.
-    buckets_ = (bucket*)kmalloc((mask_ + 1) * sizeof *buckets_,
-                                "weakcache::buckets");
+    buckets_ = (bucket*)early_kalloc((mask_ + 1) * sizeof *buckets_, PGSIZE);
     if (!buckets_)
       throw_bad_alloc();
     new (buckets_) bucket[mask_ + 1];
@@ -117,10 +116,7 @@ public:
 
   ~weakcache()
   {
-    // XXX Tear down buckets
-    panic("~weakcache not implemented");
-    if (buckets_)
-      kmfree(buckets_, (mask_ + 1) * sizeof *buckets_);
+    panic("weakcache::~weakcache");
   }
 
   weakcache(const weakcache &o) = delete;
