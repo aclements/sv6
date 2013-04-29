@@ -19,9 +19,7 @@ buddy_allocator::buddy_allocator(void *base, size_t len,
     track_len = len;
   }
 
-#if BUDDY_DEBUG
   uintptr_t free_base = (uintptr_t)base;
-#endif
   uintptr_t free_end = (uintptr_t)base + len;
   uintptr_t track_end = (uintptr_t)track_base + track_len;
   assert(track_base <= base && free_end <= track_end);
@@ -72,6 +70,8 @@ buddy_allocator::buddy_allocator(void *base, size_t len,
     orders[MAX_ORDER].blocks.push_back((struct block*)block);
 
   free_bytes = free_end - block_base;
+  bitmap_bytes = (uintptr_t)base - free_base;
+  waste_bytes = block_base - (uintptr_t)base;
 
 #if BUDDY_DEBUG
   if (0)
@@ -217,5 +217,7 @@ buddy_allocator::get_stats() const
     out.free += out.nfree[order] * (MIN_SIZE << order);
   }
   assert(out.free == get_free_bytes());
+  out.metadata_bytes = bitmap_bytes;
+  out.waste_bytes = waste_bytes;
   return out;
 }

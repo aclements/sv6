@@ -27,7 +27,13 @@ public:
 
   struct stats
   {
+    // The number of bytes of metadata in this allocator.
+    std::size_t metadata_bytes;
+    // The number of bytes of wasted padding space.
+    std::size_t waste_bytes;
+    // The total number of free bytes of memory in this allocator.
     std::size_t free;
+    // The number of free blocks at each order.
     std::size_t nfree[MAX_ORDER + 1];
   };
 
@@ -147,7 +153,14 @@ private:
   uintptr_t base, limit;
 
   // The number of bytes of free memory in this buddy allocator.
-  size_t free_bytes;
+  std::size_t free_bytes;
+
+  // The number of bytes allocated to the tracking bitmaps.
+  std::size_t bitmap_bytes;
+
+  // The number of bytes wasted in padding between the bitmaps and the
+  // blocks.
+  std::size_t waste_bytes;
 
   struct block
   {
