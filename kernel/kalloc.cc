@@ -293,7 +293,6 @@ static_vector<numa_node, MAX_NUMA_NODES> numa_nodes;
 void *percpu_offsets[NCPU];
 
 static int kinited __mpalign__;
-static char *early_kalloc(size_t size);
 
 struct memory {
   balancer<memory, mempool> b_;
@@ -318,7 +317,7 @@ struct memory {
   char* kalloc(const char *name, size_t size)
   {
     if (!kinited)
-      return early_kalloc(size);
+      return (char*)early_kalloc(size);
     void *res = nullptr;
     auto mem = mycpu()->mem;
     if (size == PGSIZE) {
@@ -628,9 +627,10 @@ parse_mb_map(struct Mbdata *mb)
 
 // Simple allocator to get off the ground during boot.  Works directly
 // with the physical memory map.
-static char *
+void *
 early_kalloc(size_t size)
 {
+  assert(!kinited);
   paddr pa = mem.alloc(0, size, size);
   mem.remove(0, pa + size);
   return (char*)p2v(pa);
@@ -678,7 +678,7 @@ char*
 kalloc(const char *name, size_t size)
 {
   if (!kinited)
-    return early_kalloc(size);
+    return (char*)early_kalloc(size);
 
   void *res = nullptr;
   const char *source = nullptr;
