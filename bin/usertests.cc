@@ -2070,10 +2070,6 @@ main(int argc, char *argv[])
 
 #define TEST(name) run_test(#name, name)
 
-  TEST(zombietest);
-
-  exit(0);
-
   TEST(memtest);
   // TEST(unopentest);
   TEST(bigargtest);
