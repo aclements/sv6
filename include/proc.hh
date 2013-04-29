@@ -59,7 +59,7 @@ typedef enum procstate {
 #define PROC_MAGIC 0xfeedfacedeadd00dULL
 
 // Per-process state
-struct proc : public rcu_freed {
+struct proc {
   sref<vmap> vmap;             // va -> vma
   char *kstack;                // Bottom of kernel stack for this process
   volatile int pid;            // Process ID
@@ -126,16 +126,15 @@ struct proc : public rcu_freed {
 
   static u64   hash(const u32& p);
 
-  void do_gc(void) override { delete this; }
-
   bool deliver_signal(int signo);
+
+  ~proc(void);
+  NEW_DELETE_OPS(proc);
 
 private:
   proc(int npid);
-  ~proc(void);
   proc& operator=(const proc&);
   proc(const proc& x);
-  NEW_DELETE_OPS(proc);
   
   procstate_t state_;       // Process state  
 };
