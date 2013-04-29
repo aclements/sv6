@@ -1002,6 +1002,7 @@ initkalloc(void)
 
     // Create buddies
     size_t node_low = buddies.size();
+    buddy_allocator::stats node_stats{};
     for (auto &reg : node_mem.get_regions()) {
       if (ALLOC_MEMSET)
         memset(p2v(reg.base), 1, reg.end - reg.base);
@@ -1022,6 +1023,12 @@ initkalloc(void)
                                      p2v(reg.base), reg.end - reg.base);
 #endif
         if (!buddy.empty()) {
+          // Get some stats
+          auto stats = buddy.get_stats();
+          node_stats.free += stats.free;
+          node_stats.metadata_bytes += stats.metadata_bytes;
+          node_stats.waste_bytes += stats.waste_bytes;
+          // Add to buddies
           buddies.emplace_back(std::move(buddy));
           allmem.add(buddies.size()-1, p2v(remaining.base), subsize);
         }
@@ -1031,6 +1038,11 @@ initkalloc(void)
       }
     }
     size_t node_buddies = buddies.size() - node_low;
+
+    console.println("kalloc: ", ssize(node_stats.free), " available in node ",
+                    node.id,
+                    " (metadata: ", ssize(node_stats.metadata_bytes),
+                    ", waste: ", ssize(node_stats.waste_bytes), ")");
 
     // Associate buddies with CPUs
     size_t cpu_index = 0;
