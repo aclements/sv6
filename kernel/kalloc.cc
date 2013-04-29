@@ -317,7 +317,7 @@ struct memory {
   char* kalloc(const char *name, size_t size)
   {
     if (!kinited)
-      return (char*)early_kalloc(size);
+      return (char*)early_kalloc(size, size);
     void *res = nullptr;
     auto mem = mycpu()->mem;
     if (size == PGSIZE) {
@@ -628,10 +628,10 @@ parse_mb_map(struct Mbdata *mb)
 // Simple allocator to get off the ground during boot.  Works directly
 // with the physical memory map.
 void *
-early_kalloc(size_t size)
+early_kalloc(size_t size, size_t align)
 {
   assert(!kinited);
-  paddr pa = mem.alloc(0, size, size);
+  paddr pa = mem.alloc(0, size, align);
   mem.remove(0, pa + size);
   return (char*)p2v(pa);
 }
@@ -678,7 +678,7 @@ char*
 kalloc(const char *name, size_t size)
 {
   if (!kinited)
-    return (char*)early_kalloc(size);
+    return (char*)early_kalloc(size, size);
 
   void *res = nullptr;
   const char *source = nullptr;

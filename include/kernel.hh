@@ -138,7 +138,7 @@ char*           kalloc(const char *name, size_t size = PGSIZE);
 void            kfree(void*, size_t size = PGSIZE);
 void*           ksalloc(int slabtype);
 void            ksfree(int slabtype, void*);
-void*           early_kalloc(size_t size);
+void*           early_kalloc(size_t size, size_t align);
 void*           kmalloc(u64 nbytes, const char *name);
 void            kmfree(void*, u64 nbytes);
 int             kmalign(void **p, int align, u64 size, const char *name);
