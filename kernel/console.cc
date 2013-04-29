@@ -315,9 +315,6 @@ consoleintr(int (*getc)(void))
         consputc(BACKSPACE);
       }
       break;
-    case C('S'):
-      scheddump();
-      break;
     case C('F'):  // kmem stats
       kmemprint(&console);
       break;

@@ -15,6 +15,7 @@
 #include "lb.hh"
 #include "work.hh"
 #include "ilist.hh"
+#include "kstream.hh"
 
 // To get good performance on a single core on ben with 79 cores idling set
 // SINGLE to 1.  XXX To fix this we need adopt LB to avoid cores ganging up on
@@ -34,7 +35,7 @@ public:
 
   void enq(proc* entry);
   proc* deq();
-  void dump();
+  void dump(print_stream *);
 
   void enq_dwork(dwork *w);
   void try_dwork();
@@ -159,18 +160,9 @@ schedule::deq(void)
 }
 
 void
-schedule::dump(void)
+schedule::dump(print_stream *s)
 {
-  cprintf("%8lu %8lu %8lu %8lu\n",
-          stats_.enqs,
-          stats_.deqs,
-          stats_.steals,
-          stats_.misses );
-  
-  stats_.enqs = 0;
-  stats_.deqs = 0;
-  stats_.steals = 0;
-  stats_.misses = 0;
+  s->print(" enq ", stats_.enqs, " deqs ", stats_.deqs, " steals ", stats_.steals, " misses ", stats_.misses);
 }
 
 void
@@ -330,29 +322,13 @@ public:
     post_swtch();
   }
 
-  int statread(mdev*, char *dst, u32 n)
-  {
-    // Sort of like a binary /proc/stat
-    size_t sz = NCPU*sizeof(sched_stat);
-
-    if (n != sz)
-      return -1;
-
-    for (int i = 0; i < NCPU; i++) {
-      memcpy(&dst[i*sizeof(sched_stat)], &(schedule_[i]->stats_),
-             sizeof(schedule_[i]->stats_));
-    }
-  
-    return n;
-  }
-
   void
-  scheddump(void)
+  scheddump(print_stream *s)
   {
-    cprintf("\ncpu    enqs     deqs   steals   misses\n");
     for (int i = 0; i < NCPU; i++) {
-      cprintf("%-2u ", i);
-      schedule_[i]->dump();
+      s->print("CPU: ", i);
+      schedule_[i]->dump(s);
+      s->println();
     }
   }
 
@@ -390,15 +366,11 @@ dwork_push(struct dwork *w, int cpu)
 }
 
 static int
-statread(mdev* m, char *dst, u32 n)
+statread(mdev* m, char *dst, u32 off, u32 n)
 {
-  return thesched_dir.statread(m, dst, n);
-}
-
-void
-scheddump(void)
-{
-  thesched_dir.scheddump();
+  window_stream s(dst, off, n);
+  thesched_dir.scheddump(&s);
+  return s.get_used();
 }
 
 int
@@ -411,5 +383,5 @@ steal(void)
 void
 initsched(void)
 {
-  devsw[MAJ_STAT].read = statread;
+  devsw[MAJ_STAT].pread = statread;
 }
