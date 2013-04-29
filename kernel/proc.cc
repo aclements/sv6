@@ -164,14 +164,15 @@ exit(int status)
 
   // Pass abandoned children to init.
   wakeupinit = 0;
-
   while (!myproc()->childq.empty()) {
     auto &p = myproc()->childq.front();
     myproc()->childq.pop_front();
     scoped_acquire pl(&p.lock);
     scoped_acquire bl(&bootproc->lock);
-    if(p.get_state() == ZOMBIE)
+    p.parent = bootproc;
+    if(p.get_state() == ZOMBIE)  {
       wakeupinit = 1;
+    }
     bootproc->childq.push_back(&p);
   }
 
@@ -218,6 +219,7 @@ exit(int status)
 static void
 freeproc(struct proc *p)
 {
+  // p->do_gc();
   gc_delayed(p);
 }
 
