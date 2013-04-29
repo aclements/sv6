@@ -11,7 +11,7 @@
 
 static u64 ticks __mpalign__;
 
-LIST_HEAD(sleepers, proc) sleepers __mpalign__;
+ilist<proc,&proc::cv_sleep> sleepers  __mpalign__;   // XXX one per core?
 struct spinlock sleepers_lock;
 
 static void
@@ -41,7 +41,6 @@ nsectime(void)
 void
 timerintr(void)
 {
-  struct proc *p, *tmp;
   struct condvar *cv;
   int again;
   u64 now;
@@ -51,26 +50,26 @@ timerintr(void)
   now = nsectime();
   again = 0;
   do {
-    acquire(&sleepers_lock);
-    LIST_FOREACH_SAFE(p, &sleepers, cv_sleep, tmp) {
-      if (p->cv_wakeup <= now) {
-        if (tryacquire(&p->lock)) {
-          if (tryacquire(&p->oncv->lock)) {
-            LIST_REMOVE(p, cv_sleep);
-            cv = p->oncv;
-            p->cv_wakeup = 0;
-            wakeup(p);
-            release(&p->lock);
+    scoped_acquire l(&sleepers_lock);
+    for (auto it = sleepers.begin(); it != sleepers.end(); it++) {
+      struct proc &p = *it;
+      if (p.cv_wakeup <= now) {
+        if (tryacquire(&p.lock)) {
+          if (tryacquire(&p.oncv->lock)) {
+            sleepers.erase(it);
+            cv = p.oncv;
+            p.cv_wakeup = 0;
+            wakeup(&p);
+            release(&p.lock);
             release(&cv->lock);
             continue;
           } else {
-            release(&p->lock);
+            release(&p.lock);
           }
         }
         again = 1;
       }
     }
-    release(&sleepers_lock); 
   } while (again);
 }
 
@@ -100,7 +99,7 @@ condvar::sleep_to(struct spinlock *lk, u64 timeout)
   if (timeout) {
     scoped_acquire l(&sleepers_lock);
     myproc()->cv_wakeup = timeout;
-    LIST_INSERT_HEAD(&sleepers, myproc(), cv_sleep);
+    sleepers.push_back(myproc());
  }
 
   lock.release();
@@ -132,7 +131,8 @@ condvar::wake_one(proc *p)
           p->pid, p->name, p->oncv, this);
   if (p->cv_wakeup) {
     scoped_acquire s_l(&sleepers_lock);
-    LIST_REMOVE(p, cv_sleep);
+    auto it = sleepers.iterator_to(p);
+    sleepers.erase(it);
     p->cv_wakeup = 0;
   }
   wakeup(p);

@@ -90,7 +90,7 @@ struct proc : public rcu_freed {
   struct condvar *oncv;        // Where it is sleeping, for kill()
   u64 cv_wakeup;               // Wakeup time for this process
   LIST_ENTRY(proc) cv_waiters; // Linked list of processes waiting for oncv
-  LIST_ENTRY(proc) cv_sleep;   // Linked list of processes sleeping on a cv
+  ilink<proc> cv_sleep;        // Linked list of processes sleeping on a cv
   struct spinlock futex_lock;
   u64 user_fs_;
   u64 unmap_tlbreq_;
