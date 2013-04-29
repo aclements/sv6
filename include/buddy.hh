@@ -19,7 +19,7 @@ public:
     MIN_SIZE = 4096,
     // The maximum order.  The higher this is, the larger blocks this
     // allocator can allocate, but larger orders also consume more
-    // memory for metadata and for satisfying alignment constraints.
+    // memory for metadata.
     MAX_ORDER = 12,
     // The maximum size this allocator can allocate.
     MAX_SIZE = MIN_SIZE << MAX_ORDER,

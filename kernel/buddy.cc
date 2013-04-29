@@ -22,6 +22,12 @@ buddy_allocator::buddy_allocator(void *base, size_t len,
   uintptr_t track_end = (uintptr_t)track_base + track_len;
   assert(track_base <= base && free_end <= track_end);
 
+  // Round tracked region out to a multiple of MAX_SIZE so that every
+  // trackable block has a buddy.
+  track_base = (void*)((uintptr_t)track_base & ~(MAX_SIZE - 1));
+  track_end = (track_end + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
+  track_len = track_end - (uintptr_t)track_base;
+
   // Use a linear allocator to allocate buddy tracking bitmaps from
   // the free space.
   // XXX(Austin) Should we check if we have more unaligned space at
@@ -52,22 +58,27 @@ buddy_allocator::buddy_allocator(void *base, size_t len,
   orders[MAX_ORDER].debug = nullptr;
 #endif
 
-  // Round bounds in to multiples of MIN_SIZE << MAX_ORDER.  Without
-  // this, some blocks wouldn't have buddies, which would complicate
-  // other logic.
-  // XXX We could instead round *out* (which might require a slightly
-  // larger bitmap) and then simply treat the bitmap as allocated
-  // blocks, which would let us use this space.
-  this->base = ((uintptr_t)track_base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
-  limit = track_end & ~(MAX_SIZE - 1);
+  // Record the region we can track.  These must be multiples of
+  // MIN_SIZE, but they will be since we've already rounded to
+  // MAX_SIZE above.
+  this->base = (uintptr_t)track_base;
+  limit = track_end;
 
-  // Create free block list.  We have to round these in, as well.
-  uintptr_t block_base = ((uintptr_t)base + MAX_SIZE - 1) & ~(MAX_SIZE - 1);
-  free_end = free_end & ~(MAX_SIZE - 1);
-  for (uintptr_t block = block_base; block < free_end; block += MAX_SIZE)
-    orders[MAX_ORDER].blocks.push_back((struct block*)block);
+  // Create free block list.
+  uintptr_t block_base = ((uintptr_t)base + MIN_SIZE - 1) & ~(MIN_SIZE - 1);
+  uintptr_t block_end = free_end & ~(MIN_SIZE - 1);
+  for (uintptr_t block = block_base; block < block_end; ) {
+    if ((block & (MAX_SIZE - 1)) == 0 && block + MAX_SIZE <= block_end) {
+      // Fast path for MAX_SIZE blocks
+      free_order((void*)block, MAX_ORDER);
+      block += MAX_SIZE;
+    } else {
+      free_order((void*)block, 0);
+      block += MIN_SIZE;
+    }
+  }
 
-  free_bytes = free_end - block_base;
+  free_bytes = block_end - block_base;
   bitmap_bytes = (uintptr_t)base - free_base;
   waste_bytes = block_base - (uintptr_t)base;
 
@@ -76,7 +87,7 @@ buddy_allocator::buddy_allocator(void *base, size_t len,
     console.println("bitmap ", (void*)((uintptr_t)free_base), "\n"
                     "     ..", (void*)((uintptr_t)base - 1), "\n",
                     "block  ", (void*)block_base, "\n"
-                    "     ..", (void*)(free_end - 1));
+                    "     ..", (void*)(block_end - 1));
 #endif
 }
 
