@@ -11,10 +11,11 @@
 #include "codex.hh"
 #include "benchcodex.hh"
 #include "cpuid.hh"
+#include "ilist.hh"
 
 struct idle {
   struct proc *cur;
-  SLIST_HEAD(zombies, proc) zombies;
+  ilist <proc, &proc::child_next> zombies;
   struct spinlock lock;
 };
 
@@ -33,24 +34,21 @@ idleproc(void)
 void
 idlezombie(struct proc *p)
 {
-  acquire(&idlem[mycpu()->id].lock);
-  SLIST_INSERT_HEAD(&idlem[mycpu()->id].zombies, p, child_next);
-  release(&idlem[mycpu()->id].lock);
+  struct idle *i = &idlem[mycpu()->id];
+  scoped_acquire l(&i->lock);
+  i->zombies.push_back(p);
 }
 
 static inline void
 finishzombies(void)
 {
   struct idle *i = &idlem[mycpu()->id];
+  scoped_acquire l(&i->lock);
 
-  if (!SLIST_EMPTY(&i->zombies)) {
-    struct proc *p, *np;
-    acquire(&i->lock);
-    SLIST_FOREACH_SAFE(p, &i->zombies, child_next, np) {
-      SLIST_REMOVE(&i->zombies, p, proc, child_next);
-      finishproc(p);
-    }
-    release(&i->lock);
+  while(!i->zombies.empty()) {
+    auto &p = i->zombies.front();
+    i->zombies.pop_front();
+    finishproc(&p);
   }
 }
 
@@ -104,7 +102,6 @@ initidle(void)
     }
   }
 
-  SLIST_INIT(&idlem->zombies);
   idlem->lock = spinlock("idle_lock", LOCKSTAT_IDLE);
 
   snprintf(p->name, sizeof(p->name), "idle_%u", myid());

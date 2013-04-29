@@ -47,8 +47,6 @@ proc::proc(int npid) :
   lock = spinlock(lockname+3, LOCKSTAT_PROC);
   cv = condvar(lockname);
   gc = new gc_handle();
-  memset(&childq, 0, sizeof(childq));
-  memset(&child_next, 0, sizeof(child_next));
   memset(&cv_waiters, 0, sizeof(cv_waiters));
   memset(&cv_sleep, 0, sizeof(cv_sleep));
   memset(__cxa_eh_global, 0, sizeof(__cxa_eh_global));
@@ -153,7 +151,6 @@ forkret(void)
 void
 exit(int status)
 {
-  struct proc *p, *np;
   int wakeupinit;
 
   if(myproc() == bootproc)
@@ -167,17 +164,15 @@ exit(int status)
 
   // Pass abandoned children to init.
   wakeupinit = 0;
-  SLIST_FOREACH_SAFE(p, &(myproc()->childq), child_next, np) {
-    acquire(&p->lock);
-    p->parent = bootproc;
-    if(p->get_state() == ZOMBIE)
-      wakeupinit = 1;
-    SLIST_REMOVE(&(myproc()->childq), p, proc, child_next);
-    release(&p->lock);
 
-    acquire(&bootproc->lock);
-    SLIST_INSERT_HEAD(&bootproc->childq, p, child_next);
-    release(&bootproc->lock);
+  while (!myproc()->childq.empty()) {
+    auto &p = myproc()->childq.front();
+    myproc()->childq.pop_front();
+    scoped_acquire pl(&p.lock);
+    scoped_acquire bl(&bootproc->lock);
+    if(p.get_state() == ZOMBIE)
+      wakeupinit = 1;
+    bootproc->childq.push_back(&p);
   }
 
   // Release vmap
@@ -408,7 +403,7 @@ doclone(clone_flags flags)
   np->cwd_m = myproc()->cwd_m;
   safestrcpy(np->name, myproc()->name, sizeof(myproc()->name));
   acquire(&myproc()->lock);
-  SLIST_INSERT_HEAD(&myproc()->childq, np, child_next);
+  myproc()->childq.push_back(np);
   release(&myproc()->lock);
 
   np->cpuid = mycpu()->id;
@@ -461,36 +456,37 @@ struct finishproc_work : public dwork
 int
 wait(int wpid,  userptr<int> status)
 {
-  struct proc *p, *np;
   int havekids, pid;
 
   for(;;){
     // Scan children for ZOMBIEs
     havekids = 0;
     acquire(&myproc()->lock);
-    SLIST_FOREACH_SAFE(p, &myproc()->childq, child_next, np) {
-      acquire(&p->lock);
-      if (wpid == -1 || wpid == p->pid) {
+    for (auto it = myproc()->childq.begin(); it != myproc()->childq.end(); it++) {
+      proc &p = *it;
+      acquire(&p.lock);
+      if (wpid == -1 || wpid == p.pid) {
 	havekids = 1;
-	if(p->get_state() == ZOMBIE){
-	  release(&p->lock);	// noone else better be trying to lock p
-	  pid = p->pid;
-	  SLIST_REMOVE(&myproc()->childq, p, proc, child_next);
+	if(p.get_state() == ZOMBIE){
+	  release(&p.lock);	// noone else better be trying to lock p
+	  pid = p.pid;
+          myproc()->childq.erase(it);
 	  release(&myproc()->lock);
 
           if (status) {
-            status.store(&p->status);
+            status.store(&p.status);
           }
 
-          if (!xnspid->remove(pid, &p))
+          proc *np = &p;
+          if (!xnspid->remove(pid, &np))
             panic("wait: ns_remove");
 
-          finishproc_work *w = new finishproc_work(p);
-          assert(dwork_push(w, p->run_cpuid_) >= 0);
+          finishproc_work *w = new finishproc_work(&p);
+          assert(dwork_push(w, p.run_cpuid_) >= 0);
 	  return pid;
 	}
       }
-      release(&p->lock);
+      release(&p.lock);
     }
 
     // No point waiting if we don't have any children.
@@ -501,7 +497,6 @@ wait(int wpid,  userptr<int> status)
 
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     myproc()->cv.sleep(&myproc()->lock);
-
     release(&myproc()->lock);
   }
 }

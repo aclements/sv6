@@ -77,8 +77,8 @@ struct proc : public rcu_freed {
   unsigned cpuid;
   void *fpu_state;             // FXSAVE state, lazily allocated
   struct spinlock lock;
-  SLIST_HEAD(childlist, proc) childq;
-  SLIST_ENTRY(proc) child_next;
+  ilink<proc> child_next;
+  ilist<proc,&proc::child_next> childq;
   ilink<proc> sched_link;
   struct condvar cv;
   struct gc_handle *gc;
