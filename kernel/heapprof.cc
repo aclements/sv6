@@ -144,6 +144,14 @@ heap_profile_print1(print_stream *s, int limit, heap_profile_arena arena)
     s->println(loc.rip, " ", loc.prbytes, " bytes in ", loc.count,
                " allocations");
   }
+
+  // Total
+  uintptr_t total_bytes = 0, total_count = 0;
+  for (auto &loc : sorted) {
+    total_bytes += loc.prbytes;
+    total_count += loc.count;
+  }
+  s->println("Total: ", total_bytes, " bytes in ", total_count, " allocations");
 }
 
 void
