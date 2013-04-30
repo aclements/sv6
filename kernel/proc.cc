@@ -308,6 +308,9 @@ proc::kill(int pid)
 {
   struct proc *p;
 
+  // XXX The one use of lookup and it is wrong: it should return a locked
+  // proc structure, or be in an RCU epoch.  Now another process can delete
+  // p between lookup and kill.
   p = xnspid->lookup(pid);
   if (p == 0) {
     panic("kill");
