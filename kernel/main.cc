@@ -29,6 +29,7 @@ void initmsr(void);
 void initseg(struct cpu *);
 void initphysmem(paddr mbaddr);
 void initpercpu(void);
+void initpageinfo(void);
 void initkalloc(void);
 void initz(void);
 void initrcu(void);
@@ -193,11 +194,15 @@ cmain(u64 mbmagic, u64 mbaddr)
   inituartcons();          // Requires interrupt routing
   initcga();
 
+  initpageinfo();          // Requires initnuma
+
   // Some global constructors require mycpu()->id (via myid()) which
-  // we setup in inittls.  (Note that gcc 4.7 eliminated the .ctors
-  // section entirely, but gcc has supported .init_array for some
-  // time.)  Note that this will implicitly initialize CPU 0's per-CPU
-  // objects as well.
+  // we setup in inittls.  Some require dynamic allocation of large
+  // memory regions (e.g., for hash tables), which requires
+  // initpageinfo and needs to happen *before* initkalloc.  (Note that
+  // gcc 4.7 eliminated the .ctors section entirely, but gcc has
+  // supported .init_array for some time.)  Note that this will
+  // implicitly initialize CPU 0's per-CPU objects as well.
   extern void (*__init_array_start[])(int, char **, char **);
   extern void (*__init_array_end[])(int, char **, char **);
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
@@ -207,7 +212,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initfpu();               // Requires nothing
   initmsr();               // Requires nothing
   initcmdline();
-  initkalloc();
+  initkalloc();            // Requires initpageinfo
   initz();
   initproc();      // process table
   initsched();     // scheduler run queues

@@ -18,8 +18,8 @@ public:
     // The size of an order 0 block.  This must be a power of two.
     MIN_SIZE = 4096,
     // The maximum order.  The higher this is, the larger blocks this
-    // allocator can allocate, but larger orders also consume more
-    // memory for metadata.
+    // allocator can allocate.  The worst-case time for allocate and
+    // free is proportional to MAX_ORDER.
     MAX_ORDER = 12,
     // The maximum size this allocator can allocate.
     MAX_SIZE = MIN_SIZE << MAX_ORDER,
@@ -174,8 +174,9 @@ private:
     // Bitmap indicating the status of each pair of buddies in this
     // order.  Set to 1 if one of the buddies in the pair is free, or
     // 0 if both are allocated or both are free (in which case, they
-    // will be combined and live on a higher-order list).  In total,
-    // these bitmaps add up to 1 bit of metadata per MIN_SIZE block.
+    // will be combined and live on a higher-order list).  All
+    // together, these bitmaps approach a total of 1 bit of metadata
+    // per MIN_SIZE block as MAX_ORDER approaches infinity.
     unsigned char *bitmap;
 
 #if BUDDY_DEBUG
