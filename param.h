@@ -63,6 +63,7 @@
 #define NCPU          8   // maximum number of CPUs
 #define NSOCKET       2
 #define PERFSIZE      (16<<20ull)
+#define MEMIDE        0
 #elif defined(HW_mtrace)
 #define DEBUG         0
 #define NCPU          16   // maximum number of CPUs
@@ -149,4 +150,7 @@
 #endif
 #ifndef QUANTUM
 #define QUANTUM      10  // scheduling time quantum and tick length (in msec)
+#endif
+#ifndef MEMIDE
+#define MEMIDE 1
 #endif
