@@ -16,6 +16,8 @@
 extern u8 _fs_img_start[];
 extern u64 _fs_img_size;
 
+#if MEMIDE
+
 static u64 disksize;
 static u8 *memdisk;
 
@@ -60,3 +62,5 @@ idewrite(u32 dev, u64 sector, const char* data)
   p = memdisk + sector*512;
   memmove(p, data, 512);
 }
+
+#endif  /* MEMIDE */

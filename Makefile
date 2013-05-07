@@ -172,10 +172,10 @@ QEMUOPTS = -smp $(QEMUSMP) -m 512 \
 	$(if $(QEMUNOREDIR),,-redir tcp:2323::23 -redir tcp:8080::80) \
 	$(if $(RUN),-append "\$$ $(RUN)",)
 
-qemu: $(KERN)
-	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN)
+qemu: $(KERN) $(O)/fs.img
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -hdb $(O)/fs.img
 gdb: $(KERN)
-	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -s
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -hdb $(O)/fs.img -s
 
 codex: $(KERN)
 
