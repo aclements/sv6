@@ -1,6 +1,5 @@
 #pragma once
 
-#include "queue.h"
 #ifdef __cplusplus
 #include "cpputil.hh"           // For NEW_DELETE_OPS
 #include "proc.hh"

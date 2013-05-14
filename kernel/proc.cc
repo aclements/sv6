@@ -4,7 +4,6 @@
 #include "amd64.h"
 #include "spinlock.h"
 #include "condvar.h"
-#include "queue.h"
 #include "proc.hh"
 #include "cpu.hh"
 #include "bits.hh"

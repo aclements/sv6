@@ -10,7 +10,6 @@
 #include "condvar.h"
 #include "file.hh"
 #include "amd64.h"
-#include "queue.h"
 #include "proc.hh"
 #include "traps.h"
 #include "lib.h"

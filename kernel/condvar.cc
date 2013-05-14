@@ -4,7 +4,6 @@
 #include "kernel.hh"
 #include "spinlock.h"
 #include "condvar.h"
-#include "queue.h"
 #include "proc.hh"
 #include "cpu.hh"
 #include "hpet.hh"

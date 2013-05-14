@@ -3,7 +3,6 @@
 #include "kernel.hh"
 #include "spinlock.h"
 #include "condvar.h"
-#include "queue.h"
 #include "proc.hh"
 #include "amd64.h"
 #include <uk/stat.h>

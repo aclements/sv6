@@ -124,8 +124,10 @@ spinlock::holding()
 #endif
 
 #if LOCKSTAT
-LIST_HEAD(lockstat_list, klockstat);
-static struct lockstat_list lockstat_list = { (struct klockstat*) nullptr };
+
+ilist<klockstat,&klockstat::link> lockstat_list;
+//LIST_HEAD(lockstat_list, klockstat);
+//static struct lockstat_list lockstat_list = { (struct klockstat*) nullptr };
 static struct spinlock lockstat_lock("lockstat");
 
 klockstat::klockstat(const char *name) :
@@ -153,7 +155,8 @@ lockstat_init(struct spinlock *lk, bool lazy)
   }
 
   acquire(&lockstat_lock);
-  LIST_INSERT_HEAD(&lockstat_list, lk->stat, link);
+  lockstat_list.push_front(lk->stat);
+  //LIST_INSERT_HEAD(&lockstat_list, lk->stat, link);
   release(&lockstat_lock);
 }
 
@@ -169,14 +172,18 @@ lockstat_stop(struct spinlock *lk)
 void
 lockstat_clear(void)
 {
-  struct klockstat *stat, *tmp;
+  // struct klockstat *stat, *tmp;
 
   acquire(&lockstat_lock);
-  LIST_FOREACH_SAFE(stat, &lockstat_list, link, tmp) {
+  
+  //LIST_FOREACH_SAFE(stat, &lockstat_list, link, tmp) {
+  for (auto it = lockstat_list.begin(); it != lockstat_list.end(); it++) {
+    klockstat *stat = &(*it);
     if (stat->magic == 0) {
-      LIST_REMOVE(stat, link);
+      lockstat_list.erase(it);
+      // LIST_REMOVE(stat, link);
       // So verifyfree doesn't follow le_next
-      stat->link.le_next = 0;
+      // stat->link.le_next = 0;
       gc_delayed(stat);
     } else {
       memset(&stat->s.cpu, 0, sizeof(stat->s.cpu));
@@ -194,8 +201,9 @@ lockstat_read(mdev*, char *dst, u32 off, u32 n)
     u32 off;
   } cache;
 
-  struct klockstat *stat;
   u32 cur;
+  iiterator<klockstat,&klockstat::link> it;
+  struct klockstat *stat;
 
   if (off % sz || n < sz)
     return -1;
@@ -204,11 +212,18 @@ lockstat_read(mdev*, char *dst, u32 off, u32 n)
   if (cache.off == off && cache.stat != nullptr) {
     cur = cache.off;
     stat = cache.stat;
+    it = lockstat_list.iterator_to(stat);
   } else {
     cur = 0;
-    stat = LIST_FIRST(&lockstat_list);
+    it = lockstat_list.begin();
+    // stat = LIST_FIRST(&lockstat_list);
+    // stat = lockstat_list.front();
+    
   }
-  for (; stat != nullptr; stat = LIST_NEXT(stat, link)) {
+  stat = &(*it);
+//  for (; stat != nullptr; stat = LIST_NEXT(stat, link)) {
+  for (; it != lockstat_list.end(); it++) {
+    stat = &(*it);
     struct lockstat *ls = &stat->s;
     if (n < sizeof(*ls))
       break;

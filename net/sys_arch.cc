@@ -9,7 +9,6 @@ extern "C" {
 #include "arch/sys_arch.h"
 }
 
-#include "queue.h"
 #include "kernel.hh"
 #include "proc.hh"
 #include "cpu.hh"

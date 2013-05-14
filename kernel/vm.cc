@@ -6,7 +6,6 @@
 #include "bits.hh"
 #include "spinlock.h"
 #include "kalloc.hh"
-#include "queue.h"
 #include "condvar.h"
 #include "proc.hh"
 #include "vm.hh"

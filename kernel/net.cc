@@ -1,6 +1,5 @@
 #include "types.h"
 #include "kernel.hh"
-#include "queue.h"
 #include "spinlock.h"
 #include "condvar.h"
 #include "proc.hh"

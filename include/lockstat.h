@@ -1,4 +1,4 @@
-#include "queue.h"
+#include "ilist.hh"
 
 #define LOCKSTAT_MAGIC 0xb4cd79c1b2e46f40ull
 
@@ -9,7 +9,9 @@
 
 struct klockstat : public rcu_freed {
   u64 magic;
-  LIST_ENTRY(klockstat) link;
+  
+  // LIST_ENTRY(klockstat) link;
+  ilink<klockstat> link;
   struct lockstat s;
 
   klockstat(const char *name);

@@ -5,7 +5,6 @@
 #include "mmu.h"
 #include "kernel.hh"
 #include "spinlock.h"
-#include "queue.h"
 #include "condvar.h"
 #include "proc.hh"
 #include "amd64.h"
