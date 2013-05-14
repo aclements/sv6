@@ -9,6 +9,7 @@
 #include "cpu.hh"
 #include "bits.hh"
 #include "vm.hh"
+#include "filetable.hh"
 
 #define INIT_START 0x1000
 

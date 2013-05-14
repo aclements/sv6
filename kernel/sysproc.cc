@@ -11,9 +11,11 @@
 #include "kmtrace.hh"
 #include "futex.h"
 #include "version.hh"
+#include "filetable.hh"
 
 #include <uk/mman.h>
 #include <uk/utsname.h>
+#include <uk/unistd.h>
 
 //SYSCALL
 int

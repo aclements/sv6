@@ -1,6 +1,9 @@
 #include <atomic>
 #include "percpu.hh"
 #include "ref.hh"
+// XXX If we move the filetable implementation to a source file, we
+// won't need file.hh
+#include "file.hh"
 
 class filetable : public referenced {
 private:

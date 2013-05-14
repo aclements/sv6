@@ -4,8 +4,6 @@
 #include <atomic>
 #include "cpputil.hh"
 #include "fs.h"
-#include "file.hh"
-#include "filetable.hh"
 #include "sched.hh"
 #include "mnode.hh"
 #include "vm.hh"
@@ -14,6 +12,7 @@
 
 struct pgmap;
 struct gc_handle;
+class filetable;
 
 #if 0
 // This should be per-address space

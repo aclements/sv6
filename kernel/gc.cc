@@ -10,6 +10,7 @@
 #include "gc.hh"
 #include "major.h"
 #include "mtrace.h"
+#include "file.hh"
 #include "uk/gcstat.h"
 
 using std::atomic;

@@ -13,6 +13,7 @@
 #include "vm.hh"
 #include "ns.hh"
 #include "work.hh"
+#include "filetable.hh"
 #include <uk/fcntl.h>
 #include <uk/unistd.h>
 #include <uk/wait.h>

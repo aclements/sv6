@@ -15,6 +15,7 @@
 #include "kmtrace.hh"
 #include "mfs.hh"
 #include "work.hh"
+#include "filetable.hh"
 
 #define BRK (USERTOP >> 1)
 

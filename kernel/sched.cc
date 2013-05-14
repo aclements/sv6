@@ -16,6 +16,7 @@
 #include "work.hh"
 #include "ilist.hh"
 #include "kstream.hh"
+#include "file.hh"
 
 // To get good performance on a single core on ben with 79 cores idling set
 // SINGLE to 1.  XXX To fix this we need adopt LB to avoid cores ganging up on

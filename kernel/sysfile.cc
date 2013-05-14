@@ -18,6 +18,7 @@
 #include <vector>
 #include "kstream.hh"
 #include <uk/spawn.h>
+#include "filetable.hh"
 
 sref<file>
 getfile(int fd)

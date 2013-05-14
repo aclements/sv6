@@ -6,6 +6,7 @@
 #include "lb.hh"
 #include "atomic_util.hh"
 #include "proc.hh"
+#include "file.hh"
 #include <uk/socket.h>
 #include <uk/un.h>
 
