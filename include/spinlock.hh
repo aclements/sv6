@@ -24,6 +24,17 @@ public:
     l_->acquire();
   }
 
+  struct try_guard_t {};
+  static try_guard_t try_guard_tag;
+
+  // Try acquire lock @c l.  If this fails, the lock_guard will be
+  // false.
+  lock_guard(Lock *l, try_guard_t) : l_(nullptr)
+  {
+    if (l->try_acquire())
+      l_ = l;
+  }
+
   // Default constructor.
   constexpr lock_guard() : l_(nullptr) { }
 
@@ -145,6 +156,11 @@ struct spinlock {
   lock_guard<spinlock> guard()
   {
     return lock_guard<spinlock>(this);
+  }
+
+  lock_guard<spinlock> try_guard()
+  {
+    return lock_guard<spinlock>(this, lock_guard<spinlock>::try_guard_tag);
   }
 
 #if SPINLOCK_DEBUG
