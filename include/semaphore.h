@@ -18,11 +18,11 @@ public:
   // move-assigned from an initialized semaphore before being used.
   // This is constexpr, so it can be used for global semaphores
   // without incurring a static constructor.
-  constexpr semaphore()
+  semaphore()
     : lock(), cv(), count() { }
 
   // Construct a semaphore.
-  constexpr semaphore(const char *name, uint64_t permits)
+  semaphore(const char *name, uint64_t permits)
     : lock(name), cv(name), count(permits) { }
 
   // Semaphores cannot be copied.

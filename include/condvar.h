@@ -3,23 +3,24 @@
 #include "queue.h"
 #ifdef __cplusplus
 #include "cpputil.hh"           // For NEW_DELETE_OPS
+#include "proc.hh"
+#include "ilist.hh"
 #endif
 
 struct condvar {
   struct spinlock lock;
-  LIST_HEAD(waiters, proc) waiters;
+  ilist<proc,&proc::cv_waiters> waiters;
 
 #ifdef __cplusplus
   // Construct an uninitialized condvar.  This should be move-assigned
   // from an initialized condvar before being used.  This is
   // constexpr, so it can be used for global condvars without
   // incurring a static constructor.
-  constexpr condvar()
-    : lock(), waiters{} { }
+  condvar()
+    : lock() { }
 
-  constexpr
   condvar(const char *name)
-    : lock(name, LOCKSTAT_CONDVAR), waiters{} { }
+    : lock(name, LOCKSTAT_CONDVAR) { }
 
   // Condvars cannot be copied.
   condvar(const condvar &o) = delete;

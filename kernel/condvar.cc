@@ -17,7 +17,8 @@ struct spinlock sleepers_lock;
 static void
 wakeup(struct proc *p)
 {
-  LIST_REMOVE(p, cv_waiters);
+  auto it = p->oncv->waiters.iterator_to(p);
+  p->oncv->waiters.erase(it);
   p->oncv = 0;
   addrun(p);
 }
@@ -92,7 +93,7 @@ condvar::sleep_to(struct spinlock *lk, u64 timeout)
   if(myproc()->oncv)
     panic("condvar::sleep_to oncv");
 
-  LIST_INSERT_HEAD(&waiters, myproc(), cv_waiters);
+  waiters.push_front(myproc());
   myproc()->oncv = this;
   myproc()->set_state(SLEEPING);
 
@@ -142,11 +143,12 @@ condvar::wake_one(proc *p)
 void
 condvar::wake_all(int yield, proc *callerproc)
 {
-  struct proc *p, *tmp;
-
   scoped_acquire cv_l(&lock);
   myproc()->yield_ = yield;
-  LIST_FOREACH_SAFE(p, &waiters, cv_waiters, tmp) {
+
+  for (auto it = this->waiters.begin(); it != this->waiters.end();
+       it++) {
+    struct proc *p = &(*it);
     if (p == callerproc) {
       wake_one(p);
     } else {

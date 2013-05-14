@@ -9,6 +9,7 @@
 #include "proc.hh"
 #include "cpu.hh"
 #include "elf.hh"
+#include "atomic_util.hh"
 
 const std::nothrow_t std::nothrow;
 

@@ -5,14 +5,14 @@
 #include "cpputil.hh"
 #include "fs.h"
 #include "sched.hh"
-#include "mnode.hh"
-#include "vm.hh"
 #include <uk/signal.h>
 #include "ilist.hh"
+#include <stdexcept>
 
 struct pgmap;
 struct gc_handle;
 class filetable;
+class mnode;
 
 #if 0
 // This should be per-address space
@@ -79,7 +79,7 @@ struct proc {
   ilink<proc> child_next;
   ilist<proc,&proc::child_next> childq;
   ilink<proc> sched_link;
-  struct condvar cv;
+  struct condvar *cv;          // for waiting till children exit
   struct gc_handle *gc;
   char lockname[16];
   int cpu_pin;
@@ -88,7 +88,7 @@ struct proc {
 #endif
   struct condvar *oncv;        // Where it is sleeping, for kill()
   u64 cv_wakeup;               // Wakeup time for this process
-  LIST_ENTRY(proc) cv_waiters; // Linked list of processes waiting for oncv
+  ilink<proc> cv_waiters;      // Linked list of processes waiting for oncv
   ilink<proc> cv_sleep;        // Linked list of processes sleeping on a cv
   struct spinlock futex_lock;
   u64 user_fs_;

@@ -45,10 +45,8 @@ proc::proc(int npid) :
 {
   snprintf(lockname, sizeof(lockname), "cv:proc:%d", pid);
   lock = spinlock(lockname+3, LOCKSTAT_PROC);
-  cv = condvar(lockname);
+  cv = new condvar(lockname);
   gc = new gc_handle();
-  memset(&cv_waiters, 0, sizeof(cv_waiters));
-  memset(&cv_sleep, 0, sizeof(cv_sleep));
   memset(__cxa_eh_global, 0, sizeof(__cxa_eh_global));
   memset(sig, 0, sizeof(sig));
 }
@@ -192,13 +190,13 @@ exit(int status)
   // Kernel threads might not have a parent
   if (myproc()->parent != nullptr) {
     release(&myproc()->parent->lock);
-    myproc()->parent->cv.wake_all();
+    myproc()->parent->cv->wake_all();
   } else {
     idlezombie(myproc());
   }
 
   if (wakeupinit)
-    bootproc->cv.wake_all();
+    bootproc->cv->wake_all();
 
   // Clean up FPU state
   if (myproc()->fpu_state) {
@@ -496,7 +494,7 @@ wait(int wpid,  userptr<int> status)
     }
 
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
-    myproc()->cv.sleep(&myproc()->lock);
+    myproc()->cv->sleep(&myproc()->lock);
     release(&myproc()->lock);
   }
 }
