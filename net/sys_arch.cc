@@ -25,7 +25,7 @@ static struct lwprot {
   lwprot() : lk("lwIP lwprot", true) { }
 } lwprot;
 
-extern void lwip_core_sleep(struct condvar *);
+extern void lwip_core_sleep(struct condvar *, uint64_t deadline = ~0);
 
 //
 // mbox
@@ -120,8 +120,7 @@ sys_arch_mbox_fetch(sys_mbox_impl **mboxp, void **msg, u32_t timeout)
         r = SYS_ARCH_TIMEOUT;
         goto done;
       }
-      // XXX Ignores timeout?
-      lwip_core_sleep(&mbox->c);
+      lwip_core_sleep(&mbox->c, to);
     } else {
       lwip_core_sleep(&mbox->c);
     }
@@ -281,9 +280,12 @@ lwip_core_lock(void)
 }
 
 void
-lwip_core_sleep(struct condvar *c)
+lwip_core_sleep(struct condvar *c, uint64_t deadline)
 {
-  c->sleep(&lwprot.lk);
+  if (deadline == ~0)
+    c->sleep(&lwprot.lk);
+  else
+    c->sleep_to(&lwprot.lk, deadline);
 }
 
 void
