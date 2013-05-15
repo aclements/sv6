@@ -2,6 +2,7 @@
 // recursively included in the extern "C" block.
 #include "spinlock.h"
 #include "condvar.h"
+#include "semaphore.h"
 
 extern "C" {
 #include "lwip/sys.h"
@@ -152,63 +153,64 @@ sys_arch_mbox_tryfetch(sys_mbox_t *mboxp, void **msg)
 //
 // sem
 //
+
 err_t
-sys_sem_new(sys_sem_t *sem, u8_t count)
+sys_sem_new(semaphore **semp, u8_t count)
 {
-  new (&sem->c) condvar("lwIP condvar");
-  sem->count = count;
-  sem->invalid = 0;
+  *semp = new semaphore("lwIP semaphore", count);
   return ERR_OK;
 }
 
 void
-sys_sem_free(sys_sem_t *sem)
+sys_sem_free(semaphore **semp)
 {
-  sem->c.~condvar();
+  delete *semp;
 }
 
 void
-sys_sem_set_invalid(sys_sem_t *sem)
+sys_sem_set_invalid(semaphore **semp)
 {
-  sem->invalid = 1;
+  *semp = nullptr;
 }
 
 int
-sys_sem_valid(sys_sem_t *sem)
+sys_sem_valid(semaphore **semp)
 {
-  return !sem->invalid;
+  return *semp != nullptr;
 }
 
 void
-sys_sem_signal(sys_sem_t *sem)
+sys_sem_signal(semaphore **semp)
 {
-  sem->count++;
-  sem->c.wake_all();
+  (*semp)->release();
 }
 
 u32_t
-sys_arch_sem_wait(sys_sem_t *sem, u32_t timeout)
+sys_arch_sem_wait(semaphore **semp, u32_t timeout)
 {
-  u64 start, to;
-  u32 r;
+  // It appears lwIP assumes that no other lwIP thread will be
+  // scheduled if a semaphore can be acquired immediately.  If we
+  // don't do this, the pbuf_free in dhcp_delete_msg releases the core
+  // lock, which allows the DHCP response to be received, which
+  // invokes dhcp_create_msg, which expects the pbuf to be cleared.
+  // This is probably an lwIP bug because this seems impossible to
+  // guarantee in any setting where it might come up.
+  if (timeout == 0 && (*semp)->try_acquire(1))
+      return 0;
 
-  start = nsectime();
-  to = (u64)timeout*1000000 + start;
-  while (sem->count == 0) {
-    if (timeout != 0) {
-      if (to < nsectime()) {
-        r = SYS_ARCH_TIMEOUT;
-        goto done;
-      }
-      lwip_core_sleep(&sem->c);
-    } else {
-      lwip_core_sleep(&sem->c);
-    }
+  lwip_core_unlock();
+  int r;
+  if (timeout == 0) {
+    (*semp)->acquire();
+    r = 0;
+  } else {
+    uint64_t start = nsectime();
+    if (!(*semp)->try_acquire(1, (uint64_t)timeout * 1000000))
+      r = SYS_ARCH_TIMEOUT;
+    else
+      r = nsectime() - start;
   }
-  r = nsectime()-start;
-  sem->count--;
-
-done:
+  lwip_core_lock();
   return r;
 }
 
