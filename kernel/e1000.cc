@@ -232,6 +232,8 @@ e1000::transmit(void *buf, u32 len)
   ewr(WMREG_TDT, (tail+1) % TX_RING_SIZE);
   txinuse_++;
 
+  if (0) console.print("Transmit ", shexdump(buf, len));
+
   return 0;
 }
 
@@ -293,6 +295,8 @@ e1000::cleanrx()
     allocrx();
 
     rxclean_ = (rxclean_+1) % RX_RING_SIZE;
+
+    if (0) console.print("Receive ", shexdump(va, len));
 
     release(&lk_);
     netrx(va, len);
