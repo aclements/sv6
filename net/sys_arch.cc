@@ -12,6 +12,7 @@ extern "C" {
 #include "kernel.hh"
 #include "proc.hh"
 #include "cpu.hh"
+#include "cpputil.hh"
 
 #define DIE panic(__func__)
 
@@ -23,39 +24,52 @@ static struct lwprot {
   lwprot() : lk("lwIP lwprot", true) { }
 } lwprot;
 
+extern void lwip_core_sleep(struct condvar *);
+
 //
 // mbox
 //
+
+struct sys_mbox_impl {
+#define MBOXSLOTS 32
+  struct condvar c;
+  volatile int head;
+  volatile int tail;
+  void *msg[MBOXSLOTS];
+
+  NEW_DELETE_OPS(sys_mbox_impl);
+
+  sys_mbox_impl()
+    : c("lwIP mbox"), head(0), tail(0) { }
+};
+
 err_t
-sys_mbox_new(sys_mbox_t *mbox, int size)
+sys_mbox_new(sys_mbox_impl **mboxp, int size)
 {
   if (size > MBOXSLOTS) {
     cprintf("sys_mbox_new: size %u\n", size);
     return ERR_MEM;
   }
-  mbox->head = 0;
-  mbox->tail = 0;
-  mbox->invalid = 0;
-  new (&mbox->c) condvar("lwIP mbox");
-
+  *mboxp = new sys_mbox_impl;
   return ERR_OK;
 }
 
 void
-sys_mbox_set_invalid(sys_mbox_t *mbox)
+sys_mbox_set_invalid(sys_mbox_impl **mboxp)
 {
-  mbox->invalid = 1;
+  *mboxp = nullptr;
 }
 
 int
-sys_mbox_valid(sys_mbox_t *mbox)
+sys_mbox_valid(sys_mbox_impl **mboxp)
 {
-  return !mbox->invalid;
+  return *mboxp != nullptr;
 }
 
 err_t
-sys_mbox_trypost(sys_mbox_t *mbox, void *msg)
+sys_mbox_trypost(sys_mbox_impl **mboxp, void *msg)
 {
+  sys_mbox_impl *mbox = *mboxp;
   err_t r = ERR_MEM;
 
   if (mbox->head - mbox->tail < MBOXSLOTS) {
@@ -69,8 +83,10 @@ sys_mbox_trypost(sys_mbox_t *mbox, void *msg)
 }
 
 void
-sys_mbox_post(sys_mbox_t *mbox, void *msg)
+sys_mbox_post(sys_mbox_impl **mboxp, void *msg)
 {
+  sys_mbox_impl *mbox = *mboxp;
+
   while (mbox->head - mbox->tail == MBOXSLOTS)
     lwip_core_sleep(&mbox->c);
 
@@ -80,16 +96,18 @@ sys_mbox_post(sys_mbox_t *mbox, void *msg)
 }
 
 void
-sys_mbox_free(sys_mbox_t *mbox)
+sys_mbox_free(sys_mbox_impl **mboxp)
 {
+  sys_mbox_impl *mbox = *mboxp;
   if (mbox->head != mbox->tail)
     panic("sys_mbox_free");
-  mbox->c.~condvar();
+  delete mbox;
 }
 
 u32_t
-sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout)
+sys_arch_mbox_fetch(sys_mbox_impl **mboxp, void **msg, u32_t timeout)
 {
+  sys_mbox_impl *mbox = *mboxp;
   u64 start, to;
   u32 r;
 
@@ -101,6 +119,7 @@ sys_arch_mbox_fetch(sys_mbox_t *mbox, void **msg, u32_t timeout)
         r = SYS_ARCH_TIMEOUT;
         goto done;
       }
+      // XXX Ignores timeout?
       lwip_core_sleep(&mbox->c);
     } else {
       lwip_core_sleep(&mbox->c);
@@ -116,8 +135,9 @@ done:
 }
 
 u32_t
-sys_arch_mbox_tryfetch(sys_mbox_t *mbox, void **msg)
+sys_arch_mbox_tryfetch(sys_mbox_t *mboxp, void **msg)
 {
+  sys_mbox_impl *mbox = *mboxp;
   u32_t r = SYS_MBOX_EMPTY;
 
   if (mbox->head - mbox->tail != 0) {
