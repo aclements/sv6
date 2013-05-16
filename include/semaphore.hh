@@ -5,14 +5,11 @@
 
 struct semaphore
 {
-#ifdef __cplusplus
 private:
-#endif
   spinlock lock;
   condvar cv;
   uint64_t count;
 
-#ifdef __cplusplus
 public:
   // Construct an uninitialized semaphore.  This should be
   // move-assigned from an initialized semaphore before being used.
@@ -52,5 +49,4 @@ public:
   {
     return lock_guard<semaphore>(this);
   }
-#endif
 };

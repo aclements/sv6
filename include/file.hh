@@ -6,7 +6,7 @@
 #include <atomic>
 #include "refcache.hh"
 #include "condvar.h"
-#include "semaphore.h"
+#include "semaphore.hh"
 #include "seqlock.hh"
 #include "mfs.hh"
 #include "sleeplock.hh"

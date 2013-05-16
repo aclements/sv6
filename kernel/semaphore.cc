@@ -1,4 +1,4 @@
-#include "semaphore.h"
+#include "semaphore.hh"
 
 void
 semaphore::acquire(uint64_t permits)

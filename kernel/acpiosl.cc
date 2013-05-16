@@ -9,7 +9,7 @@ extern "C" {
 #include "amd64.h"
 #include "kernel.hh"
 #include "cpu.hh"
-#include "semaphore.h"
+#include "semaphore.hh"
 #include "spinlock.h"
 #include "pci.hh"
 #include <new>

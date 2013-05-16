@@ -2,7 +2,7 @@
 // recursively included in the extern "C" block.
 #include "spinlock.h"
 #include "condvar.h"
-#include "semaphore.h"
+#include "semaphore.hh"
 
 extern "C" {
 #include "lwip/sys.h"
