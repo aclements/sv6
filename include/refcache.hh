@@ -152,7 +152,7 @@
 #include "spercpu.hh"
 #include "kstats.hh"
 #include "seqlock.hh"
-#include "condvar.h"
+#include "condvar.hh"
 #include "critical.hh"
 
 #include <stdexcept>

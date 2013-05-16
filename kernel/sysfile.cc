@@ -2,7 +2,7 @@
 #include "mmu.h"
 #include "kernel.hh"
 #include "spinlock.h"
-#include "condvar.h"
+#include "condvar.hh"
 #include "proc.hh"
 #include "fs.h"
 #include "file.hh"

@@ -1,7 +1,7 @@
 // We have to include these before lwip/sys.h so that they don't get
 // recursively included in the extern "C" block.
 #include "spinlock.h"
-#include "condvar.h"
+#include "condvar.hh"
 #include "semaphore.hh"
 
 extern "C" {

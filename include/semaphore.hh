@@ -1,7 +1,7 @@
 #pragma once
 
 #include "spinlock.h"
-#include "condvar.h"
+#include "condvar.hh"
 
 struct semaphore
 {

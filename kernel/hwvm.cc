@@ -6,7 +6,7 @@
 #include "bits.hh"
 #include "spinlock.h"
 #include "kalloc.hh"
-#include "condvar.h"
+#include "condvar.hh"
 #include "proc.hh"
 #include "vm.hh"
 #include "apic.hh"

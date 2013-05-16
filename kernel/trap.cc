@@ -5,7 +5,7 @@
 #include "cpu.hh"
 #include "traps.h"
 #include "spinlock.h"
-#include "condvar.h"
+#include "condvar.hh"
 #include "proc.hh"
 #include "kmtrace.hh"
 #include "bits.hh"

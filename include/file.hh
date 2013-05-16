@@ -5,7 +5,7 @@
 #include "gc.hh"
 #include <atomic>
 #include "refcache.hh"
-#include "condvar.h"
+#include "condvar.hh"
 #include "semaphore.hh"
 #include "seqlock.hh"
 #include "mfs.hh"

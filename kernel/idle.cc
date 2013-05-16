@@ -2,7 +2,7 @@
 #include "kernel.hh"
 #include "amd64.h"
 #include "spinlock.h"
-#include "condvar.h"
+#include "condvar.hh"
 #include "proc.hh"
 #include "cpu.hh"
 #include "spercpu.hh"

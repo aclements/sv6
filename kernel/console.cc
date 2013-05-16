@@ -7,7 +7,7 @@
 #include "kernel.hh"
 #include "spinlock.h"
 #include "fs.h"
-#include "condvar.h"
+#include "condvar.hh"
 #include "file.hh"
 #include "amd64.h"
 #include "proc.hh"

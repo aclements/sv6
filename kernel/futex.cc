@@ -4,7 +4,7 @@
 #include "cpputil.hh"
 #include "ns.hh"
 #include "errno.h"
-#include "condvar.h"
+#include "condvar.hh"
 #include "proc.hh"
 #include "cpu.hh"
 #include "spercpu.hh"
