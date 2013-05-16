@@ -3,7 +3,7 @@
 #include "kernel.hh"
 #include "pci.hh"
 #include "pcireg.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "apic.hh"
 #include "irq.hh"
 #include "e1000reg.hh"

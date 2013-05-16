@@ -1,6 +1,6 @@
 #pragma once
 
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "condvar.hh"
 
 class sleeplock {

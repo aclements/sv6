@@ -4,7 +4,7 @@
 #include "amd64.h"
 #include "cpu.hh"
 #include "traps.h"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "condvar.hh"
 #include "proc.hh"
 #include "kmtrace.hh"

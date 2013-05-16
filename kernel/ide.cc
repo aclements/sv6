@@ -3,7 +3,7 @@
 #include "types.h"
 #include "mmu.h"
 #include "kernel.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "amd64.h"
 #include "traps.h"
 

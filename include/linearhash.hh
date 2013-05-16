@@ -4,7 +4,7 @@
  * A linear-probing hash table.
  */
 
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "seqlock.hh"
 #include "lockwrap.hh"
 #include "hash.hh"

@@ -10,7 +10,7 @@ extern "C" {
 #include "kernel.hh"
 #include "cpu.hh"
 #include "semaphore.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "pci.hh"
 #include <new>
 

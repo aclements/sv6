@@ -5,7 +5,7 @@
 #include "types.h"
 #include "cpu.hh"
 #include "kernel.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "fs.h"
 #include "condvar.hh"
 #include "file.hh"

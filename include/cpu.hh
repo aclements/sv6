@@ -2,7 +2,7 @@
 
 #include "mmu.h"
 #include <atomic>
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "spercpu.hh"
 
 using std::atomic;

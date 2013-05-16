@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gc.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "refcache.hh"
 #include "hash.hh"
 #include "log2.hh"

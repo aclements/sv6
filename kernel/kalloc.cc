@@ -6,7 +6,7 @@
 #include "types.h"
 #include "mmu.h"
 #include "kernel.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "kalloc.hh"
 #include "mtrace.h"
 #include "cpu.hh"

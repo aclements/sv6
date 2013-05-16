@@ -146,7 +146,7 @@
 
 #pragma once
 
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "ilist.hh"
 #include "percpu.hh"
 #include "spercpu.hh"

@@ -2,7 +2,7 @@
 #include "kernel.hh"
 #include "cpu.hh"
 #include "cpputil.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "sperf.hh"
 
 using namespace scopedperf;

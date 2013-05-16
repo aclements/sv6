@@ -4,7 +4,7 @@
 #include "cpu.hh"
 #include "kernel.hh"
 #include "bits.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "kalloc.hh"
 #include "condvar.hh"
 #include "proc.hh"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "spinlock.h"
+#include "spinlock.hh"
 #include <atomic>
 #include "cpputil.hh"
 #include "fs.h"

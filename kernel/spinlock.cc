@@ -5,7 +5,7 @@
 #include "amd64.h"
 #include "cpu.hh"
 #include "bits.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "mtrace.h"
 #include "condvar.hh"
 #include "fs.h"

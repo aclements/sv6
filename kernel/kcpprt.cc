@@ -3,7 +3,7 @@
 #include "types.h"
 #include "kernel.hh"
 #include "cpputil.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "amd64.h"
 #include "condvar.hh"
 #include "proc.hh"

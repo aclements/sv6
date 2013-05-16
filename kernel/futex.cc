@@ -1,6 +1,6 @@
 #include "types.h"
 #include "kernel.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "cpputil.hh"
 #include "ns.hh"
 #include "errno.h"

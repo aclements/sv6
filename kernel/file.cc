@@ -1,6 +1,6 @@
 #include "types.h"
 #include "kernel.hh"
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "condvar.hh"
 #include "fs.h"
 #include "file.hh"

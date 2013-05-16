@@ -2,16 +2,13 @@
 #include "types.h"
 #include "lockstat.h"
 #include <assert.h>
-#ifdef __cplusplus
 #include <atomic>
 #include "cpputil.hh"           // For NEW_DELETE_OPS
-#endif
 
 #if LOCKSTAT
 extern struct klockstat klockstat_lazy;
 #endif
 
-#ifdef __cplusplus
 // ::lock_guard represents lock ownership of a lockable object.  These
 // objects are not copyable, but they are movable, so lock ownership
 // may be transferred.
@@ -72,7 +69,6 @@ public:
     return !!l_;
   }
 };
-#endif
 
 #define USE_CODEX_IMPL CODEX
 
@@ -80,7 +76,7 @@ public:
 struct spinlock {
 
 // Is the lock held?
-#if defined(__cplusplus) && !USE_CODEX_IMPL
+#if !USE_CODEX_IMPL
   std::atomic<u32> locked;
 #else
   // codex does not use atomic<u32>, to avoid
@@ -100,7 +96,6 @@ struct spinlock {
   struct klockstat *stat;
 #endif
 
-#ifdef __cplusplus
   // Construct an uninitialized spinlock.  This should be
   // move-assigned from an initialized spinlock before being used.
   // This is constexpr, so it can be used for global spinlocks without
@@ -155,7 +150,6 @@ struct spinlock {
 #if SPINLOCK_DEBUG
   bool holding();
 #endif
-#endif // __cplusplus
 };
 
 #if SPINLOCK_DEBUG
@@ -164,7 +158,6 @@ struct spinlock {
 #define lockname(s) ("unknown")
 #endif
 
-#ifdef __cplusplus
 // Deprecated aliases for spinlock methods
 
 static inline void
@@ -203,4 +196,3 @@ public:
 // XXX(Austin) scoped_acquire is the old name for the
 // spinlock-specific RAII lock holder.
 typedef lock_guard<spinlock> scoped_acquire;
-#endif

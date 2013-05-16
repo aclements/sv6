@@ -1,6 +1,6 @@
 #pragma once
 
-#include "spinlock.h"
+#include "spinlock.hh"
 #include "log2.hh"
 
 #include <cstddef>
