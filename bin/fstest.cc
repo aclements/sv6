@@ -88,6 +88,7 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
     if (nfunc == 0)
       continue;
 
+    fflush(stdout);
     pids[p] = fork();
     assert(pids[p] >= 0);
 
