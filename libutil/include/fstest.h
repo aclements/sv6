@@ -25,4 +25,11 @@ struct fstest {
 };
 
 extern struct fstest fstests[];
-
+#ifdef __cplusplus
+extern "C" {
+#endif
+  void expect_result(const char *varname, long got, long expect);
+  void expect_errno(int expect);
+#ifdef __cplusplus
+}
+#endif

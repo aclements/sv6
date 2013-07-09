@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <setjmp.h>
+#include <errno.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include "mtrace.h"
@@ -52,6 +53,9 @@ struct testfunc {
 
   testfunc(int (*f)(void)) : func(f) {}
   void run() {
+#ifndef XV6_USER
+    errno = 0;
+#endif
     start.sync();
     retval = func();
     stop.sync();
@@ -154,11 +158,40 @@ pf_handler(int signo)
 static bool verbose = false;
 static bool check_commutativity = false;
 static bool run_threads = false;
+static bool check_results = false;
+static fstest *cur_test = nullptr;
+
+void
+expect_result(const char *varname, long got, long expect)
+{
+  if (!check_results) return;
+  if (got == expect) return;
+  auto name = cur_test->testname;
+#ifdef XV6_USER
+  printf("%s: expected %s == %ld, got %ld\n",
+         name, varname, expect, got);
+#else
+  printf("%s: expected %s == %ld, got %ld (errno %s)\n",
+         name, varname, expect, got, strerror(errno));
+#endif
+}
+
+void
+expect_errno(int expect)
+{
+#ifndef XV6_USER
+  if (!check_results) return;
+  if (errno == expect) return;
+  auto name = cur_test->testname;
+  printf("%s: expected errno == %s, got %s\n",
+         name, strerror(expect), strerror(errno));
+#endif
+}
 
 static void
 usage(const char* prog)
 {
-  fprintf(stderr, "Usage: %s [-v] [-c] [-t] [-n NPARTS] [-p THISPART] [min[-max]]\n", prog);
+  fprintf(stderr, "Usage: %s [-v] [-c] [-t] [-r] [-n NPARTS] [-p THISPART] [min[-max]]\n", prog);
 }
 
 int
@@ -174,7 +207,7 @@ main(int ac, char** av)
     ;
 
   for (;;) {
-    int opt = getopt(ac, av, "vctp:n:");
+    int opt = getopt(ac, av, "vctrp:n:");
     if (opt == -1)
       break;
 
@@ -189,6 +222,11 @@ main(int ac, char** av)
 
     case 't':
       run_threads = true;
+      break;
+
+    case 'r':
+      run_threads = true;
+      check_results = true;
       break;
 
     case 'n':
@@ -238,6 +276,8 @@ main(int ac, char** av)
     printf(" check");
   if (run_threads)
     printf(" threads");
+  if (check_results)
+    printf(" results");
   if (min == 0 && max == UINT_MAX)
     printf(" all");
   else if (min == max)
@@ -262,6 +302,8 @@ main(int ac, char** av)
   signal(SIGSEGV, pf_handler);
 
   for (uint32_t t = min; t <= max && t < ntests; t++) {
+    cur_test = &fstests[t];
+
     if (check_commutativity) {
       run_test(tp, tf, &fstests[t], 0, false);
       int ra0 = tf[0].retval;
