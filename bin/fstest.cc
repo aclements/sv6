@@ -145,7 +145,7 @@ static void
 pf_handler(int signo)
 {
   if (pf_active)
-    siglongjmp(pf_jmpbuf, 1);
+    siglongjmp(pf_jmpbuf, signo);
   // Let the error happen
   signal(signo, SIG_DFL);
 }
