@@ -33,3 +33,12 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef XV6_USER
+#define setup_error(format, ...) \
+  printf("setup error, line %d: " format "\n", __LINE__, ##__VA_ARGS__)
+#else
+#define setup_error(format, ...) \
+  printf("setup error, line %d: " format " (errno %d)\n", \
+         __LINE__, ##__VA_ARGS__, errno)
+#endif
