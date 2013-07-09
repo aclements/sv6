@@ -146,6 +146,8 @@ pf_handler(int signo)
 {
   if (pf_active)
     siglongjmp(pf_jmpbuf, 1);
+  // Let the error happen
+  signal(signo, SIG_DFL);
 }
 
 static bool verbose = false;
