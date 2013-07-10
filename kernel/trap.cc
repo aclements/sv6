@@ -70,7 +70,8 @@ do_pagefault(struct trapframe *tf)
 #endif
       return 0;
     }
-    cprintf("pagefault: failed in kernel\n");
+    console.println("pagefault: failed in kernel (addr ", (void*)addr, " rip ",
+                    (void*)tf->rip, ")");
     tf->rax = -1;
     tf->rip = (u64)__uaccess_end;
     return 0;
