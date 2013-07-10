@@ -304,6 +304,8 @@ main(int ac, char** av)
   for (uint32_t t = min; t <= max && t < ntests; t++) {
     cur_test = &fstests[t];
 
+    printf("%s (test %d) starting\n", fstests[t].testname, t);
+
     if (check_commutativity) {
       run_test(tp, tf, &fstests[t], 0, false);
       int ra0 = tf[0].retval;
@@ -328,7 +330,6 @@ main(int ac, char** av)
 
     if (run_threads) {
       run_test(tp, tf, &fstests[t], 0, true);
-      printf("%s: threads done\n", fstests[t].testname);
     }
   }
 }
