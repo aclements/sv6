@@ -121,6 +121,9 @@ readi(sref<mnode> m, char* buf, u64 start, u64 nbytes)
       u64 msize = *m->as_file()->read_size();
       if (end > msize)
         end = msize;
+      // Re-check loop condition, since end changed
+      if (pos >= end)
+        break;
     }
 
     u64 pgoff = pos - pgbase;
