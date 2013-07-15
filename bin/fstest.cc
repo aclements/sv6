@@ -34,12 +34,14 @@ public:
 
 struct testproc {
   double_barrier setup;
-  std::atomic<void (*)(void)> setupf;
+  std::atomic<void (*)(void)> setupf1;
+  std::atomic<void (*)(void)> setupf2;
 
-  testproc(void (*s)(void)) : setupf(s) {}
+  testproc(void (*s1)(void), void (*s2)(void)) : setupf1(s1), setupf2(s2) {}
   void run() {
     setup.enter();
-    setupf();
+    setupf1();
+    setupf2();
     setup.exit();
   }
 };
@@ -79,9 +81,11 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
     setaffinity(2);
 
   for (int i = 0; i < 2; i++)
-    new (&tp[i]) testproc(t->proc[i].setup_proc);
+    new (&tp[i]) testproc(t->proc[i].setup_proc, t->setup_procfinal);
   for (int i = 0; i < 2; i++)
     new (&tf[i]) testfunc(t->func[i].call);
+
+  t->setup_common();
 
   pid_t pids[2] = { 0, 0 };
   for (int p = 0; p < 2; p++) {
@@ -120,7 +124,6 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
     }
   }
 
-  t->setup_common();
   for (int p = 0; p < 2; p++) if (pids[p]) tp[p].setup.sync();
   t->setup_final();
 
@@ -304,7 +307,8 @@ main(int ac, char** av)
   for (uint32_t t = min; t <= max && t < ntests; t++) {
     cur_test = &fstests[t];
 
-    printf("%s (test %d) starting\n", fstests[t].testname, t);
+    if (verbose)
+      printf("%s (test %d) starting\n", fstests[t].testname, t);
 
     if (check_commutativity) {
       run_test(tp, tf, &fstests[t], 0, false);

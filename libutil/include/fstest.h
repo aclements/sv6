@@ -19,6 +19,7 @@ struct fstest {
   const char* testname;
   void (*setup_common)(void);
   struct fstestproc proc[2];
+  void (*setup_procfinal)(void);
   void (*setup_final)(void);
   struct fstestfunc func[2];
   void (*cleanup)(void);
