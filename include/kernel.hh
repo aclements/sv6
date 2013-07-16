@@ -169,7 +169,7 @@ void            piceoi(void);
 void            picdump(void);
 
 // pipe.c
-int             pipealloc(sref<file>*, sref<file>*);
+int             pipealloc(sref<file>*, sref<file>*, int flags);
 void            pipeclose(struct pipe*, int);
 int             piperead(struct pipe*, char*, int);
 int             pipewrite(struct pipe*, const char*, int);

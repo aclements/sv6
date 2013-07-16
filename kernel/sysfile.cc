@@ -572,10 +572,10 @@ sys_execv(userptr_str upath, userptr<userptr_str> uargv)
 
 //SYSCALL
 int
-sys_pipe(userptr<int> fd)
+sys_pipe2(userptr<int> fd, int flags)
 {
   sref<file> rf, wf;
-  if (pipealloc(&rf, &wf) < 0)
+  if (pipealloc(&rf, &wf, flags) < 0)
     return -1;
 
   int fd_buf[2] = { fdalloc(std::move(rf), 0), fdalloc(std::move(wf), 0) };
@@ -587,6 +587,13 @@ sys_pipe(userptr<int> fd)
   if (fd_buf[1] >= 0)
     myproc()->ftable->close(fd_buf[1]);
   return -1;
+}
+
+//SYSCALL
+int
+sys_pipe(userptr<int> fd)
+{
+  return sys_pipe2(fd, 0);
 }
 
 //SYSCALL

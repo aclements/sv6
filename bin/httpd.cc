@@ -2,14 +2,14 @@
 #include "user.h"
 #include "lib.h"
 
-#include "sockutil.h"
-
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+
+#include "sockutil.h"
 
 #define VERSION "0.1"
 #define HTTP_VERSION "1.0"

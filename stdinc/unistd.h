@@ -21,6 +21,7 @@ int dup2(int oldfd, int newfd);
 off_t lseek(int fd, off_t offset, int whence);
 int chdir(const char *path);
 int pipe(int pipefd[2]);
+int pipe2(int pipefd[2], int flags);
 
 unsigned sleep(unsigned);
 pid_t getpid(void);

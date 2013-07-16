@@ -243,18 +243,6 @@ public:
   void inc() override { referenced::inc(); }
   void dec() override { referenced::dec(); }
 
-  ssize_t
-  read(char *addr, size_t n) override
-  {
-    return -1;
-  }
-
-  ssize_t
-  write(const char *addr, size_t n) override
-  {
-    return -1;
-  }
-
   int
   bind(const struct sockaddr *addr, size_t addrlen) override
   {

@@ -8,6 +8,7 @@
 #include "file.hh"
 #include "cpu.hh"
 #include "uk/unistd.h"
+#include "uk/fcntl.h"
 
 #define PIPESIZE 512
 
@@ -26,9 +27,13 @@ struct ordered : pipe {
   int writeopen;  // write fd is still open
   u32 nread;      // number of bytes read
   u32 nwrite;     // number of bytes written
+  bool nonblock;
   char data[PIPESIZE];
 
-  ordered() : readopen(1), writeopen(1), nread(0), nwrite(0) {
+  ordered(int flags)
+    : readopen(1), writeopen(1), nread(0), nwrite(0),
+      nonblock(flags & O_NONBLOCK)
+  {
     lock = spinlock("pipe", LOCKSTAT_PIPE);
     cv = condvar("pipe");
   };
@@ -40,7 +45,7 @@ struct ordered : pipe {
     scoped_acquire l(&lock);
     for(int i = 0; i < n; i++){
       while(nwrite == nread + PIPESIZE){ 
-        if(readopen == 0 || myproc()->killed){
+        if(nonblock || readopen == 0 || myproc()->killed){
           return -1;
         }
         cv.wake_all();
@@ -56,7 +61,7 @@ struct ordered : pipe {
     int i;
     scoped_acquire l(&lock);
     while(nread == nwrite && writeopen) { 
-      if(myproc()->killed){
+      if(nonblock || myproc()->killed){
         return -1;
       }
       cv.sleep(&lock);
@@ -87,12 +92,12 @@ struct ordered : pipe {
 
 
 int
-pipealloc(sref<file> *f0, sref<file> *f1)
+pipealloc(sref<file> *f0, sref<file> *f1, int flags)
 {
   struct pipe *p = nullptr;
   auto cleanup = scoped_cleanup([&](){delete p;});
   try {
-    p = new ordered();
+    p = new ordered(flags);
     *f0 = make_sref<file_pipe_reader>(p);
     *f1 = make_sref<file_pipe_writer>(p);
   } catch (std::bad_alloc &e) {
