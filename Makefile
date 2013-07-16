@@ -14,9 +14,11 @@ O  	   = o.$(HW)
 
 ifeq ($(HW),linux)
 PLATFORM   := native
+TOOLPREFIX := 
 else
 ifeq ($(HW),linuxmtrace)
 PLATFORM   := native
+TOOLPREFIX := 
 else
 PLATFORM   := xv6
 endif
