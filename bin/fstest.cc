@@ -301,6 +301,7 @@ main(int ac, char** av)
 
   madvise(0, (size_t) _end, MADV_WILLNEED);
 
+  signal(SIGPIPE, SIG_IGN);
   signal(SIGBUS, pf_handler);
   signal(SIGSEGV, pf_handler);
 
