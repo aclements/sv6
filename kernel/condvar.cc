@@ -110,7 +110,7 @@ condvar::sleep_to(struct spinlock *lk, u64 timeout)
     // Callers should use scoped locks to ensure locks are released as the stack
     // is unwinded.  But, callers don't have to check for p->killed to ensure
     // that they don't call wait() again after being killed.
-    throw KillException();
+    throw kill_exception();
   }
 }
 

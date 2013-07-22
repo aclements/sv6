@@ -138,7 +138,7 @@ private:
   procstate_t state_;       // Process state  
 };
 
-class KillException : public std::runtime_error {
+class kill_exception : public std::runtime_error {
 public:
-    KillException() : std::runtime_error("killed") { };
+    kill_exception() : std::runtime_error("killed") { };
 };
