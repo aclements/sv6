@@ -311,6 +311,14 @@ main(int ac, char** av)
   for (uint32_t t = min; t <= max && t < ntests; t++) {
     cur_test = &fstests[t];
 
+#ifdef XV6_USER
+    // XXX xv6 does not support mprotect, so skip mprotect tests
+    if (strstr(fstests[t].testname, "mprotect")) {
+      printf("skipping %s (test %d)\n", fstests[t].testname, t);
+      continue;
+    }
+#endif
+
     if (verbose)
       printf("%s (test %d) starting\n", fstests[t].testname, t);
 
