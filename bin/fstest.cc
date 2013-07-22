@@ -201,13 +201,14 @@ int
 main(int ac, char** av)
 {
   uint32_t min = 0;
-  uint32_t max = UINT_MAX;
+  uint32_t max;
   int nparts = -1;
   int thispart = -1;
 
   uint32_t ntests = 0;
   for (ntests = min; fstests[ntests].testname; ntests++)
     ;
+  max = ntests - 1;
 
   for (;;) {
     int opt = getopt(ac, av, "vctrp:n:");
@@ -252,8 +253,10 @@ main(int ac, char** av)
       min = max = atoi(av[optind]);
     } else {
       *dash = '\0';
-      min = atoi(av[optind]);
-      max = atoi(dash + 1);
+      if (av[optind])
+        min = atoi(av[optind]);
+      if (*(dash + 1))
+        max = atoi(dash + 1);
     }
   } else if (nparts >= 0 || thispart >= 0) {
     if (nparts < 0 || thispart < 0) {
@@ -281,7 +284,7 @@ main(int ac, char** av)
     printf(" threads");
   if (check_results)
     printf(" results");
-  if (min == 0 && max == UINT_MAX)
+  if (min == 0 && max == ntests - 1)
     printf(" all");
   else if (min == max)
     printf(" %d", min);
