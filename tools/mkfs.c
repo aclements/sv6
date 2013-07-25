@@ -13,7 +13,7 @@ int size = 32768;
 
 int fsfd;
 struct superblock sb;
-char zeroes[512];
+char zeroes[BSIZE];
 u32 freeblock;
 u32 usedblocks;
 u32 bitblocks;
@@ -56,7 +56,7 @@ main(int argc, char *argv[])
   int i, cc, fd;
   u32 rootino, inum, off;
   struct dirent de;
-  char buf[512];
+  char buf[BSIZE];
   struct dinode din;
   int nblocks;
 
@@ -65,8 +65,8 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  assert((512 % sizeof(struct dinode)) == 0);
-  assert((512 % sizeof(struct dirent)) == 0);
+  assert((BSIZE % sizeof(struct dinode)) == 0);
+  assert((BSIZE % sizeof(struct dirent)) == 0);
 
   fsfd = open(argv[1], O_RDWR|O_CREAT|O_TRUNC, 0666);
   if(fsfd < 0){
@@ -74,7 +74,7 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  bitblocks = (size+512*8-1)/(512*8);
+  bitblocks = (size+BSIZE*8-1)/(BSIZE*8);
   usedblocks = ninodes / IPB + 3 + bitblocks;
   freeblock = usedblocks;
 
@@ -152,11 +152,11 @@ main(int argc, char *argv[])
 void
 wsect(u32 sec, void *buf)
 {
-  if(lseek(fsfd, sec * 512L, 0) != sec * 512L){
+  if(lseek(fsfd, sec * (long)BSIZE, 0) != sec * (long)BSIZE){
     perror("lseek");
     exit(1);
   }
-  if(write(fsfd, buf, 512) != 512){
+  if(write(fsfd, buf, BSIZE) != BSIZE){
     perror("write");
     exit(1);
   }
@@ -171,7 +171,7 @@ i2b(u32 inum)
 void
 winode(u32 inum, struct dinode *ip)
 {
-  char buf[512];
+  char buf[BSIZE];
   u32 bn;
   struct dinode *dip;
 
@@ -185,7 +185,7 @@ winode(u32 inum, struct dinode *ip)
 void
 rinode(u32 inum, struct dinode *ip)
 {
-  char buf[512];
+  char buf[BSIZE];
   u32 bn;
   struct dinode *dip;
 
@@ -198,11 +198,11 @@ rinode(u32 inum, struct dinode *ip)
 void
 rsect(u32 sec, void *buf)
 {
-  if(lseek(fsfd, sec * 512L, 0) != sec * 512L){
+  if(lseek(fsfd, sec * (long)BSIZE, 0) != sec * (long)BSIZE){
     perror("lseek");
     exit(1);
   }
-  if(read(fsfd, buf, 512) != 512){
+  if(read(fsfd, buf, BSIZE) != BSIZE){
     perror("read");
     exit(1);
   }
@@ -226,20 +226,20 @@ ialloc(u16 type)
 void
 balloc(int used)
 {
-  u8 buf[512];
+  u8 buf[BSIZE];
   int bbn = 0;
   int i;
 
   printf("balloc: first %d blocks have been allocated\n", used);
   while (used > 0) {
-    bzero(buf, 512);
-    for(i = 0; i < used && i < 512*8; i++){
+    bzero(buf, BSIZE);
+    for(i = 0; i < used && i < BSIZE*8; i++){
       buf[i/8] = buf[i/8] | (0x1 << (i%8));
     }
     printf("balloc: write bitmap block at sector %zu\n", ninodes/IPB + 3 + bbn);
     wsect(ninodes / IPB + 3 + bbn, buf);
     bbn++;
-    used -= 512*8;
+    used -= BSIZE*8;
   }
 }
 
@@ -251,7 +251,7 @@ iappend(u32 inum, void *xp, int n)
   char *p = (char*)xp;
   u32 fbn, off, n1;
   struct dinode din;
-  char buf[512];
+  char buf[BSIZE];
   u32 indirect[NINDIRECT];
   u32 x;
 
@@ -259,7 +259,7 @@ iappend(u32 inum, void *xp, int n)
 
   off = xint(din.size);
   while(n > 0){
-    fbn = off / 512;
+    fbn = off / BSIZE;
     assert(fbn < MAXFILE);
     if(fbn < NDIRECT){
       if(xint(din.addrs[fbn]) == 0){
@@ -308,9 +308,9 @@ iappend(u32 inum, void *xp, int n)
 
       x = xint(indirect[i2]);
     }
-    n1 = min(n, (fbn + 1) * 512 - off);
+    n1 = min(n, (fbn + 1) * BSIZE - off);
     rsect(x, buf);
-    bcopy(p, buf + off - (fbn * 512), n1);
+    bcopy(p, buf + off - (fbn * BSIZE), n1);
     wsect(x, buf);
     n -= n1;
     off += n1;
