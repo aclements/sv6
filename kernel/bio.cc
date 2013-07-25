@@ -22,7 +22,7 @@ buf::get(u32 dev, u64 sector)
     auto locked = nb->write();
     if (bufcache.insert(k, nb.get())) {
       nb->inc();  // keep it in the cache
-      ideread(dev, sector, locked->data);
+      ideread(dev, locked->data, BSIZE, sector*BSIZE);
       return nb;
     }
   }
@@ -37,7 +37,7 @@ buf::writeback()
 
   // write copy[] to disk; don't need to wait for write to finish,
   // as long as write order to disk has been established.
-  idewrite(dev_, sector_, copy->data);
+  idewrite(dev_, copy->data, BSIZE, sector_*BSIZE);
 }
 
 void

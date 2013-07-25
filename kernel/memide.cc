@@ -17,14 +17,12 @@ extern u64 _fs_img_size;
 
 #if MEMIDE
 
-static u64 disksize;
 static u8 *memdisk;
 
 void
 initdisk(void)
 {
   memdisk = _fs_img_start;
-  disksize = _fs_img_size/512;
 }
 
 // Interrupt handler.
@@ -35,31 +33,31 @@ ideintr(void)
 }
 
 void
-ideread(u32 dev, u64 sector, char* data)
+ideread(u32 dev, char* data, u64 count, u64 offset)
 {
   u8 *p;
 
   if(dev != 1)
     panic("ideread: request not for disk 1");
-  if(sector >= disksize)
+  if(offset > _fs_img_size || offset + count > _fs_img_size)
     panic("ideread: sector out of range");
 
-  p = memdisk + sector*512;
-  memmove(data, p, 512);
+  p = memdisk + offset;
+  memmove(data, p, count);
 }
 
 void
-idewrite(u32 dev, u64 sector, const char* data)
+idewrite(u32 dev, const char* data, u64 count, u64 offset)
 {
   u8 *p;
 
   if(dev != 1)
     panic("ideread: request not for disk 1");
-  if(sector >= disksize)
+  if(offset > _fs_img_size || offset + count > _fs_img_size)
     panic("ideread: sector out of range");
 
-  p = memdisk + sector*512;
-  memmove(p, data, 512);
+  p = memdisk + offset;
+  memmove(p, data, count);
 }
 
 #endif  /* MEMIDE */

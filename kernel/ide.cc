@@ -52,11 +52,17 @@ initdisk(void)
 }
 
 static void
-ide_select(u32 dev, u64 sector)
+ide_select(u32 dev, u64 count, u64 offset)
 {
+  assert(offset % 512 == 0);
+  assert(count > 0);
+  assert(count % 512 == 0);
+  assert(count / 512 < 256);
+
+  u64 sector = offset / 512;
   idewait(0);
   outb(0x3f6, 0);  // generate interrupt
-  outb(0x1f2, 1);  // number of sectors
+  outb(0x1f2, count / 512);  // number of sectors
   outb(0x1f3, sector & 0xff);
   outb(0x1f4, (sector >> 8) & 0xff);
   outb(0x1f5, (sector >> 16) & 0xff);
@@ -64,29 +70,29 @@ ide_select(u32 dev, u64 sector)
 }
 
 void
-ideread(u32 dev, u64 sector, char* data)
+ideread(u32 dev, char* data, u64 count, u64 offset)
 {
   assert(dev == 1);
   assert(havedisk1);
   scoped_acquire l(&idelock);
 
-  ide_select(dev, sector);
+  ide_select(dev, count, offset);
   outb(0x1f7, IDE_CMD_READ);
 
   assert(idewait(1) >= 0);
-  insl(0x1f0, data, 512/4);
+  insl(0x1f0, data, count/4);
 }
 
 void
-idewrite(u32 dev, u64 sector, const char* data)
+idewrite(u32 dev, const char* data, u64 count, u64 offset)
 {
   assert(dev == 1);
   assert(havedisk1);
   scoped_acquire l(&idelock);
 
-  ide_select(dev, sector);
+  ide_select(dev, count, offset);
   outb(0x1f7, IDE_CMD_WRITE);
-  outsl(0x1f0, data, 512/4);
+  outsl(0x1f0, data, count/4);
 
   assert(idewait(1) >= 0);
 }
