@@ -8,11 +8,13 @@
 #define S_IFREG (T_FILE << __S_IFMT_SHIFT)
 #define S_IFDIR (T_DIR << __S_IFMT_SHIFT)
 #define S_IFSOCK (T_SOCKET << __S_IFMT_SHIFT)
+#define S_IFIFO (T_FIFO << __S_IFMT_SHIFT)
 
 #define S_ISCHR(m) (((m) & S_IFMT) == S_IFCHR)
 #define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #define S_ISSOCK(m) (((m) & S_IFMT) == S_IFSOCK)
+#define S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
 
 #define S_IRWXU 0700
 #define S_IRUSR 0400

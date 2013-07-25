@@ -139,6 +139,17 @@ file_inode::pwrite(const char *addr, size_t n, off_t off)
 }
 
 
+int
+file_pipe_reader::stat(struct stat *st, enum stat_flags flags)
+{
+  st->st_mode = (T_FIFO << __S_IFMT_SHIFT) | 0600;
+  st->st_dev = 0;               // XXX ?
+  st->st_ino = (uintptr_t)pipe;
+  st->st_nlink = 1;
+  st->st_size = 0;
+  return 0;
+}
+
 ssize_t
 file_pipe_reader::read(char *addr, size_t n)
 {
@@ -152,6 +163,17 @@ file_pipe_reader::onzero(void)
   delete this;
 }
 
+
+int
+file_pipe_writer::stat(struct stat *st, enum stat_flags flags)
+{
+  st->st_mode = (T_FIFO << __S_IFMT_SHIFT) | 0600;
+  st->st_dev = 0;               // XXX ?
+  st->st_ino = (uintptr_t)pipe;
+  st->st_nlink = 1;
+  st->st_size = 0;
+  return 0;
+}
 
 ssize_t
 file_pipe_writer::write(const char *addr, size_t n)

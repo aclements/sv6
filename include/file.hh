@@ -91,6 +91,7 @@ public:
   void inc() override { refcache::referenced::inc(); }
   void dec() override { refcache::referenced::dec(); }
 
+  int stat(struct stat*, enum stat_flags) override;
   ssize_t read(char *addr, size_t n) override;
   void onzero() override;
 
@@ -106,6 +107,7 @@ public:
   void inc() override { referenced::inc(); }
   void dec() override { referenced::dec(); }
 
+  int stat(struct stat*, enum stat_flags) override;
   ssize_t write(const char *addr, size_t n) override;
   void onzero() override;
 
