@@ -10,7 +10,7 @@
 // Inodes start at block 2.
 
 #define ROOTINO 1  // root i-number
-#define BSIZE 512  // block size
+#define BSIZE 4096  // block size
 
 // File system super block
 struct superblock {
@@ -24,7 +24,7 @@ struct superblock {
 #define MAXFILE (NDIRECT + NINDIRECT + NINDIRECT*NINDIRECT)
 
 // On-disk inode structure
-// (512 % sizeof(dinode)) == 0
+// (BSIZE % sizeof(dinode)) == 0
 struct dinode {
   short type;           // File type
   short major;          // Major device number (T_DEV only)
