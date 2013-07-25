@@ -6,9 +6,9 @@
 static weakcache<buf::key_t, buf> bufcache(512 << 10);
 
 sref<buf>
-buf::get(u32 dev, u64 sector)
+buf::get(u32 dev, u64 block)
 {
-  buf::key_t k = { dev, sector };
+  buf::key_t k = { dev, block };
   for (;;) {
     sref<buf> b = bufcache.lookup(k);
     if (b.get() != nullptr) {
@@ -18,11 +18,11 @@ buf::get(u32 dev, u64 sector)
       return b;
     }
 
-    sref<buf> nb = sref<buf>::transfer(new buf(dev, sector));
+    sref<buf> nb = sref<buf>::transfer(new buf(dev, block));
     auto locked = nb->write();
     if (bufcache.insert(k, nb.get())) {
       nb->inc();  // keep it in the cache
-      ideread(dev, locked->data, BSIZE, sector*BSIZE);
+      ideread(dev, locked->data, BSIZE, block*BSIZE);
       return nb;
     }
   }
@@ -37,7 +37,7 @@ buf::writeback()
 
   // write copy[] to disk; don't need to wait for write to finish,
   // as long as write order to disk has been established.
-  idewrite(dev_, copy->data, BSIZE, sector_*BSIZE);
+  idewrite(dev_, copy->data, BSIZE, block_*BSIZE);
 }
 
 void

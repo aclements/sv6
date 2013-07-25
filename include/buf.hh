@@ -16,11 +16,11 @@ public:
 
   typedef pair<u32, u64> key_t;
 
-  static sref<buf> get(u32 dev, u64 sector);
+  static sref<buf> get(u32 dev, u64 block);
   void writeback();
 
   u32 dev() { return dev_; }
-  u64 sector() { return sector_; }
+  u64 block() { return block_; }
   bool dirty() { return dirty_; }
 
   seq_reader<bufdata> read() {
@@ -54,7 +54,7 @@ public:
 
 private:
   const u32 dev_;
-  const u64 sector_;
+  const u64 block_;
 
   seqcount<u32> seq_;
   sleeplock write_lock_;
@@ -63,8 +63,8 @@ private:
 
   bufdata data_;
 
-  buf(u32 dev, u64 sector)
-    : dev_(dev), sector_(sector), dirty_(false) {}
+  buf(u32 dev, u64 block)
+    : dev_(dev), block_(block), dirty_(false) {}
   void onzero() override;
   NEW_DELETE_OPS(buf);
 
