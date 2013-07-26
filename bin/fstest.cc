@@ -348,4 +348,6 @@ main(int ac, char** av)
       run_test(tp, tf, &fstests[t], 0, true);
     }
   }
+
+  printf("fstest: done\n");
 }
