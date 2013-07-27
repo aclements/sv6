@@ -17,6 +17,8 @@ class dirns;
 u64 namehash(const strbuf<DIRSIZ>&);
 
 struct file {
+  virtual file* dup() { inc(); return this; }
+
   virtual int stat(struct stat*, enum stat_flags) { return -1; }
   virtual ssize_t read(char *addr, size_t n) { return -1; }
   virtual ssize_t write(const char *addr, size_t n) { return -1; }
@@ -99,6 +101,35 @@ private:
   struct pipe* const pipe;
 };
 
+struct file_pipe_writer_wrapper : public referenced, public file {
+public:
+  file_pipe_writer_wrapper(file* f) : inner(f) {}
+  NEW_DELETE_OPS(file_pipe_writer_wrapper);
+
+  void inc() override { referenced::inc(); }
+  void dec() override { referenced::dec(); }
+
+  file* dup() override {
+    return inner->dup();
+  }
+
+  int stat(struct stat* st, enum stat_flags flags) override {
+    return inner->stat(st, flags);
+  }
+
+  ssize_t write(const char *addr, size_t n) override {
+    return inner->write(addr, n);
+  }
+
+  void onzero() override {
+    inner->dec();
+    delete this;
+  }
+
+private:
+  file* inner;
+};
+
 struct file_pipe_writer : public referenced, public file {
 public:
   file_pipe_writer(pipe* p) : pipe(p) {}
@@ -106,6 +137,12 @@ public:
 
   void inc() override { referenced::inc(); }
   void dec() override { referenced::dec(); }
+
+  file* dup() override {
+    inc();
+    file* w = new file_pipe_writer_wrapper(this);
+    return w ?: this;
+  }
 
   int stat(struct stat*, enum stat_flags) override;
   ssize_t write(const char *addr, size_t n) override;

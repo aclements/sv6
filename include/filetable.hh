@@ -33,9 +33,10 @@ public:
         if (f && (!close_cloexec || !info.get_cloexec())) {
           // XXX f's refcount could have dropped to zero between the
           // load and here
-          f->inc();
-          t->info_[cpu][fd].store(
-            info.with_locked(false), std::memory_order_relaxed);
+          file* newf = f->dup();
+          fdinfo newinfo(newf, info.get_cloexec());
+
+          t->info_[cpu][fd].store(newinfo, std::memory_order_relaxed);
           t->cloexec_[cpu][fd].store(
             info.get_cloexec(), std::memory_order_relaxed);
         } else {
@@ -71,7 +72,7 @@ public:
     fdinfo none(nullptr, false);
     // Transfer f to manual reference counting since we can't store
     // sref's in the info table.
-    file *fptr = f.transfer_to_ptr();
+    file *fptr = f->dup();
     fdinfo newinfo(fptr, cloexec, true);
     for (int fd = 0; fd < NOFILE; fd++) {
       // Note that we skip over locked FDs because that means they're
@@ -152,7 +153,7 @@ public:
     // Update to new info and unlock.  It's safe to update cloexec_
     // non-atomically with info even with concurrent lock-free readers
     // because any that care will double-check the fdinfo bit.
-    file *newfptr = newf.transfer_to_ptr();
+    file *newfptr = newf->dup();
     fdinfo newinfo(newfptr, cloexec);
     if (cloexec != cloexec_[cpu][fd])
       cloexec_[cpu][fd] = cloexec;
