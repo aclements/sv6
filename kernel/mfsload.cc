@@ -77,7 +77,7 @@ load_inum(u64 inum)
     break;
 
   default:
-    cprintf("unhandled inode type %d\n", i->type.load());
+    panic("unhandled inode %ld type %d\n", inum, i->type.load());
   }
 
   return m;
