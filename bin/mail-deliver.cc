@@ -1,5 +1,6 @@
 #include "libutil.h"
 #include "shutil.h"
+#include "xsys.h"
 
 #include <fcntl.h>
 #include <stdio.h>
