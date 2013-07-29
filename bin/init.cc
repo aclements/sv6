@@ -1,14 +1,23 @@
 // init: The initial user-level program
 
-#include "types.h"
+#ifdef XV6_USER
 #include "user.h"
-#include <fcntl.h>
-#include "lib.h"
 #include "major.h"
+#endif
+
+#include <fcntl.h>
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+
+#ifndef XV6_USER
+#include <sys/mount.h>
+#endif
+
+#include "libutil.h"
 
 static const char *sh_argv[] = { "sh", 0 };
 static const char *app_argv[][MAXARG] = {
@@ -18,6 +27,7 @@ static const char *app_argv[][MAXARG] = {
 #endif
 };
 
+#ifdef XV6_USER
 static struct {
   const char* name;
   int major;
@@ -33,6 +43,7 @@ static struct {
   { "/dev/kmemstats",    MAJ_KMEMSTATS},
   { "/dev/mfsstats",    MAJ_MFSSTATS},
 };
+#endif
 
 static int
 startone(const char * const *argv)
@@ -59,7 +70,11 @@ runcmdline(void)
   long r;
   int fd;
 
+#ifdef XV6_USER
   fd = open("/dev/cmdline", O_RDONLY);
+#else
+  fd = open("/proc/cmdline", O_RDONLY);
+#endif
   if (fd < 0)
     return;
 
@@ -81,6 +96,7 @@ main(void)
 {
   int pid, wpid;
 
+#ifdef XV6_USER
   if(open("console", O_RDWR) < 0){
     mknod("console", 1, 1);
     open("console", O_RDWR);
@@ -89,12 +105,18 @@ main(void)
   dup(0);  // stderr
 
   mkdir("dev", 0777);
-  for (int i = 0; i < NELEM(dev); i++)
-    if (mknod(dev[i].name, dev[i].major, 1) < 0)
-      fprintf(stderr, "init: mknod %s failed\n", dev[i].name);
-  
-  for (u32 i = 0; i < NELEM(app_argv); i++)
-    startone(app_argv[i]);
+  for (auto &d : dev)
+    if (mknod(d.name, d.major, 1) < 0)
+      fprintf(stderr, "init: mknod %s failed\n", d.name);
+#else
+  mkdir("/proc", 0555);
+  int r = mount("x", "/proc", "proc", 0, "");
+  if (r < 0)
+    edie("mount /proc failed");
+#endif
+
+  for (auto &argv : app_argv)
+    startone(argv);
 
   time_t now = time(nullptr);
   printf("init complete at %s", ctime(&now));
