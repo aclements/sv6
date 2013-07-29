@@ -67,6 +67,8 @@ runcmdline(void)
   if (r < 0)
     return;
   buf[r] = 0;
+
+  close(fd);
   
   if ((b = strchr(buf, '$'))) {
     argv[2] = b+1;
