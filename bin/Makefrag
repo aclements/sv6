@@ -83,6 +83,7 @@ UPROGS_NATIVE := \
 	mail-enqueue \
 	mail-qman \
 	mail-deliver \
+	halt \
 
 ifeq ($(HAVE_TESTGEN),y)
 UPROGS_BIN    += fstest
