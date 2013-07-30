@@ -184,16 +184,13 @@ codex: $(KERN)
 ##
 ## mtrace
 ##
-mscan.syms: $(KERN)
-	$(NM) -C -S $< > $@
-
 mscan.kern: $(KERN)
 	cp $< $@
 
 MTRACEOUT ?= mtrace.out
 MTRACEOPTS = -rtc clock=vm -mtrace-enable -mtrace-file $(MTRACEOUT) \
 	     -mtrace-calls
-$(MTRACEOUT): mscan.kern mscan.syms 
+$(MTRACEOUT): mscan.kern
 	$(Q)rm -f $(MTRACEOUT)
 	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel mscan.kern -s
 $(MTRACEOUT)-scripted:
