@@ -166,13 +166,25 @@ $(O)/fs.img: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
 ##
 ## qemu
 ##
+ifeq ($(HW),linuxmtrace)
+override QEMUAPPEND += console=ttyS0
+endif
+
+ifneq ($(RUN),)
+override QEMUAPPEND += \$$ $(RUN)
+endif
+
 QEMUOPTS = -smp $(QEMUSMP) -m 512 \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-nographic \
 	-numa node -numa node \
 	-net user -net nic,model=e1000 \
 	$(if $(QEMUNOREDIR),,-redir tcp:2323::23 -redir tcp:8080::80) \
-	$(if $(RUN),-append "\$$ $(RUN)",)
+	$(if $(QEMUAPPEND),-append "$(QEMUAPPEND)",) \
+
+ifeq ($(HW),linuxmtrace)
+QEMUOPTS += -initrd $(O)/initramfs
+endif
 
 qemu: $(KERN) $(O)/fs.img
 	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -hdb $(O)/fs.img
