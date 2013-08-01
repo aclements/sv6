@@ -17,6 +17,10 @@ PLATFORM   := native
 TOOLPREFIX := 
 else
 ifeq ($(HW),linuxmtrace)
+# Build the user space for mtrace'ing under Linux.  This builds an
+# initramfs of xv6's user space that can be booted on a Linux kernel.
+# Make targets like qemu and mtrace.out are supported if the user
+# provides KERN=path/to/Linux/bzImage to make.
 PLATFORM   := native
 TOOLPREFIX := 
 else
