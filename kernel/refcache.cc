@@ -45,12 +45,15 @@ refcache::cache::evict(struct refcache::cache::way *way,
   auto delta = way->delta;
   if (REFCACHE_DEBUG) {
     assert(obj);
-    assert(delta);
   }
+  // XXX If delta is zero, we need to dirty the object, but if it's
+  // already dirty (or non-zero), we can probably avoid actually
+  // locking or modifying the object.
   scoped_acquire l(&obj->lock_);
   auto writer_global = obj->refcount_seq_.write_begin();
   auto writer_way = way->seq.write_begin();
   way->delta = 0;
+  way->obj = nullptr;
   if ((obj->refcount_ += delta) == 0) {
     // The global count has dropped to zero.  Does this object have a
     // reviewer?
@@ -248,7 +251,7 @@ refcache::cache::flush()
     // the review list for next round because we know that we'll
     // have passed through all of the cores when we next get the
     // token.
-    if (ways_[i].delta) {
+    if (ways_[i].obj) {
       evict(&ways_[i], true);
       ++nflushed;
     }

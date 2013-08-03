@@ -35,9 +35,9 @@
 // count can be reordered.  As a result, a zero global reference count
 // does not imply a zero true reference count.  However, once the true
 // count *is* zero, there will be no more updates, so if the global
-// reference count of an object drops to zero and *remains* zero for
-// an entire epoch, then the refcache can guarantee that the true
-// count is zero and free the object.
+// reference count of an object drops to zero and there are no more
+// operations for an entire epoch, then the refcache can guarantee
+// that the true count is zero and free the object.
 //
 // This lag between the true reference count and the global reference
 // count of an object is the main complication for refcache.  For
@@ -65,14 +65,17 @@
 // should not be freed.
 //
 // It is not enough for the global reference count to be zero when an
-// object is reexamined; rather, it must have been zero for the entire
-// epoch.  For example, core 0 will observe a zero global reference
-// count at the end of epoch 3, and again when it reexamines the
-// object at the end of epoch 4.  However, the true count is not zero,
-// and the global reference count was temporarily non-zero during the
-// epoch.  We call this a *dirty* zero and in this situation the
-// refcache will queue the object to be examined again after another
-// epoch.
+// object is reexamined; rather, there must have been no operations on
+// the object for the entire epoch.  For example, core 0 will observe
+// a zero global reference count at the end of epoch 3, and again when
+// it reexamines the object at the end of epoch 4.  However, the true
+// count is not zero, and the global reference count was temporarily
+// non-zero during the epoch.  We call this a *dirty* zero and in this
+// situation the refcache will queue the object to be examined again
+// after another epoch.  Furthermore, even if operations for an object
+// cancel out on a core, we must still flush this "zero delta" to the
+// object, potentially dirtying the object's global count or adding it
+// to the review queue.
 //
 // We can extend this approach to support "weak references", which
 // provide a controlled way to access an object without preventing its
@@ -98,7 +101,8 @@
 // review queue.
 //
 //   flush():
-//     evict all cache entries
+//     evict all cache entries (even those with zero deltas)
+//     clear cache
 //     update the current epoch
 //
 //   evict(object, delta):
@@ -390,6 +394,7 @@ namespace refcache {
 
     struct way
     {
+      // A way is in use if obj is non-null
       referenced *obj;
       seqcount<uint32_t> seq;
       int32_t delta;
@@ -440,7 +445,7 @@ namespace refcache {
       struct way *way = hash_way(obj);
       if (way->obj != obj) {
         // This object is not in the cache
-        if (way->delta) {
+        if (way->obj) {
           // Need to evict to free up an entry.  Since this is a
           // capacity eviction, local_epoch may be behind
           // global_epoch.
@@ -451,13 +456,15 @@ namespace refcache {
         way->obj = obj;
       }
       // If the delta is getting close to overflowing, evict.
-      if (way->delta == INT_MAX || way->delta == INT_MIN)
+      if (way->delta == INT_MAX || way->delta == INT_MIN) {
         evict(way, false);
+        way->obj = obj;
+      }
       return way;
     }
 
-    // Evict the object from way, freeing up this slot.  way must have
-    // a non-zero delta and interrupts must be disabled.  If
+    // Evict the object from way, freeing up this slot by clearing its
+    // object and delta.  Interrupts must be disabled.  If
     // local_epoch_is_exact, then we assume that local_epoch equals
     // global_epoch.  Otherwise, local_epoch may be global_epoch or
     // global_epoch - 1.
