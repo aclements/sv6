@@ -16,6 +16,7 @@ LIBUTIL_OBJS := \
 
 ifeq ($(HAVE_TESTGEN),y)
 LIBUTIL_OBJS += testgen.o
+LIBUTIL_OBJS += $(patsubst %.c,%.o,$(notdir $(wildcard libutil/testgen.*.c)))
 endif
 
 LIBUTIL_OBJS := $(addprefix $(O)/libutil/, $(LIBUTIL_OBJS))
