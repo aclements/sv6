@@ -198,7 +198,22 @@ sys_madvise(userptr<void> addr, size_t len, int advice)
 int
 sys_mprotect(userptr<void> addr, size_t len, int prot)
 {
-  return -1;
+  if ((uptr)addr % PGSIZE)
+    return -1;                  // EINVAL
+  if ((uptr)addr + len >= USERTOP || (uptr)addr + (uptr)len < (uptr)addr)
+    return -1;                  // ENOMEM
+  if (!(prot & (PROT_READ | PROT_WRITE | PROT_EXEC))) {
+    cprintf("not implemented: PROT_NONE\n");
+    return -1;
+  }
+
+  uptr align_addr = PGROUNDDOWN((uptr)addr);
+  uptr align_len = PGROUNDUP((uptr)addr + len) - align_addr;
+  uint64_t flags = 0;
+  if (prot & PROT_WRITE)
+    flags |= vmdesc::FLAG_WRITE;
+
+  return myproc()->vmap->mprotect(align_addr, align_len, flags);
 }
 
 //SYSCALL

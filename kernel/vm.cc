@@ -299,6 +299,43 @@ vmap::willneed(uptr start, uptr len)
 }
 
 int
+vmap::mprotect(uptr start, uptr len, uint64_t flags)
+{
+  auto begin = vpfs_.find(start / PGSIZE);
+  auto end = vpfs_.find((start + len) / PGSIZE);
+  auto lock = vpfs_.acquire(begin, end);
+
+  mmu::shootdown shootdown;
+
+  for (auto it = begin; it < end; it += it.span()) {
+    if (!it.is_set())
+      return -1;                // ENOMEM
+
+    auto nflags = (it->flags & ~vmdesc::FLAG_WRITE) | flags;
+    if (nflags == it->flags)
+      continue;
+
+    if ((it->flags & vmdesc::FLAG_WRITE) && !(flags & vmdesc::FLAG_WRITE)) {
+      // Permissions are decreasing; need a shootdown
+      cache.invalidate(it.index() * PGSIZE, PGSIZE, it, &shootdown);
+    } else if (!(it->flags & vmdesc::FLAG_WRITE) && (flags & vmdesc::FLAG_WRITE)) {
+      // We're giving write permission.  We don't need a shootdown
+      // (we'll just get a spurious fault), but we do need to check
+      // that these permissions are okay.  Conveniently, POSIX allows
+      // a partial mprotect, so we can check this as we go.
+
+      // XXX This should fail if this is a mapped file that was opened
+      // O_RDONLY (we don't check this in mmap either).
+    }
+
+    it->flags = nflags;
+  }
+
+  shootdown.perform();
+  return 0;
+}
+
+int
 vmap::dup_page(uptr dest, uptr src)
 {
   auto srcit = vpfs_.find(src / PGSIZE);
