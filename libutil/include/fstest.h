@@ -43,3 +43,18 @@ extern "C" {
   printf("setup error, line %d: " format " (errno %d)\n", \
          __LINE__, ##__VA_ARGS__, errno)
 #endif
+
+#ifndef XV6_USER
+#define O_ANYFD 0
+#endif
+
+static int __attribute__((unused)) xerrno(int r) {
+#ifdef XV6_USER
+  return r;
+#else
+  if (r < 0)
+    return -errno;
+  else
+    return r;
+#endif
+}
