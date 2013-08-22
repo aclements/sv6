@@ -57,6 +57,22 @@ sys_dup2(int ofd, int nfd)
   return nfd;
 }
 
+static off_t
+compute_offset(file_inode *fi, off_t offset, int whence)
+{
+  switch (whence) {
+  case SEEK_SET:
+    return offset;
+
+  case SEEK_CUR:
+    return (off_t)fi->off + offset;
+
+  case SEEK_END:
+    return offset + *fi->ip->as_file()->read_size();
+  }
+  return -1;
+}
+
 //SYSCALL
 off_t
 sys_lseek(int fd, off_t offset, int whence)
@@ -70,27 +86,20 @@ sys_lseek(int fd, off_t offset, int whence)
     return -1;
 
   file_inode* fi = static_cast<file_inode*>(ff);
-  auto l = fi->off_lock.guard();
-  switch (whence) {
-  case SEEK_SET:
-    fi->off = offset;
-    break;
+  if (fi->ip->type() != mnode::types::file)
+    return -1;                  // ESPIPE
 
-  case SEEK_CUR:
-    fi->off += offset;
-    break;
-
-  case SEEK_END:
-    if (fi->ip->type() != mnode::types::file)
-      return -1;
-    fi->off = offset + *fi->ip->as_file()->read_size();
-    break;
-
-  default:
+  // Pre-validate offset and whence
+  if (compute_offset(fi, offset, whence) < 0)
     return -1;
-  }
 
-  return fi->off;
+  auto l = fi->off_lock.guard();
+  off_t new_offset = compute_offset(fi, offset, whence);
+  if (new_offset < 0)
+    return -1;
+  fi->off = new_offset;
+
+  return new_offset;
 }
 
 //SYSCALL
