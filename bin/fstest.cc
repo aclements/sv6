@@ -103,11 +103,17 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
     if (pids[p] == 0) {
       // Get all text and data structures
       madvise(0, (size_t) _end, MADV_WILLNEED);
+
       // Prime the VM system (this must be kept in sync with
       // fs_testgen.py)
       void *r = mmap((void*)0x12345600000, 4 * 4096, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
       if (r == (void*)-1)
-        setup_error("mmap");
+        setup_error("mmap (fixed)");
+      munmap(r, 4 * 4096);
+
+      r = mmap(0, 4 * 4096, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+      if (r == (void*)-1)
+        setup_error("mmap (non-fixed)");
       munmap(r, 4 * 4096);
 
       // Run setup
