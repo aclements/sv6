@@ -67,6 +67,8 @@ public:
     return sref<file>::newref(f);
   }
 
+  // Allocate a FD and point it to f.  This takes over the reference
+  // to f from the caller.
   int allocfd(sref<file>&& f, bool percpu = false, bool cloexec = false) {
     int cpu = percpu ? myid() : 0;
     fdinfo none(nullptr, false);
@@ -90,6 +92,10 @@ public:
       }
     }
     cprintf("filetable::allocfd: failed\n");
+    // The "dup" call told f that we're binding it to a FD.  That
+    // ultimately failed, but we have to tell it that we're "closing"
+    // the FD now.
+    fptr->pre_close();
     fptr->dec();
     return -1;
   }
@@ -124,10 +130,12 @@ public:
     infop->store(newinfo, std::memory_order_release);
 
     // Close old file
-    if (info.get_file())
+    if (info.get_file()) {
+      info.get_file()->pre_close();
       info.get_file()->dec();
-    else
+    } else {
       cprintf("filetable::close: bad fd %u\n", fd);
+    }
   }
 
   bool replace(int fd, sref<file>&& newf, bool cloexec = false) {
@@ -159,8 +167,11 @@ public:
       cloexec_[cpu][fd] = cloexec;
     infop->store(newinfo, std::memory_order_release);
 
-    if (oldinfo.get_file() && oldinfo.get_file() != newfptr)
+    // Close the old FD
+    if (oldinfo.get_file() && oldinfo.get_file() != newfptr) {
+      oldinfo.get_file()->pre_close();
       oldinfo.get_file()->dec();
+    }
     return true;
   }
 
@@ -179,11 +190,14 @@ private:
   }
 
   ~filetable() {
+    // Close all FDs
     for(int cpu = 0; cpu < NCPU; cpu++){
       for(int fd = 0; fd < NOFILE; fd++){
         fdinfo info = info_[cpu][fd].load();
-        if (info.get_file())
+        if (info.get_file()) {
+          info.get_file()->pre_close();
           info.get_file()->dec();
+        }
       }
     }
   }

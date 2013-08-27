@@ -5,6 +5,7 @@
 #include "gc.hh"
 #include <atomic>
 #include "refcache.hh"
+#include "eager_refcache.hh"
 #include "condvar.hh"
 #include "semaphore.hh"
 #include "seqlock.hh"
@@ -17,7 +18,13 @@ class dirns;
 u64 namehash(const strbuf<DIRSIZ>&);
 
 struct file {
+  // Duplicate this file so it can be bound to a FD.
   virtual file* dup() { inc(); return this; }
+
+  // Called when a FD using this file is being closed, just before
+  // dec().  This can be an explicit close(), or the termination of a
+  // process.  This will always be paired with a dup().
+  virtual void pre_close() { }
 
   virtual int stat(struct stat*, enum stat_flags) { return -1; }
   virtual ssize_t read(char *addr, size_t n) { return -1; }
@@ -101,7 +108,7 @@ private:
   struct pipe* const pipe;
 };
 
-struct file_pipe_writer_wrapper : public referenced, public file {
+struct file_pipe_writer_wrapper : public eager_refcache::referenced, public file {
 public:
   file_pipe_writer_wrapper(file* f) : inner(f) {}
   NEW_DELETE_OPS(file_pipe_writer_wrapper);
@@ -119,6 +126,26 @@ public:
 
   ssize_t write(const char *addr, size_t n) override {
     return inner->write(addr, n);
+  }
+
+  void pre_close() override {
+    // This FD is being closed.  Now we need to know the moment its
+    // reference count actually drops to zero so we can immediately
+    // decrement the write end of the pipe.  (close()'s reference is
+    // *probably* the last reference, but there may be concurrent
+    // operations holding transient references on this FD.)
+    eagerify();
+
+    // XXX It's really hard to convince yourself that we never miss a
+    // pre_close, especially in error-handling cases.  I'm pretty sure
+    // it's true because we only get a file_pipe_writer_wrapper when
+    // we dup a file_pipe_writer, and we only do that when we're about
+    // to install it in the filetable, and if the filetable dup's a
+    // struct file, it always pre_closes it.  We could make this
+    // simpler by starting eager_refcache::referenced in *eager* mode
+    // and only switching it to scalable mode when we "commit" the
+    // reference.  I think the eager to scalable transition only
+    // requires setting referenced::mode_.
   }
 
   void onzero() override {
