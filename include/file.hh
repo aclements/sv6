@@ -108,6 +108,35 @@ private:
   struct pipe* const pipe;
 };
 
+// We need to detect immediately when there are no more pipe writers.
+// To do this while avoiding sharing in the common case, we use a
+// two-level approach to pipe writer reference counting.
+//
+//          pipe
+//            ↑             (fixed reference)
+//     file_pipe_writer
+//    ↗       ↑        ↖    (eager references)
+// wrapper wrapper wrapper
+//    ↑       ↑     ↑  ↑    (hybrid references)
+//   FD      FD    FD temp
+//
+// Each pipe has exactly one file_pipe_writer that represents its
+// write end.  This is always eagerly reference counted and as soon as
+// it reaches zero, the write end is closed.  However, this is not
+// what an FD table entry points to.  Each FD table entry gets a
+// unique file_pipe_writer_wrapper, which in turn references the
+// file_pipe_writer.  Hence, the reference count on the
+// file_pipe_writer is the number of FDs that are open to it.  No
+// more, no less.
+//
+// file_pipe_writer_wrapper is hybrid counted.  As long as the FD is
+// open, it has at least one reference, so it operates in scalable
+// mode and thus temporary references are scalable.  When the FD is
+// closed, it switches to eager mode, and as soon as the last
+// reference to the wrapper is dropped, the wrapper will be destroyed
+// and release its reference to the file_pipe_writer (potentially
+// closing the pipe).
+
 struct file_pipe_writer_wrapper : public eager_refcache::referenced, public file {
 public:
   file_pipe_writer_wrapper(file* f) : inner(f) {}
