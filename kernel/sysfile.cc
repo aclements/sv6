@@ -73,6 +73,24 @@ compute_offset(file_inode *fi, off_t offset, int whence)
   return -1;
 }
 
+static int
+check_offset(file_inode *fi, off_t offset, int whence)
+{
+  if (whence == SEEK_END) {
+    if (offset > 0)
+      return -1;
+
+    if (offset == 0)
+      return 0;
+
+    mfile::page_state ps = fi->ip->as_file()->get_page((1 - offset) / PGSIZE);
+    if (ps.get_page_info() && !ps.is_partial_page())
+      return 0;
+  }
+
+  return compute_offset(fi, offset, whence);
+}
+
 //SYSCALL
 off_t
 sys_lseek(int fd, off_t offset, int whence)
@@ -90,7 +108,7 @@ sys_lseek(int fd, off_t offset, int whence)
     return -1;                  // ESPIPE
 
   // Pre-validate offset and whence
-  if (compute_offset(fi, offset, whence) < 0)
+  if (check_offset(fi, offset, whence) < 0)
     return -1;
 
   auto l = fi->off_lock.guard();
