@@ -10,7 +10,7 @@
 #include "uk/unistd.h"
 #include "uk/fcntl.h"
 
-#define PIPESIZE 512
+#define PIPESIZE (4*4096)
 
 struct pipe {
   virtual ~pipe() { };
