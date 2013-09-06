@@ -69,7 +69,7 @@ compute_offset(file_inode *fi, off_t cur_off, off_t offset, int whence)
 
   case SEEK_END:
     if (offset < 0) {
-      mfile::page_state ps = fi->ip->as_file()->get_page((1 - offset) / PGSIZE);
+      mfile::page_state ps = fi->ip->as_file()->get_page((-offset - 1) / PGSIZE);
       if (!ps.get_page_info())
         // Attempt to seek before the beginning of the file
         return -1;
