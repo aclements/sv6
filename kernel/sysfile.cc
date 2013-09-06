@@ -58,14 +58,14 @@ sys_dup2(int ofd, int nfd)
 }
 
 static off_t
-compute_offset(file_inode *fi, off_t cur_off, off_t offset, int whence)
+compute_offset(file_inode *fi, off_t offset, int whence)
 {
   switch (whence) {
   case SEEK_SET:
     return offset;
 
   case SEEK_CUR:
-    return cur_off + offset;
+    return (off_t)fi->off + offset;
 
   case SEEK_END:
     if (offset < 0) {
@@ -97,16 +97,15 @@ sys_lseek(int fd, off_t offset, int whence)
     return -1;                  // ESPIPE
 
   // Pre-validate offset and whence
-  off_t orig_cur_off = fi->off;
-  off_t orig_new_off = compute_offset(fi, orig_cur_off, offset, whence);
+  off_t orig_new_off = compute_offset(fi, offset, whence);
   if (orig_new_off < 0)
     return -1;
-  if (orig_new_off == orig_cur_off)
-    // No change; don't acquire the lock
+  if (orig_new_off == fi->off)
+    // No change; don't acquire the lock (this is racy, but that's okay)
     return orig_new_off;
 
   auto l = fi->off_lock.guard();
-  off_t new_offset = compute_offset(fi, fi->off, offset, whence);
+  off_t new_offset = compute_offset(fi, offset, whence);
   if (new_offset < 0)
     return -1;
   fi->off = new_offset;
