@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 typedef ptrdiff_t ssize_t;
-typedef size_t off_t;
+typedef ssize_t off_t;
 
 typedef uint64_t dev_t;
 typedef uint64_t ino_t;
