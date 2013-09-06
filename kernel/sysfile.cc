@@ -84,7 +84,10 @@ check_offset(file_inode *fi, off_t offset, int whence)
       return 0;
 
     mfile::page_state ps = fi->ip->as_file()->get_page((1 - offset) / PGSIZE);
-    if (ps.get_page_info() && !ps.is_partial_page())
+    if (!ps.get_page_info())
+      return -1;
+
+    if (!ps.is_partial_page())
       return 0;
   }
 
