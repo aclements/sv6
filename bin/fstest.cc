@@ -97,6 +97,15 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
       continue;
 
     fflush(stdout);
+    if (do_pin) {
+      for (int f = 0; f < 2; f++) {
+        if (t->func[f].callproc == p) {
+          setaffinity(f);
+          break;
+        }
+      }
+    }
+
     pids[p] = fork();
     assert(pids[p] >= 0);
 
