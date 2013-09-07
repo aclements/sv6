@@ -58,14 +58,17 @@ sys_dup2(int ofd, int nfd)
 }
 
 static off_t
-compute_offset(file_inode *fi, off_t offset, int whence)
+compute_offset(file_inode *fi, off_t *fioffp, off_t offset, int whence)
 {
   switch (whence) {
   case SEEK_SET:
     return offset;
 
-  case SEEK_CUR:
-    return (off_t)fi->off + offset;
+  case SEEK_CUR: {
+    off_t fioff = fi->off;
+    if (fioffp) *fioffp = fioff;
+    return fioff + offset;
+  }
 
   case SEEK_END:
     if (offset < 0) {
@@ -96,16 +99,20 @@ sys_lseek(int fd, off_t offset, int whence)
   if (fi->ip->type() != mnode::types::file)
     return -1;                  // ESPIPE
 
-  // Pre-validate offset and whence
-  off_t orig_new_off = compute_offset(fi, offset, whence);
+  // Pre-validate offset and whence.  Be careful to only read fi->off
+  // once, regardless of what code path we take.
+  off_t fioff = -1;
+  off_t orig_new_off = compute_offset(fi, &fioff, offset, whence);
   if (orig_new_off < 0)
     return -1;
-  if (orig_new_off == fi->off)
-    // No change; don't acquire the lock (this is racy, but that's okay)
+  if (fioff == -1)
+    fioff = fi->off;
+  if (orig_new_off == fioff)
+    // No change; don't acquire the lock
     return orig_new_off;
 
   auto l = fi->off_lock.guard();
-  off_t new_offset = compute_offset(fi, offset, whence);
+  off_t new_offset = compute_offset(fi, nullptr, offset, whence);
   if (new_offset < 0)
     return -1;
   fi->off = new_offset;
