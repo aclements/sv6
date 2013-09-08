@@ -27,8 +27,8 @@ struct ordered : pipe {
   struct condvar  full;
   int readopen;   // read fd is still open
   int writeopen;  // write fd is still open
-  u32 nread;      // number of bytes read
-  u32 nwrite;     // number of bytes written
+  std::atomic<size_t> nread;  // number of bytes read
+  std::atomic<size_t> nwrite; // number of bytes written
   bool nonblock;
   char data[PIPESIZE];
 
@@ -46,6 +46,19 @@ struct ordered : pipe {
   NEW_DELETE_OPS(ordered);
 
   virtual int write(const char *addr, int n) override {
+    if (nonblock) {
+      for (;;) {
+        size_t nr = nread;
+        size_t nw = nwrite;
+        if (nr == nread) {
+          // use nread sort-of like a seqlock
+          if (nw == nr + PIPESIZE)
+            return -1;
+          break;
+        }
+      }
+    }
+
     scoped_acquire l(&lock);
     for(int i = 0; i < n; i++){
       while(nwrite == nread + PIPESIZE){ 
@@ -64,7 +77,19 @@ struct ordered : pipe {
   }
 
   virtual int read(char *addr, int n) override {
-    int i;
+    if (nonblock) {
+      for (;;) {
+        size_t nr = nread;
+        size_t nw = nwrite;
+        if (nr == nread) {
+          // use nread sort-of like a seqlock
+          if (nw == nr)
+            return -1;
+          break;
+        }
+      }
+    }
+
     scoped_acquire l(&lock);
     while(nread == nwrite) {
       if (nonblock || myproc()->killed)
@@ -74,6 +99,7 @@ struct ordered : pipe {
         return 0;
       empty.sleep(&lock, &lock_close);
     }
+    int i;
     for(i = 0; i < n; i++) { 
       if(nread == nwrite)
         break;
