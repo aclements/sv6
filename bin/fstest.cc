@@ -100,7 +100,7 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
     if (do_pin) {
       for (int f = 0; f < 2; f++) {
         if (t->func[f].callproc == p) {
-          setaffinity(f);
+          setaffinity(f+2);
           break;
         }
       }
