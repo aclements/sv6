@@ -734,7 +734,7 @@ kalloc(const char *name, size_t size)
       auto l = lb.lock.guard();
       res = lb.alloc.alloc_nothrow(size);
 #if PRINT_STEAL
-      if (res && mycpu()->mem.steal.is_local(idx))
+      if (res && mycpu()->mem->steal.is_local(idx))
         cprintf("CPU %d stole from buddy %lu\n", myid(), idx);
 #endif
       if (res)
