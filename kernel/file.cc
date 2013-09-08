@@ -64,7 +64,7 @@ file_inode::read(char *addr, size_t n)
     if (!ps.get_page_info())
       return 0;
 
-    if (off >= *ip->as_file()->read_size())
+    if (ps.is_partial_page() && off >= *ip->as_file()->read_size())
       return 0;
 
     l = off_lock.guard();
