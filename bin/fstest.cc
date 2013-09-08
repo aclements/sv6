@@ -272,15 +272,25 @@ main(int ac, char** av)
   }
 
   if (optind < ac) {
-    char* dash = strchr(av[optind], '-');
-    if (!dash) {
-      min = max = atoi(av[optind]);
-    } else {
-      *dash = '\0';
-      if (av[optind])
-        min = atoi(av[optind]);
-      if (*(dash + 1))
-        max = atoi(dash + 1);
+    bool found = false;
+    for (uint32_t t = 0; t < ntests && !found; t++) {
+      if (strcmp(av[optind], fstests[t].testname) == 0) {
+        min = max = t;
+        found = true;
+      }
+    }
+
+    if (!found) {
+      char* dash = strchr(av[optind], '-');
+      if (!dash) {
+        min = max = atoi(av[optind]);
+      } else {
+        *dash = '\0';
+        if (av[optind])
+          min = atoi(av[optind]);
+        if (*(dash + 1))
+          max = atoi(dash + 1);
+      }
     }
   } else if (nparts >= 0 || thispart >= 0) {
     if (nparts < 0 || thispart < 0) {
