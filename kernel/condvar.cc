@@ -74,7 +74,7 @@ timerintr(void)
 }
 
 void
-condvar::sleep_to(struct spinlock *lk, u64 timeout)
+condvar::sleep_to(struct spinlock *lk, u64 timeout, struct spinlock *lk2)
 {
   if(myproc() == 0)
     panic("sleep");
@@ -86,6 +86,8 @@ condvar::sleep_to(struct spinlock *lk, u64 timeout)
   lock.acquire();
 
   lk->release();
+  if (lk2)
+    lk2->release();
 
   myproc()->lock.acquire();
 
@@ -106,6 +108,8 @@ condvar::sleep_to(struct spinlock *lk, u64 timeout)
   sched();
   // Reacquire original lock.
   lk->acquire();
+  if (lk2)
+    lk2->acquire();
   if (myproc()->killed) {
     // Callers should use scoped locks to ensure locks are released as the stack
     // is unwinded.  But, callers don't have to check for p->killed to ensure
@@ -115,9 +119,9 @@ condvar::sleep_to(struct spinlock *lk, u64 timeout)
 }
 
 void
-condvar::sleep(struct spinlock *lk)
+condvar::sleep(struct spinlock *lk, struct spinlock *lk2)
 {
-  sleep_to(lk, 0);
+  sleep_to(lk, 0, lk2);
 }
 
 void

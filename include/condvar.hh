@@ -28,8 +28,8 @@ struct condvar {
 
   NEW_DELETE_OPS(condvar);
 
-  void sleep(struct spinlock *);
-  void sleep_to(struct spinlock*, u64);
+  void sleep(struct spinlock *, struct spinlock * = nullptr);
+  void sleep_to(struct spinlock*, u64, struct spinlock * = nullptr);
   void wake_all(int yield=false, proc *callerproc=nullptr);
   void wake_one(proc *p);
 };

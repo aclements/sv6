@@ -22,7 +22,9 @@ struct pipe {
 
 struct ordered : pipe {
   struct spinlock lock;
-  struct condvar  cv;
+  struct spinlock lock_close;
+  struct condvar  empty;
+  struct condvar  full;
   int readopen;   // read fd is still open
   int writeopen;  // write fd is still open
   u32 nread;      // number of bytes read
@@ -35,7 +37,9 @@ struct ordered : pipe {
       nonblock(flags & O_NONBLOCK)
   {
     lock = spinlock("pipe", LOCKSTAT_PIPE);
-    cv = condvar("pipe");
+    lock_close = spinlock("pipe:close", LOCKSTAT_PIPE);
+    empty = condvar("pipe:empty");
+    full = condvar("pipe:full");
   };
   ~ordered() override {
   };
@@ -45,44 +49,49 @@ struct ordered : pipe {
     scoped_acquire l(&lock);
     for(int i = 0; i < n; i++){
       while(nwrite == nread + PIPESIZE){ 
-        if(nonblock || readopen == 0 || myproc()->killed){
+        if (nonblock || myproc()->killed)
           return -1;
-        }
-        cv.wake_all();
-        cv.sleep(&lock);
+        scoped_acquire lclose(&lock_close);
+        if (readopen == 0)
+          return -1;
+        full.sleep(&lock, &lock_close);
       }
       data[nwrite++ % PIPESIZE] = addr[i];
     }
-    cv.wake_all();
+    if (n > 0)
+      empty.wake_all();
     return n;
   }
 
   virtual int read(char *addr, int n) override {
     int i;
     scoped_acquire l(&lock);
-    while(nread == nwrite && writeopen) { 
-      if(nonblock || myproc()->killed){
+    while(nread == nwrite) {
+      if (nonblock || myproc()->killed)
         return -1;
-      }
-      cv.sleep(&lock);
+      scoped_acquire lclose(&lock_close);
+      if (writeopen == 0)
+        return 0;
+      empty.sleep(&lock, &lock_close);
     }
     for(i = 0; i < n; i++) { 
       if(nread == nwrite)
         break;
       addr[i] = data[nread++ % PIPESIZE];
     }
-    cv.wake_all();
+    if (i > 0)
+      full.wake_all();
     return i;
   }
 
   virtual int close(int writable) override {
-    scoped_acquire l(&lock);
+    scoped_acquire l(&lock_close);
     if(writable){
       writeopen = 0;
     } else {
       readopen = 0;
     }
-    cv.wake_all();
+    empty.wake_all();
     if(readopen == 0 && writeopen == 0){
       return 1;
     }
