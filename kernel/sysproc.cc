@@ -185,9 +185,12 @@ sys_madvise(userptr<void> addr, size_t len, int advice)
 
   switch (advice) {
   case MADV_WILLNEED:
-  case MADV_SOMEONE_ELSE_WILLNEED:
-    if (myproc()->vmap->willneed(align_addr, align_len,
-                                 advice == MADV_WILLNEED) < 0)
+    if (myproc()->vmap->willneed(align_addr, align_len) < 0)
+      return -1;
+    return 0;
+
+  case MADV_INVALIDATE_CACHE:
+    if (myproc()->vmap->invalidate_cache(align_addr, align_len) < 0)
       return -1;
     return 0;
 

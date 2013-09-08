@@ -59,12 +59,8 @@ static int __attribute__((unused)) xerrno(int r) {
 #endif
 }
 
-static void __attribute__((unused)) xwillneed(void *va, size_t len) {
+static void __attribute__((unused)) xinvalidate(void *va, size_t len) {
 #ifdef XV6_USER
-  madvise(va, len, MADV_SOMEONE_ELSE_WILLNEED);
-#else
-  volatile char *p = (volatile char*) va;
-  for (size_t i = 0; i < len; i++)
-    p[i];
+  madvise(va, len, MADV_INVALIDATE_CACHE);
 #endif
 }

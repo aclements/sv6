@@ -263,7 +263,7 @@ vmap::remove(uptr start, uptr len)
 }
 
 int
-vmap::willneed(uptr start, uptr len, bool fill_page_tables)
+vmap::willneed(uptr start, uptr len)
 {
   auto begin = vpfs_.find(start / PGSIZE);
   auto end = vpfs_.find((start + len) / PGSIZE);
@@ -285,13 +285,33 @@ vmap::willneed(uptr start, uptr len, bool fill_page_tables)
 
     page_info *page = ensure_page(it, writable ? access_type::WRITE
                                                : access_type::READ);
-    if (!fill_page_tables || !page)
+    if (!page)
       continue;
 
     if (it->flags & vmdesc::FLAG_COW || !writable)
       cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U);
     else
       cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+  }
+
+  shootdown.perform();
+  return 0;
+}
+
+int
+vmap::invalidate_cache(uptr start, uptr len)
+{
+  auto begin = vpfs_.find(start / PGSIZE);
+  auto end = vpfs_.find((start + len) / PGSIZE);
+  auto lock = vpfs_.acquire(begin, end);
+
+  mmu::shootdown shootdown;
+
+  for (auto it = begin; it < end; it += it.span()) {
+    if (!it.is_set())
+      continue;
+
+    cache.invalidate(it.index() * PGSIZE, PGSIZE, it, &shootdown);
   }
 
   shootdown.perform();
