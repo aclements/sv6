@@ -60,12 +60,15 @@ file_inode::read(char *addr, size_t n)
   } else if (ip->type() != mnode::types::file) {
     return -1;
   } else {
-    if (off >= *ip->as_file()->read_size()) {
-      r = 0;
-    } else {
-      l = off_lock.guard();
-      r = readi(ip, addr, off, n);
-    }
+    mfile::page_state ps = ip->as_file()->get_page(off / PGSIZE);
+    if (!ps.get_page_info())
+      return 0;
+
+    if (off >= *ip->as_file()->read_size())
+      return 0;
+
+    l = off_lock.guard();
+    r = readi(ip, addr, off, n);
   }
   if (r > 0)
     off += r;
