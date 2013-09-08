@@ -4,6 +4,7 @@ Q          ?= @
 TOOLPREFIX ?= x86_64-jos-elf-
 QEMU 	   ?= qemu-system-x86_64
 QEMUSMP	   ?= 8
+QEMUMEM    ?= 512
 QEMUSRC    ?= ../mtrace
 MTRACE	   ?= $(QEMU)
 HW	   ?= qemu
@@ -174,11 +175,20 @@ ifeq ($(HW),linuxmtrace)
 override QEMUAPPEND += console=ttyS0
 endif
 
+## One NUMA node per CPU when mtrace'ing
+ifeq ($(HW),linuxmtrace)
+QEMUSMP := 4
+QEMUMEM := 1024
+else ifeq ($(HW),mtrace)
+QEMUSMP := 4
+QEMUMEM := 1024
+endif
+
 ifneq ($(RUN),)
 override QEMUAPPEND += \$$ $(RUN)
 endif
 
-QEMUOPTS = -smp $(QEMUSMP) -m 512 \
+QEMUOPTS = -smp $(QEMUSMP) -m $(QEMUMEM) \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-nographic \
 	-numa node -numa node \
@@ -188,6 +198,13 @@ QEMUOPTS = -smp $(QEMUSMP) -m 512 \
 
 ifeq ($(HW),linuxmtrace)
 QEMUOPTS += -initrd $(O)/initramfs
+endif
+
+## One NUMA node per CPU when mtrace'ing
+ifeq ($(HW),linuxmtrace)
+QEMUOPTS += -numa node -numa node
+else ifeq ($(HW),mtrace)
+QEMUOPTS += -numa node -numa node
 endif
 
 qemu: $(KERN) $(O)/fs.img
