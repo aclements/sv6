@@ -139,7 +139,7 @@ struct vmap : public referenced {
   int remove(uptr start, uptr len);
 
   // Populate vmdesc's.
-  int willneed(uptr start, uptr len);
+  int willneed(uptr start, uptr len, bool fill_page_tables);
 
   // Modify protection on a range.  flags must be 0 or FLAG_MAPPED.
   int mprotect(uptr start, uptr len, uint64_t flags);

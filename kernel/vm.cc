@@ -263,7 +263,7 @@ vmap::remove(uptr start, uptr len)
 }
 
 int
-vmap::willneed(uptr start, uptr len)
+vmap::willneed(uptr start, uptr len, bool fill_page_tables)
 {
   auto begin = vpfs_.find(start / PGSIZE);
   auto end = vpfs_.find((start + len) / PGSIZE);
@@ -285,7 +285,7 @@ vmap::willneed(uptr start, uptr len)
 
     page_info *page = ensure_page(it, writable ? access_type::WRITE
                                                : access_type::READ);
-    if (!page)
+    if (!fill_page_tables || !page)
       continue;
 
     if (it->flags & vmdesc::FLAG_COW || !writable)
