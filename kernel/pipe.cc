@@ -25,7 +25,7 @@ struct ordered : pipe {
   struct spinlock lock_close;
   struct condvar  empty;
   struct condvar  full;
-  int readopen;   // read fd is still open
+  std::atomic<bool> readopen;   // read fd is still open
   int writeopen;  // write fd is still open
   std::atomic<size_t> nread;  // number of bytes read
   std::atomic<size_t> nwrite; // number of bytes written
@@ -33,7 +33,7 @@ struct ordered : pipe {
   char data[PIPESIZE];
 
   ordered(int flags)
-    : readopen(1), writeopen(1), nread(0), nwrite(0),
+    : readopen(true), writeopen(1), nread(0), nwrite(0),
       nonblock(flags & O_NONBLOCK)
   {
     lock = spinlock("pipe", LOCKSTAT_PIPE);
@@ -59,13 +59,16 @@ struct ordered : pipe {
       }
     }
 
+    if (!readopen)
+      return -1;
+
     scoped_acquire l(&lock);
     for(int i = 0; i < n; i++){
       while(nwrite == nread + PIPESIZE){ 
         if (nonblock || myproc()->killed)
           return -1;
         scoped_acquire lclose(&lock_close);
-        if (readopen == 0)
+        if (!readopen)
           return -1;
         full.sleep(&lock, &lock_close);
       }
