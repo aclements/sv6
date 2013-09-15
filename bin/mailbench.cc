@@ -80,7 +80,6 @@ timer_thread(void)
 {
   warmup = true;
   bar.join();
-  bar.join();
   sleep(warmup_secs);
   warmup = false;
   sleep(duration);
@@ -111,6 +110,8 @@ do_mua(int cpu, string spooldir, string msgpath)
   int msgfd = open(msgpath.c_str(), O_RDONLY|O_CLOEXEC|O_ANYFD);
   if (msgfd < 0)
     edie("open %s failed", msgpath.c_str());
+
+  bar.join();
 
   bool mywarmup = true;
   uint64_t mycount = 0;
