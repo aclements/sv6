@@ -5,13 +5,16 @@ TOOLPREFIX ?= x86_64-jos-elf-
 QEMU 	   ?= qemu-system-x86_64
 QEMUSMP	   ?= 8
 QEMUMEM    ?= 512
-QEMUSRC    ?= ../mtrace
-MTRACE	   ?= $(QEMU)
 HW	   ?= qemu
 EXCEPTIONS ?= y
 RUN	   ?= $(empty)
 PYTHON     ?= python
 O  	   = o.$(HW)
+
+# Directory containing mtrace-magic.h for HW=mtrace
+MTRACESRC  ?= ../mtrace
+# Mtrace-enabled QEMU binary
+MTRACE     ?= $(MTRACESRC)/x86_64-softmmu/qemu-system-x86_64
 
 ifeq ($(HW),linux)
 PLATFORM   := native
@@ -58,7 +61,7 @@ ifeq ($(PLATFORM),xv6)
 INCLUDES  = --sysroot=$(O)/sysroot \
 	-iquote include -iquote$(O)/include \
 	-iquote libutil/include \
-	-Istdinc $(CODEXINC) -I$(QEMUSRC) \
+	-Istdinc $(CODEXINC) -I$(MTRACESRC) \
 	-include param.h -include libutil/include/compiler.h
 COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
@@ -67,7 +70,7 @@ COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1
 COMFLAGS  += -Wl,-m,elf_x86_64 -nostdlib
 LDFLAGS   = -m elf_x86_64
 else
-INCLUDES := -include param.h -iquote libutil/include -I$(QEMUSRC)
+INCLUDES := -include param.h -iquote libutil/include -I$(MTRACESRC)
 COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 endif
@@ -228,11 +231,11 @@ $(MTRACEOUT)-scripted:
 	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel $(KERN)
 .PHONY: $(MTRACEOUT) $(MTRACEOUT)-scripted
 
-mscan.out: $(QEMUSRC)/mtrace-tools/mscan $(MTRACEOUT)
-	$(QEMUSRC)/mtrace-tools/mscan --kernel $(KERN) > $@ || (rm -f $@; exit 2)
+mscan.out: $(MTRACESRC)/mtrace-tools/mscan $(MTRACEOUT)
+	$(MTRACESRC)/mtrace-tools/mscan --kernel $(KERN) > $@ || (rm -f $@; exit 2)
 
-mscan.sorted: mscan.out $(QEMUSRC)/mtrace-tools/sersec-sort
-	$(QEMUSRC)/mtrace-tools/sersec-sort < $< > $@
+mscan.sorted: mscan.out $(MTRACESRC)/mtrace-tools/sersec-sort
+	$(MTRACESRC)/mtrace-tools/sersec-sort < $< > $@
 
 rsync: $(KERN)
 	rsync -avP $(KERN) amsterdam.csail.mit.edu:/tftpboot/$(HW)/kernel.xv6
