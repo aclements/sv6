@@ -1,6 +1,12 @@
 The xv6 software is:
 
-Copyright (c) 2006-2009 Frans Kaashoek, Robert Morris, Russ Cox,
+Copyright (c) 2006-2011 Frans Kaashoek, Robert Morris, Russ Cox,
+                        Massachusetts Institute of Technology
+
+sv6 is a derivative of xv6 and is:
+
+Copyright (c) 2011-2013 Austin Clements, Silas Boyd-Wickizer,
+                        Nickolai Zeldovich, Frans Kaashoek,
                         Massachusetts Institute of Technology
 
 Permission is hereby granted, free of charge, to any person obtaining
