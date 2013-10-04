@@ -2,14 +2,14 @@
 -include config.mk
 Q          ?= @
 TOOLPREFIX ?= x86_64-jos-elf-
-QEMU 	   ?= qemu-system-x86_64
-QEMUSMP	   ?= 8
+QEMU       ?= qemu-system-x86_64
+QEMUSMP    ?= 8
 QEMUMEM    ?= 512
-HW	   ?= qemu
+HW         ?= qemu
 EXCEPTIONS ?= y
-RUN	   ?= $(empty)
+RUN        ?= $(empty)
 PYTHON     ?= python
-O  	   = o.$(HW)
+O           = o.$(HW)
 
 # Directory containing mtrace-magic.h for HW=mtrace
 MTRACESRC  ?= ../mtrace
