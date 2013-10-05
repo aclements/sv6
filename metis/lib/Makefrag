@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 OBJDIRS += lib
 
 LIB_SRCS := lib/mr-sched.c		\

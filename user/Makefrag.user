@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 CXXFLAGS := -iquote user $(filter-out -nostdinc++ -Istdinc -Inet, $(CXXFLAGS)) -msse
 
 $(O)/utest: $(O)/kernel/crange.o \

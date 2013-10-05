@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 -include $(O)/metis/lib/*.d
 
 METIS_LDFLAGS += $(O)/libmetis.a

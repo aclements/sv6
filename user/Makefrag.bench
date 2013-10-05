@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 NCXXFLAGS = -static -g -MD -m64 -O3 -Wall -Werror -DHW_$(HW) \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer \
 	    -fms-extensions -mcx16 -mno-red-zone -std=c++0x \

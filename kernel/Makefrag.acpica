@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 ACPICA := kernel/acpica
 
 ACPICA_SRCS := $(shell find $(ACPICA)/source/components -name "*.c")

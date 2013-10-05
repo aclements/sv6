@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 HAVE_LWIP = $(shell (cd lwip 2> /dev/null && echo y) || echo n)
 
 ifeq ($(HAVE_LWIP),y)

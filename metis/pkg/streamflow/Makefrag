@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 OBJDIRS += pkg/streamflow
 
 META_METHOD := RADIX_TREE

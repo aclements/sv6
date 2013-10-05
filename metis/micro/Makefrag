@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 OBJDIRS += micro
 
 $(O)/micro/%.o: micro/%.c

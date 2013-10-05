@@ -1,3 +1,5 @@
+# -*- makefile-gmake -*-
+
 $(O)/tools/mkfs: tools/mkfs.c include/fs.h
 	$(Q)mkdir -p $(@D)
 	gcc -Werror -Wall -I. -idirafter stdinc -o $@ $<
