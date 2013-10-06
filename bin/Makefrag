@@ -127,9 +127,9 @@ LINK_CMD_BEGIN := $(Q)$(LD) $(LDFLAGS)
 LINK_CMD_END :=  --start-group $(UPROGS_LIBS) --end-group $(ULIB_END)
 endif
 
-ifeq ($(HW),linuxmtrace)
-# Statically link for Linux mtrace environment so we can create a
-# trivial initramfs without libraries
+ifeq ($(PLATFORM),native)
+# Statically link for the Linux environment so we can create a trivial
+# initramfs without libraries
 LINK_CMD_END := $(LINK_CMD_END) -static
 
 # Build an initramfs
