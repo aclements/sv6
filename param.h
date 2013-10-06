@@ -58,6 +58,9 @@
 // Track kernel memory usage
 #define KERNEL_HEAP_PROFILE 0
 
+//
+// QEMU-based targets
+//
 #if defined(HW_qemu)
 #define DEBUG         1
 #define NCPU          8   // maximum number of CPUs
@@ -77,6 +80,10 @@
 #define NCPU          2
 #define NSOCKET       2
 #define PERFSIZE      (16<<20ull)
+
+//
+// Physical hardware targets
+//
 #elif defined(HW_josmp)
 #define DEBUG         0
 #define NCPU          16  // maximum number of CPUs
@@ -104,6 +111,10 @@
 // Disable the hardware stream and adjacent cache line prefetcher
 #define DISABLE_PREFETCH_STREAM 1
 #define DISABLE_PREFETCH_ADJ 1
+
+//
+// Linux user-space targets (no kernel, so most options aren't set)
+//
 #elif defined(HW_user)
 #define NCPU          256
 #define PERFSIZE      (16<<20ull)
@@ -117,7 +128,6 @@
 #elif defined(HW_linux)
 #define NCPU          256
 #define MTRACE        0
-// No kernel, so other options aren't set
 #elif defined(HW_linuxmtrace)
 #define NCPU          256
 #define MTRACE        1
