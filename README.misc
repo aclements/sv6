@@ -1,21 +1,4 @@
-* mtrace
-
-  You need to build and install mtrace:
-    git+ssh://amsterdam.csail.mit.edu/home/am6/mpdev/qemu.git -b mtrace
-
-  #define MTRACE 1 in param.h  (for qemu!)
-  If mtrace isn't cloned next to the xv6-scale repository, then set
-  MTRACESRC in config.mk to the directory containing mtrace-magic.h
-  $ make mscan.out
-  or make mtrace.out to generate just the trace file and not the summary.
-
-* Networking with lwIP
-
-  $ git clone git://git.savannah.nongnu.org/lwip.git
-  $ (cd lwip && git checkout DEVEL-1_4_1)
-  $ make clean;make
-
-  (if you are building o.josmp, make sure you make clean that make target)
+Misc notes.  Some are likely to be out of date.
 
 * Copies of e1000 and e1000e manuals are in manuals/.  They were
   retrieved from:
@@ -73,11 +56,3 @@
   $ CC=gcc CXX=g++ ./configure --prefix=[PREFIX] \
     --enable-targets=x86_64 --enable-optimized
   $ CC=gcc CXX=g++ make && make install
-
-* abstract sharing
-
-  Obtain and configure mtrace as described above.
-  Disable DEBUG and enable MTRACE in param.h.
-  $ make QEMUSMP=8 mtrace.out
-  Run asharing in xv6 to generate abstract sharing traces
-  $ mscan --abstract-scopes --unexpected-sharing
