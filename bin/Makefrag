@@ -89,6 +89,7 @@ UPROGS_NATIVE := \
 	allocbench \
 	crwpbench \
 	filebench \
+	vmimbalbench \
 
 ifeq ($(HAVE_TESTGEN),y)
 UPROGS_BIN    += fstest

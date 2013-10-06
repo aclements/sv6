@@ -1,23 +1,21 @@
-#if defined(LINUX)
-#include "types.h"
-#include <pthread.h>
-#include "user/util.h"
-#include <sys/wait.h>
-#else
-#include "types.h"
-#include "pthread.h"
-#include "user.h"
-#include "amd64.h"
-#endif
-
-#include "xsys.h"
-#include <sys/mman.h>
-#include "lib.h"
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+
+#if defined(XV6_USER)
+#include "pthread.h"
+#else
+#include <pthread.h>
+#endif
+
+#include "amd64.h"
+#include "xsys.h"
+
 
 // That's ~1GB or so? Somewhere plenty high in the address space,
 // but a good bajillion bytes or so below USERTOP.
@@ -45,15 +43,15 @@ static bool producermap[MAXCPU][MAXCPU];
 static pthread_t tids[MAXCPU];
 
 // Last address allocated by this cpu's consumer.
-static volatile u64 alloctop = STARTADDR;
+static volatile uint64_t alloctop = STARTADDR;
 
 void
 consumer()
 {
   printf("Starting consumer on cpu %d\n", consumercpu);
-  u64 t0 = rdtsc();
-  u64 t1;
-  for (u64 alloc = STARTADDR; 
+  uint64_t t0 = rdtsc();
+  uint64_t t1;
+  for (uint64_t alloc = STARTADDR;
        alloc < (STARTADDR + npages * PAGESIZE);
        alloc += PAGECHUNK) {
     while (mmap((void *)alloc, PAGECHUNK, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, -1, 0) == MAP_FAILED);
@@ -62,19 +60,19 @@ consumer()
     alloctop = alloc + PAGECHUNK;
   }
   t1 = rdtsc();
-  printf("Consumer %d: %" PRIu64 " cycles/page\n", consumercpu, (t1-t0)/(u64)npages);
+  printf("Consumer %d: %" PRIu64 " cycles/page\n", consumercpu, (t1-t0)/(uint64_t)npages);
 }
 
 void *
 producer(void *arg)
 {
-  int cpu = (u64)arg;
+  int cpu = (uint64_t)arg;
   if (setaffinity(cpu) < 0) {
     printf("sys_setaffinity(%d) failed", cpu);
     return nullptr;
   }
   printf("Starting producer for consumer %d on cpu %d\n", consumercpu, cpu);
-  u64 mylastfree = STARTADDR;
+  uint64_t mylastfree = STARTADDR;
   // Producers may try to unmap the same pages if there is more than one per consumer; 
   // that's okay, ignore already-unmapped errors.
   while (mylastfree < (STARTADDR + npages * PAGESIZE)) {
@@ -175,7 +173,7 @@ main(int argc, char * argv[])
         if (!(producermap[i][j])) {
           continue;
         }
-        if (pthread_create(&tids[j], nullptr, &producer, (void *)(u64)j) < 0) {
+        if (pthread_create(&tids[j], nullptr, &producer, (void *)(uint64_t)j) < 0) {
           die("consumer on %d failed to spawn producer on %d\n", i, j);
         }
       }
