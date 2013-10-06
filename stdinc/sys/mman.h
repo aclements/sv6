@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sys/types.h>
 #include <uk/mman.h>
 
 BEGIN_DECLS
