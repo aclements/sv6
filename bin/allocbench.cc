@@ -1,16 +1,7 @@
-#if defined(LINUX)
-#include <pthread.h>
-#include "user/util.h"
-#include "types.h"
-#include <assert.h>
-#include <sys/wait.h>
-#else
-#include "types.h"
-#include "user.h"
-#include "amd64.h"
-#include "uspinlock.h"
-#include "mtrace.h"
+#if defined(XV6_USER)
 #include "pthread.h"
+#else
+#include <pthread.h>
 #endif
 #include "xsys.h"
 #include <inttypes.h>
@@ -18,6 +9,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 static pthread_barrier_t bar;
 static int niter;
@@ -59,7 +51,7 @@ main(int ac, char **av)
 
   pthread_barrier_init(&bar, 0, nthread);
 
-  for(u64 i = 0; i < nthread; i++)
+  for(uint64_t i = 0; i < nthread; i++)
     xthread_create(&tid[i], 0, thr, (void*) i);
 
   for(int i = 0; i < nthread; i++)

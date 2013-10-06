@@ -86,6 +86,7 @@ UPROGS_NATIVE := \
 	mail-deliver \
 	halt \
 	init \
+	allocbench \
 
 ifeq ($(HAVE_TESTGEN),y)
 UPROGS_BIN    += fstest
