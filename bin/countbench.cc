@@ -14,16 +14,6 @@
 
 #include "libutil.h"
 
-#if defined(LINUX)
-#include "include/compiler.h"
-#define NCPU 256
-#include <pthread.h>
-#include "user/util.h"
-#include <assert.h>
-#include <sys/wait.h>
-#include <atomic>
-#include "include/xsys.h"
-#else
 #include "compiler.h"
 #include "types.h"
 #include "user.h"
@@ -33,7 +23,6 @@
 #include "kstats.hh"
 #include "xsys.h"
 #include <xv6/perf.h>
-#endif
 
 #define PGSIZE 4096
 
