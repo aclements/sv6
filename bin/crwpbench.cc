@@ -1,28 +1,22 @@
+#include <assert.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
-#ifdef LINUX
-#include <assert.h>
-#include "user/util.h"
-#include "include/xsys.h"
-#else
-#include "types.h"
+#if defined(XV6_USER)
 #include "user.h"
-#include "mtrace.h"
-#include "amd64.h"
-#include "xsys.h"
-#include "rnd.hh"
 #endif
+#include "amd64.h"
+#include "rnd.hh"
+#include "xsys.h"
 
 // Concurrent reading and writing of a pipe.  Forks n processes with one shared
 // pipe.  Even process write a character to the pipe, odd ones read the
 // character.
-
-// To build on Linux: g++ -DLINUX -Wall -g -I.. -pthread crwpbench.cc
 
 static int fds[2];
 static int delay;

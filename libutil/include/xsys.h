@@ -23,6 +23,15 @@
 
 #define SOCK_DGRAM_UNORDERED SOCK_DGRAM
 
+#include <time.h>
+static inline void nsleep(unsigned long long nsecs)
+{
+  struct timespec ts;
+  ts.tv_nsec = nsecs % 1000000000;
+  ts.tv_sec = nsecs / 1000000000;
+  nanosleep(&ts, NULL);
+}
+
 #else // Must be xv6
 
 #define xpthread_join(tid) waitpid(tid, NULL,0)

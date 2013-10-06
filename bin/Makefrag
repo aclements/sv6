@@ -87,6 +87,7 @@ UPROGS_NATIVE := \
 	halt \
 	init \
 	allocbench \
+	crwpbench \
 
 ifeq ($(HAVE_TESTGEN),y)
 UPROGS_BIN    += fstest
