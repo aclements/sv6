@@ -1,21 +1,15 @@
-#if defined(LINUX)
-#include "user/util.h"
-#include "types.h"
-#include <assert.h>
-#include <sys/wait.h>
-#include "xsys.h"
-#else
-#include "types.h"
-#include "user.h"
-#include "amd64.h"
-#include "mtrace.h"
-#include "xsys.h"
-#endif
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+
+#if defined(XV6_USER)
+#include "mtrace.h"
+#endif
+#include "amd64.h"
+#include "xsys.h"
 
 #define CHUNKSZ 512
 #define FILESZ  (NCPU*CHUNKSZ)
@@ -91,7 +85,7 @@ main(int ac, char **av)
   close(fd);
 
   //mtenable("xv6-filebench");
-  u64 t0 = rdtsc();
+  uint64_t t0 = rdtsc();
   for (int i = 0; i < nthread; i++) {
     int pid = fork();
     if (pid == 0) {
@@ -103,7 +97,7 @@ main(int ac, char **av)
 
   for (int i = 0; i < nthread; i++)
     wait(NULL);
-  u64 t1 = rdtsc();
+  uint64_t t1 = rdtsc();
   mtdisable("xv6-filebench");
 
   printf("filebench: %lu\n", t1-t0);
