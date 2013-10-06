@@ -115,16 +115,6 @@
 //
 // Linux user-space targets (no kernel, so most options aren't set)
 //
-#elif defined(HW_user)
-#define NCPU          256
-#define PERFSIZE      (16<<20ull)
-#elif defined(HW_bench)
-#define NCPU          48
-#define PERFSIZE      (16<<20ull)
-#elif defined(HW_ugc)
-#define NCPU          256
-#define CACHELINE    64  // cache line size
-#define PERFSIZE      (16<<20ull)
 #elif defined(HW_linux)
 #define NCPU          256
 #define MTRACE        0

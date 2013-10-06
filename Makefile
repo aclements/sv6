@@ -118,7 +118,6 @@ include libutil/Makefrag
 include bin/Makefrag
 include tools/Makefrag
 include metis/Makefrag
--include user/Makefrag.$(HW)
 
 $(O)/%.o: %.c $(O)/sysroot
 	@echo "  CC     $@"

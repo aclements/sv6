@@ -74,12 +74,6 @@
     --enable-targets=x86_64 --enable-optimized
   $ CC=gcc CXX=g++ make && make install
 
-* user-space version
-
-  $ apt-get install libjemalloc-dev
-  $ make HW=user
-  $ ./o.user/utest
-
 * abstract sharing
 
   Obtain and configure mtrace as described above.
