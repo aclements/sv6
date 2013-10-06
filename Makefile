@@ -198,10 +198,6 @@ QEMUOPTS = -smp $(QEMUSMP) -m $(QEMUMEM) \
 	$(if $(QEMUNOREDIR),,-redir tcp:2323::23 -redir tcp:8080::80) \
 	$(if $(QEMUAPPEND),-append "$(QEMUAPPEND)",) \
 
-ifeq ($(HW),linuxmtrace)
-QEMUOPTS += -initrd $(O)/initramfs
-endif
-
 ## One NUMA node per CPU when mtrace'ing
 ifeq ($(HW),linuxmtrace)
 QEMUOPTS += -numa node -numa node
@@ -209,10 +205,18 @@ else ifeq ($(HW),mtrace)
 QEMUOPTS += -numa node -numa node
 endif
 
-qemu: $(KERN) $(O)/fs.img
-	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -hdb $(O)/fs.img
+ifeq ($(PLATFORM),xv6)
+QEMUOPTS += -hdb $(O)/fs.img
+qemu: $(O)/fs.img
+endif
+ifeq ($(PLATFORM),native)
+QEMUOPTS += -initrd $(O)/initramfs -append console=ttyS0
+endif
+
+qemu: $(KERN)
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN)
 gdb: $(KERN)
-	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -hdb $(O)/fs.img -s
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -s
 
 codex: $(KERN)
 
