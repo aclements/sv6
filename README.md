@@ -75,7 +75,7 @@ invoking `make clean`.)
 sv6 can be run under an mtrace-enabled QEMU to monitor and analyze its
 memory access behavior.  You'll need to build and install mtrace:
 
-    git clone git+ssh://amsterdam.csail.mit.edu/home/am6/mpdev/qemu.git -b mtrace
+    git clone https://github.com/aclements/mtrace.git
 
 And build with `HW=mtrace`.  If mtrace isn't cloned next to the sv6
 repository, then set `MTRACESRC` in `config.mk` to the directory
