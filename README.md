@@ -63,9 +63,9 @@ Optional components
 To enable networking support, you'll need to clone lwIP.  From the
 root of your sv6 clone,
 
-  git clone git://git.savannah.nongnu.org/lwip.git
-  (cd lwip && git checkout DEVEL-1_4_1)
-  make clean
+    git clone git://git.savannah.nongnu.org/lwip.git
+    (cd lwip && git checkout DEVEL-1_4_1)
+    make clean
 
 (If you are building another hardware target, be sure to set `HW` when
 invoking `make clean`.)
@@ -75,7 +75,7 @@ invoking `make clean`.)
 sv6 can be run under an mtrace-enabled QEMU to monitor and analyze its
 memory access behavior.  You'll need to build and install mtrace:
 
-  git clone git+ssh://amsterdam.csail.mit.edu/home/am6/mpdev/qemu.git -b mtrace
+    git clone git+ssh://amsterdam.csail.mit.edu/home/am6/mpdev/qemu.git -b mtrace
 
 And build with `HW=mtrace`.  If mtrace isn't cloned next to the sv6
 repository, then set `MTRACESRC` in `config.mk` to the directory
@@ -114,4 +114,4 @@ file system containing an sv6 init, sh, and everything else (sorry, no
 `ls`).  You can boot this on a real machine, or run a
 super-lightweight Linux VM in QEMU using
 
-  make HW=linux KERN=path/to/Linux/bzImage/or/vmlinuz qemu
+    make HW=linux KERN=path/to/Linux/bzImage/or/vmlinuz qemu
