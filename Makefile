@@ -181,7 +181,7 @@ $(O)/fs.img: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
 ##
 ## qemu
 ##
-ifeq ($(HW),linuxmtrace)
+ifeq ($(PLATFORM),native)
 override QEMUAPPEND += console=ttyS0
 endif
 
@@ -218,7 +218,7 @@ QEMUOPTS += -hdb $(O)/fs.img
 qemu: $(O)/fs.img
 endif
 ifeq ($(PLATFORM),native)
-QEMUOPTS += -initrd $(O)/initramfs -append console=ttyS0
+QEMUOPTS += -initrd $(O)/initramfs
 endif
 
 qemu: $(KERN)
