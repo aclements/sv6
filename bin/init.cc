@@ -87,6 +87,7 @@ runcmdline(void)
   
   if ((b = strchr(buf, '$'))) {
     argv[2] = b+1;
+    printf("init: Starting %s\n", argv[2]);
     startone(argv);
   }
 }
