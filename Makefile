@@ -1,22 +1,30 @@
 # Custom config file?  Otherwise use defaults.
 -include config.mk
+# Quiet.  Run "make Q=" for a verbose build.
 Q          ?= @
 # Prefix to use for ELF build tools, if the native toolchain isn't
 # ELF.  E.g., x86_64-jos-elf-
 TOOLPREFIX ?=
+# QEMU binary
 QEMU       ?= qemu-system-x86_64
+# Number of CPUs to emulate
 QEMUSMP    ?= 8
+# RAM to simulate (in MB)
 QEMUMEM    ?= 512
+# Default hardware build target.  See param.h for others.
 HW         ?= qemu
+# Enable C++ exception handling in the kernel.
 EXCEPTIONS ?= y
+# Shell command to run in VM after booting
 RUN        ?= $(empty)
+# Python binary
 PYTHON     ?= python
-O           = o.$(HW)
-
 # Directory containing mtrace-magic.h for HW=mtrace
 MTRACESRC  ?= ../mtrace
 # Mtrace-enabled QEMU binary
 MTRACE     ?= $(MTRACESRC)/x86_64-softmmu/qemu-system-x86_64
+
+O           = o.$(HW)
 
 ifeq ($(HW),linux)
 PLATFORM   := native
