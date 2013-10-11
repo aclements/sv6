@@ -110,8 +110,8 @@ using `make HW=linux`.  This will place Linux-compatible binaries in
 
 You can also boot a Linux kernel into a pure sv6 user-space!  `make
 HW=linux` also builds `o.linux/initramfs`, which is a Linux initramfs
-file system containing an sv6 init, sh, and everything else (sorry, no
-`ls`).  You can boot this on a real machine, or run a
-super-lightweight Linux VM in QEMU using
+file system containing an sv6 init, sh, ls, and everything else.  You
+can boot this on a real machine, or run a super-lightweight Linux VM
+in QEMU using
 
     make HW=linux KERN=path/to/Linux/bzImage/or/vmlinuz qemu

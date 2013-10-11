@@ -12,6 +12,8 @@
 #ifdef XV6_USER
 #include "fs.h"
 #include "sysstubs.h"
+#else
+#include <dirent.h>
 #endif
 
 char
@@ -67,12 +69,19 @@ ls(const std::string &path)
 
   case S_IFDIR:
     std::vector<std::string> names;
+#ifdef XV6_USER
     char namebuf[DIRSIZ+1];
     char *prev = nullptr;
     while(readdir(fd, prev, namebuf) > 0) {
       prev = namebuf;
       names.push_back(path + '/' + namebuf);
     }
+#else
+    DIR *dir = fdopendir(fd);
+    struct dirent *de;
+    while ((de = readdir(dir)))
+      names.push_back(path + '/' + de->d_name);
+#endif
 
     std::sort(names.begin(), names.end());
 

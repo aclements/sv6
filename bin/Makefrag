@@ -85,6 +85,7 @@ UPROGS_NATIVE := \
 	halt \
 	init \
 	linkbench \
+	ls \
 	mail-deliver \
 	mail-enqueue \
 	mail-qman \
