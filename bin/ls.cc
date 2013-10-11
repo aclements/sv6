@@ -1,105 +1,87 @@
-#include "types.h"
 #include <sys/stat.h>
-#include "user.h"
-#include "fs.h"
-#include "cpputil.hh"
 
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <string>
 #include <vector>
+
+#ifdef XV6_USER
+#include "fs.h"
+#include "sysstubs.h"
+#endif
 
 char
 filetype(mode_t m)
 {
-  int type = (m & S_IFMT) >> __S_IFMT_SHIFT;
-  switch (type) {
-  case T_DIR:  return 'd';
-  case T_FILE: return '-';
-  case T_DEV:  return 'c';
-  default:     return '?';
-  }
+  if (S_ISDIR(m)) return 'd';
+  if (S_ISREG(m)) return '-';
+  if (S_ISCHR(m)) return 'c';
+  return '?';
 }
 
 const char*
 fmtname(const char *path)
 {
-  static char buf[DIRSIZ+1];
   const char *p;
-  
+
   // Find first character after last slash.
   for(p=path+strlen(path); p >= path && *p != '/'; p--)
     ;
   p++;
-  
-  // Return blank-padded name.
-  if(strlen(p) >= DIRSIZ)
-    return p;
-  memmove(buf, p, strlen(p));
-  memset(buf+strlen(p), ' ', DIRSIZ-strlen(p));
-  return buf;
+  return p;
 }
 
 static void
-printout(struct stat* st, const char* path)
+printout(struct stat* st, const std::string &path)
 {
-  printf("%c %s %8lx %7zu %3d\n",
-         filetype(st->st_mode), fmtname(path),
-         st->st_ino, st->st_size, st->st_nlink);
+  printf("%c %-14s %8lx %7zu %3d\n",
+         filetype(st->st_mode), fmtname(path.c_str()),
+         st->st_ino, st->st_size, (unsigned)st->st_nlink);
 }
 
 void
-ls(const char *path)
+ls(const std::string &path)
 {
-  char buf[512], *p;
   int fd;
   struct stat st;
-  
-  if((fd = open(path, 0)) < 0){
-    fprintf(stderr, "ls: cannot open %s\n", path);
+
+  if((fd = open(path.c_str(), 0)) < 0){
+    fprintf(stderr, "ls: cannot open %s\n", path.c_str());
     return;
   }
-  
+
   if(fstat(fd, &st) < 0){
-    fprintf(stderr, "ls: cannot stat %s\n", path);
+    fprintf(stderr, "ls: cannot stat %s\n", path.c_str());
     close(fd);
     return;
   }
-  
+
   switch(st.st_mode & S_IFMT){
   case S_IFREG:
     printout(&st, path);
     break;
-  
-  case S_IFDIR:
-    if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf){
-      fprintf(stderr, "ls: path too long\n");
-      break;
-    }
-    strcpy(buf, path);
-    p = buf+strlen(buf);
-    *p++ = '/';
 
-    std::vector<strbuf<DIRSIZ>> names;
-    strbuf<DIRSIZ> namebuf;
+  case S_IFDIR:
+    std::vector<std::string> names;
+    char namebuf[DIRSIZ+1];
     char *prev = nullptr;
-    while(readdir(fd, prev, namebuf.buf_) > 0) {
-      prev = namebuf.buf_;
-      names.push_back(namebuf);
+    while(readdir(fd, prev, namebuf) > 0) {
+      prev = namebuf;
+      names.push_back(path + '/' + namebuf);
     }
 
     std::sort(names.begin(), names.end());
 
     for (auto &n: names) {
-      memmove(p, n.buf_, DIRSIZ);
-      p[DIRSIZ] = 0;
-      if (stat(buf, &st) < 0){
-        fprintf(stderr, "ls: cannot stat %s\n", buf);
+      if (stat(n.c_str(), &st) < 0){
+        fprintf(stderr, "ls: cannot stat %s\n", n.c_str());
         continue;
       }
-      printout(&st, buf);
+      printout(&st, n);
     }
     break;
   }
