@@ -528,6 +528,79 @@ namespace std {
   }
 
   template<class charT>
+  bool operator<(const basic_string<charT>& a, const basic_string<charT>& b)
+  {
+    return a.compare(b) < 0;
+  }
+
+  template<class charT>
+  bool operator<(const charT* a, const basic_string<charT>& b)
+  {
+    return b.compare(a) > 0;
+  }
+
+  template<class charT>
+  bool operator<(const basic_string<charT>& a, const charT* b)
+  {
+    return a.compare(b) < 0;
+  }
+
+  template<class charT>
+  bool operator>(const basic_string<charT>& a, const basic_string<charT>& b)
+  {
+    return a.compare(b) > 0;
+  }
+
+  template<class charT>
+  bool operator>(const charT* a, const basic_string<charT>& b)
+  {
+    return b.compare(a) < 0;
+  }
+
+  template<class charT>
+  bool operator>(const basic_string<charT>& a, const charT* b)
+  {
+    return a.compare(b) > 0;
+  }
+
+  template<class charT>
+  bool operator<=(const basic_string<charT>& a, const basic_string<charT>& b)
+  {
+    return a.compare(b) <= 0;
+  }
+
+  template<class charT>
+  bool operator<=(const charT* a, const basic_string<charT>& b)
+  {
+    return b.compare(a) >= 0;
+  }
+
+  template<class charT>
+  bool operator<=(const basic_string<charT>& a, const charT* b)
+  {
+    return a.compare(b) <= 0;
+  }
+
+  template<class charT>
+  bool operator>=(const basic_string<charT>& a, const basic_string<charT>& b)
+  {
+    return a.compare(b) >= 0;
+  }
+
+  template<class charT>
+  bool operator>=(const charT* a, const basic_string<charT>& b)
+  {
+    return b.compare(a) <= 0;
+  }
+
+  template<class charT>
+  bool operator>=(const basic_string<charT>& a, const charT* b)
+  {
+    return a.compare(b) >= 0;
+  }
+
+
+  template<class charT>
   basic_string<charT> operator+(const basic_string<charT>& lhs,
                                 const basic_string<charT>& rhs)
   {
