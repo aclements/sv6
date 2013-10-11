@@ -1,5 +1,3 @@
-#include "types.h"
-#include "user.h"
 #include <stdio.h>
 
 int

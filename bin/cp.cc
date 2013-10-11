@@ -1,7 +1,9 @@
-#include "types.h"
-#include "user.h"
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include "libutil.h"
 
 int
 main(int argc, char *argv[])

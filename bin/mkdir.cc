@@ -1,7 +1,6 @@
-#include "types.h"
-#include "user.h"
-
 #include <sys/stat.h>
+
+#include "libutil.h"
 
 int
 main(int argc, char *argv[])

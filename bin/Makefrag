@@ -72,9 +72,13 @@ endif
 # Binaries that are known to build on PLATFORM=native
 UPROGS_NATIVE := \
 	allocbench \
+	base64 \
 	benchhdr \
+	cat \
+	cp \
 	crwpbench \
 	dirbench \
+	echo \
 	fdbench \
 	filebench \
 	forktest \
@@ -87,6 +91,8 @@ UPROGS_NATIVE := \
 	mailbench \
 	mailfilter \
 	mapbench \
+	mkdir \
+	mv \
 	sh \
 	tee \
 	vmimbalbench \

@@ -1,7 +1,6 @@
-#include "types.h"
-#include "user.h"
-
 #include <fcntl.h>
+#include <unistd.h>
+#include "libutil.h"
 
 char buf[512];
 
