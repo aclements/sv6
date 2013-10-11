@@ -71,24 +71,24 @@ endif
 
 # Binaries that are known to build on PLATFORM=native
 UPROGS_NATIVE := \
+	allocbench \
 	benchhdr \
-	mapbench \
-	tee \
-        dirbench \
-	mailbench \
-	mailfilter \
-	sh \
-	linkbench \
-	forktest \
+	crwpbench \
+	dirbench \
 	fdbench \
-	mail-enqueue \
-	mail-qman \
-	mail-deliver \
+	filebench \
+	forktest \
 	halt \
 	init \
-	allocbench \
-	crwpbench \
-	filebench \
+	linkbench \
+	mail-deliver \
+	mail-enqueue \
+	mail-qman \
+	mailbench \
+	mailfilter \
+	mapbench \
+	sh \
+	tee \
 	vmimbalbench \
 
 ifeq ($(HAVE_TESTGEN),y)
