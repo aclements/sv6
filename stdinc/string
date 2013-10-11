@@ -145,7 +145,7 @@ namespace std {
     basic_string& operator=(basic_string &&str) noexcept
     {
       release();
-      data = str.data_;
+      data_ = str.data_;
       str.data_ = nullptr;
       return *this;
     }
