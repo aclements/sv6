@@ -1,7 +1,9 @@
 # Custom config file?  Otherwise use defaults.
 -include config.mk
 Q          ?= @
-TOOLPREFIX ?= x86_64-jos-elf-
+# Prefix to use for ELF build tools, if the native toolchain isn't
+# ELF.  E.g., x86_64-jos-elf-
+TOOLPREFIX ?=
 QEMU       ?= qemu-system-x86_64
 QEMUSMP    ?= 8
 QEMUMEM    ?= 512
