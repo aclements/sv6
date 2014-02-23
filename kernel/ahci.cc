@@ -1,384 +1,438 @@
-#include <kern/disk.h>
-#include <dev/ahci.h>
-#include <dev/pcireg.h>
-#include <dev/ahcireg.h>
-#include <dev/idereg.h>
-#include <dev/satareg.h>
-#include <kern/lib.h>
-#include <kern/arch.h>
-#include <kern/timer.h>
-#include <kern/intr.h>
-#include <inc/error.h>
+#include "types.h"
+#include "amd64.h"
+#include "kernel.hh"
+#include "pci.hh"
+#include "pcireg.hh"
+#include "disk.hh"
+#include "ahcireg.hh"
+#include "satareg.hh"
+#include "idereg.hh"
+#include "kstream.hh"
+#include "spinlock.hh"
+#include "condvar.hh"
 
 enum { fis_debug = 0 };
 
-struct ahci_port_page {
-    volatile struct ahci_recv_fis rfis;		/* 256-byte alignment */
-    uint8_t pad[0x300];
+class ahci_hba;
 
-    volatile struct ahci_cmd_header cmdh;	/* 1024-byte alignment */
-    struct ahci_cmd_header cmdh_unused[31];
+struct ahci_port_page
+{
+  volatile struct ahci_recv_fis rfis __attribute__((aligned (256)));
+  u8 pad[0x300];
 
-    volatile struct ahci_cmd_table cmdt;	/* 128-byte alignment */
+  volatile struct ahci_cmd_header cmdh __attribute__((aligned (1024)));
+  struct ahci_cmd_header cmdh_unused[31];
 
-    struct disk dk;
-    disk_callback cb;
-    void *cbarg;
+  volatile struct ahci_cmd_table cmdt __attribute__((aligned (128)));
 };
 
-struct ahci_hba {
-    uint32_t irq;
-    uint32_t membase;
-    volatile struct ahci_reg *r;
-    struct ahci_port_page *port[32];
-    struct interrupt_handler ih;
+class ahci_port : public disk
+{
+public:
+  ahci_port(ahci_hba *h, int p, volatile ahci_reg_port* reg);
+
+  void read(char* buf, u64 nbytes, u64 off) override;
+  void write(const char* buf, u64 nbytes, u64 off) override;
+  void flush() override;
+  void handle_port_irq();
+
+  NEW_DELETE_OPS(ahci_port);
+
+private:
+  ahci_hba *const hba;
+  const int pid;
+  volatile ahci_reg_port *const preg;
+  ahci_port_page *portpage;
+
+  u64 fill_prd(void* addr, u64 nbytes);
+  void fill_fis(sata_fis_reg* fis);
+
+  void dump();
+  int wait();
+
+  void issue(void* buf, u64 nbytes, u64 off, int cmd);
+
+  // For the disk read/write interface..
+  spinlock io_lock;
+  condvar io_cv;
+  bool busy;
+  bool done;
 };
 
-/*
- * Helper functions
- */
-
-static uint32_t
-ahci_fill_prd(struct ahci_hba *a, uint32_t port,
-	      struct kiovec *iov_buf, uint32_t iov_cnt)
+class ahci_hba : public irq_handler
 {
-    uint32_t nbytes = 0;
+public:
+  ahci_hba(struct pci_func *pcif);
+  ahci_hba(const ahci_hba &) = delete;
+  ahci_hba &operator=(const ahci_hba &) = delete;
 
-    struct ahci_cmd_table *cmd = (void *) &a->port[port]->cmdt;
-    assert(iov_cnt < sizeof(cmd->prdt) / sizeof(cmd->prdt[0]));
+  static int attach(struct pci_func *pcif);
 
-    for (uint32_t slot = 0; slot < iov_cnt; slot++) {
-	cmd->prdt[slot].dba = kva2pa(iov_buf[slot].iov_base);
-	cmd->prdt[slot].dbc = iov_buf[slot].iov_len - 1;
-	nbytes += iov_buf[slot].iov_len;
-    }
+  void handle_irq() override;
 
-    a->port[port]->cmdh.prdtl = iov_cnt;
-    return nbytes;
-}
+  NEW_DELETE_OPS(ahci_hba);
 
-static void
-ahci_fis_debug(struct sata_fis_reg *r)
+private:
+  const u32 membase;
+  volatile ahci_reg *const reg;
+  ahci_port* port[32];
+};
+
+void
+initahci(void)
 {
-    cprintf("SATA FIS Reg\n");
-    cprintf("type:              0x%x\n", r->type);
-    cprintf("cflag:             0x%x\n", r->cflag);
-    cprintf("command/status:    0x%x\n", r->command);
-    cprintf("features/error:    0x%x\n", r->features);
-    cprintf("lba_0:             0x%x\n", r->lba_0);
-    cprintf("lba_1:             0x%x\n", r->lba_1);
-    cprintf("lba_2:             0x%x\n", r->lba_2);
-    cprintf("dev_head:          0x%x\n", r->dev_head);
-    cprintf("lba_3:             0x%x\n", r->lba_3);
-    cprintf("lba_4:             0x%x\n", r->lba_4);
-    cprintf("lba_5:             0x%x\n", r->lba_5);
-    cprintf("features_ex:       0x%x\n", r->features_ex);
-    cprintf("sector_count:      0x%x\n", r->sector_count);
-    cprintf("sector_count_ex:   0x%x\n", r->sector_count_ex);
-    cprintf("control:           0x%x\n", r->control);
-}
-
-static void
-ahci_fill_fis(struct ahci_hba *a, uint32_t port, void *fis, uint32_t fislen)
-{
-    memcpy((void *) &a->port[port]->cmdt.cfis[0], fis, fislen);
-    a->port[port]->cmdh.flags = fislen / sizeof(uint32_t);
-    if (fis_debug)
-        ahci_fis_debug((struct sata_fis_reg *) fis);
-}
-
-static void
-ahci_port_debug(struct ahci_hba *a, uint32_t port)
-{
-    cprintf("AHCI port %d dump:\n", port);
-    cprintf("PxCMD    = 0x%x\n", a->r->port[port].cmd);
-    cprintf("PxTFD    = 0x%x\n", a->r->port[port].tfd);
-    cprintf("PxSIG    = 0x%x\n", a->r->port[port].sig);
-    cprintf("PxCI     = 0x%x\n", a->r->port[port].ci);
-    cprintf("SStatus  = 0x%x\n", a->r->port[port].ssts);
-    cprintf("SControl = 0x%x\n", a->r->port[port].sctl);
-    cprintf("SError   = 0x%x\n", a->r->port[port].serr);
-    cprintf("GHC      = 0x%x\n", a->r->ghc);
-}
-
-static int
-ahci_port_wait(struct ahci_hba *a, uint32_t port)
-{
-    uint64_t ts_start = karch_get_tsc();
-    for (;;) {
-	uint32_t tfd = a->r->port[port].tfd;
-	uint8_t stat = AHCI_PORT_TFD_STAT(tfd);
-	if (!(stat & IDE_STAT_BSY) && !(a->r->port[port].ci & 1))
-	    return 0;
-
-	uint64_t ts_diff = karch_get_tsc() - ts_start;
-	if (ts_diff > 1000 * 1000 * 1000) {
-	    cprintf("ahci_port_wait: stuck for %"PRIu64" cycles\n", ts_diff);
-	    ahci_port_debug(a, port);
-	    return -1;
-	}
-    }
-}
-
-/*
- * Driver hooks.
- */
-
-static void
-ahci_complete(struct ahci_hba *a, uint32_t port)
-{
-    assert(a->port[port]->cb && !(a->r->port[port].ci & 1));
-    uint32_t tfd = a->r->port[port].tfd;
-
-    disk_io_status stat = disk_io_success;
-    if (AHCI_PORT_TFD_STAT(tfd) & (IDE_STAT_ERR | IDE_STAT_DF)) {
-	cprintf("ahci_complete: status %02x, err %02x\n",
-		AHCI_PORT_TFD_STAT(tfd), AHCI_PORT_TFD_ERR(tfd));
-	stat = disk_io_failure;
-    }
-
-    disk_callback cb = a->port[port]->cb;
-    a->port[port]->cb = 0;
-    cb(stat, a->port[port]->cbarg);
-}
-
-static void
-ahci_intr(void *arg)
-{
-    struct ahci_hba *a = arg;
-    a->r->is = ~0;
-
-    for (uint32_t i = 0; i < 32; i++) {
-	a->r->port[i].is = ~0;
-	if (a->port[i] && a->port[i]->cb && !(a->r->port[i].ci & 1))
-	    ahci_complete(a, i);
-    }
-}
-
-static void
-ahci_poll(struct disk *dk)
-{
-    ahci_intr(dk->dk_arg);
-}
-
-static int
-ahci_issue(struct disk *dk, disk_op op, struct kiovec *iov_buf, int iov_cnt,
-	   uint64_t offset, disk_callback cb, void *cbarg)
-{
-    assert(!(offset % 512));
-    uint64_t sector_off = offset / 512;
-
-    struct ahci_hba *a = dk->dk_arg;
-    uint32_t port = dk->dk_id;
-    if (a->port[port]->cb)
-	return -E_BUSY;
-
-    struct sata_fis_reg fis;
-    memset(&fis, 0, sizeof(fis));
-    fis.type = SATA_FIS_TYPE_REG_H2D;
-    fis.cflag = SATA_FIS_REG_CFLAG;
-    fis.command = SAFE_EQUAL(op, op_read)  ? IDE_CMD_READ_DMA_EXT :
-		  SAFE_EQUAL(op, op_write) ? IDE_CMD_WRITE_DMA_EXT :
-		  SAFE_EQUAL(op, op_flush) ? IDE_CMD_FLUSH_CACHE : 0;
-
-    if (!SAFE_EQUAL(op, op_flush)) {
-	uint32_t len = ahci_fill_prd(a, port, iov_buf, iov_cnt);
-	assert(!(len % 512));
-	assert(len <= DISK_REQMAX);
-
-	fis.dev_head = IDE_DEV_LBA;
-	fis.control = IDE_CTL_LBA48;
-
-	fis.sector_count = len / 512;
-	fis.lba_0 = (sector_off >>  0) & 0xff;
-	fis.lba_1 = (sector_off >>  8) & 0xff;
-	fis.lba_2 = (sector_off >> 16) & 0xff;
-	fis.lba_3 = (sector_off >> 24) & 0xff;
-	fis.lba_4 = (sector_off >> 32) & 0xff;
-	fis.lba_5 = (sector_off >> 40) & 0xff;
-	ahci_fill_fis(a, port, &fis, sizeof(fis));
-
-	if (SAFE_EQUAL(op, op_read)) {
-	    a->port[port]->cmdh.prdbc = 0;
-	} else {
-	    a->port[port]->cmdh.flags |= AHCI_CMD_FLAGS_WRITE;
-	    a->port[port]->cmdh.prdbc = len;
-	}
-    }
-
-    a->r->port[port].ci |= 1;
-    a->port[port]->cb = cb;
-    a->port[port]->cbarg = cbarg;
-    return 0;
-}
-
-/*
- * Initialization.
- */
-
-static void
-ahci_reset_port(struct ahci_hba *a, uint32_t port)
-{
-    /* Wait for port to quiesce */
-    if (a->r->port[port].cmd & (AHCI_PORT_CMD_ST | AHCI_PORT_CMD_CR |
-				AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_FR)) {
-	cprintf("AHCI: port %d active, clearing..\n", port);
-	a->r->port[port].cmd &= ~(AHCI_PORT_CMD_ST | AHCI_PORT_CMD_FRE);
-	timer_delay(500 * 1000 * 1000);
-
-	if (a->r->port[port].cmd & (AHCI_PORT_CMD_CR | AHCI_PORT_CMD_FR)) {
-	    cprintf("AHCI: port %d still active, giving up\n", port);
-	    return;
-	}
-    }
-
-    /* Initialize memory buffers */
-    a->port[port]->cmdh.ctba = kva2pa((void *) &a->port[port]->cmdt);
-    a->r->port[port].clb = kva2pa((void *) &a->port[port]->cmdh);
-    a->r->port[port].fb = kva2pa((void *) &a->port[port]->rfis);
-    a->r->port[port].ci = 0;
-
-    /* Clear any errors first, otherwise the chip wedges */
-    a->r->port[port].serr = ~0;
-    a->r->port[port].serr = 0;
-
-    /* Enable receiving frames */
-    a->r->port[port].cmd |= AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_ST |
-			    AHCI_PORT_CMD_SUD | AHCI_PORT_CMD_POD |
-			    AHCI_PORT_CMD_ACTIVE;
-
-    /* Check if there's anything there */
-    uint32_t phystat = a->r->port[port].ssts;
-    if (!phystat) {
-	cprintf("AHCI: port %d: not connected\n", port);
-	return;
-    }
-
-    /* Try to send an IDENTIFY */
-    static union {
-	struct identify_device id;
-	char buf[512];
-    } id_buf;
-
-    struct kiovec id_iov =
-	{ .iov_base = &id_buf.buf[0], .iov_len = sizeof(id_buf) };
-
-    struct sata_fis_reg fis;
-    memset(&fis, 0, sizeof(fis));
-    fis.type = SATA_FIS_TYPE_REG_H2D;
-    fis.cflag = SATA_FIS_REG_CFLAG;
-    fis.command = IDE_CMD_IDENTIFY;
-    fis.sector_count = 1;
-
-    ahci_fill_prd(a, port, &id_iov, 1);
-    ahci_fill_fis(a, port, &fis, sizeof(fis));
-    a->r->port[port].ci |= 1;
-
-    int r = ahci_port_wait(a, port);
-    if (r < 0) {
-	cprintf("AHCI: port %d: cannot identify\n", port);
-	return;
-    }
-
-    /* Fill in the disk object */
-    struct disk *dk = &a->port[port]->dk;
-    dk->dk_arg = a;
-    dk->dk_id = port;
-    dk->dk_issue = &ahci_issue;
-    dk->dk_poll = &ahci_poll;
-
-    if (!(id_buf.id.features86 & IDE_FEATURE86_LBA48)) {
-	cprintf("AHCI: disk too small, driver requires LBA48\n");
-	return;
-    }
-
-    uint64_t sectors = id_buf.id.lba48_sectors;
-    dk->dk_bytes = sectors * 512;
-    memcpy(&dk->dk_model[0], id_buf.id.model, sizeof(id_buf.id.model));
-    memcpy(&dk->dk_serial[0], id_buf.id.serial, sizeof(id_buf.id.serial));
-    memcpy(&dk->dk_firmware[0], id_buf.id.firmware, sizeof(id_buf.id.firmware));
-    static_assert(sizeof(dk->dk_model) >= sizeof(id_buf.id.model));
-    static_assert(sizeof(dk->dk_serial) >= sizeof(id_buf.id.serial));
-    static_assert(sizeof(dk->dk_firmware) >= sizeof(id_buf.id.firmware));
-    sprintf(&dk->dk_busloc[0], "ahci.%d", port);
-
-    /* Enable write-caching, read look-ahead */
-    memset(&fis, 0, sizeof(fis));
-    ahci_fill_prd(a, port, 0, 0);
-
-    fis.type = SATA_FIS_TYPE_REG_H2D;
-    fis.cflag = SATA_FIS_REG_CFLAG;
-    fis.command = IDE_CMD_SETFEATURES;
-
-    fis.features = IDE_FEATURE_WCACHE_ENA;
-    ahci_fill_fis(a, port, &fis, sizeof(fis));
-    a->r->port[port].ci |= 1;
-    r = ahci_port_wait(a, port);
-    if (r < 0) {
-	cprintf("AHCI: port %d: cannot enable write caching\n", port);
-	return;
-    }
-
-    fis.features = IDE_FEATURE_RLA_ENA;
-    ahci_fill_fis(a, port, &fis, sizeof(fis));
-    a->r->port[port].ci |= 1;
-    r = ahci_port_wait(a, port);
-    if (r < 0) {
-	cprintf("AHCI: port %d: cannot enable read lookahead\n", port);
-	return;
-    }
-
-    /* Enable interrupts and done */
-    a->r->port[port].ie = AHCI_PORT_INTR_DHRE;
-    disk_register(dk);
-}
-
-static void
-ahci_reset(struct ahci_hba *a)
-{
-    a->r->ghc |= AHCI_GHC_AE | AHCI_GHC_IE;
-
-    for (uint32_t i = 0; i < 32; i++)
-	if (a->r->pi & (1 << i))
-	    ahci_reset_port(a, i);
+  pci_register_class_driver(PCI_CLASS_MASS_STORAGE,
+                            PCI_SUBCLASS_MASS_STORAGE_SATA,
+                            &ahci_hba::attach);
 }
 
 int
-ahci_init(struct pci_func *f)
+ahci_hba::attach(struct pci_func *pcif)
 {
-    if (PCI_INTERFACE(f->dev_class) != 0x01) {
-	cprintf("ahci_init: not an AHCI controller\n");
-	return 0;
+  if (PCI_INTERFACE(pcif->dev_class) != 0x01) {
+    console.println("AHCI: not an AHCI controller");
+    return 0;
+  }
+
+  console.println("AHCI: attaching");
+  pci_func_enable(pcif);
+  ahci_hba *hba __attribute__((unused)) = new ahci_hba(pcif);
+  console.println("AHCI: done");
+  return 1;
+}
+
+ahci_hba::ahci_hba(struct pci_func *pcif)
+  : membase(pcif->reg_base[5]),
+    reg((ahci_reg*) p2v(membase))
+{
+  reg->g.ghc |= AHCI_GHC_AE;
+
+  for (int i = 0; i < 32; i++) {
+    if (reg->g.pi & (1 << i)) {
+      port[i] = new ahci_port(this, i, &reg->port[i].p);
+    }
+  }
+
+  irq ahci_irq = extpic->map_pci_irq(pcif);
+  ahci_irq.enable();
+  ahci_irq.register_handler(this);
+  reg->g.ghc |= AHCI_GHC_IE;
+}
+
+void
+ahci_hba::handle_irq()
+{
+  for (int i = 0; i < 32; i++) {
+    if (!(reg->g.is & (1 << i)))
+      continue;
+
+    if (port[i]) {
+      port[i]->handle_port_irq();
+    } else {
+      cprintf("AHCI: stray irq for port %d, clearing\n", i);
+      reg->g.is = (1 << i);
+    }
+  }
+}
+
+
+ahci_port::ahci_port(ahci_hba *h, int p, volatile ahci_reg_port* reg)
+  : hba(h), pid(p), preg(reg), busy(false)
+{
+  portpage = (ahci_port_page*) kalloc("ahci_port_page");
+  assert(portpage);
+
+  /* Wait for port to quiesce */
+  if (preg->cmd & (AHCI_PORT_CMD_ST | AHCI_PORT_CMD_CR |
+                   AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_FR)) {
+    cprintf("AHCI: port %d active, clearing..\n", pid);
+    preg->cmd &= ~(AHCI_PORT_CMD_ST | AHCI_PORT_CMD_FRE);
+    microdelay(500 * 1000);
+
+    if (preg->cmd & (AHCI_PORT_CMD_CR | AHCI_PORT_CMD_FR)) {
+      cprintf("AHCI: port %d still active, giving up\n", pid);
+      return;
+    }
+  }
+
+  /* Initialize memory buffers */
+  portpage->cmdh.ctba = v2p((void*) &portpage->cmdt);
+  preg->clb = v2p((void*) &portpage->cmdh);
+  preg->fb = v2p((void*) &portpage->rfis);
+  preg->ci = 0;
+
+  /* Clear any errors first, otherwise the chip wedges */
+  preg->serr = ~0;
+  preg->serr = 0;
+
+  /* Enable receiving frames */
+  preg->cmd |= AHCI_PORT_CMD_FRE | AHCI_PORT_CMD_ST |
+               AHCI_PORT_CMD_SUD | AHCI_PORT_CMD_POD |
+               AHCI_PORT_CMD_ACTIVE;
+
+  /* Check if there's anything there */
+  u32 phystat = preg->ssts;
+  if (!phystat) {
+    cprintf("AHCI: port %d: not connected\n", pid);
+    return;
+  }
+
+  /* Try to send an IDENTIFY */
+  union {
+    struct identify_device id;
+    char buf[512];
+  } id_buf;
+
+  struct sata_fis_reg fis;
+  memset(&fis, 0, sizeof(fis));
+  fis.type = SATA_FIS_TYPE_REG_H2D;
+  fis.cflag = SATA_FIS_REG_CFLAG;
+  fis.command = IDE_CMD_IDENTIFY;
+  fis.sector_count = 1;
+
+  fill_prd(&id_buf, sizeof(id_buf));
+  fill_fis(&fis);
+  preg->ci |= 1;
+
+  if (wait() < 0) {
+    cprintf("AHCI: port %d: cannot identify\n", pid);
+    return;
+  }
+
+  if (!(id_buf.id.features86 & IDE_FEATURE86_LBA48)) {
+    cprintf("AHCI: disk too small, driver requires LBA48\n");
+    return;
+  }
+
+  u64 sectors = id_buf.id.lba48_sectors;
+  dk_nbytes = sectors * 512;
+  memcpy(dk_model, id_buf.id.model, sizeof(id_buf.id.model));
+  dk_model[sizeof(dk_model) - 1] = '\0';
+  memcpy(dk_serial, id_buf.id.serial, sizeof(id_buf.id.serial));
+  dk_serial[sizeof(dk_serial) - 1] = '\0';
+  memcpy(dk_firmware, id_buf.id.firmware, sizeof(id_buf.id.firmware));
+  dk_firmware[sizeof(dk_firmware) - 1] = '\0';
+  snprintf(dk_busloc, sizeof(dk_busloc), "ahci.%d", pid);
+
+  /* Enable write-caching, read look-ahead */
+  memset(&fis, 0, sizeof(fis));
+  fis.type = SATA_FIS_TYPE_REG_H2D;
+  fis.cflag = SATA_FIS_REG_CFLAG;
+  fis.command = IDE_CMD_SETFEATURES;
+  fis.features = IDE_FEATURE_WCACHE_ENA;
+
+  fill_prd(0, 0);
+  fill_fis(&fis);
+  preg->ci |= 1;
+
+  if (wait() < 0) {
+    cprintf("AHCI: port %d: cannot enable write caching\n", pid);
+    return;
+  }
+
+  fis.features = IDE_FEATURE_RLA_ENA;
+  fill_fis(&fis);
+  preg->ci |= 1;
+
+  if (wait() < 0) {
+    cprintf("AHCI: port %d: cannot enable read lookahead\n", pid);
+    return;
+  }
+
+  /* Enable interrupts */
+  preg->ie = AHCI_PORT_INTR_DHRE;
+
+  disk_register(this);
+}
+
+u64
+ahci_port::fill_prd(void* addr, u64 nbytes)
+{
+  volatile ahci_cmd_table *cmd = (ahci_cmd_table *) &portpage->cmdt;
+
+  if (addr && nbytes) {
+    cmd->prdt[0].dba = v2p(addr);
+    cmd->prdt[0].dbc = nbytes - 1;
+    portpage->cmdh.prdtl = 1;
+  } else {
+    portpage->cmdh.prdtl = 0;
+  }
+
+  return nbytes;
+}
+
+static void
+print_fis(sata_fis_reg *r)
+{
+  cprintf("SATA FIS Reg\n");
+  cprintf("type:              0x%x\n", r->type);
+  cprintf("cflag:             0x%x\n", r->cflag);
+  cprintf("command/status:    0x%x\n", r->command);
+  cprintf("features/error:    0x%x\n", r->features);
+  cprintf("lba_0:             0x%x\n", r->lba_0);
+  cprintf("lba_1:             0x%x\n", r->lba_1);
+  cprintf("lba_2:             0x%x\n", r->lba_2);
+  cprintf("dev_head:          0x%x\n", r->dev_head);
+  cprintf("lba_3:             0x%x\n", r->lba_3);
+  cprintf("lba_4:             0x%x\n", r->lba_4);
+  cprintf("lba_5:             0x%x\n", r->lba_5);
+  cprintf("features_ex:       0x%x\n", r->features_ex);
+  cprintf("sector_count:      0x%x\n", r->sector_count);
+  cprintf("sector_count_ex:   0x%x\n", r->sector_count_ex);
+  cprintf("control:           0x%x\n", r->control);
+}
+
+void
+ahci_port::fill_fis(sata_fis_reg* fis)
+{
+  memcpy((void*) &portpage->cmdt.cfis[0], fis, sizeof(*fis));
+  portpage->cmdh.flags = sizeof(*fis) / sizeof(u32);
+  if (fis_debug)
+    print_fis(fis);
+}
+
+void
+ahci_port::dump()
+{
+  cprintf("AHCI port %d dump:\n", pid);
+  cprintf("PxCMD    = 0x%x\n", preg->cmd);
+  cprintf("PxTFD    = 0x%x\n", preg->tfd);
+  cprintf("PxSIG    = 0x%x\n", preg->sig);
+  cprintf("PxCI     = 0x%x\n", preg->ci);
+  cprintf("SStatus  = 0x%x\n", preg->ssts);
+  cprintf("SControl = 0x%x\n", preg->sctl);
+  cprintf("SError   = 0x%x\n", preg->serr);
+  // cprintf("GHC      = 0x%x\n", hba->reg->ghc);
+}
+
+int
+ahci_port::wait()
+{
+  u64 ts_start = rdtsc();
+
+  for (;;) {
+    u32 tfd = preg->tfd;
+    u8 stat = AHCI_PORT_TFD_STAT(tfd);
+    if (!(stat & IDE_STAT_BSY) && !(preg->ci & 1))
+      return 0;
+
+    u64 ts_diff = rdtsc() - ts_start;
+    if (ts_diff > 1000 * 1000 * 1000) {
+      cprintf("ahci_port::wait: stuck for %lx cycles\n", ts_diff);
+      dump();
+      return -1;
+    }
+  }
+}
+
+void
+ahci_port::handle_port_irq()
+{
+  scoped_acquire x(&io_lock);
+
+  preg->is = ~0;
+  if (busy && !done && !(preg->ci & 1)) {
+    done = true;
+    io_cv.wake_all();
+
+    u32 tfd = preg->tfd;
+    if (AHCI_PORT_TFD_STAT(tfd) & (IDE_STAT_ERR | IDE_STAT_DF)) {
+      cprintf("AHCI: port %d: status %02x, err %02x\n",
+              pid, AHCI_PORT_TFD_STAT(tfd), AHCI_PORT_TFD_ERR(tfd));
+    }
+  }
+}
+
+void
+ahci_port::read(char* buf, u64 nbytes, u64 off)
+{
+  scoped_acquire x(&io_lock);
+  while (busy)
+    io_cv.sleep(&io_lock);
+  busy = true;
+  done = false;
+
+  issue((void*) buf, nbytes, off, IDE_CMD_READ_DMA_EXT);
+
+  while (!done)
+    io_cv.sleep(&io_lock);
+
+  busy = false;
+}
+
+void
+ahci_port::write(const char* buf, u64 nbytes, u64 off)
+{
+  scoped_acquire x(&io_lock);
+  while (busy)
+    io_cv.sleep(&io_lock);
+  busy = true;
+  done = false;
+
+  issue((void*) buf, nbytes, off, IDE_CMD_WRITE_DMA_EXT);
+
+  while (!done)
+    io_cv.sleep(&io_lock);
+
+  busy = false;
+}
+
+void
+ahci_port::flush()
+{
+  scoped_acquire x(&io_lock);
+  while (busy)
+    io_cv.sleep(&io_lock);
+  busy = true;
+  done = false;
+
+  issue(nullptr, 0, 0, IDE_CMD_FLUSH_CACHE);
+
+  while (!done)
+    io_cv.sleep(&io_lock);
+
+  busy = false;
+}
+
+void
+ahci_port::issue(void* addr, u64 nbytes, u64 off, int cmd)
+{
+  assert((off % 512) == 0);
+
+  sata_fis_reg fis;
+  memset(&fis, 0, sizeof(fis));
+  fis.type = SATA_FIS_TYPE_REG_H2D;
+  fis.cflag = SATA_FIS_REG_CFLAG;
+  fis.command = cmd;
+
+  u32 len = fill_prd(addr, nbytes);
+  assert((len % 512) == 0);
+  assert(len <= DISK_REQMAX);
+
+  if (len) {
+    u64 sector_off = off / 512;
+
+    fis.dev_head = IDE_DEV_LBA;
+    fis.control = IDE_CTL_LBA48;
+
+    fis.sector_count = len / 512;
+    fis.lba_0 = (sector_off >>  0) & 0xff;
+    fis.lba_1 = (sector_off >>  8) & 0xff;
+    fis.lba_2 = (sector_off >> 16) & 0xff;
+    fis.lba_3 = (sector_off >> 24) & 0xff;
+    fis.lba_4 = (sector_off >> 32) & 0xff;
+    fis.lba_5 = (sector_off >> 40) & 0xff;
+
+    if (cmd == IDE_CMD_READ_DMA_EXT) {
+      portpage->cmdh.prdbc = 0;
     }
 
-    struct ahci_hba *a;
-    int r = page_alloc((void **) &a);
-    if (r < 0)
-	return r;
-
-    static_assert(sizeof(*a) <= PGSIZE);
-    memset(a, 0, PGSIZE);
-
-    for (int i = 0; i < 32; i++) {
-	static_assert(sizeof(a->port[i]) <= PGSIZE);
-	r = page_alloc((void **) &a->port[i]);
-	if (r < 0)
-	    return r;
-	memset((void *) a->port[i], 0, PGSIZE);
+    if (cmd == IDE_CMD_WRITE_DMA_EXT) {
+      portpage->cmdh.flags |= AHCI_CMD_FLAGS_WRITE;
+      portpage->cmdh.prdbc = len;
     }
+  }
 
-    pci_func_enable(f);
-    a->irq = f->irq_line;
-    a->membase = f->reg_base[5];
-    a->r = pa2kva(a->membase);
-
-    cprintf("AHCI: base 0x%x, irq %d, v 0x%x\n",
-	    a->membase, a->irq, a->r->vs);
-    ahci_reset(a);
-
-    a->ih.ih_func = &ahci_intr;
-    a->ih.ih_arg = a;
-    irq_register(a->irq, &a->ih);
-
-    return 1;
+  fill_fis(&fis);
+  preg->ci |= 1;
 }

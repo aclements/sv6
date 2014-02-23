@@ -12,6 +12,7 @@ OBJS = \
 	console.o \
 	kcpprt.o \
 	e1000.o \
+	ahci.o \
 	exec.o \
 	file.o \
 	fmt.o \
@@ -78,6 +79,7 @@ OBJS = \
 	unixsock.o \
 	heapprof.o \
 	eager_refcache.o \
+	disk.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 

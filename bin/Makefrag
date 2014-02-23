@@ -62,6 +62,7 @@ UPROGS_BIN= \
 	mail-enqueue \
 	mail-qman \
 	mail-deliver \
+        disktest \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \

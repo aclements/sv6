@@ -39,6 +39,7 @@ void initdisk(void);
 void inituser(void);
 void initsamp(void);
 void inite1000(void);
+void initahci(void);
 void initpci(void);
 void initnet(void);
 void initsched(void);
@@ -227,6 +228,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initlockstat();
   initacpi();              // Requires initacpitables, initkalloc?
   inite1000();             // Before initpci
+  initahci();
   initpci();               // Suggests initacpi
   initnet();
   inithpet();              // Requires initacpitables
