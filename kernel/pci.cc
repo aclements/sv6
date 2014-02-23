@@ -31,7 +31,7 @@ struct pci_driver {
 static int pci_bridge_attach(struct pci_func *pcif);
 
 // pci_attach_class matches the class and subclass of a PCI device
-static static_vector<struct pci_driver, 1> pci_attach_class =
+static static_vector<struct pci_driver, 64> pci_attach_class =
 {
   { PCI_CLASS_BRIDGE, PCI_SUBCLASS_BRIDGE_PCI, &pci_bridge_attach },
 };
@@ -394,6 +394,15 @@ pci_register_driver(u32 vendor_id, u32 dev_id,
   if (pci_scanned)
     panic("pci_register_driver called after initpci");
   pci_attach_vendor.push_back(pci_driver{vendor_id, dev_id, attachfn});
+}
+
+void
+pci_register_class_driver(u32 class_id, u32 subclass_id,
+                          int (*attachfn)(struct pci_func *pcif))
+{
+  if (pci_scanned)
+    panic("pci_register_class_driver called after initpci");
+  pci_attach_class.push_back(pci_driver{class_id, subclass_id, attachfn});
 }
 
 void

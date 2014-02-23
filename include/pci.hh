@@ -33,6 +33,8 @@ struct pci_bus {
 
 void pci_register_driver(u32 vendor_id, u32 dev_id,
                          int (*attachfn)(struct pci_func *pcif));
+void pci_register_class_driver(u32 class_id, u32 subclass_id,
+                               int (*attachfn)(struct pci_func *pcif));
 
 void pci_func_enable(struct pci_func *f);
 irq pci_map_msi_irq(struct pci_func *f);
