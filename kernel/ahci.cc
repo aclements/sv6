@@ -31,8 +31,8 @@ class ahci_port : public disk
 public:
   ahci_port(ahci_hba *h, int p, volatile ahci_reg_port* reg);
 
-  void read(char* buf, u64 nbytes, u64 off) override;
-  void write(const char* buf, u64 nbytes, u64 off) override;
+  void readv(kiovec *iov, int iov_cnt, u64 off) override;
+  void writev(kiovec *iov, int iov_cnt, u64 off) override;
   void flush() override;
   void handle_port_irq();
 
@@ -45,12 +45,13 @@ private:
   ahci_port_page *portpage;
 
   u64 fill_prd(void* addr, u64 nbytes);
+  u64 fill_prd_v(kiovec* iov, int iov_cnt);
   void fill_fis(sata_fis_reg* fis);
 
   void dump();
   int wait();
 
-  void issue(void* buf, u64 nbytes, u64 off, int cmd);
+  void issue(kiovec* iov, int iov_cnt, u64 off, int cmd);
 
   // For the disk read/write interface..
   spinlock io_lock;
@@ -246,19 +247,28 @@ ahci_port::ahci_port(ahci_hba *h, int p, volatile ahci_reg_port* reg)
 }
 
 u64
-ahci_port::fill_prd(void* addr, u64 nbytes)
+ahci_port::fill_prd_v(kiovec* iov, int iov_cnt)
 {
-  volatile ahci_cmd_table *cmd = (ahci_cmd_table *) &portpage->cmdt;
+  u64 nbytes = 0;
 
-  if (addr && nbytes) {
-    cmd->prdt[0].dba = v2p(addr);
-    cmd->prdt[0].dbc = nbytes - 1;
-    portpage->cmdh.prdtl = 1;
-  } else {
-    portpage->cmdh.prdtl = 0;
+  volatile ahci_cmd_table *cmd = (ahci_cmd_table *) &portpage->cmdt;
+  assert(iov_cnt < sizeof(cmd->prdt) / sizeof(cmd->prdt[0]));
+
+  for (int slot = 0; slot < iov_cnt; slot++) {
+    cmd->prdt[slot].dba = v2p(iov[slot].iov_base);
+    cmd->prdt[slot].dbc = iov[slot].iov_len - 1;
+    nbytes += iov[slot].iov_len;
   }
 
+  portpage->cmdh.prdtl = iov_cnt;
   return nbytes;
+}
+
+u64
+ahci_port::fill_prd(void* addr, u64 nbytes)
+{
+  kiovec iov = { addr, nbytes };
+  return fill_prd_v(&iov, 1);
 }
 
 static void
@@ -344,7 +354,7 @@ ahci_port::handle_port_irq()
 }
 
 void
-ahci_port::read(char* buf, u64 nbytes, u64 off)
+ahci_port::readv(kiovec* iov, int iov_cnt, u64 off)
 {
   scoped_acquire x(&io_lock);
   while (busy)
@@ -352,7 +362,7 @@ ahci_port::read(char* buf, u64 nbytes, u64 off)
   busy = true;
   done = false;
 
-  issue((void*) buf, nbytes, off, IDE_CMD_READ_DMA_EXT);
+  issue(iov, iov_cnt, off, IDE_CMD_READ_DMA_EXT);
 
   while (!done)
     io_cv.sleep(&io_lock);
@@ -361,7 +371,7 @@ ahci_port::read(char* buf, u64 nbytes, u64 off)
 }
 
 void
-ahci_port::write(const char* buf, u64 nbytes, u64 off)
+ahci_port::writev(kiovec* iov, int iov_cnt, u64 off)
 {
   scoped_acquire x(&io_lock);
   while (busy)
@@ -369,7 +379,7 @@ ahci_port::write(const char* buf, u64 nbytes, u64 off)
   busy = true;
   done = false;
 
-  issue((void*) buf, nbytes, off, IDE_CMD_WRITE_DMA_EXT);
+  issue(iov, iov_cnt, off, IDE_CMD_WRITE_DMA_EXT);
 
   while (!done)
     io_cv.sleep(&io_lock);
@@ -395,7 +405,7 @@ ahci_port::flush()
 }
 
 void
-ahci_port::issue(void* addr, u64 nbytes, u64 off, int cmd)
+ahci_port::issue(kiovec* iov, int iov_cnt, u64 off, int cmd)
 {
   assert((off % 512) == 0);
 
@@ -405,7 +415,7 @@ ahci_port::issue(void* addr, u64 nbytes, u64 off, int cmd)
   fis.cflag = SATA_FIS_REG_CFLAG;
   fis.command = cmd;
 
-  u32 len = fill_prd(addr, nbytes);
+  u64 len = fill_prd_v(iov, iov_cnt);
   assert((len % 512) == 0);
   assert(len <= DISK_REQMAX);
 
