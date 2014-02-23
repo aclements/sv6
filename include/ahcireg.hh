@@ -56,13 +56,13 @@ struct ahci_reg_port {
 
 struct ahci_reg {
   union {
-    struct ahci_reg_global;
+    struct ahci_reg_global g;
     char __pad[0x100];
   };
 
   struct {
     union {
-      struct ahci_reg_port;
+      struct ahci_reg_port p;
       char __pad[0x80];
     };
   } port[32];
