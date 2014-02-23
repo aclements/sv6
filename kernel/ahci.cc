@@ -58,8 +58,35 @@ private:
   // For the disk read/write interface..
   spinlock io_lock;
   condvar io_cv;
-  bool busy;
-  bool done;
+  bool io_busy;
+  bool io_done;
+
+  class scoped_io : scoped_acquire {
+  public:
+    scoped_io(ahci_port* pp) : scoped_acquire(&pp->io_lock), p(pp) {
+      while (p->io_busy)
+        p->io_cv.sleep(&p->io_lock);
+      p->io_busy = true;
+      p->io_done = false;
+    }
+
+    ~scoped_io() {
+      p->io_busy = false;
+    }
+
+  private:
+    ahci_port* p;
+  };
+
+  void io_wait() {
+    while (!io_done) {
+      if (myproc()->get_state() == RUNNING) {
+        io_cv.sleep(&io_lock);
+      } else {
+        handle_port_irq_locked();
+      }
+    }
+  };
 };
 
 class ahci_hba : public irq_handler
@@ -140,7 +167,7 @@ ahci_hba::handle_irq()
 
 
 ahci_port::ahci_port(ahci_hba *h, int p, volatile ahci_reg_port* reg)
-  : hba(h), pid(p), preg(reg), busy(false)
+  : hba(h), pid(p), preg(reg), io_busy(false)
 {
   portpage = (ahci_port_page*) kalloc("ahci_port_page");
   assert(portpage);
@@ -349,8 +376,8 @@ ahci_port::handle_port_irq()
 void
 ahci_port::handle_port_irq_locked()
 {
-  if (busy && !done && !(preg->ci & 1)) {
-    done = true;
+  if (io_busy && !io_done && !(preg->ci & 1)) {
+    io_done = true;
     io_cv.wake_all();
 
     u32 tfd = preg->tfd;
@@ -364,67 +391,25 @@ ahci_port::handle_port_irq_locked()
 void
 ahci_port::readv(kiovec* iov, int iov_cnt, u64 off)
 {
-  scoped_acquire x(&io_lock);
-  while (busy)
-    io_cv.sleep(&io_lock);
-  busy = true;
-  done = false;
-
+  scoped_io x(this);
   issue(iov, iov_cnt, off, IDE_CMD_READ_DMA_EXT);
-
-  while (!done) {
-    if (myproc()->get_state() == RUNNING) {
-      io_cv.sleep(&io_lock);
-    } else {
-      handle_port_irq_locked();
-    }
-  }
-
-  busy = false;
+  io_wait();
 }
 
 void
 ahci_port::writev(kiovec* iov, int iov_cnt, u64 off)
 {
-  scoped_acquire x(&io_lock);
-  while (busy)
-    io_cv.sleep(&io_lock);
-  busy = true;
-  done = false;
-
+  scoped_io x(this);
   issue(iov, iov_cnt, off, IDE_CMD_WRITE_DMA_EXT);
-
-  while (!done) {
-    if (myproc()->get_state() == RUNNING) {
-      io_cv.sleep(&io_lock);
-    } else {
-      handle_port_irq_locked();
-    }
-  }
-
-  busy = false;
+  io_wait();
 }
 
 void
 ahci_port::flush()
 {
-  scoped_acquire x(&io_lock);
-  while (busy)
-    io_cv.sleep(&io_lock);
-  busy = true;
-  done = false;
-
+  scoped_io x(this);
   issue(nullptr, 0, 0, IDE_CMD_FLUSH_CACHE);
-
-  while (!done) {
-    if (myproc()->get_state() == RUNNING) {
-      io_cv.sleep(&io_lock);
-    } else {
-      handle_port_irq_locked();
-    }
-  }
-
-  busy = false;
+  io_wait();
 }
 
 void
