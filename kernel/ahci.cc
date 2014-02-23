@@ -10,6 +10,7 @@
 #include "kstream.hh"
 #include "spinlock.hh"
 #include "condvar.hh"
+#include "cpu.hh"
 
 enum { fis_debug = 0 };
 
@@ -35,6 +36,7 @@ public:
   void writev(kiovec *iov, int iov_cnt, u64 off) override;
   void flush() override;
   void handle_port_irq();
+  void handle_port_irq_locked();
 
   NEW_DELETE_OPS(ahci_port);
 
@@ -341,6 +343,12 @@ ahci_port::handle_port_irq()
   scoped_acquire x(&io_lock);
 
   preg->is = ~0;
+  handle_port_irq_locked();
+}
+
+void
+ahci_port::handle_port_irq_locked()
+{
   if (busy && !done && !(preg->ci & 1)) {
     done = true;
     io_cv.wake_all();
@@ -364,8 +372,13 @@ ahci_port::readv(kiovec* iov, int iov_cnt, u64 off)
 
   issue(iov, iov_cnt, off, IDE_CMD_READ_DMA_EXT);
 
-  while (!done)
-    io_cv.sleep(&io_lock);
+  while (!done) {
+    if (myproc()->get_state() == RUNNING) {
+      io_cv.sleep(&io_lock);
+    } else {
+      handle_port_irq_locked();
+    }
+  }
 
   busy = false;
 }
@@ -381,8 +394,13 @@ ahci_port::writev(kiovec* iov, int iov_cnt, u64 off)
 
   issue(iov, iov_cnt, off, IDE_CMD_WRITE_DMA_EXT);
 
-  while (!done)
-    io_cv.sleep(&io_lock);
+  while (!done) {
+    if (myproc()->get_state() == RUNNING) {
+      io_cv.sleep(&io_lock);
+    } else {
+      handle_port_irq_locked();
+    }
+  }
 
   busy = false;
 }
@@ -398,8 +416,13 @@ ahci_port::flush()
 
   issue(nullptr, 0, 0, IDE_CMD_FLUSH_CACHE);
 
-  while (!done)
-    io_cv.sleep(&io_lock);
+  while (!done) {
+    if (myproc()->get_state() == RUNNING) {
+      io_cv.sleep(&io_lock);
+    } else {
+      handle_port_irq_locked();
+    }
+  }
 
   busy = false;
 }

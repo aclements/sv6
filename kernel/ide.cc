@@ -15,7 +15,7 @@
 #define IDE_CMD_READ  0x20
 #define IDE_CMD_WRITE 0x30
 
-#if !MEMIDE
+#if !MEMIDE && !AHCIIDE
 
 static struct spinlock idelock;
 static int havedisk1;

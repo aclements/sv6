@@ -66,7 +66,8 @@
 #define NCPU          8   // maximum number of CPUs
 #define NSOCKET       2
 #define PERFSIZE      (16<<20ull)
-#define MEMIDE        1
+#define MEMIDE        0
+#define AHCIIDE       1
 #elif defined(HW_mtrace)
 #define DEBUG         0
 #define NCPU          16   // maximum number of CPUs
@@ -153,4 +154,7 @@
 #endif
 #ifndef MEMIDE
 #define MEMIDE 1
+#endif
+#ifndef AHCIIDE
+#define AHCIIDE 0
 #endif

@@ -220,8 +220,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   initidle();
   initgc();        // gc epochs and threads
   initrefcache();  // Requires initsched
-  initdisk();      // disk
-  initinode();     // inode cache
   initconsole();
   initfutex();
   initsamp();
@@ -234,6 +232,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   inithpet();              // Requires initacpitables
   initrtc();               // Requires inithpet
   initdev();               // Misc /dev nodes
+  initdisk();      // disk
+  initinode();     // inode cache
   initmfs();
 
   if (VERBOSE)
