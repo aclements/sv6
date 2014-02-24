@@ -9,7 +9,7 @@
 #include "include/fs.h"
 
 int ninodes = 2400;
-int size = 32768;
+int size = 4096;
 
 int fsfd;
 struct superblock sb;
