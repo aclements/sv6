@@ -11,6 +11,9 @@
 
 #include <stdexcept>
 
+#define DEFAULT_EVENT "CPU cycle unhalted"
+#define DEFAULT_PERIOD 100000
+
 static void
 conf(int fd, const struct perf_selector &c)
 {
@@ -23,20 +26,21 @@ void
 usage(const char *argv0)
 {
   printf("Usage: %s [options] <command...>\n", argv0);
-  printf("  -e event   Event to sample\n"
-         "  -p period  Specify sampling period\n"
+  printf("  -e event   Event to sample (default: %s)\n"
+         "  -p period  Sample every PERIOD events (default: %d)\n"
          "  -P         Precise sampling\n"
-         "  -l cycles  Sample loads longer than CYCLES\n");
+         "  -l cycles  Sample loads longer than CYCLES (implies -P)\n",
+         DEFAULT_EVENT, DEFAULT_PERIOD);
 }
 
 int
 main(int ac, char *av[])
 {
   struct perf_selector c{};
-  const char *event = "CPU cycle unhalted";
+  const char *event = DEFAULT_EVENT;
 
   c.enable = true;
-  c.period = 100000;
+  c.period = DEFAULT_PERIOD;
 
   int opt;
   while ((opt = getopt(ac, av, "e:p:Pl:")) != -1) {
