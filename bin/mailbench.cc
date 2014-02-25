@@ -184,7 +184,7 @@ usage(const char *argv0)
 int
 main(int argc, char **argv)
 {
-  const char *alt_str = "false";
+  const char *alt_str = "none";
   int opt;
   while ((opt = getopt(argc, argv, "a:")) != -1) {
     switch (opt) {
