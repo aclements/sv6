@@ -115,3 +115,46 @@ can boot this on a real machine, or run a super-lightweight Linux VM
 in QEMU using
 
     make HW=linux KERN=path/to/Linux/bzImage/or/vmlinuz qemu
+
+
+How to
+======
+
+CPU profiling
+-------------
+
+sv6 supports NMI-based system-wide hardware performance counter
+profiling on both Intel and AMD CPUs.  On recent Intel CPUs, it also
+supports PEBS precise event sampling and memory load latency
+profiling.
+
+To profile a command, use the `perf` tool.  E.g.,
+
+    perf mailbench -a all / 1
+
+By default, `perf` monitors unhalted CPU cycles, but other events can
+be selected from those known to `libutil/pmcdb.cc`.
+
+Once `perf` has run, the sampler data can be read from `/dev/sampler`.
+To transfer the file to your computer where it can be decoded, use the
+web server:
+
+    curl http://<hostname>/dev/sampler > sampler
+
+Finally, to decode the sample file, use `perf-report`:
+
+    ./o.$HW/tools/perf-report sampler o.$HW/kernel.elf
+
+To get stack traces from a user binary, pass its unstripped ELF image
+(e.g., `o.$HW/bin/ls.unstripped`) as the last argument instead of the
+kernel image.
+
+
+Kernel statistics
+-----------------
+
+The kernel continually maintains a lot of internal statistics
+counters.  To see the changes in these counters over a command, run,
+e.g.
+
+    monkstats mailbench -a all / 1
