@@ -17,12 +17,6 @@
 #include "kstream.hh"
 #include "file.hh"
 
-// To get good performance on a single core on ben with 79 cores idling set
-// SINGLE to 1.  XXX To fix this we need adopt LB to avoid cores ganging up on
-// the same cores for stealing.  And, make sure we can profile the idle loop
-// in this scenario.
-#define SINGLE 0  
-
 enum { sched_debug = 0 };
 
 struct schedule : public balance_pool<schedule> {
