@@ -605,7 +605,8 @@ sys_pipe2(userptr<int> fd, int flags)
   if (pipealloc(&rf, &wf, flags) < 0)
     return -1;
 
-  int fd_buf[2] = { fdalloc(std::move(rf), 0), fdalloc(std::move(wf), 0) };
+  int fd_buf[2] = { fdalloc(std::move(rf), flags),
+                    fdalloc(std::move(wf), flags) };
   if (fd_buf[0] >= 0 && fd_buf[1] >= 0 && fd.store(fd_buf, 2))
     return 0;
 
