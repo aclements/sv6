@@ -15,6 +15,7 @@
 
 #include <string>
 #include <thread>
+#include <vector>
 
 // Set to 1 to manage the queue manager's life time from this program.
 // Set to 0 if the queue manager is started and stopped outside of
@@ -97,9 +98,9 @@ xwaitpid(int pid, const char *cmd)
 }
 
 static void
-do_mua(int cpu, string spooldir, string msgpath)
+do_mua(int cpu, string spooldir, string msgpath, size_t batch_size)
 {
-  const char *argv[] = {"./mail-enqueue", spooldir.c_str(), "user", nullptr};
+  std::vector<const char*> argv{"./mail-enqueue"};
 #if defined(XV6_USER)
   int errno;
 #endif
@@ -110,6 +111,13 @@ do_mua(int cpu, string spooldir, string msgpath)
   int msgfd = open(msgpath.c_str(), O_RDONLY|O_CLOEXEC|O_ANYFD);
   if (msgfd < 0)
     edie("open %s failed", msgpath.c_str());
+
+  // Construct command line
+  if (batch_size)
+    argv.push_back("-b");
+  argv.push_back(spooldir.c_str());
+  argv.push_back("user");
+  argv.push_back(nullptr);
 
   bar.join();
 
@@ -123,23 +131,43 @@ do_mua(int cpu, string spooldir, string msgpath)
       start_tsc.add(rdtsc());
     }
 
-    if (lseek(msgfd, 0, SEEK_SET) < 0)
-      edie("lseek failed");
-
     pid_t pid;
+    int msgpipe[2];
     posix_spawn_file_actions_t actions;
     if ((errno = posix_spawn_file_actions_init(&actions)))
       edie("posix_spawn_file_actions_init failed");
-    if ((errno = posix_spawn_file_actions_adddup2(&actions, msgfd, 0)))
-      edie("posix_spawn_file_actions_adddup2 failed");
+    if (batch_size) {
+      if (pipe2(msgpipe, O_CLOEXEC|O_ANYFD) < 0)
+        edie("pipe failed");
+      if ((errno = posix_spawn_file_actions_adddup2(&actions, msgpipe[0], 0)))
+        edie("posix_spawn_file_actions_adddup2 failed");
+    } else {
+      if (lseek(msgfd, 0, SEEK_SET) < 0)
+        edie("lseek failed");
+      if ((errno = posix_spawn_file_actions_adddup2(&actions, msgfd, 0)))
+        edie("posix_spawn_file_actions_adddup2 failed");
+    }
     if ((errno = posix_spawn(&pid, argv[0], &actions, nullptr,
-                             const_cast<char *const*>(argv), environ)))
+                             const_cast<char *const*>(argv.data()), environ)))
       edie("posix_spawn failed");
     if ((errno = posix_spawn_file_actions_destroy(&actions)))
       edie("posix_spawn_file_actions_destroy failed");
-    xwaitpid(pid, argv[0]);
 
-    ++mycount;
+    if (batch_size) {
+      close(msgpipe[0]);
+      // Send batch of messages
+      uint64_t msg_len = strlen(message);
+      for (size_t i = 0; i < batch_size; ++i) {
+        xwrite(msgpipe[1], &msg_len, sizeof msg_len);
+        xwrite(msgpipe[1], message, msg_len);
+      }
+      close(msgpipe[1]);
+      mycount += batch_size;
+    } else {
+      ++mycount;
+    }
+
+    xwaitpid(pid, argv[0]);
   }
 
   stop_usec.add(now_usec());
@@ -178,6 +206,8 @@ usage(const char *argv0)
   fprintf(stderr, "Usage: %s [options] basedir nthreads\n", argv0);
   fprintf(stderr, "  -a none   Use regular APIs (default)\n");
   fprintf(stderr, "     all    Use alternate APIs\n");
+  fprintf(stderr, "  -b 0      Do not use batch spooling (default)\n");
+  fprintf(stderr, "     N      Spool in batches of size N\n");
   exit(2);
 }
 
@@ -185,11 +215,15 @@ int
 main(int argc, char **argv)
 {
   const char *alt_str = "none";
+  size_t batch_size = 0;
   int opt;
-  while ((opt = getopt(argc, argv, "a:")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:")) != -1) {
     switch (opt) {
     case 'a':
       alt_str = optarg;
+      break;
+    case 'b':
+      batch_size = atoi(optarg);
       break;
     default:
       usage(argv[0]);
@@ -234,7 +268,8 @@ main(int argc, char **argv)
   xwrite(fd, message, strlen(message));
   close(fd);
 
-  printf("# --cores=%d --duration=%ds --alt=%s\n", nthreads, duration, alt_str);
+  printf("# --cores=%d --duration=%ds --alt=%s --batch-size=%zu\n",
+         nthreads, duration, alt_str, batch_size);
 
   // Run benchmark
   bar.init(nthreads + 1);
@@ -243,7 +278,8 @@ main(int argc, char **argv)
 
   std::thread *threads = new std::thread[nthreads];
   for (int i = 0; i < nthreads; ++i)
-    threads[i] = std::thread(do_mua, i, basedir + "/spool", basedir + "/msg");
+    threads[i] = std::thread(do_mua, i, basedir + "/spool", basedir + "/msg",
+                             batch_size);
 
   // Wait
   timer.join();
