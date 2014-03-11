@@ -54,7 +54,7 @@ xread(int fd, void *buf, size_t n)
   while (pos < n) {
     int r = read(fd, (char*)buf + pos, n - pos);
     if (r < 0)
-      die("read failed");
+      edie("read failed");
     if (r == 0)
       break;
     pos += r;
@@ -70,7 +70,7 @@ xwrite(int fd, const void *buf, size_t n)
   while (n) {
     r = write(fd, buf, n);
     if (r < 0 || r == 0)
-      die("write failed");
+      edie("write failed");
     buf = (char *) buf + r;
     n -= r;
   }
