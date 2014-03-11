@@ -51,10 +51,18 @@ readall(int fd, void *buf, size_t n)
 ssize_t
 copy_fd(int dst, int src)
 {
-  ssize_t res = 0;
+  return copy_fd_n(dst, src, (size_t)-1);
+}
+
+// Read from src until EOF or limit bytes, write to dst.  Returns
+// number of bytes copied on success, < 0 on failure.
+ssize_t
+copy_fd_n(int dst, int src, size_t limit)
+{
+  size_t res = 0;
   char buf[4096];
-  while (1) {
-    int r = read(src, buf, sizeof buf);
+  while (res < limit) {
+    int r = read(src, buf, limit - res < sizeof buf ? limit - res : sizeof buf);
     if (r < 0) {
 #if !defined(XV6_USER)
       if (errno == EINTR)
