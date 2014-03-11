@@ -37,7 +37,7 @@ public:
     notify_len_ = SUN_LEN(&notify_addr_);
   }
 
-  void queue(int msgfd, const char *recipient)
+  void queue(int msgfd, const char *recipient, size_t limit = (size_t)-1)
   {
     // Create temporary message
     char tmpname[256];
@@ -47,7 +47,7 @@ public:
     if (tmpfd < 0)
       edie("open %s failed", tmpname);
 
-    if (copy_fd(tmpfd, msgfd) < 0)
+    if (copy_fd_n(tmpfd, msgfd, limit) < 0)
       edie("copy_fd message failed");
 
     struct stat st;
@@ -92,10 +92,27 @@ public:
 };
 
 static void
+do_batch_mode(int fd, const char *recip, spool_writer *spool)
+{
+  while (1) {
+    uint64_t msg_len;
+    size_t len = xread(fd, &msg_len, sizeof msg_len);
+    if (len == 0)
+      break;
+    if (len != sizeof msg_len)
+      die("short read of message length");
+    spool->queue(fd, recip, msg_len);
+  }
+}
+
+static void
 usage(const char *argv0)
 {
   fprintf(stderr, "Usage: %s spooldir recipient <message\n", argv0);
+  fprintf(stderr, "       %s -b spooldir recipient <message-stream\n", argv0);
   fprintf(stderr, "       %s --exit spooldir\n", argv0);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "Where message-stream is a sequence of <u64 N><char[N]>.");
   exit(2);
 }
 
@@ -108,14 +125,29 @@ main(int argc, char **argv)
     return 0;
   }
 
-  if (argc != 3)
+  int opt;
+  bool batch_mode = false;
+  while ((opt = getopt(argc, argv, "b")) != -1) {
+    switch (opt) {
+    case 'b':
+      batch_mode = true;
+      break;
+    default:
+      usage(argv[0]);
+    }
+  }
+
+  if (argc - optind != 2)
     usage(argv[0]);
 
-  const char *spooldir = argv[1];
-  const char *recip = argv[2];
+  const char *spooldir = argv[optind];
+  const char *recip = argv[optind + 1];
 
   spool_writer spool{spooldir};
-  spool.queue(0, recip);
+  if (batch_mode)
+    do_batch_mode(0, recip, &spool);
+  else
+    spool.queue(0, recip);
 
   return 0;
 }
