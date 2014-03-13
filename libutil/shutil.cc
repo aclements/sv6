@@ -1,4 +1,5 @@
 #include "shutil.h"
+#include "libutil.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -92,4 +93,22 @@ mkdir_if_noent(const char *path, mode_t mode)
 #endif
   }
   return 0;
+}
+
+// Return the length of the file referred to by fd.  Returns < 0 on
+// failure.
+ssize_t
+fd_len(int fd)
+{
+  // Could also do this with fstat, but that returns way more
+  // information than we need
+  off_t pos = lseek(fd, 0, SEEK_CUR);
+  if (pos < 0)
+    return -1;
+  off_t end = lseek(fd, 0, SEEK_END);
+  if (end < 0)
+    return -1;
+  if (lseek(fd, pos, SEEK_SET))
+    edie("failed to return file offset to original position");
+  return end;
 }
