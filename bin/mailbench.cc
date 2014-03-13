@@ -226,6 +226,7 @@ usage(const char *argv0)
   fprintf(stderr, "     all    Use alternate APIs\n");
   fprintf(stderr, "  -b 0      Do not use batch spooling (default)\n");
   fprintf(stderr, "     N      Spool in batches of size N\n");
+  fprintf(stderr, "     inf    Spool in unbounded batches\n");
   exit(2);
 }
 
@@ -241,7 +242,10 @@ main(int argc, char **argv)
       alt_str = optarg;
       break;
     case 'b':
-      batch_size = atoi(optarg);
+      if (strcmp(optarg, "inf") == 0)
+        batch_size = (size_t)-1;
+      else
+        batch_size = atoi(optarg);
       break;
     default:
       usage(argv[0]);
@@ -286,8 +290,13 @@ main(int argc, char **argv)
   xwrite(fd, message, strlen(message));
   close(fd);
 
-  printf("# --cores=%d --duration=%ds --alt=%s --batch-size=%zu\n",
-         nthreads, duration, alt_str, batch_size);
+  printf("# --cores=%d --duration=%ds --alt=%s",
+         nthreads, duration, alt_str);
+  if (batch_size == (size_t)-1)
+    printf(" --batch-size=inf");
+  else
+    printf(" --batch-size=%zu", batch_size);
+  printf("\n");
 
   // Run benchmark
   bar.init(nthreads + 1);
