@@ -123,6 +123,8 @@ do_mua(int cpu, string spooldir, string msgpath, size_t batch_size)
 
   bool mywarmup = true;
   uint64_t mycount = 0;
+  pid_t pid = 0;
+  int msgpipe[2], respipe[2];
   while (!stop) {
     if (__builtin_expect(warmup != mywarmup, 0)) {
       mywarmup = warmup;
@@ -131,52 +133,59 @@ do_mua(int cpu, string spooldir, string msgpath, size_t batch_size)
       start_tsc.add(rdtsc());
     }
 
-    pid_t pid;
-    int msgpipe[2], respipe[2];
-    posix_spawn_file_actions_t actions;
-    if ((errno = posix_spawn_file_actions_init(&actions)))
-      edie("posix_spawn_file_actions_init failed");
-    if (batch_size) {
-      if (pipe2(msgpipe, O_CLOEXEC|O_ANYFD) < 0)
-        edie("pipe msgpipe failed");
-      if ((errno = posix_spawn_file_actions_adddup2(&actions, msgpipe[0], 0)))
-        edie("posix_spawn_file_actions_adddup2 msgpipe failed");
-      if (pipe2(respipe, O_CLOEXEC|O_ANYFD) < 0)
-        edie("pipe respipe failed");
-      if ((errno = posix_spawn_file_actions_adddup2(&actions, respipe[1], 1)))
-        edie("posix_spawn_file_actions_adddup2 respipe failed");
-    } else {
-      if (lseek(msgfd, 0, SEEK_SET) < 0)
-        edie("lseek failed");
-      if ((errno = posix_spawn_file_actions_adddup2(&actions, msgfd, 0)))
-        edie("posix_spawn_file_actions_adddup2 failed");
-    }
-    if ((errno = posix_spawn(&pid, argv[0], &actions, nullptr,
-                             const_cast<char *const*>(argv.data()), environ)))
-      edie("posix_spawn failed");
-    if ((errno = posix_spawn_file_actions_destroy(&actions)))
-      edie("posix_spawn_file_actions_destroy failed");
-
-    if (batch_size) {
-      close(msgpipe[0]);
-      close(respipe[1]);
-      // Send batch of messages
-      uint64_t msg_len = strlen(message);
-      for (size_t i = 0; i < batch_size; ++i) {
-        xwrite(msgpipe[1], &msg_len, sizeof msg_len);
-        xwrite(msgpipe[1], message, msg_len);
-
-        uint64_t res;
-        if (xread(respipe[0], &res, sizeof res) != sizeof res)
-          die("short read of result code");
+    if (pid == 0) {
+      posix_spawn_file_actions_t actions;
+      if ((errno = posix_spawn_file_actions_init(&actions)))
+        edie("posix_spawn_file_actions_init failed");
+      if (batch_size) {
+        if (pipe2(msgpipe, O_CLOEXEC|O_ANYFD) < 0)
+          edie("pipe msgpipe failed");
+        if ((errno = posix_spawn_file_actions_adddup2(&actions, msgpipe[0], 0)))
+          edie("posix_spawn_file_actions_adddup2 msgpipe failed");
+        if (pipe2(respipe, O_CLOEXEC|O_ANYFD) < 0)
+          edie("pipe respipe failed");
+        if ((errno = posix_spawn_file_actions_adddup2(&actions, respipe[1], 1)))
+          edie("posix_spawn_file_actions_adddup2 respipe failed");
+      } else {
+        if (lseek(msgfd, 0, SEEK_SET) < 0)
+          edie("lseek failed");
+        if ((errno = posix_spawn_file_actions_adddup2(&actions, msgfd, 0)))
+          edie("posix_spawn_file_actions_adddup2 failed");
       }
-      close(msgpipe[1]);
-      mycount += batch_size;
-    } else {
-      ++mycount;
+      if ((errno = posix_spawn(&pid, argv[0], &actions, nullptr,
+                               const_cast<char *const*>(argv.data()), environ)))
+        edie("posix_spawn failed");
+      if ((errno = posix_spawn_file_actions_destroy(&actions)))
+        edie("posix_spawn_file_actions_destroy failed");
+
+      if (batch_size) {
+        close(msgpipe[0]);
+        close(respipe[1]);
+      }
     }
 
-    xwaitpid(pid, argv[0]);
+    if (batch_size) {
+      // Send message in batch mode
+      uint64_t msg_len = strlen(message);
+      xwrite(msgpipe[1], &msg_len, sizeof msg_len);
+      xwrite(msgpipe[1], message, msg_len);
+
+      // Get batch-mode response
+      uint64_t res;
+      if (xread(respipe[0], &res, sizeof res) != sizeof res)
+        die("short read of result code");
+    }
+
+    ++mycount;
+
+    if (batch_size == 0 || mycount % batch_size == 0) {
+      if (batch_size) {
+        close(msgpipe[1]);
+        close(respipe[0]);
+      }
+      xwaitpid(pid, argv[0]);
+      pid = 0;
+    }
   }
 
   stop_usec.add(now_usec());
