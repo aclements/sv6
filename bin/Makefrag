@@ -139,6 +139,11 @@ ifeq ($(PLATFORM),native)
 # Statically link for the Linux environment so we can create a trivial
 # initramfs without libraries
 LINK_CMD_END := $(LINK_CMD_END) -static
+# Unfortunately, the weak symbols in libpthread mean pthreads don't
+# work with static linking unless we force the linker to include the
+# whole archive.  This is, apparently, "not a bug"
+# (http://gcc.gnu.org/bugzilla/show_bug.cgi?id=52590).
+LINK_CMD_BEGIN += -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 
 # Build an initramfs
 $(O)/initramfs: $(addprefix $(O)/bin/, $(UPROGS_NATIVE))
