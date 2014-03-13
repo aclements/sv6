@@ -174,6 +174,8 @@ do_mua(int cpu, string spooldir, string msgpath, size_t batch_size)
       uint64_t res;
       if (xread(respipe[0], &res, sizeof res) != sizeof res)
         die("short read of result code");
+      if (res != 0)
+        die("%s returned status %d", argv[0], (int)res);
     }
 
     ++mycount;
@@ -227,6 +229,7 @@ usage(const char *argv0)
   fprintf(stderr, "  -b 0      Do not use batch spooling (default)\n");
   fprintf(stderr, "     N      Spool in batches of size N\n");
   fprintf(stderr, "     inf    Spool in unbounded batches\n");
+  fprintf(stderr, "  -p        Use delivery process pooling\n");
   exit(2);
 }
 
@@ -235,8 +238,9 @@ main(int argc, char **argv)
 {
   const char *alt_str = "none";
   size_t batch_size = 0;
+  bool pool = false;
   int opt;
-  while ((opt = getopt(argc, argv, "a:b:")) != -1) {
+  while ((opt = getopt(argc, argv, "a:b:p")) != -1) {
     switch (opt) {
     case 'a':
       alt_str = optarg;
@@ -246,6 +250,9 @@ main(int argc, char **argv)
         batch_size = (size_t)-1;
       else
         batch_size = atoi(optarg);
+      break;
+    case 'p':
+      pool = true;
       break;
     default:
       usage(argv[0]);
@@ -274,11 +281,15 @@ main(int argc, char **argv)
   pid_t qman_pid;
   if (START_QMAN) {
     // Start queue manager
-    const char *qman[] = {"./mail-qman", "-a", alt_str,
-                          spooldir.c_str(), mailroot.c_str(),
-                          nthreads_str, nullptr};
+    std::vector<const char*> qman{"./mail-qman", "-a", alt_str};
+    if (pool)
+      qman.push_back("-p");
+    qman.push_back(spooldir.c_str());
+    qman.push_back(mailroot.c_str());
+    qman.push_back(nthreads_str);
+    qman.push_back(nullptr);
     if (posix_spawn(&qman_pid, qman[0], nullptr, nullptr,
-                    const_cast<char *const*>(qman), environ) != 0)
+                    const_cast<char *const*>(qman.data()), environ) != 0)
       die("posix_spawn %s failed", qman[0]);
     sleep(1);
   }
@@ -296,7 +307,7 @@ main(int argc, char **argv)
     printf(" --batch-size=inf");
   else
     printf(" --batch-size=%zu", batch_size);
-  printf("\n");
+  printf(" --pool=%s\n", pool ? "true" : "false");
 
   // Run benchmark
   bar.init(nthreads + 1);
