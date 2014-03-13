@@ -132,15 +132,19 @@ do_mua(int cpu, string spooldir, string msgpath, size_t batch_size)
     }
 
     pid_t pid;
-    int msgpipe[2];
+    int msgpipe[2], respipe[2];
     posix_spawn_file_actions_t actions;
     if ((errno = posix_spawn_file_actions_init(&actions)))
       edie("posix_spawn_file_actions_init failed");
     if (batch_size) {
       if (pipe2(msgpipe, O_CLOEXEC|O_ANYFD) < 0)
-        edie("pipe failed");
+        edie("pipe msgpipe failed");
       if ((errno = posix_spawn_file_actions_adddup2(&actions, msgpipe[0], 0)))
-        edie("posix_spawn_file_actions_adddup2 failed");
+        edie("posix_spawn_file_actions_adddup2 msgpipe failed");
+      if (pipe2(respipe, O_CLOEXEC|O_ANYFD) < 0)
+        edie("pipe respipe failed");
+      if ((errno = posix_spawn_file_actions_adddup2(&actions, respipe[1], 1)))
+        edie("posix_spawn_file_actions_adddup2 respipe failed");
     } else {
       if (lseek(msgfd, 0, SEEK_SET) < 0)
         edie("lseek failed");
@@ -155,11 +159,16 @@ do_mua(int cpu, string spooldir, string msgpath, size_t batch_size)
 
     if (batch_size) {
       close(msgpipe[0]);
+      close(respipe[1]);
       // Send batch of messages
       uint64_t msg_len = strlen(message);
       for (size_t i = 0; i < batch_size; ++i) {
         xwrite(msgpipe[1], &msg_len, sizeof msg_len);
         xwrite(msgpipe[1], message, msg_len);
+
+        uint64_t res;
+        if (xread(respipe[0], &res, sizeof res) != sizeof res)
+          die("short read of result code");
       }
       close(msgpipe[1]);
       mycount += batch_size;

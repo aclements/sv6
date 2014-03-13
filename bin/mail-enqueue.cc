@@ -92,7 +92,7 @@ public:
 };
 
 static void
-do_batch_mode(int fd, const char *recip, spool_writer *spool)
+do_batch_mode(int fd, int resultfd, const char *recip, spool_writer *spool)
 {
   while (1) {
     uint64_t msg_len;
@@ -102,6 +102,10 @@ do_batch_mode(int fd, const char *recip, spool_writer *spool)
     if (len != sizeof msg_len)
       die("short read of message length");
     spool->queue(fd, recip, msg_len);
+
+    // Indicate success
+    uint64_t res = 0;
+    xwrite(resultfd, &res, sizeof res);
   }
 }
 
@@ -112,7 +116,10 @@ usage(const char *argv0)
   fprintf(stderr, "       %s -b spooldir recipient <message-stream\n", argv0);
   fprintf(stderr, "       %s --exit spooldir\n", argv0);
   fprintf(stderr, "\n");
-  fprintf(stderr, "Where message-stream is a sequence of <u64 N><char[N]>.");
+  fprintf(stderr,
+          "In batch mode, message-stream is a sequence of <u64 N><char[N]> and\n"
+          "a <u64> return code will be written to stdout after every delivery.\n"
+    );
   exit(2);
 }
 
@@ -145,7 +152,7 @@ main(int argc, char **argv)
 
   spool_writer spool{spooldir};
   if (batch_mode)
-    do_batch_mode(0, recip, &spool);
+    do_batch_mode(0, 1, recip, &spool);
   else
     spool.queue(0, recip);
 
