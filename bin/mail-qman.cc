@@ -142,6 +142,9 @@ class deliverer
 {
   pid_t pid_;
   string mailroot_;
+  bool pool_;
+  string pool_recipient_;
+  int msgpipe[2], respipe[2];
 
   void start_child(const char *argv[], int stdin, int stdout)
   {
@@ -183,6 +186,11 @@ class deliverer
 
   void wait_child()
   {
+    if (pool_) {
+      close(msgpipe[1]);
+      close(respipe[0]);
+    }
+
     int status;
     if (waitpid(pid_, &status, 0) < 0)
       edie("waitpid failed");
@@ -192,23 +200,71 @@ class deliverer
   }
 
 public:
-  deliverer(const string &mailroot)
-    : pid_(0), mailroot_(mailroot) { }
+  deliverer(const string &mailroot, bool pool)
+    : pid_(0), mailroot_(mailroot), pool_(pool) { }
+
+  ~deliverer()
+  {
+    if (pid_)
+      wait_child();
+  }
 
   void
   deliver(const string &recipient, int msgfd)
   {
-    const char *argv[] = {"./mail-deliver", mailroot_.c_str(),
-                          recipient.c_str(), nullptr};
-    start_child(argv, msgfd, -1);
-    wait_child();
+    if (pool_) {
+      if (pid_ && recipient != pool_recipient_)
+        // Restart child if recipient changed
+        wait_child();
+
+      if (!pid_) {
+        // Start batch-mode deliver process
+        const char *argv[] = {"./mail-deliver", "-b", mailroot_.c_str(),
+                              recipient.c_str(), nullptr};
+        pool_recipient_ = recipient;
+        if (pipe2(msgpipe, O_CLOEXEC|O_ANYFD) < 0)
+          edie("pipe msgpipe failed");
+        if (pipe2(respipe, O_CLOEXEC|O_ANYFD) < 0)
+          edie("pipe respipe failed");
+        start_child(argv, msgpipe[0], respipe[1]);
+        close(msgpipe[0]);
+        close(respipe[1]);
+      }
+
+      // Get length of message
+      uint64_t msg_len;
+      if ((msg_len = fd_len(msgfd)) < 0)
+        edie("mail-qman: failed to get length of message");
+
+      // Deliver message to running deliver process
+      xwrite(msgpipe[1], &msg_len, sizeof msg_len);
+      ssize_t r = copy_fd_n(msgpipe[1], msgfd, msg_len);
+      if (r < 0)
+        edie("mail-qman: copy_fd_n to mail-deliver failed");
+      else if (r < msg_len)
+        die("mail-qman: short write to mail-deliver (%zd < %zu)",
+            r, (size_t)msg_len);
+
+      // Get batch-mode response
+      uint64_t res;
+      if (xread(respipe[0], &res, sizeof res) != sizeof res)
+        die("mail-qman: short read of deliver result code");
+      if (res != 0)
+        die("mail-qman: mail-deliver returned status %d", (int)res);
+    } else {
+      const char *argv[] = {"./mail-deliver", mailroot_.c_str(),
+                            recipient.c_str(), nullptr};
+      start_child(argv, msgfd, -1);
+      wait_child();
+    }
   }
 };
 
 static void
-do_process(spool_reader *spool, const string &mailroot, int nthread, int cpu)
+do_process(spool_reader *spool, const string &mailroot, bool pool,
+           int nthread, int cpu)
 {
-  deliverer d{mailroot};
+  deliverer d{mailroot, pool};
   while (true) {
     string id = spool->dequeue();
     if (id == "EXIT") {
@@ -231,6 +287,7 @@ usage(const char *argv0)
   fprintf(stderr, "Usage: %s [options] spooldir mailroot nthread\n", argv0);
   fprintf(stderr, "  -a none   Use regular APIs (default)\n");
   fprintf(stderr, "     all    Use alternate APIs\n");
+  fprintf(stderr, "  -p        Use pooled mail-deliver\n");
   exit(2);
 }
 
@@ -238,7 +295,8 @@ int
 main(int argc, char **argv)
 {
   int opt;
-  while ((opt = getopt(argc, argv, "a:")) != -1) {
+  bool pool = false;
+  while ((opt = getopt(argc, argv, "a:p")) != -1) {
     switch (opt) {
     case 'a':
       if (strcmp(optarg, "all") == 0)
@@ -247,6 +305,9 @@ main(int argc, char **argv)
         alt = false;
       else
         usage(argv[0]);
+      break;
+    case 'p':
+      pool = true;
       break;
     default:
       usage(argv[0]);
@@ -268,7 +329,8 @@ main(int argc, char **argv)
 
   for (int i = 0; i < nthread; ++i) {
     setaffinity(i);
-    threads[i] = std::move(thread(do_process, &reader, mailroot, nthread, i));
+    threads[i] = std::move(thread(do_process, &reader, mailroot, pool,
+                                  nthread, i));
   }
 
   for (int i = 0; i < nthread; ++i)
