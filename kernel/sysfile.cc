@@ -51,6 +51,12 @@ sys_dup2(int ofd, int nfd)
   if (!f)
     return -1;
 
+  if (ofd == nfd)
+    // Do nothing, aggressively.  Remarkably, while dup2 usually
+    // clears O_CLOEXEC on nfd (even if ofd is O_CLOEXEC), POSIX 2013
+    // is very clear that it should *not* do this if ofd == nfd.
+    return nfd;
+
   if (!myproc()->ftable->replace(nfd, std::move(f)))
     return -1;
 
