@@ -138,48 +138,77 @@ public:
   }
 };
 
-static void
-deliver(const char *mailroot, int msgfd, const string &recipient)
+class deliverer
 {
-  const char *argv[] = {"./mail-deliver", mailroot, recipient.c_str(), nullptr};
+  pid_t pid_;
+  string mailroot_;
 
-  pid_t pid;
+  void start_child(const char *argv[], int stdin, int stdout)
+  {
 #if defined(XV6_USER)
-  // xv6 doesn't define errno.
-  int errno = 0;
+    // xv6 doesn't define errno.
+    int errno = 0;
 #endif
-  if (alt) {
-    posix_spawn_file_actions_t actions;
-    if ((errno = posix_spawn_file_actions_init(&actions)))
-      edie("posix_spawn_file_actions_init failed");
-    if ((errno = posix_spawn_file_actions_adddup2(&actions, msgfd, 0)))
-      edie("posix_spawn_file_actions_adddup2 failed");
-    if ((errno = posix_spawn(&pid, argv[0], &actions, nullptr,
-                             const_cast<char *const*>(argv), environ)))
-      edie("posix_spawn failed");
-    if ((errno = posix_spawn_file_actions_destroy(&actions)))
-      edie("posix_spawn_file_actions_destroy failed");
-  } else {
-    pid = fork();
-    if (pid < 0)
-      edie("fork failed");
-    if (pid == 0) {
-      dup2(msgfd, 0);
-      execv(argv[0], const_cast<char *const*>(argv));
-      edie("execv %s failed", argv[0]);
+    if (alt) {
+      posix_spawn_file_actions_t actions;
+      if ((errno = posix_spawn_file_actions_init(&actions)))
+        edie("posix_spawn_file_actions_init failed");
+      if (stdin >= 0)
+        if ((errno = posix_spawn_file_actions_adddup2(&actions, stdin, 0)))
+          edie("posix_spawn_file_actions_adddup2 failed");
+      if (stdout >= 0)
+        if ((errno = posix_spawn_file_actions_adddup2(&actions, stdout, 1)))
+          edie("posix_spawn_file_actions_adddup2 failed");
+      if ((errno = posix_spawn(&pid_, argv[0], &actions, nullptr,
+                               const_cast<char *const*>(argv), environ)))
+        edie("posix_spawn failed");
+      if ((errno = posix_spawn_file_actions_destroy(&actions)))
+        edie("posix_spawn_file_actions_destroy failed");
+    } else {
+      pid_ = fork();
+      if (pid_ < 0)
+        edie("fork failed");
+      if (pid_ == 0) {
+        // Note that this doesn't handle the case where stdin/stdout are
+        // 0/1 and have O_CLOEXEC set, but that never happens here.
+        if (stdin >= 0 && dup2(stdin, 0) < 0)
+          edie("dup2 stdin failed");
+        if (stdout >= 0 && dup2(stdout, 1) < 0)
+          edie("dup2 stdout failed");
+        execv(argv[0], const_cast<char *const*>(argv));
+        edie("execv %s failed", argv[0]);
+      }
     }
   }
 
-  int status;
-  if (waitpid(pid, &status, 0) < 0)
-    edie("waitpid failed");
-  if (!WIFEXITED(status) || WEXITSTATUS(status))
-    die("deliver failed: status %d", status);
-}
+  void wait_child()
+  {
+    int status;
+    if (waitpid(pid_, &status, 0) < 0)
+      edie("waitpid failed");
+    if (!WIFEXITED(status) || WEXITSTATUS(status))
+      die("deliver failed: status %d", status);
+    pid_ = 0;
+  }
+
+public:
+  deliverer(const string &mailroot)
+    : pid_(0), mailroot_(mailroot) { }
+
+  void
+  deliver(const string &recipient, int msgfd)
+  {
+    const char *argv[] = {"./mail-deliver", mailroot_.c_str(),
+                          recipient.c_str(), nullptr};
+    start_child(argv, msgfd, -1);
+    wait_child();
+  }
+};
 
 static void
-do_process(spool_reader *spool, const char *mailroot, int nthread, int cpu)
+do_process(spool_reader *spool, const string &mailroot, int nthread, int cpu)
 {
+  deliverer d{mailroot};
   while (true) {
     string id = spool->dequeue();
     if (id == "EXIT") {
@@ -190,7 +219,7 @@ do_process(spool_reader *spool, const char *mailroot, int nthread, int cpu)
       return;
     string recip = spool->get_recipient(id);
     int msgfd = spool->open_message(id);
-    deliver(mailroot, msgfd, recip);
+    d.deliver(recip, msgfd);
     close(msgfd);
     spool->remove(id);
   }
