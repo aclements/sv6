@@ -22,7 +22,7 @@ fetchmem(void* dst, const void* usrc, u64 size)
 {
   if(mycpu()->ncli != 0)
     panic("fetchstr: cli'd");
-  if ((uintptr_t)usrc >= USERTOP || (uintptr_t)usrc + size >= USERTOP)
+  if ((uintptr_t)usrc >= USERTOP || (uintptr_t)usrc + size > USERTOP)
     return -1;
   // __uaccess_mem can't handle size == 0
   if(size == 0)
