@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <vector>
 #include <stdexcept>
 
 #define DEFAULT_EVENT "CPU cycle unhalted"
@@ -82,6 +83,11 @@ main(int ac, char *av[])
     die(e.what());
   }
 
+  std::vector<const char *> args;
+  for (int i = optind; i < ac; ++i)
+    args.push_back(av[i]);
+  args.push_back(nullptr);
+
   int fd = open("/dev/sampler", O_RDWR);
   if (fd < 0)
     die("perf: open failed");
@@ -92,8 +98,8 @@ main(int ac, char *av[])
 
   if (pid == 0) {
     conf(fd, c);
-    execv(av[optind], av+optind);
-    die("perf: exec failed");
+    execv(args[0], const_cast<char * const *>(args.data()));
+    die("perf: exec %s failed", args[0]);
   }
 
   wait(NULL);
