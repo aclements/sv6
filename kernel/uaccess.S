@@ -57,15 +57,15 @@ ENTRY(__uaccess_strend)
         movl    $1, PROC_UACCESS(%r11)
 
         // %rcx limits scas
-        // XXX Is this off by one?  We want the limit to include the NUL.
         mov     %rsi, %rcx
         // Search for NUL
         xor     %rax, %rax
         // Scan string
         repne   scasb
         jne     2f
-        // RDI points to NUL
+        // RDI points one past the NUL
         mov     %rdi, %rax
+        dec     %rax
         jmp     __uaccess_end
 2:
         // No NUL found
