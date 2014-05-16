@@ -64,7 +64,7 @@ To enable networking support, you'll need to clone lwIP.  From the
 root of your sv6 clone,
 
     git clone git://git.savannah.nongnu.org/lwip.git
-    (cd lwip && git checkout DEVEL-1_4_1)
+    (cd lwip && git checkout DEVEL-1_4_1 && patch -p1 < ../lwip.patch)
     make clean
 
 (If you are building another hardware target, be sure to set `HW` when
