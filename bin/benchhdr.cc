@@ -119,4 +119,5 @@ int main(int argc, char **argv)
   print_kconfig();
 
   printf(" ==\n");
+  return 0;
 }

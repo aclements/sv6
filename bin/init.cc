@@ -129,4 +129,5 @@ main(void)
     while((wpid=wait(NULL)) >= 0 && wpid != pid)
       fprintf(stderr, "zombie!\n");
   }
+  return 0;
 }

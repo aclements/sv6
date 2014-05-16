@@ -154,4 +154,5 @@ main(int ac, char **av)
       die("forgot to call ready()");
     mtdisable("xv6-asharing");
   }
+  return 0;
 }

@@ -92,6 +92,7 @@ main(int ac, char** av)
   u64 t1 = rdtsc();
   mtdisable("xv6-schedbench");
   printf("%lu\n", (t1-t0)/iters);
+  return 0;
 }
 
 #if 0

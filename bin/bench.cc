@@ -157,4 +157,6 @@ main(int ac, char **av)
   printf("\n");
   for (int i = 0; i < n; i++)
     printf("%s\n", the_bench[i]->result());
+
+  return 0;
 }

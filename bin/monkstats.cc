@@ -48,4 +48,5 @@ main(int ac, char * const av[])
   KSTATS_ALL(X);
 #undef X
   printf("\n");
+  return 0;
 }

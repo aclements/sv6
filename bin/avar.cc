@@ -17,4 +17,5 @@ main(int ac, char **av)
     mtdisable("xv6-asharing");  
   else
     die("usage: %s on|onkern|off\n", av[0]);
+  return 0;
 }

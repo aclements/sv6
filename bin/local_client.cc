@@ -87,4 +87,5 @@ main(int argc, char *argv[])
 
   unlink (CLIENT);
   close (sock);
+  return 0;
 }

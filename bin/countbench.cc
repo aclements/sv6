@@ -226,4 +226,5 @@ main(int argc, char **argv)
          (sum(stop_tscs, nthread) - sum(start_tscs, nthread))/iters);
   printf("\n");
   sleep(5);
+  return 0;
 }

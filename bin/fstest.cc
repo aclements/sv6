@@ -376,4 +376,5 @@ main(int ac, char** av)
   }
 
   printf("fstest: done\n");
+  return 0;
 }

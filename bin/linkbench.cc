@@ -274,4 +274,5 @@ main(int argc, char **argv)
   // hist.print();
 
   printf("\n");
+  return 0;
 }

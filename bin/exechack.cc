@@ -65,4 +65,5 @@ main(int ac, char **av)
   if (ac > 1 && av[1][0] == 'w')
     worker1();
   master();
+  return 0;
 }

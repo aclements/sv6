@@ -14,4 +14,5 @@ main(int argc, char *argv[])
     if (mkdir(argv[i], 0777) < 0)
       die("mkdir: %s failed to create", argv[i]);
   }
+  return 0;
 }

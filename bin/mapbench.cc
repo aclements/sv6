@@ -546,4 +546,6 @@ main(int argc, char **argv)
   printf("%lu cycles/iteration\n",
          (sum(stop_tscs, nthread) - sum(start_tscs, nthread))/iter);
   printf("\n");
+
+  return 0;
 }

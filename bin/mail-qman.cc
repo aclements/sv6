@@ -335,4 +335,5 @@ main(int argc, char **argv)
 
   for (int i = 0; i < nthread; ++i)
     threads[i].join();
+  return 0;
 }
