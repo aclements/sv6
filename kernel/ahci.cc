@@ -160,8 +160,14 @@ ahci_hba::handle_irq()
       port[i]->handle_port_irq();
     } else {
       cprintf("AHCI: stray irq for port %d, clearing\n", i);
-      reg->g.is = (1 << i);
     }
+
+    /* AHCI 1.3, section 10.7.2.1 says we need to first clear the
+     * port interrupt status and then clear the host interrupt
+     * status.  It's fine to do this even after we've processed the
+     * port interrupt: if any port interrupts happened in the mean
+     * time, the host interrupt bit will just get set again. */
+    reg->g.is = (1 << i);
   }
 }
 
