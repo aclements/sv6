@@ -23,6 +23,13 @@ ceil_log2_const(std::size_t x, bool exact = true)
     : 1 + ceil_log2_const(x >> 1, ((x & 1) == 1) ? false : exact);
 }
 
+// Return floor(log2(x)).
+static inline std::size_t
+floor_log2(std::size_t x)
+{
+  return sizeof(long long) * 8 - __builtin_clzll(x) - 1;
+}
+
 // Return floor(log2(x)).  This is slow, but can be evaluated in a
 // constexpr context.
 static inline constexpr std::size_t
