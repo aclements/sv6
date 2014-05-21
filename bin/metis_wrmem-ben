@@ -5,57 +5,11 @@
 ./benchhdr bench=wrmem
 echo
 
-# 64K
-./metis_wrmem -s 4000 -p 1 -a 65536; sleep 5
-./metis_wrmem -s 4000 -p 10 -a 65536; sleep 5
-./metis_wrmem -s 4000 -p 20 -a 65536; sleep 5
-./metis_wrmem -s 4000 -p 30 -a 65536; sleep 5
-./metis_wrmem -s 4000 -p 40 -a 65536; sleep 5
-./metis_wrmem -s 4000 -p 50 -a 65536; sleep 5
-./metis_wrmem -s 4000 -p 60 -a 65536; sleep 5
-./metis_wrmem -s 4000 -p 70 -a 65536; sleep 5
-./metis_wrmem -s 4000 -p 80 -a 65536; sleep 5
-
-# # 256K
-# ./metis_wrmem -s 4000 -p 1 -a 262144; sleep 5
-# ./metis_wrmem -s 4000 -p 10 -a 262144; sleep 5
-# ./metis_wrmem -s 4000 -p 20 -a 262144; sleep 5
-# ./metis_wrmem -s 4000 -p 30 -a 262144; sleep 5
-# ./metis_wrmem -s 4000 -p 40 -a 262144; sleep 5
-# ./metis_wrmem -s 4000 -p 50 -a 262144; sleep 5
-# ./metis_wrmem -s 4000 -p 60 -a 262144; sleep 5
-# ./metis_wrmem -s 4000 -p 70 -a 262144; sleep 5
-# ./metis_wrmem -s 4000 -p 80 -a 262144; sleep 5
-
-# # 1M
-# ./metis_wrmem -s 4000 -p 1 -a 1048576; sleep 5
-# ./metis_wrmem -s 4000 -p 10 -a 1048576; sleep 5
-# ./metis_wrmem -s 4000 -p 20 -a 1048576; sleep 5
-# ./metis_wrmem -s 4000 -p 30 -a 1048576; sleep 5
-# ./metis_wrmem -s 4000 -p 40 -a 1048576; sleep 5
-# ./metis_wrmem -s 4000 -p 50 -a 1048576; sleep 5
-# ./metis_wrmem -s 4000 -p 60 -a 1048576; sleep 5
-# ./metis_wrmem -s 4000 -p 70 -a 1048576; sleep 5
-# ./metis_wrmem -s 4000 -p 80 -a 1048576; sleep 5
-
-# # 4M
-# ./metis_wrmem -s 4000 -p 1 -a 4194304; sleep 5
-# ./metis_wrmem -s 4000 -p 10 -a 4194304; sleep 5
-# ./metis_wrmem -s 4000 -p 20 -a 4194304; sleep 5
-# ./metis_wrmem -s 4000 -p 30 -a 4194304; sleep 5
-# ./metis_wrmem -s 4000 -p 40 -a 4194304; sleep 5
-# ./metis_wrmem -s 4000 -p 50 -a 4194304; sleep 5
-# ./metis_wrmem -s 4000 -p 60 -a 4194304; sleep 5
-# ./metis_wrmem -s 4000 -p 70 -a 4194304; sleep 5
-# ./metis_wrmem -s 4000 -p 80 -a 4194304; sleep 5
-
-# 8M
-./metis_wrmem -s 4000 -p 1 -a 8388608; sleep 5
-./metis_wrmem -s 4000 -p 10 -a 8388608; sleep 5
-./metis_wrmem -s 4000 -p 20 -a 8388608; sleep 5
-./metis_wrmem -s 4000 -p 30 -a 8388608; sleep 5
-./metis_wrmem -s 4000 -p 40 -a 8388608; sleep 5
-./metis_wrmem -s 4000 -p 50 -a 8388608; sleep 5
-./metis_wrmem -s 4000 -p 60 -a 8388608; sleep 5
-./metis_wrmem -s 4000 -p 70 -a 8388608; sleep 5
-./metis_wrmem -s 4000 -p 80 -a 8388608; sleep 5
+for trial in 1 2 3; do
+    # 64K and 8M
+    for a in 65536 8388608; do
+        for p in 1 10 20 30 40 50 60 70 80; do
+            ./metis_wrmem -s 4000 -p $p -a $a; sleep 5
+        done
+    done
+done
