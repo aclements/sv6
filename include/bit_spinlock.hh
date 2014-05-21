@@ -121,3 +121,38 @@ public:
 #endif
   }
 };
+
+/**
+ * An implementation of the bit_spinlock API that is always unlocked.
+ */
+class dummy_bit_spinlock
+{
+public:
+  void init(bool locked = false) const noexcept
+  {
+    assert(!locked);
+  }
+
+  bool is_locked() const noexcept
+  {
+    return false;
+  }
+
+  void acquire(bit_spinlock::cli_manager cli = bit_spinlock::cli_internal)
+    const noexcept
+  {
+    assert(false);
+  }
+
+  bool try_acquire(bit_spinlock::cli_manager cli = bit_spinlock::cli_internal)
+    const noexcept
+  {
+    assert(false);
+  }
+
+  void release(bit_spinlock::cli_manager cli = bit_spinlock::cli_internal)
+    const noexcept
+  {
+    assert(false);
+  }
+};
