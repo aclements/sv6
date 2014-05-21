@@ -36,7 +36,7 @@ endif
 # Streamflow uses super pages of 8MB
 SF_MMOPT += -DSPAGE_SM=8
 
-OPTFLAG := -O3
+OPTFLAG := -O3 -g
 #OPTFLAG := -g
 INCLUDES := -I$(TOP) -I$(TOP)/lib
 
