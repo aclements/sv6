@@ -12,7 +12,9 @@
 #include "presplitter.h"
 #include "apphelper.h"
 
+#if XV6_USER
 #include "sysstubs.h"           /* For xv6 pt_pages */
+#endif
 
 enum { main_lcpu = 0 };
 enum { def_gr_tasks_per_cpu = 16 };
