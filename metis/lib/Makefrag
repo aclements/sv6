@@ -25,16 +25,24 @@ LIB_SRCS := lib/mr-sched.c		\
 	    lib/platform.c		\
 	    lib/cpumap.c		\
 	    lib/mergesort.c		\
-	    lib/umalloc.c               \
+	    lib/umalloc.cc              \
 	    lib/rbktsmgr.c
 
 LIB_OBJS := $(patsubst %.c, $(O)/%.o, $(LIB_SRCS))
+LIB_OBJS := $(patsubst %.cc, $(O)/%.o, $(LIB_OBJS))
 LIB_OBJS := $(patsubst %.S, $(O)/%.o, $(LIB_OBJS))
 
 $(O)/lib/%.o: lib/%.c
 	$(Q)mkdir -p $(@D)
 	@echo "CC	$<"
 	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
+
+$(O)/lib/umalloc.o: INCLUDE+=-iquote../include -iquote../libutil/include
+$(O)/lib/umalloc.o: CXXFLAGS+=-std=c++11
+$(O)/lib/%.o: lib/%.cc
+	$(Q)mkdir -p $(@D)
+	@echo "CXX	$<"
+	$(Q)$(CXX) $(CXXFLAGS) $(OPTFLAG) $(INCLUDE) -o $@ -c $<
 
 $(O)/lib/%.o: lib/%.S
 	$(Q)mkdir -p $(@D)

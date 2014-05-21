@@ -83,11 +83,11 @@ $(O)/%.o: %.c
 
 $(O)/%: $(O)/%.o $(LDEPS)
 	@echo "MAKE	$@"
-	$(Q)$(CC) $(CFLAGS) -o $@ $< $(LIB)
+	$(Q)$(CXX) $(CFLAGS) -o $@ $< $(LIB)
 
 $(O)/%.sf: $(O)/%.o $(LDEPS)
 	@echo "MAKE	$@"
-	$(Q)$(CC) $(CFLAGS) -o $@ $< $(SF_LIB)
+	$(Q)$(CXX) $(CFLAGS) -o $@ $< $(SF_LIB)
 
 clean:
 	@rm -rf $(PROGS) *.o *.a *~ *.tmp *.bak *.log *.orig $(O)
