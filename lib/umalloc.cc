@@ -1,5 +1,3 @@
-//#define UMALLOC_DEBUG
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +24,64 @@
 // memory can be re-partitioned, however).  It also never returns
 // memory to the system.
 
+// == Overall architecture ==
+//
+// Throughout this allocator, it uses "size classes", which are simply
+// the ceil(log2(bytes)) of an allocation.  That is, each allocation
+// gets rounded up to the nearest power of two.
+//
+// The allocator has three levels:
+//
+// A *linear allocator* allocates memory linearly from per-core pools
+// that area allocated min_map_bytes at a time.  This allocator never
+// reuses memory.  This is used exclusively to allocate nodes for the
+// large allocator's radix array.
+//
+// A *large allocator* allocates memory for objects whose size class
+// is larger than half-a-page (where only one object will fit on a
+// page).  It maintains per-core per-size-class free lists.  Each free
+// region starts on a page boundary and is an exact multiple of the
+// page size.  The allocator finds the smallest sufficient size class
+// with a free region and returns that.  However, if an allocated
+// object is smaller than its size class, the allocator will release
+// unused pages at the end of the allocated region (splitting the page
+// run in to smaller size-class-sized regions), so allocated regions
+// are never more than (PGSIZE-1) bytes larger than the requested
+// size, even though size classes are exponential.
+//
+// To free pages, the large allocator maintains a radix array of
+// metadata, indexed by page.  For each allocated region, this marks
+// it as allocated.  For each free region, this marks which thread has
+// the region on its free list.  In both cases, it marks the head and
+// the rest of the region differently so regions can be identified.
+// When an object is freed to the large allocator, its size is
+// computed using the radix array and it is merged with adjacent free
+// pages that belong to the same thread (also using the radix array).
+// This could result in an arbitrary size region, so it is split in to
+// the largest size classes possible.
+//
+// Finally, a *small allocator* handles allocations for size classes
+// half-a-page and smaller (where multiple objects will fit on one
+// page).  Like the large allocation, this allocator maintains
+// per-core per-size-class free lists; however, the small allocator
+// does no splitting or merging.  If the free list for an allocation
+// is empty, it obtains a page from the large allocator, carves it up
+// in to equal size regions, and stores the size class at the
+// beginning of the page.  As a result, there is no per-object space
+// overhead; only per-page overhead.  Freeing an object simply checks
+// the page header to find the object's size class and adds it to the
+// appropriate free list.
+//
+// malloc determines whether to use the large allocator or the small
+// allocator based on the requested object size.  free determines
+// which allocator to free back to using the pointer's alignment: if
+// it is page-aligned it must have come from the large allocator;
+// otherwise it must have come from the small allocator.
+
+// Uncomment to enable additional debugging.
+//#define UMALLOC_DEBUG
+
+// Uncomment to enable debug prints.
 //#define pdebug printf
 #define pdebug if (0) printf
 
@@ -48,6 +104,7 @@ namespace {
 #endif
   }
 
+  // Assert that ptr looks like a valid pointer.
   void check_ptr(void *ptr)
   {
     assert(ptr < (void*)0x800000000000);
@@ -92,6 +149,8 @@ namespace {
       return !!head;
     }
 
+    // Add ptr to this block list.  size_class is used only for
+    // debugging.
     void push(void *ptr, size_t size_class)
     {
       block *b = static_cast<block*>(ptr);
@@ -110,6 +169,8 @@ namespace {
       check_ptr(head);
     }
 
+    // Pop a block from this list.  size_class is used only for
+    // debugging.
     void *pop(size_t size_class)
     {
       assert(head);
@@ -129,6 +190,7 @@ namespace {
       return b;
     }
 
+    // Remove ptr from whatever block list it's on.
     static void remove(void *ptr)
     {
       block *b = static_cast<block*>(ptr);
@@ -145,20 +207,28 @@ namespace {
   // Size classes
   //
 
+  // XXX This has an internal fragmentation of 100%.  We could easily
+  // get it down to 50% by using the top *two* most significant bits,
+  // for example.  OTOH, the large allocator only rounds up to PGSIZE,
+  // so this would only really matter for small allocations.
+
   // At this many bytes, the size class will be one page large
   enum { LARGE_THRESHOLD = 2049 };
 
+  // Compute the size class of a byte size.
   size_t size_to_class(size_t bytes)
   {
     return ceil_log2(bytes);
   }
 
+  // Return the maximum number of bytes that can be stored in an
+  // object with the given size class.
   size_t class_max_size(size_t sc)
   {
     return 1ull << sc;
   }
 
-  // Return the largest size class that would *fit* in bytes
+  // Return the largest size class that would fit in bytes.
   size_t size_fit_class(size_t bytes)
   {
     return floor_log2(bytes);
@@ -273,7 +343,9 @@ namespace {
     // XXX The information about free pages could be written on the
     // pages themselves, rather than requiring lots of space in a
     // radix tree.  There could be races with checking the data, so
-    // we'd have to double-check the radix state.
+    // we'd have to double-check the radix state.  But that would
+    // reduce this to two bits per page, which could be packed much
+    // more efficiently (we could even use a straight 16GB mapping).
 
     page_info() = default;
     explicit page_info(pid_t owner) : owner(owner) { }
@@ -322,12 +394,15 @@ namespace {
     pid_t tid = gettid();
     void *end = (char*)run + bytes;
     auto it = pages.find(idx(run));
+    // Divide the run up in to size-class-sized pieces
     while (run < end) {
       size_t fsc = size_fit_class((char*)end - (char*)run);
       size_t fbytes = class_max_size(fsc);
       pdebug("adding free run %p class %zu\n", run, fsc);
       free_runs[fsc].push(run, fsc);
       auto nextit = it + fbytes / PGSIZE;
+
+      // Mark pages as free to this thread
       pages.fill(it++, page_info(tid));
       if (it != nextit) {
         pages.fill(it, nextit, page_info(-tid));
@@ -344,9 +419,6 @@ namespace {
   void *alloc_from_run(void *run, size_t sc, size_t bytes)
   {
     pdebug("alloc_large %zu bytes from run %zu => %p\n", bytes, sc, run);
-
-    // XXX Should we round bytes up to its size class, or it is okay
-    // that we only take the number of pages we need?
 
     // If we only used part of run, put the rest back on a free list
     size_t used_pages = (bytes + PGSIZE - 1) / PGSIZE;
@@ -369,6 +441,7 @@ namespace {
     return run;
   }
 
+  // Allocate bytes bytes from the large allocator.
   void *alloc_large(size_t bytes)
   {
     assert(bytes >= LARGE_THRESHOLD);
@@ -397,6 +470,7 @@ namespace {
     return alloc_from_run(run, map_sc, bytes);
   }
 
+  // Free the memory at ptr to the large allocator.
   void free_large(void *ptr)
   {
     pid_t tid = gettid();
@@ -451,6 +525,7 @@ namespace {
     add_free_run(idx_to_ptr(pre.index()), (post - pre) * PGSIZE);
   }
 
+  // Get the allocated size of the large allocation at ptr.
   size_t get_size_large(void *ptr)
   {
     // XXX Deduplicate with code in free
@@ -483,6 +558,7 @@ namespace {
   };
   enum { PAGE_HDR_MAGIC = 0x2065c977e3516564 };
 
+  // Allocate bytes bytes from the small allocator
   void *alloc_small(size_t bytes)
   {
     assert(bytes < LARGE_THRESHOLD);
@@ -503,9 +579,12 @@ namespace {
       hdr->magic = PAGE_HDR_MAGIC;
       hdr->size_class = sc;
 
-      assert(sizeof(page_hdr) <= 16);
       size_t sbytes = class_max_size(sc);
+      // Make sure fragments are always 16-byte aligned.  (This could
+      // be less aligned for smaller size classes, but there are no
+      // smaller size classes.)
       char *fragment = (char*)page + 16;
+      assert(sizeof(page_hdr) <= 16);
       char *last = (char*)page + PGSIZE - sbytes;
       int i = 0;
       for (; fragment <= last; fragment += sbytes, ++i)
@@ -518,6 +597,7 @@ namespace {
     return ptr;
   }
 
+  // Free the memory at ptr to the small allocator.
   void free_small(void *ptr)
   {
     // Round ptr to the page start to get the page metadata
@@ -528,6 +608,7 @@ namespace {
     free_fragments[hdr->size_class].push(ptr, hdr->size_class);
   }
 
+  // Get the allocated size of the small allocation at ptr.
   size_t get_size_small(void *ptr)
   {
     page_hdr *hdr = (page_hdr*)(((uintptr_t)ptr) & ~(PGSIZE-1));
