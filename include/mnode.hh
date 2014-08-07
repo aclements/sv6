@@ -336,6 +336,8 @@ public:
      * Low bits are flags, as above.  High bits are page_info pointer.
      */
     u64 value_;
+    static_assert((alignof(page_info) & 0x7) == 0,
+                  "page_info must be at least 8 byte aligned");
 
     page_info* get_page_info_raw() const {
       return (page_info*) (value_ & ~0x7);
