@@ -110,7 +110,9 @@ class Syscall(object):
         uargs = []
         for karg in kargs:
             m = re.match("(.*?) *[a-z_]+$", karg)
-            if m:
+            if karg.strip() == "void":
+                atype = "void"
+            elif m:
                 atype = m.group(1)
             elif karg.strip() == "...":
                 atype = "..."
