@@ -139,6 +139,21 @@ sys_close(int fd)
 }
 
 //SYSCALL
+void
+sys_sync(void)
+{
+  // Not implemented
+}
+
+//SYSCALL
+int
+sys_fsync(int fd)
+{
+  // Not implemented
+  return 0;
+}
+
+//SYSCALL
 ssize_t
 sys_read(int fd, userptr<void> p, size_t n)
 {

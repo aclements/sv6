@@ -22,6 +22,8 @@ off_t lseek(int fd, off_t offset, int whence);
 int chdir(const char *path);
 int pipe(int pipefd[2]);
 int pipe2(int pipefd[2], int flags);
+void sync(void);
+int fsync(int fd);
 
 unsigned sleep(unsigned);
 pid_t getpid(void);
