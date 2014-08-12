@@ -14,6 +14,7 @@
 #include <sys/wait.h>
 
 #ifndef XV6_USER
+#include <errno.h>
 #include <sys/mount.h>
 #endif
 
@@ -114,6 +115,12 @@ main(void)
   int r = mount("x", "/proc", "proc", 0, "");
   if (r < 0)
     edie("mount /proc failed");
+  mkdir("/dev", 0555);
+  r = mount("x", "/dev", "devtmpfs", 0, "");
+  if (r < 0) {
+    fprintf(stderr, "Warning: mount /dev failed: %s\n", strerror (errno));
+    fprintf(stderr, "(Is CONFIG_DEVTMPFS=y in your kernel configuration?)\n");
+  }
 #endif
 
   for (auto &argv : app_argv)
