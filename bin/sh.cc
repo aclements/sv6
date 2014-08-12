@@ -483,6 +483,7 @@ lex(const string &buf, bool eof, vector<tok> *toks)
       if (strchr(whitespace, *pos) || strchr(symbols, *pos) || *pos == '#') {
         toks->push_back(tok{'a', move(word)});
         toks->push_back(tok{' '});
+        word.clear();
         mode = NORMAL;
         continue;
       } else if (*pos == '\'') {
