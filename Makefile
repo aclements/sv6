@@ -198,7 +198,7 @@ ifneq ($(RUN),)
 override QEMUAPPEND += \$$ $(RUN)
 endif
 
-QEMUOPTS = -smp $(QEMUSMP) -m $(QEMUMEM) \
+QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-nographic \
 	-numa node -numa node \
@@ -222,6 +222,9 @@ endif
 ifeq ($(PLATFORM),native)
 QEMUOPTS += -initrd $(O)/initramfs
 endif
+
+# User-provided QEMU options
+QEMUOPTS += $(QEMUEXTRA)
 
 qemu: $(KERN)
 	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN)
