@@ -183,6 +183,9 @@ $(O)/fs.img: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
 ##
 ifeq ($(PLATFORM),native)
 override QEMUAPPEND += console=ttyS0
+# Exit qemu on panic
+override QEMUAPPEND += panic=-1
+QEMUOPTS += -no-reboot
 endif
 
 ## One NUMA node per CPU when mtrace'ing
