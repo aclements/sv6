@@ -241,7 +241,7 @@ codex: $(KERN)
 ##
 MTRACEOUT ?= mtrace.out
 MTRACEOPTS = -rtc clock=vm -mtrace-enable -mtrace-file $(MTRACEOUT) \
-	     -mtrace-calls
+	     -mtrace-calls -snapshot
 $(MTRACEOUT): $(KERN)
 	$(Q)rm -f $(MTRACEOUT)
 	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel $(KERN) -s
