@@ -439,6 +439,13 @@ struct tok
 {
   char type;
   string word;
+
+  string describe() const
+  {
+    if (word.empty())
+      return string() + type;
+    return word;
+  }
 };
 
 void
@@ -470,13 +477,13 @@ lex(const string &buf, bool eof, vector<tok> *toks)
       if (strchr(symbols, *pos)) {
         char next = ((pos + 1) < end) ? *(pos + 1) : 0;
         if (*pos == '>' && next == '>') {
-          toks->push_back(tok{'+'});
+          toks->push_back(tok{'+', ">>"});
           pos += 2;
         } else if (*pos == '&' && next == '&') {
-          toks->push_back(tok{'A'});
+          toks->push_back(tok{'A', "&&"});
           pos += 2;
         } else if (*pos == '|' && next == '|') {
-          toks->push_back(tok{'O'});
+          toks->push_back(tok{'O', "||"});
           pos += 2;
         } else
           toks->push_back(tok{*(pos++)});
@@ -797,7 +804,7 @@ public:
       res = plist();
       if (cur != toks.end())
         res = sref<cmd>::transfer(
-          new cmd_error{string("unexpected token: ") + cur->type});
+          new cmd_error{string("unexpected token: ") + cur->describe()});
     } catch (syntax_error &error) {
       res = sref<cmd>::transfer(
         new cmd_error{string("syntax error: ") + error.what()});
