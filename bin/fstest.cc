@@ -16,8 +16,9 @@
 #include "fstest.h"
 #include "libutil.h"
 #include "spinbarrier.hh"
+#include "elf.hh"
 
-extern char _end[];
+extern char _end[], __ehdr_start[];
 __thread sigjmp_buf pf_jmpbuf;
 __thread int pf_active;
 
@@ -64,10 +65,30 @@ struct testfunc {
   }
 };
 
+// Ensure entire binary is paged in, to avoid spurious page faults
+// during testing
+static void
+pagein()
+{
+  elfhdr *ehdr = (elfhdr*)__ehdr_start;
+  assert(ehdr->magic == ELF_MAGIC);
+  for (size_t i = 0; i < ehdr->phnum; i++) {
+    proghdr *phdr = (proghdr*)(
+      (uintptr_t)ehdr + ehdr->phoff + i * ehdr->phentsize);
+    if (phdr->type == ELF_PROG_LOAD) {
+      char *ptr = (char*)phdr->vaddr;
+      while (ptr < (char*)(phdr->vaddr + phdr->memsz)) {
+        *(volatile char *)ptr;
+        ptr += 4096;
+      }
+    }
+  }
+}
+
 static void*
 testfunc_thread(void* arg)
 {
-  madvise(0, (size_t) _end, MADV_WILLNEED);
+  pagein();
   testfunc* f = (testfunc*) arg;
   f->run();
   return nullptr;
@@ -111,7 +132,7 @@ run_test(testproc* tp, testfunc* tf, fstest* t, int first_func, bool do_pin)
 
     if (pids[p] == 0) {
       // Get all text and data structures
-      madvise(0, (size_t) _end, MADV_WILLNEED);
+      pagein();
 
       // Prime the VM system (this must be kept in sync with
       // fs_testgen.py)
