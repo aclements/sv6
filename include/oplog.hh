@@ -49,6 +49,10 @@ namespace oplog {
   public:
     constexpr logged_object() : sync_lock_("logged_object") { }
 
+    // logged_object is meant to be subclassed, so it needs a virtual
+    // destructor.
+    virtual ~logged_object() { }
+
     // A Logger instance protected by a lock.  Users of this class
     // should not attempt to hold a reference to the protected logger
     // longer than the locked_logger object remains live.
