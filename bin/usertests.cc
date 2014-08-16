@@ -760,103 +760,103 @@ subdir(void)
   printf("subdir test\n");
 
   unlink("ff");
-  if(mkdir("dd", 0777) != 0)
-    die("subdir mkdir dd failed");
+  if(mkdir("sub", 0777) != 0)
+    die("subdir mkdir sub failed");
 
-  fd = open("dd/ff", O_CREAT | O_RDWR, 0666);
+  fd = open("sub/ff", O_CREAT | O_RDWR, 0666);
   if(fd < 0)
-    die("create dd/ff failed");
+    die("create sub/ff failed");
   write(fd, "ff", 2);
   close(fd);
   
-  if(unlink("dd") >= 0)
-    die("unlink dd (non-empty dir) succeeded!");
+  if(unlink("sub") >= 0)
+    die("unlink sub (non-empty dir) succeeded!");
 
-  if(mkdir("/dd/dd", 0777) != 0)
-    die("subdir mkdir dd/dd failed");
+  if(mkdir("/sub/sub", 0777) != 0)
+    die("subdir mkdir sub/sub failed");
 
-  fd = open("dd/dd/ff", O_CREAT | O_RDWR, 0666);
+  fd = open("sub/sub/ff", O_CREAT | O_RDWR, 0666);
   if(fd < 0)
-    die("create dd/dd/ff failed");
+    die("create sub/sub/ff failed");
   write(fd, "FF", 2);
   close(fd);
 
-  fd = open("dd/dd/../ff", 0);
+  fd = open("sub/sub/../ff", 0);
   if(fd < 0)
-    die("open dd/dd/../ff failed");
+    die("open sub/sub/../ff failed");
   cc = read(fd, buf, sizeof(buf));
   if(cc != 2 || buf[0] != 'f')
-    die("dd/dd/../ff wrong content");
+    die("sub/sub/../ff wrong content");
   close(fd);
 
-  if(link("dd/dd/ff", "dd/dd/ffff") != 0)
-    die("link dd/dd/ff dd/dd/ffff failed");
+  if(link("sub/sub/ff", "sub/sub/ffff") != 0)
+    die("link sub/sub/ff sub/sub/ffff failed");
 
-  if(unlink("dd/dd/ff") != 0)
-    die("unlink dd/dd/ff failed");
-  if(open("dd/dd/ff", O_RDONLY) >= 0)
-    die("open (unlinked) dd/dd/ff succeeded");
+  if(unlink("sub/sub/ff") != 0)
+    die("unlink sub/sub/ff failed");
+  if(open("sub/sub/ff", O_RDONLY) >= 0)
+    die("open (unlinked) sub/sub/ff succeeded");
 
-  if(chdir("dd") != 0)
-    die("chdir dd failed");
-  if(chdir("dd/../../dd") != 0)
-    die("chdir dd/../../dd failed");
-  if(chdir("dd/../../../dd") != 0)
-    die("chdir dd/../../dd failed");
+  if(chdir("sub") != 0)
+    die("chdir sub failed");
+  if(chdir("sub/../../sub") != 0)
+    die("chdir sub/../../sub failed");
+  if(chdir("sub/../../../sub") != 0)
+    die("chdir sub/../../sub failed");
   if(chdir("./..") != 0)
     die("chdir ./.. failed");
 
-  fd = open("dd/dd/ffff", 0);
+  fd = open("sub/sub/ffff", 0);
   if(fd < 0)
-    die("open dd/dd/ffff failed");
+    die("open sub/sub/ffff failed");
   if(read(fd, buf, sizeof(buf)) != 2)
-    die("read dd/dd/ffff wrong len");
+    die("read sub/sub/ffff wrong len");
   close(fd);
 
-  if(open("dd/dd/ff", O_RDONLY) >= 0)
-    die("open (unlinked) dd/dd/ff succeeded!");
+  if(open("sub/sub/ff", O_RDONLY) >= 0)
+    die("open (unlinked) sub/sub/ff succeeded!");
 
-  if(open("dd/ff/ff", O_CREAT|O_RDWR, 0666) >= 0)
-    die("create dd/ff/ff succeeded!");
-  if(open("dd/xx/ff", O_CREAT|O_RDWR, 0666) >= 0)
-    die("create dd/xx/ff succeeded!");
-  if(open("dd", O_CREAT, 0666) >= 0)
-    die("create dd succeeded!");
-  if(open("dd", O_RDWR) >= 0)
-    die("open dd rdwr succeeded!");
-  if(open("dd", O_WRONLY) >= 0)
-    die("open dd wronly succeeded!");
-  if(link("dd/ff/ff", "dd/dd/xx") == 0)
-    die("link dd/ff/ff dd/dd/xx succeeded!");
-  if(link("dd/xx/ff", "dd/dd/xx") == 0)
-    die("link dd/xx/ff dd/dd/xx succeeded!");
-  if(link("dd/ff", "dd/dd/ffff") == 0)
-    die("link dd/ff dd/dd/ffff succeeded!");
-  if(mkdir("dd/ff/ff", 0777) == 0)
-    die("mkdir dd/ff/ff succeeded!");
-  if(mkdir("dd/xx/ff", 0777) == 0)
-    die("mkdir dd/xx/ff succeeded!");
-  if(mkdir("dd/dd/ffff", 0777) == 0)
-    die("mkdir dd/dd/ffff succeeded!");
-  if(unlink("dd/xx/ff") == 0)
-    die("unlink dd/xx/ff succeeded!");
-  if(unlink("dd/ff/ff") == 0)
-    die("unlink dd/ff/ff succeeded!");
-  if(chdir("dd/ff") == 0)
-    die("chdir dd/ff succeeded!");
-  if(chdir("dd/xx") == 0)
-    die("chdir dd/xx succeeded!");
+  if(open("sub/ff/ff", O_CREAT|O_RDWR, 0666) >= 0)
+    die("create sub/ff/ff succeeded!");
+  if(open("sub/xx/ff", O_CREAT|O_RDWR, 0666) >= 0)
+    die("create sub/xx/ff succeeded!");
+  if(open("sub", O_CREAT, 0666) >= 0)
+    die("create sub succeeded!");
+  if(open("sub", O_RDWR) >= 0)
+    die("open sub rdwr succeeded!");
+  if(open("sub", O_WRONLY) >= 0)
+    die("open sub wronly succeeded!");
+  if(link("sub/ff/ff", "sub/sub/xx") == 0)
+    die("link sub/ff/ff sub/sub/xx succeeded!");
+  if(link("sub/xx/ff", "sub/sub/xx") == 0)
+    die("link sub/xx/ff sub/sub/xx succeeded!");
+  if(link("sub/ff", "sub/sub/ffff") == 0)
+    die("link sub/ff sub/sub/ffff succeeded!");
+  if(mkdir("sub/ff/ff", 0777) == 0)
+    die("mkdir sub/ff/ff succeeded!");
+  if(mkdir("sub/xx/ff", 0777) == 0)
+    die("mkdir sub/xx/ff succeeded!");
+  if(mkdir("sub/sub/ffff", 0777) == 0)
+    die("mkdir sub/sub/ffff succeeded!");
+  if(unlink("sub/xx/ff") == 0)
+    die("unlink sub/xx/ff succeeded!");
+  if(unlink("sub/ff/ff") == 0)
+    die("unlink sub/ff/ff succeeded!");
+  if(chdir("sub/ff") == 0)
+    die("chdir sub/ff succeeded!");
+  if(chdir("sub/xx") == 0)
+    die("chdir sub/xx succeeded!");
 
-  if(unlink("dd/dd/ffff") != 0)
-    die("unlink dd/dd/ff failed");
-  if(unlink("dd/ff") != 0)
-    die("unlink dd/ff failed");
-  if(unlink("dd") == 0)
-    die("unlink non-empty dd succeeded!");
-  if(unlink("dd/dd") < 0)
-    die("unlink dd/dd failed");
-  if(unlink("dd") < 0)
-    die("unlink dd failed");
+  if(unlink("sub/sub/ffff") != 0)
+    die("unlink sub/sub/ff failed");
+  if(unlink("sub/ff") != 0)
+    die("unlink sub/ff failed");
+  if(unlink("sub") == 0)
+    die("unlink non-empty sub succeeded!");
+  if(unlink("sub/sub") < 0)
+    die("unlink sub/sub failed");
+  if(unlink("sub") < 0)
+    die("unlink sub failed");
 
   printf("subdir ok\n");
 }
@@ -869,122 +869,122 @@ renametest(void)
 
   printf("rename test\n");
 
-  if (mkdir("dd", 0777) < 0)
-    die("mkdir dd failed");
-  fd = open("dd/ff", O_WRONLY | O_CREAT, 0666);
+  if (mkdir("sub", 0777) < 0)
+    die("mkdir sub failed");
+  fd = open("sub/ff", O_WRONLY | O_CREAT, 0666);
   if (fd < 0)
-    die("open dd/ff failed");
+    die("open sub/ff failed");
   write(fd, "xx", 2);
   if (fstat(fd, &st) < 0)
-    die("stat dd/ff failed");
+    die("stat sub/ff failed");
   if (st.st_nlink != 1)
     die("wrong st_nlink after create ff");
   ino = st.st_ino;
   close(fd);
 
-  if (link("dd/ff", "dd/f0") < 0)
-    die("link dd/f0 failed");
-  if (link("dd/ff", "dd/f1") < 0)
-    die("link dd/f1 failed");
+  if (link("sub/ff", "sub/f0") < 0)
+    die("link sub/f0 failed");
+  if (link("sub/ff", "sub/f1") < 0)
+    die("link sub/f1 failed");
 
-  fd = open("dd/gg", O_WRONLY | O_CREAT, 0666);
+  fd = open("sub/gg", O_WRONLY | O_CREAT, 0666);
   if (fd < 0)
-    die("open dd/gg failed");
+    die("open sub/gg failed");
   write(fd, "yy", 2);
 
-  if (link("dd/gg", "dd/g0") < 0)
-    die("link dd/g0 failed");
-  if (link("dd/gg", "dd/g1") < 0)
-    die("link dd/g1 failed");
-  if (link("dd/gg", "dd/g2") < 0)
-    die("link dd/g2 failed");
+  if (link("sub/gg", "sub/g0") < 0)
+    die("link sub/g0 failed");
+  if (link("sub/gg", "sub/g1") < 0)
+    die("link sub/g1 failed");
+  if (link("sub/gg", "sub/g2") < 0)
+    die("link sub/g2 failed");
 
   if (fstat(fd, &st) < 0)
-    die("stat dd/gg failed");
+    die("stat sub/gg failed");
   if (st.st_nlink != 4)
     die("wrong st_nlink after create gg");
   if (st.st_ino == ino)
     die("reused inode for gg");
   close(fd);
 
-  if (rename("dd/f1", "dd/f2") < 0)
+  if (rename("sub/f1", "sub/f2") < 0)
     die("rename f1-f2 failed");
-  if (rename("dd/f1", "dd/f2") >= 0)
+  if (rename("sub/f1", "sub/f2") >= 0)
     die("rename f1-f2 succeeded again");
 
-  if (stat("dd/f2", &st) < 0)
+  if (stat("sub/f2", &st) < 0)
     die("stat f2 failed");
   if (st.st_ino != ino)
     die("wrong inode after f1-f2 rename");
   if (st.st_nlink != 3)
     die("wrong nlink after f1-f2 rename");
 
-  if (rename("dd/f2", "dd/f2") < 0)
+  if (rename("sub/f2", "sub/f2") < 0)
     die("self-rename failed");
 
-  if (stat("dd/f2", &st) < 0)
+  if (stat("sub/f2", &st) < 0)
     die("stat f2 failed");
   if (st.st_ino != ino)
     die("wrong inode after self-rename");
   if (st.st_nlink != 3)
     die("wrong nlink after self-rename");
 
-  if (unlink("dd/g1") < 0)
+  if (unlink("sub/g1") < 0)
     die("unlink g1 failed");
-  if (stat("dd/gg", &st) < 0)
+  if (stat("sub/gg", &st) < 0)
     die("stat gg failed");
   if (st.st_ino == ino)
     die("dup inode after unlink g1");
   if (st.st_nlink != 3)
     die("wrong nlink after unlink g1");
 
-  if (rename("dd/g2", "dd/f2") < 0)
+  if (rename("sub/g2", "sub/f2") < 0)
     die("rename g2-f2 failed");
-  if (rename("dd/g2", "dd/f2") >= 0)
+  if (rename("sub/g2", "sub/f2") >= 0)
     die("rename g2-f2 succeeded again");
-  if (stat("dd/f2", &st) < 0)
+  if (stat("sub/f2", &st) < 0)
     die("stat f2(gg) failed");
   if (st.st_ino == ino)
     die("dup inode after rename g2-f2");
   if (st.st_nlink != 3)
     die("wrong nlink after rename g2-f2");
 
-  if (stat("dd/ff", &st) < 0)
+  if (stat("sub/ff", &st) < 0)
     die("stat ff failed");
   if (st.st_ino != ino)
     die("wrong inode after rename g2-f2");
   if (st.st_nlink != 2)
     die("wrong nlink after rename g2-f2");
 
-  if (unlink("dd/ff") < 0)
-    die("unlink dd/ff failed");
-  if (stat("dd/f0", &st) < 0)
-    die("stat dd/f0 failed");
+  if (unlink("sub/ff") < 0)
+    die("unlink sub/ff failed");
+  if (stat("sub/f0", &st) < 0)
+    die("stat sub/f0 failed");
   if (st.st_ino != ino)
     die("wrong inode after unlink ff");
   if (st.st_nlink != 1)
     die("wrong nlink after unlink ff");
 
-  if (unlink("dd/f0") < 0)
-    die("unlink dd/f0 failed");
-  if (unlink("dd/f2") < 0)
-    die("unlink dd/f2 failed");
+  if (unlink("sub/f0") < 0)
+    die("unlink sub/f0 failed");
+  if (unlink("sub/f2") < 0)
+    die("unlink sub/f2 failed");
 
-  if (stat("dd/gg", &st) < 0)
+  if (stat("sub/gg", &st) < 0)
     die("stat gg failed");
   if (st.st_ino == ino)
     die("dup inode after unlink f2");
   if (st.st_nlink != 2)
     die("wrong nlink after unlink f2");
 
-  if (unlink("dd/gg") < 0)
+  if (unlink("sub/gg") < 0)
     die("unlink gg failed");
-  if (unlink("dd") >= 0)
-    die("unlink dd succeeded early");
-  if (unlink("dd/g0") < 0)
+  if (unlink("sub") >= 0)
+    die("unlink sub succeeded early");
+  if (unlink("sub/g0") < 0)
     die("unlink g0 failed");
-  if (unlink("dd") < 0)
-    die("unlink dd failed");
+  if (unlink("sub") < 0)
+    die("unlink sub failed");
 
   printf("rename ok\n");
 }
