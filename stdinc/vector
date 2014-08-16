@@ -56,6 +56,8 @@ namespace std {
     ~vector()
     {
       clear();
+      if (data_)
+        delete[] reinterpret_cast<char*>(data_);
     }
 
     vector& operator=(const vector &x)
