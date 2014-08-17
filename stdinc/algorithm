@@ -7,6 +7,14 @@
 
 namespace std {
   // [C++11 25.2]
+  struct __less
+  {
+    template <class T> bool operator()(const T& x, const T& y) const
+    {
+      return x < y;
+    }
+  };
+
   template <class InputIterator, class Predicate>
   bool all_of(InputIterator first, InputIterator last, Predicate pred)
   {
@@ -121,8 +129,39 @@ namespace std {
   template<class RandomAccessIterator>
   void sort(RandomAccessIterator first, RandomAccessIterator last)
   {
-    sort(first, last, [](decltype(*first)& a,
-                         decltype(*first)& b) { return a < b; });
+    sort(first, last, __less());
+  }
+
+  template<class ForwardIterator, class Compare>
+  ForwardIterator is_sorted_until(ForwardIterator first, ForwardIterator last,
+                                  Compare comp)
+  {
+    if (last - first < 2)
+      return last;
+    ForwardIterator next = first;
+    for (++next; next != last; ++next, ++first)
+      if (comp(*next, *first))
+        break;
+    return next;
+  }
+
+  template<class ForwardIterator>
+  bool is_sorted(ForwardIterator first, ForwardIterator last)
+  {
+    return is_sorted_until(first, last, __less()) == last;
+  }
+
+  template<class ForwardIterator, class Compare>
+  bool is_sorted(ForwardIterator first, ForwardIterator last,
+                 Compare comp)
+  {
+    return is_sorted_until(first, last, comp) == last;
+  }
+
+  template<class ForwardIterator>
+  ForwardIterator is_sorted_until(ForwardIterator first, ForwardIterator last)
+  {
+    return is_sorted_until(first, last, __less());
   }
 
   // Returns an iterator pointing to @c value, or, if @c value isn't
