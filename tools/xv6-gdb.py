@@ -17,7 +17,7 @@ class StaticVectorPrinter(object):
 
     def children(self):
         items = self.val["data_"].cast(self.itype.pointer())
-        for i in xrange(self.val["size_"]):
+        for i in range(self.val["size_"]):
             yield "[%d]" % i, items.dereference()
             items += 1
 
