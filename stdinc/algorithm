@@ -6,7 +6,7 @@
 #include <utility>
 
 namespace std {
-  // [C++11 25.2]
+  // [C++11 25.2] Non-modifying sequence operations
   struct __less
   {
     template <class T> bool operator()(const T& x, const T& y) const
@@ -52,7 +52,7 @@ namespace std {
     return first;
   }
 
-  // [C++11 25.4.7]
+  // [C++11 25.4.7] Minimum and maximum
   template<class T>
   const T& min(const T& a, const T& b)
   {
@@ -85,6 +85,7 @@ namespace std {
     return a;
   }
 
+  // [C++11 25.3.6] Fill
   template<class ForwardIterator, class T>
   void fill(ForwardIterator first, ForwardIterator last, const T& value)
   {
@@ -99,6 +100,7 @@ namespace std {
     memset(first, value, last - first);
   }
 
+  // [C++11 25.4.1] Sorting
   template<class RandomAccessIterator, class Compare>
   void sort(RandomAccessIterator first, RandomAccessIterator last,
             Compare comp)
@@ -163,6 +165,8 @@ namespace std {
   {
     return is_sorted_until(first, last, __less());
   }
+
+  // [C++11 25.4.3] Binary search
 
   // Returns an iterator pointing to @c value, or, if @c value isn't
   // present, an iterator pointing to @c value's successor.  @c comp
@@ -234,4 +238,182 @@ namespace std {
     return upper_bound(first, last, value,
                        [](const T& a, const T& b) { return a < b; });
   }
+
+  // [C++11 25.4.6] Heap operations
+
+  // Move *(first + pos) up the heap to the correct position
+  template<class RandomAccessIterator, class Compare, class Distance>
+  void
+  __move_up(RandomAccessIterator first, Distance pos, Distance len, Compare comp)
+  {
+    auto val = std::move(*(first + pos));
+    Distance parent;
+    // Shift values down until we find the place to insert val
+    while (parent = (pos - 1) / 2, pos > 0 && comp(*(first + parent), val)) {
+      *(first + pos) = std::move(*(first + parent));
+      pos = parent;
+    }
+    // Insert val
+    *(first + pos) = std::move(val);
+  }
+
+  // Move *(first + pos) down the heap to the correct position
+  template<class RandomAccessIterator, class Compare, class Distance>
+  void
+  __move_down(RandomAccessIterator first, Distance pos, Distance len,
+              Compare comp)
+  {
+    auto val = std::move(*(first + pos));
+    while (true) {
+      // Set childpos to the larger of the children of pos
+      Distance childpos = 2 * pos + 1;
+      Distance rightpos = childpos + 1;
+      if (rightpos < len && !comp(*(first + rightpos), *(first + childpos)))
+        childpos = rightpos;
+      // If we hit the bottom or val is > than the largest child, we've
+      // found our hole
+      if (childpos >= len || comp(*(first + childpos), val)) {
+        *(first + pos) = std::move(val);
+        return;
+      }
+      // Move the child up the tree
+      *(first + pos) = std::move(*(first + childpos));
+      // Move the hole down the tree
+      pos = childpos;
+    }
+  }
+
+  template<class RandomAccessIterator, class Compare>
+  void
+  push_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+  {
+    __move_up(first, last - first - 1, last - first, comp);
+  }
+
+  template<class RandomAccessIterator>
+  void
+  push_heap(RandomAccessIterator first, RandomAccessIterator last)
+  {
+    push_heap(first, last, __less());
+  }
+
+  template<class RandomAccessIterator, class Compare>
+  void
+  pop_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+  {
+    if (last - first <= 1)
+      return;
+    --last;
+    std::swap(*first, *last);
+    __move_down(first, decltype(last - first)(0), last - first, comp);
+  }
+
+  template<class RandomAccessIterator>
+  void
+  pop_heap(RandomAccessIterator first, RandomAccessIterator last)
+  {
+    pop_heap(first, last, __less());
+  }
+
+  template<class RandomAccessIterator, class Compare>
+  void
+  make_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+  {
+    auto len = last - first;
+    // To avoid problems if i is unsigned, i is one more than the real index
+    for (auto i = len / 2; i > 0; --i)
+      __move_down(first, i - 1, len, comp);
+  }
+
+  template<class RandomAccessIterator>
+  void
+  make_heap(RandomAccessIterator first, RandomAccessIterator last)
+  {
+    make_heap(first, last, __less());
+  }
+
+  template<class RandomAccessIterator, class Compare>
+  void
+  sort_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+  {
+    for (; first != last; --last)
+      pop_heap(first, last, comp);
+  }
+
+  template<class RandomAccessIterator>
+  void
+  sort_heap(RandomAccessIterator first, RandomAccessIterator last)
+  {
+    sort_heap(first, last, __less());
+  }
+
+  template<class RandomAccessIterator, class Compare>
+  RandomAccessIterator
+  is_heap_until(RandomAccessIterator first, RandomAccessIterator last,
+                Compare comp)
+  {
+    if (first == last)
+      return last;
+    RandomAccessIterator pos = first + 1;
+    for (; pos != last; ++pos) {
+      RandomAccessIterator parent = first + (pos - first - 1) / 2;
+      if (comp(*parent, *pos))
+        break;
+    }
+    return pos;
+  }
+
+  template<class RandomAccessIterator>
+  bool
+  is_heap(RandomAccessIterator first, RandomAccessIterator last)
+  {
+    return is_heap_until(first, last, __less()) == last;
+  }
+
+  template<class RandomAccessIterator, class Compare>
+  bool
+  is_heap(RandomAccessIterator first, RandomAccessIterator last, Compare comp)
+  {
+    return is_heap_until(first, last, comp) == last;
+  }
+
+  template<class RandomAccessIterator>
+  RandomAccessIterator
+  is_heap_until(RandomAccessIterator first, RandomAccessIterator last)
+  {
+    return is_heap_until(first, last, __less());
+  }
 }
+
+#if 0
+#include <cassert>
+#include <vector>
+
+int main(int argc, char **argv)
+{
+  std::vector<int> vec;
+  for (int t = 0; t < 1000; ++t) {
+    vec.clear();
+    for (int i = 0; i < 100; ++i) {
+      vec.push_back(rand() % 100);
+      push_heap(vec.begin(), vec.end());
+      assert(is_heap(vec.begin(), vec.end()));
+    }
+    while (!vec.empty()) {
+      pop_heap(vec.begin(), vec.end());
+      vec.pop_back();
+      assert(is_heap(vec.begin(), vec.end()));
+    }
+
+    for (int i = 0; i < 100; ++i)
+      vec.push_back(rand() % 100);
+    make_heap(vec.begin(), vec.end());
+    assert(is_heap(vec.begin(), vec.end()));
+
+    sort_heap(vec.begin(), vec.end());
+    for (int i = 0; i < vec.size() - 1; ++i)
+      assert(vec[i] <= vec[i+1]);
+  }
+  return 0;
+}
+#endif
