@@ -3,6 +3,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
 namespace std {
   // [C++11 20.6.12.1]
@@ -210,4 +211,41 @@ namespace std {
       swap(ptr_, u.ptr_);
     }
   };
+
+  // [C++14 20.8.1.4]
+  template<class T>
+  struct __make_unique_result
+  {
+    typedef unique_ptr<T> single;
+  };
+
+  template<class T>
+  struct __make_unique_result<T[]>
+  {
+    typedef unique_ptr<T[]> array;
+  };
+
+  template<class T, size_t Bound>
+  struct __make_unique_result<T[Bound]>
+  {
+    struct invalid { };
+  };
+
+  template<class T, class ...Args>
+  typename __make_unique_result<T>::single
+  make_unique(Args&& ...args)
+  {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+  }
+
+  template<class T>
+  typename __make_unique_result<T>::array
+  make_unique(size_t bound)
+  {
+    return unique_ptr<T>(new typename remove_extent<T>::type[bound]());
+  }
+
+  template<class T, class... Args>
+  typename __make_unique_result<T>::invalid
+  make_unique(Args&&...) = delete;
 }
