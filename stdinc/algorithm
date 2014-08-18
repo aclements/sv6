@@ -85,6 +85,26 @@ namespace std {
     return a;
   }
 
+  // [C++11 25.3.2] Move
+  template<class InputIterator, class OutputIterator>
+  OutputIterator move(InputIterator first, InputIterator last,
+                      OutputIterator result)
+  {
+    while (first != last)
+        *result++ = std::move(*first++);
+    return result;
+  }
+
+  template<class BidirectionalIterator1, class BidirectionalIterator2>
+  BidirectionalIterator2 move_backward(BidirectionalIterator1 first,
+                                       BidirectionalIterator1 last,
+                                       BidirectionalIterator2 result)
+  {
+    while (first != last)
+      *(--result) = std::move(*(--last));
+    return result;
+  }
+
   // [C++11 25.3.6] Fill
   template<class ForwardIterator, class T>
   void fill(ForwardIterator first, ForwardIterator last, const T& value)
