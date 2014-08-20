@@ -17,6 +17,11 @@ class seqcount
 public:
   constexpr seqcount() : seq_(0) { }
 
+  seqcount(const seqcount &o) = delete;
+  seqcount &operator=(const seqcount &o) = delete;
+  seqcount(seqcount &&o) = delete;
+  seqcount &operator=(seqcount &&o) = delete;
+
   /**
    * An RAII object representing a read section protected by a
    * seqcount.
