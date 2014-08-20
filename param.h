@@ -23,6 +23,7 @@
 #define BUDDY_DEBUG   DEBUG
 #define REFCACHE_DEBUG DEBUG
 #define RADIX_DEBUG   DEBUG
+#define SEQLOCK_DEBUG DEBUG
 #define USTACKPAGES   8
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
 #define GC_GLOBAL     true

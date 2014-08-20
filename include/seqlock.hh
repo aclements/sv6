@@ -4,6 +4,10 @@
 #include "spinlock.hh"
 #include <atomic>
 
+#if SEQLOCK_DEBUG
+void getcallerpcs(void*, uintptr_t*, int);
+#endif
+
 /**
  * A seqcount is a synchronization primitive that, in conjunction with
  * some form of mutual exclusion, provides write-free optimistic reads
@@ -13,9 +17,16 @@ template<typename T = unsigned>
 class seqcount
 {
   std::atomic<T> seq_;
+#if SEQLOCK_DEBUG
+  uintptr_t write_pcs_[10];
+#endif
 
 public:
-  constexpr seqcount() : seq_(0) { }
+  constexpr seqcount() : seq_(0)
+#if SEQLOCK_DEBUG
+                       , write_pcs_{}
+#endif
+  { }
 
   seqcount(const seqcount &o) = delete;
   seqcount &operator=(const seqcount &o) = delete;
@@ -140,6 +151,7 @@ public:
     void done() __attribute__((always_inline))
     {
       if (sc_) {
+        sc_->write_pcs_[0] = 0;
         // This is the mirror of write_begin: writes are not allowed
         // to move after this, but reads are.
         sc_->seq_.store(val_ + 1, std::memory_order_release);
@@ -159,6 +171,9 @@ public:
    * section, it will be forced to retry.
    */
   writer write_begin()
+#if SEQLOCK_DEBUG
+    __attribute__((__noinline__))
+#endif
   {
     // Writes are not allowed to move before this because they may be
     // observed by a reader that thinks the value is stable.  Reads
@@ -176,6 +191,11 @@ public:
     T val = seq_.load(std::memory_order_relaxed);
     seq_.store(val + 1, std::memory_order_relaxed);
     std::atomic_thread_fence(std::memory_order_acquire);
+    assert(!(val & 1));
+#if SEQLOCK_DEBUG
+    getcallerpcs(__builtin_frame_address(0),
+                 write_pcs_, sizeof write_pcs_ / sizeof(write_pcs_[0]));
+#endif
     return writer(this, val + 1);
   }
 };
