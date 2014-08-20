@@ -202,8 +202,10 @@ private:
     }
   }
 
-  filetable& operator=(const filetable&);
-  filetable(const filetable& x);
+  filetable& operator=(const filetable&) = delete;
+  filetable(const filetable& x) = delete;
+  filetable& operator=(filetable &&) = delete;
+  filetable(filetable &&) = delete;
   NEW_DELETE_OPS(filetable);  
 
   class fdinfo
