@@ -427,7 +427,7 @@ initmsr(void)
 void
 initnmi(void)
 {
-  void *nmistackbase = ksalloc(slab_stack);
+  void *nmistackbase = kalloc("kstack", KSTACKSIZE);
   mycpu()->ts.ist[1] = (u64) nmistackbase + KSTACKSIZE;
 
   if (mycpu()->id == 0)

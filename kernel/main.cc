@@ -145,7 +145,7 @@ bootothers(void)
     // Tell bootother.S what stack to use and the address of apstart;
     // it expects to find these two addresses stored just before
     // its first instruction.
-    stack = (char*) ksalloc(slab_stack);
+    stack = (char*) kalloc("kstack", KSTACKSIZE);
     *(u32*)(code-4) = (u32)v2p(&apstart);
     *(u64*)(code-12) = (u64)stack + KSTACKSIZE;
     // bootother.S sets this to 0x0a55face early on

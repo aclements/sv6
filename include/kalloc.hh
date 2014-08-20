@@ -54,7 +54,6 @@ class versioned {
 };
 
 enum {
-  slab_stack,
   slab_perf,
   slab_type_max
 };

@@ -1081,9 +1081,6 @@ initkalloc(void)
     panic("Physical memory regions missing from NUMA map");
 
   // Configure slabs
-  strncpy(slabmem[slab_stack].name, "kstack", MAXNAME);
-  slabmem[slab_stack].order = ceil_log2(KSTACKSIZE);
-
   strncpy(slabmem[slab_perf].name, "kperf", MAXNAME);
   slabmem[slab_perf].order = ceil_log2(PERFSIZE);
 

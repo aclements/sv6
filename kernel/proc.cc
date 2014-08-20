@@ -237,7 +237,7 @@ proc::alloc(void)
     panic("allocproc: ns_insert");
 
   // Allocate kernel stack if possible.
-  if((p->kstack = (char*) ksalloc(slab_stack)) == 0){
+  if((p->kstack = (char*) kalloc("kstack", KSTACKSIZE)) == 0){
     if (!xnspid->remove(p->pid, &p))
       panic("allocproc: ns_remove");
     freeproc(p);
@@ -423,7 +423,7 @@ finishproc(struct proc *p, bool removepid)
   if (removepid && !xnspid->remove(p->pid, &p))
     panic("finishproc: ns_remove");
   if (p->kstack)
-    ksfree(slab_stack, p->kstack);
+    kfree(p->kstack, KSTACKSIZE);
 
   p->pid = 0;
   p->parent = 0;
