@@ -216,6 +216,8 @@ printtrap(struct trapframe *tf, bool lock)
               rcr2(),
               tf->err & FEC_U ? "user" : "kernel");
   }
+  if (kstack && tf->rsp < (uintptr_t)kstack)
+    __cprintf("  possible stack overflow\n");
 }
 
 void __noret__
