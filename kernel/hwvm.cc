@@ -14,6 +14,7 @@
 #include "ipi.hh"
 #include "kstats.hh"
 #include "cpuid.hh"
+#include "vmalloc.hh"
 
 using namespace std;
 
@@ -86,7 +87,7 @@ public:
   {
     // Don't free kernel portion of the pml4 and don't kfree this
     // page, since operator delete will do that.
-    free(L_PML4, PX(L_PML4, KBASE), false);
+    free(L_PML4, PX(L_PML4, KGLOBAL), false);
   }
 
   // Delete'ing a ::pgmap also frees all sub-pgmaps (except those
@@ -105,7 +106,7 @@ public:
     pgmap *pml4 = (pgmap*)kalloc("PML4");
     if (!pml4)
       throw_bad_alloc();
-    size_t k = PX(L_PML4, KBASE);
+    size_t k = PX(L_PML4, KGLOBAL);
     memset(&pml4->e[0], 0, 8*k);
     memmove(&pml4->e[k], &e[k], 8*(512-k));
     return pml4;
@@ -123,7 +124,7 @@ public:
 
   u64 internal_pages() const
   {
-    return internal_pages(L_PML4, PX(L_PML4, KBASE));
+    return internal_pages(L_PML4, PX(L_PML4, KGLOBAL));
   }
 
   // An iterator that references the page structure entry on a fixed
@@ -286,6 +287,7 @@ public:
 static_assert(sizeof(pgmap) == PGSIZE, "!(sizeof(pgmap) == PGSIZE)");
 
 extern pgmap kpml4;
+static atomic<uintptr_t> kvmallocpos;
 
 // Create a direct mapping starting at PA 0 to VA KBASE up to
 // KBASEEND.  This augments the KCODE mapping created by the
@@ -316,6 +318,17 @@ initpg(void)
       paddr pa = it.index() - KBASE;
       *it.create(0) = pa | PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
     }
+    assert(!kpml4.find(KBASEEND, level).is_set());
+
+    // Create KVMALLOC area.  This doesn't map anything at this point;
+    // it only fills in PML4 entries that can later be shared with all
+    // other page tables.
+    for (auto it = kpml4.find(KVMALLOC, pgmap::L_PDPT); it.index() < KVMALLOCEND;
+         it += it.span()) {
+      it.create(0);
+      assert(!it.is_set());
+    }
+    kvmallocpos = KVMALLOC;
   }
 
   // Enable global pages.  This has to happen on every core.
@@ -397,6 +410,62 @@ inittls(struct cpu *c)
   writemsr(MSR_GS_KERNBASE, (u64)&c->cpu);
   c->cpu = c;
   c->proc = nullptr;
+}
+
+// Allocate 'bytes' bytes in the KVMALLOC area, surrounded by at least
+// 'guard' bytes of unmapped memory.  This memory must be freed with
+// vmalloc_free.
+void *
+vmalloc_raw(size_t bytes, size_t guard, const char *name)
+{
+  if (kvmallocpos == 0)
+    panic("vmalloc called before initpg");
+  bytes = PGROUNDUP(bytes);
+  guard = PGROUNDUP(guard);
+  // Ensure there is always some guard space.  vmalloc_free depends on
+  // this.
+  if (guard < PGSIZE)
+    guard = PGSIZE;
+
+  uintptr_t base = guard + kvmallocpos.fetch_add(bytes + guard * 2);
+  if (base + bytes + guard >= KVMALLOCEND)
+    // Egads, we ran out of KVMALLOC space?!  Ideally, we would
+    // recycle KVMALLOC space and perform a TLB shootdown, but other
+    // things will surely break long before this does.
+    panic("vmalloc: out of KVMALLOC space (recycling not implemented)");
+
+  for (auto it = kpml4.find(base); it.index() < base + bytes; it += it.span()) {
+    void *page = kalloc(name);
+    if (!page)
+      throw_bad_alloc();
+    *it.create(0) = v2p(page) | PTE_P | PTE_W | PTE_G;
+  }
+  mtlabel(mtrace_label_heap, base, bytes, name, strlen(name));
+
+  return (void*)base;
+}
+
+// Free vmalloc'd memory at ptr.  Note that this *lazily* unmaps this
+// area from KVMALLOC space, so this area may remain effectively
+// mapped until some indeterminate point in the future.
+void
+vmalloc_free(void *ptr)
+{
+  if ((uintptr_t)ptr % PGSIZE)
+    panic("vmalloc_free: ptr %p is not page-aligned", ptr);
+  if ((uintptr_t)ptr < KVMALLOC || (uintptr_t)ptr >= KVMALLOCEND)
+    panic("vmalloc_free: ptr %p is not in KVMALLOC space", ptr);
+
+  // Free and unmap until we reach the guard space.
+  for (auto it = kpml4.find((uintptr_t)ptr); it.is_set(); it += it.span()) {
+    kfree(p2v(PTE_ADDR(*it)));
+    *it = 0;
+  }
+  mtunlabel(mtrace_label_heap, ptr);
+
+  // XXX Should release unused page table pages.  This requires a
+  // global TLB shootdown, so we should only do it in large-ish
+  // batches.
 }
 
 void

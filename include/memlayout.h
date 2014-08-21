@@ -1,3 +1,13 @@
+// The kernel controls the address space above 0xFFFF800000000000.
+
+// Everything above KGLOBAL is identical in every address space.
+#define KGLOBAL    KVMALLOC
+
+// [KVMALLOC, KVMALLOCEND) is used for dynamic kernel virtual mappings
+// of vmalloc'd memory.
+#define KVMALLOC    0xFFFFF00000000000ull
+#define KVMALLOCEND 0xFFFFF10000000000ull  // 1 TB
+
 // Physical memory is direct-mapped from KBASE to KBASEEND in initpg.
 #define KBASE      0xFFFFFF0000000000ull
 #define KBASEEND   0xFFFFFF5000000000ull  // 320GB
