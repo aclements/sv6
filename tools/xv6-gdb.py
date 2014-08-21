@@ -22,9 +22,40 @@ class StaticVectorPrinter(object):
             yield "[%d]" % i, items.dereference()
             items += 1
 
+class IListPrinter(object):
+    """Pretty-printer for ilists and islists."""
+
+    def __init__(self, val):
+        self.val = val
+        self.type = val.type
+        link_member = val.type.template_argument(1)
+        self.link_type = link_member.type.target()
+        self.link_off = int(link_member.cast(self.link_type.pointer()))
+
+    def display_hint(self):
+        return 'array'
+
+    def to_string(self):
+        return str(self.type)
+
+    def children(self):
+        link = self.val['head']
+        i = 0
+        while True:
+            elt = link['next']
+            # elt is a pointer value.  Compute the pointer to the link
+            # field.
+            link = gdb.Value(int(elt) + self.link_off).cast(self.link_type.pointer())
+            if link['next'] == self.val['head']['next']:
+                break
+            yield "[%d]" % i, elt.dereference()
+            i += 1
+
 def build_pretty_printer():
     pp = gdb.printing.RegexpCollectionPrettyPrinter("xv6")
     pp.add_printer('static_vector', '^static_vector<.*>$', StaticVectorPrinter)
+    pp.add_printer('ilist', '^ilist<.*>$', IListPrinter)
+    pp.add_printer('islist', '^islist<.*>$', IListPrinter)
     return pp
 
 gdb.printing.register_pretty_printer(
