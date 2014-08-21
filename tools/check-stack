@@ -1,0 +1,16 @@
+#!/bin/bash
+
+RES=$(objdump -d $1 | awk '
+/>:$/ { FN=$2 }
+# The first regexp speeds up the script by ~50%
+/,%rsp$/ && /\tsub +\$0x[0-9a-f]{3,},%rsp$/ {
+  N=strtonum(substr($NF, 2))
+  if (N < 1024) next
+  print N "\t" substr(FN, 2, length(FN)-3)
+}
+' | sort -rn)
+
+if [[ -n "$RES" ]]; then
+    echo "Top stack users:"
+    echo "$RES" | head -n 5 | c++filt
+fi

@@ -100,6 +100,7 @@ $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	$(Q)mkdir -p $(@D)
 	$(Q)$(LD) $(LDFLAGS) -T kernel/kernel.ld -z max-page-size=4096 -e start \
 		-o $@ $(O)/kernel/boot.o $(OBJS) -L$(O) $(LFLAGS)
+	$(Q)tools/check-stack $@
 
 $(O)/kernel/%.o: lib/%.cc $(O)/sysroot
 	@echo "  CXX    $@"
