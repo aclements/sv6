@@ -8,6 +8,7 @@
 #include <uk/signal.h>
 #include "ilist.hh"
 #include <stdexcept>
+#include "vmalloc.hh"
 
 struct pgmap;
 struct gc_handle;
@@ -61,6 +62,7 @@ typedef enum procstate {
 struct proc {
   sref<vmap> vmap;             // va -> vma
   char *kstack;                // Bottom of kernel stack for this process
+  vmalloc_ptr<char[]> kstack_vm; // vmalloc'd kstack, if using vmalloc
   volatile int pid;            // Process ID
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status

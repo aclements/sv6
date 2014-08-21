@@ -236,12 +236,22 @@ proc::alloc(void)
   if (!xnspid->insert(p->pid, p))
     panic("allocproc: ns_insert");
 
-  // Allocate kernel stack if possible.
-  if((p->kstack = (char*) kalloc("kstack", KSTACKSIZE)) == 0){
+  // Allocate kernel stack.
+  try {
+#if KSTACK_DEBUG
+    // vmalloc the stack to surround it with guard pages so we can
+    // detect stack over/underflows.
+    p->kstack_vm = vmalloc<char[]>(KSTACKSIZE);
+    p->kstack = p->kstack_vm.get();
+#else
+    if(!(p->kstack = (char*) kalloc("kstack", KSTACKSIZE)))
+      throw_bad_alloc();
+#endif
+  } catch (...) {
     if (!xnspid->remove(p->pid, &p))
       panic("allocproc: ns_remove");
     freeproc(p);
-    return 0;
+    throw;
   }
 
   sp = p->kstack + KSTACKSIZE;
@@ -422,8 +432,10 @@ finishproc(struct proc *p, bool removepid)
 {
   if (removepid && !xnspid->remove(p->pid, &p))
     panic("finishproc: ns_remove");
+#if !KSTACK_DEBUG
   if (p->kstack)
     kfree(p->kstack, KSTACKSIZE);
+#endif
 
   p->pid = 0;
   p->parent = 0;
