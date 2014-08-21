@@ -62,6 +62,6 @@ class PerCPU(gdb.Function):
         cpubase = gdb.lookup_global_symbol('percpu_offsets').value()[cpu]
 
         # Put together new pointer
-        return (cpubase + offset).cast(key.type)
+        return (cpubase + offset).cast(key.type.pointer()).dereference()
 
 PerCPU()
