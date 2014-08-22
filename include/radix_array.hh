@@ -772,9 +772,13 @@ public:
      * than or equal to #index().  The #base_span() is the size of
      * that range and will always be greater than or equal to #span(),
      * which is how much of that span lies after #index().
+     *
+     * As a special case, if the iterator is >= N, this returns N.
      */
     size_type base() const
     {
+      if (k_ >= N)
+        return N;
       // Round k_ down to the nearest multiple of the base span.
       return k_ & ~(base_span() - 1);
     }
