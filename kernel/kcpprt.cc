@@ -131,6 +131,20 @@ abort(void)
 static void
 cxx_terminate(void)
 {
+  static std::atomic_flag recursive = ATOMIC_FLAG_INIT;
+
+  // In GCC, we can actually rethrow and catch the exception that led
+  // to the terminate.  However, terminate may be called for other
+  // reasons, such as a "throw" without an active exception, so if we
+  // don't have an active exception, this will call us recursively.
+  try {
+    if (!recursive.test_and_set())
+      throw;
+  } catch (const std::exception &e) {
+    panic("unhandled exception: %s", e.what());
+  } catch (...) {
+    panic("unhandled exception");
+  }
   panic("cxx terminate");
 }
 
