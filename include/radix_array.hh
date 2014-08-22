@@ -337,6 +337,16 @@ public:
     }
 
     /**
+     * Assert that this iterator points to a valid key.
+     */
+    void assert_valid() const
+    {
+#if RADIX_DEBUG
+      assert(k_ < N);
+#endif
+    }
+
+    /**
      * Force #node to point to a node where the <tt>subkey(k,
      * node_level)</tt>'th child is a terminal node pointer.  If
      * provided, do not exceed level @c limit.  #node must initially
@@ -579,6 +589,7 @@ public:
      */
     value_type &operator*() const
     {
+      assert_valid();
       // XXX Throwing an exception here means we can't use C++11
       // for-each syntax safely.  It also means I can't safely call
       // is_set and then * in the presence of concurrent updates.  It
@@ -610,6 +621,7 @@ public:
      */
     value_type *operator->() const
     {
+      assert_valid();
       return &(**this);
     }
 
@@ -618,6 +630,7 @@ public:
      */
     bool is_set() const
     {
+      assert_valid();
       while (node_level_) {
         // Upper node
         node_ptr c(node_.as_upper_node()->child[subkey(k_, node_level_)]);
@@ -769,6 +782,7 @@ public:
      */
     size_type span() const
     {
+      assert_valid();
       auto bs = base_span();
       return bs - (k_ & (bs - 1));
     }
@@ -799,6 +813,7 @@ public:
      */
     size_type base_span() const
     {
+      assert_valid();
       force_terminal();
       return level_span(node_level_);
     }
