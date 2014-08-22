@@ -1,5 +1,6 @@
 import gdb
 import gdb.printing
+import re
 
 class StaticVectorPrinter(object):
     """Pretty-printer for static_vectors."""
@@ -33,7 +34,7 @@ gdb.printing.register_pretty_printer(
 class PerCPU(gdb.Function):
     """Return the value of a static percpu variable.
 
-    Usage: $percpu("varname", [cpunum])
+    Usage: $percpu(var, [cpunum])
 
     If the CPU number is omitted, it defaults to the CPU of the
     selected thread.
@@ -42,17 +43,25 @@ class PerCPU(gdb.Function):
     def __init__(self):
         super(PerCPU, self).__init__('percpu')
 
-    def invoke(self, varname, cpu=None):
-        varname = varname.string()
+    def invoke(self, basevar, cpu=None):
+        if not (basevar.type.tag and
+                basevar.type.tag.startswith('static_percpu<')):
+            raise gdb.GdbError('Not a static_percpu')
+
         if cpu is None:
             cpu = gdb.selected_thread().num - 1
         else:
             cpu = int(cpu)
 
-        # Get the key
-        key = gdb.lookup_global_symbol('__%s_key' % varname)
+        # Get the key.  Unfortunately, G++ optimizes out the second
+        # template argument, so we have to do this the dumb way.
+        m = re.search(r'&([^ ,]+_key),', str(basevar.type))
+        if not m:
+            raise gdb.GdbError('Failed to parse type string %r' %
+                               str(basevar.type))
+        key = gdb.lookup_global_symbol(m.group(1))
         if key is None:
-            raise gdb.GdbError('No per-cpu symbol "%s"' % varname)
+            raise gdb.GdbError('Failed to find per-cpu key %r' % m.group(1))
 
         # Compute the offset
         start = gdb.lookup_global_symbol('__percpu_start')
