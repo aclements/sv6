@@ -226,6 +226,14 @@ private:
    */
   static constexpr unsigned LEVELS = num_levels();
 
+  static constexpr size_t
+  level_fanout(unsigned level)
+  {
+    return level == LEVELS ? (N >> key_shift(LEVELS - 1)) :
+      level > 0 ? UPPER_FANOUT :
+      LEAF_FANOUT;
+  }
+
   /**
    * Return the index into @c level for the given key.  The leaf level
    * is level 0 and the root is level <tt>LEVELS - 1</tt>.
@@ -392,7 +400,8 @@ public:
         node_ptr new_child;
         if (node_level_ > 1) {
           // Create upper node
-          new_child = node_ptr(upper_node::create(r_, orig_child), false);
+          new_child = node_ptr(upper_node::create(r_, orig_child, node_level_),
+                               false);
         } else {
           // Create leaf node
           new_child = node_ptr(leaf_node::create(r_, orig_child), false);
@@ -1211,26 +1220,32 @@ private:
     /**
      * Call #create() instead.
      */
-    upper_node(radix_array *r, node_ptr src)
+    upper_node(radix_array *r, node_ptr src, unsigned level)
     {
-      // Initialize child pointers
+      // Initialize child pointers.  Note that if we're the top-most
+      // level, we may not use all of the child pointers.
       bool is_locked = src.get_lock().is_locked();
+      size_t fanout = level_fanout(level);
       try {
+        size_t i = 0;
         if (src.is_external()) {
           // Copy to new externals for each child node
           value_type *orig = src.as_external();
-          for (auto &c : child)
+          for (; i < fanout; ++i)
             // XXX Use allocator?
             // Relaxed stores are safe because this upper_node will be
             // installed with an atomic operation that will act as a
             // barrier for these writes.
-            c.store(node_ptr(new value_type(*orig), is_locked),
-                    std::memory_order_relaxed);
+            child[i].store(node_ptr(new value_type(*orig), is_locked),
+                           std::memory_order_relaxed);
         } else if (is_locked) {
           // Propagate lock
-          for (auto &c : child)
-            c.store(node_ptr(nullptr, true), std::memory_order_relaxed);
+          for (; i < fanout; ++i)
+            child[i].store(node_ptr(nullptr, true), std::memory_order_relaxed);
         }
+        // Zero remaining slots (if any)
+        for (; i < UPPER_FANOUT; ++i)
+          child[i].store(0, std::memory_order_relaxed);
       } catch (...) {
         // XXX If we didn't zalloc it, some of the pointers might be
         // junk.  Maybe wrap this around the value_type copy so we
@@ -1248,10 +1263,12 @@ private:
      * initialized to replace @c src from the parent node.  @c src
      * must be a null or external pointer.
      */
-    static upper_node *create(radix_array *r, node_ptr src)
+    static upper_node *create(radix_array *r, node_ptr src, unsigned level)
     {
-      if (RADIX_DEBUG)
+      if (RADIX_DEBUG) {
         assert(src.is_null() || src.is_external());
+        assert(level > 0 && level <= LEVELS);
+      }
 
       // Construct an upper_node using r's allocator.
       upper_node *node;
@@ -1259,7 +1276,7 @@ private:
         node = r->upper_node_alloc_.default_allocate();
       } else {
         node = r->upper_node_alloc_.allocate(1);
-        r->upper_node_alloc_.construct(node, r, src);
+        r->upper_node_alloc_.construct(node, r, src, level);
       }
 
       return node;
