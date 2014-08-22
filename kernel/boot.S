@@ -19,7 +19,7 @@
 #define PADDR(x) ((x) - KCODE)
 
 # STACK is the size of the bootstrap stack.
-#define STACK 8192
+#define STACK KSTACKSIZE
 
 # MultiBoot header.
 # http://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Header-layout
