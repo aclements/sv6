@@ -440,7 +440,7 @@ vmalloc_raw(size_t bytes, size_t guard, const char *name)
       throw_bad_alloc();
     *it.create(0) = v2p(page) | PTE_P | PTE_W | PTE_G;
   }
-  mtlabel(mtrace_label_heap, base, bytes, name, strlen(name));
+  mtlabel(mtrace_label_heap, (void*)base, bytes, name, strlen(name));
 
   return (void*)base;
 }
