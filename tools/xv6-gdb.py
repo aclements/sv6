@@ -2,8 +2,8 @@ import gdb
 import gdb.printing
 import re
 
-class StaticVectorPrinter(object):
-    """Pretty-printer for static_vectors."""
+class VectorPrinter(object):
+    """Pretty-printer for vectors and static_vectors."""
 
     def __init__(self, val):
         self.val = val
@@ -18,7 +18,7 @@ class StaticVectorPrinter(object):
 
     def children(self):
         items = self.val["data_"].cast(self.itype.pointer())
-        for i in range(self.val["size_"]):
+        for i in range(int(self.val["size_"])):
             yield "[%d]" % i, items.dereference()
             items += 1
 
@@ -53,7 +53,8 @@ class IListPrinter(object):
 
 def build_pretty_printer():
     pp = gdb.printing.RegexpCollectionPrettyPrinter("xv6")
-    pp.add_printer('static_vector', '^static_vector<.*>$', StaticVectorPrinter)
+    pp.add_printer('vector', '^std::vector<.*>$', VectorPrinter)
+    pp.add_printer('static_vector', '^static_vector<.*>$', VectorPrinter)
     pp.add_printer('ilist', '^ilist<.*>$', IListPrinter)
     pp.add_printer('islist', '^islist<.*>$', IListPrinter)
     return pp
