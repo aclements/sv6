@@ -356,12 +356,12 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
     uintptr_t va = src + i;
     void *obj = pml4;
     int level;
-    for (level = pgmap::L_PML4; level >= 0; level--) {
+    for (level = pgmap::L_PML4; ; level--) {
       pme_t entry = ((mypgmap*)obj)->e[PX(level, va)];
       if (!(entry & PTE_P))
         return i;
       obj = p2v(PTE_ADDR(entry));
-      if (entry & PTE_PS)
+      if (level == 0 || (entry & PTE_PS))
         break;
     }
     ((char*)dst)[i] = ((char*)obj)[va % (1ull << PXSHIFT(level))];
