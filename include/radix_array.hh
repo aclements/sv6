@@ -775,16 +775,15 @@ public:
      * Return the span of this iterator.  The value stored in the
      * array will be the same for at least <tt>[index(), index() +
      * span())</tt>.
-     *
-     * Note: When iterating by spans, test <tt>it < end</tt> rather
-     * than <tt>it != end</tt> because, in general, the span may
-     * exceed the position of an end iterator.
      */
     size_type span() const
     {
       assert_valid();
-      auto bs = base_span();
-      return bs - (k_ & (bs - 1));
+      force_terminal();
+      if (node_level_ == LEVELS)
+        return N - k_;
+      auto ls = level_span(node_level_);
+      return ls - (k_ & (ls - 1));
     }
 
     /**
@@ -802,8 +801,10 @@ public:
     {
       if (k_ >= N)
         return N;
-      // Round k_ down to the nearest multiple of the base span.
-      return k_ & ~(base_span() - 1);
+      // Round k_ down to the nearest multiple of the level span.
+      force_terminal();
+      auto ls = level_span(node_level_);
+      return k_ & ~(ls - 1);
     }
 
     /**
@@ -815,6 +816,8 @@ public:
     {
       assert_valid();
       force_terminal();
+      if (node_level_ == LEVELS)
+        return N;
       return level_span(node_level_);
     }
   };
