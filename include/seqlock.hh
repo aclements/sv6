@@ -151,7 +151,9 @@ public:
     void done() __attribute__((always_inline))
     {
       if (sc_) {
+#if SEQLOCK_DEBUG
         sc_->write_pcs_[0] = 0;
+#endif
         // This is the mirror of write_begin: writes are not allowed
         // to move after this, but reads are.
         sc_->seq_.store(val_ + 1, std::memory_order_release);
