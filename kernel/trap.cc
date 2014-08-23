@@ -33,6 +33,8 @@ static struct irq_info
   bool in_use;
 } irq_info[256 - T_IRQ0];
 
+static void trap(struct trapframe *tf);
+
 u64
 sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 {
@@ -63,11 +65,6 @@ do_pagefault(struct trapframe *tf)
 
     sti();
     if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
-#if MTRACE
-      mtstop(myproc());
-      if (myproc()->mtrace_stacks.curr >= 0)
-        mtresume(myproc());
-#endif
       return 0;
     }
     console.println("pagefault: failed in kernel (addr ", (void*)addr, " rip ",
@@ -78,11 +75,6 @@ do_pagefault(struct trapframe *tf)
   } else if (tf->err & FEC_U) {
       sti();
       if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
-#if MTRACE
-        mtstop(myproc());
-        if (myproc()->mtrace_stacks.curr >= 0)
-          mtresume(myproc());
-#endif
         return 0;
       }
       uerr.println("pagefault: failed in user for ", shex(addr),
@@ -103,8 +95,9 @@ namespace {
   DEFINE_PERCPU(int, nmi_swallow);
 }
 
-void
-trap(struct trapframe *tf)
+// C/C++ entry point for traps; called by assembly trap stub
+extern "C" void
+trap_c(struct trapframe *tf)
 {
   if (tf->trapno == T_NMI) {
     // An NMI can come in after popcli() drops ncli to zero and intena
@@ -166,6 +159,18 @@ trap(struct trapframe *tf)
   // XXX mt_ascope ascope("trap:%d", tf->trapno);
 #endif
 
+  trap(tf);
+
+#if MTRACE
+  mtstop(myproc());
+  if (myproc()->mtrace_stacks.curr >= 0)
+    mtresume(myproc());
+#endif
+}
+
+static void
+trap(struct trapframe *tf)
+{
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
     kstats::inc(&kstats::sched_tick_count);
@@ -196,7 +201,7 @@ trap(struct trapframe *tf)
       // modify this without protection because interrupts are
       // disabled.
       mycpu()->no_sched_count |= NO_SCHED_COUNT_YIELD_REQUESTED;
-      goto out;
+      return;
     }
     break;
   case T_IRQ0 + IRQ_IDE:
@@ -280,7 +285,7 @@ trap(struct trapframe *tf)
         h->handle_irq();
       lapiceoi();
       piceoi();
-      goto out;
+      return;
     }
 
     if (tf->trapno == T_PGFLT) {
@@ -317,17 +322,9 @@ trap(struct trapframe *tf)
     yield();
   }
 
-
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == 0x3)
     exit(-1);
-
- out:;
-#if MTRACE
-  mtstop(myproc());
-  if (myproc()->mtrace_stacks.curr >= 0)
-    mtresume(myproc());
-#endif
 }
 
 void

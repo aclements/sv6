@@ -135,7 +135,7 @@ trapcommon:
         swapgs
 
 1:      movq %rsp, %rdi  // first argument to trap
-        call trap
+        call trap_c
         // Fall through to trapret
         
 .globl trapret
