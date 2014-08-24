@@ -2,9 +2,18 @@
 
 RES=$(objdump -d $1 | awk '
 />:$/ { FN=$2 }
-# The first regexp speeds up the script by ~50%
-/,%rsp$/ && /\tsub +\$0x[0-9a-f]{3,},%rsp$/ {
+# The first regexp speeds up the script by ~50%.  Avoid matching
+# negative subtractions (see below).
+/,%rsp$/ && /\tsub +\$0x[0-9a-f]{3,8},%rsp$/ {
   N=strtonum(substr($NF, 2))
+  if (N < 1024) next
+  print N "\t" substr(FN, 2, length(FN)-3)
+}
+# GCC can also generate add $0x<negative>,%rsp.  I think this only
+# happens for -128 because the instruction encoding is more efficient,
+# but be paranoid.
+/,%rsp$/ && /\tadd +\$0xffffffff[0-9a-f]+,%rsp$/ {
+  N=2**32 - strtonum("0x" substr($NF, 2+10))
   if (N < 1024) next
   print N "\t" substr(FN, 2, length(FN)-3)
 }
