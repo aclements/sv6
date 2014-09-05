@@ -212,6 +212,7 @@ cmain(u64 mbmagic, u64 mbaddr)
       (*__init_array_start[i])(0, nullptr, nullptr);
 
   inittrap();
+  inithpet();              // Requires initacpitables
   initfpu();               // Requires nothing
   initmsr();               // Requires nothing
   initcmdline();
@@ -231,7 +232,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   initahci();
   initpci();               // Suggests initacpi
   initnet();
-  inithpet();              // Requires initacpitables
   initrtc();               // Requires inithpet
   initdev();               // Misc /dev nodes
   initdisk();      // disk
