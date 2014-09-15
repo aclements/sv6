@@ -67,8 +67,8 @@ do_pagefault(struct trapframe *tf)
     if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
       return 0;
     }
-    console.println("pagefault: failed in kernel (addr ", (void*)addr, " rip ",
-                    (void*)tf->rip, ")");
+    console.println("pagefault accessing user address from kernel (addr ",
+                    (void*)addr, " rip ", (void*)tf->rip, ")");
     tf->rax = -1;
     tf->rip = (u64)__uaccess_end;
     return 0;
@@ -77,7 +77,7 @@ do_pagefault(struct trapframe *tf)
       if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
         return 0;
       }
-      uerr.println("pagefault: failed in user for ", shex(addr),
+      uerr.println("pagefault from user for ", shex(addr),
                    " err ", (int)tf->err);
       cli();
   }
