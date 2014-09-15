@@ -54,7 +54,7 @@ main(int ac, char * const av[])
   }
 
   if (args.empty())
-    die("usage: %s [-pmc#] command...\n", av[0]);
+    die("usage: %s [-pmc#] command...", av[0]);
 
   sys_stat* s0 = sys_stat::read();
   pmc_count::config(pmc_selector[pmci].sel);

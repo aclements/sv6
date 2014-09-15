@@ -68,7 +68,7 @@ int
 main(int ac, char * const av[])
 {
   if (ac <= 1)
-    die("usage: %s command...\n", av[0]);
+    die("usage: %s command...", av[0]);
 
   int fd = open("/dev/lockstat", O_RDWR);
   if (fd < 0)

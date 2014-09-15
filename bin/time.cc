@@ -10,7 +10,7 @@ int
 main(int ac, char * const av[])
 {
   if (ac <= 1)
-    die("usage: %s command...\n", av[0]);
+    die("usage: %s command...", av[0]);
 
   u64 t0 = rdtsc();
 
