@@ -44,6 +44,9 @@ main(int ac, char * const av[])
   char * const *xav;
   int pmci = 0;
 
+  if (ac <= 1 || (av[1][0] == '-' && ac <= 2))
+    die("usage: %s [-pmc#] command...\n", av[0]);
+
   xav = &av[1];
   if (xav[0][0] == '-') {
     pmci = atoi(&xav[0][1]);

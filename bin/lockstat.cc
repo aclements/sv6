@@ -65,6 +65,9 @@ stats(void)
 int
 main(int ac, char * const av[])
 {
+  if (ac <= 1)
+    die("usage: %s command...\n", av[0]);
+
   int fd = open("/dev/lockstat", O_RDWR);
   if (fd < 0)
     die("lockstat: open failed");

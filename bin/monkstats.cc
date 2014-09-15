@@ -24,6 +24,9 @@ main(int ac, char * const av[])
 {
   struct kstats kstats_before, kstats_after;
 
+  if (ac <= 1)
+    die("usage: %s command...\n", av[0]);
+
   read_kstats(&kstats_before);
 
   int pid = fork();
