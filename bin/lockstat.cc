@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <vector>
+
 static void
 xwrite(int fd, char c)
 {
@@ -80,7 +82,9 @@ main(int ac, char * const av[])
 
   if (pid == 0) {
     xwrite(fd, '1');
-    execv(av[1], av+1);
+    std::vector<const char *> args(av + 1, av + ac);
+    args.push_back(nullptr);
+    execv(args[0], const_cast<char * const *>(args.data()));
     die("lockstat: exec failed");
   }
   

@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <vector>
+
 #define CMN PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE
 
 struct selector {
@@ -41,17 +43,18 @@ valstr(u64 val)
 int
 main(int ac, char * const av[])
 {
-  char * const *xav;
   int pmci = 0;
 
-  if (ac <= 1 || (av[1][0] == '-' && ac <= 2))
-    die("usage: %s [-pmc#] command...\n", av[0]);
+  std::vector<const char *> args(av + 1, av + ac);
+  args.push_back(nullptr);
 
-  xav = &av[1];
-  if (xav[0][0] == '-') {
-    pmci = atoi(&xav[0][1]);
-    xav = &xav[1];
+  if (!args.empty() && args[0][0] == '-') {
+    pmci = atoi(&args[0][1]);
+    args.erase(args.begin());
   }
+
+  if (args.empty())
+    die("usage: %s [-pmc#] command...\n", av[0]);
 
   sys_stat* s0 = sys_stat::read();
   pmc_count::config(pmc_selector[pmci].sel);
@@ -63,7 +66,7 @@ main(int ac, char * const av[])
     die("xtime: fork failed");
   
   if (pid == 0) {
-    execv(xav[0], xav);
+    execv(args[0], const_cast<char * const *>(args.data()));
     die("xtime: exec failed");
   }
 

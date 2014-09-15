@@ -83,9 +83,7 @@ main(int ac, char *av[])
     die(e.what());
   }
 
-  std::vector<const char *> args;
-  for (int i = optind; i < ac; ++i)
-    args.push_back(av[i]);
+  std::vector<const char *> args(av + optind, av + ac);
   args.push_back(nullptr);
 
   int fd = open("/dev/sampler", O_RDWR);

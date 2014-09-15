@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <vector>
+
 int
 main(int ac, char * const av[])
 {
@@ -18,7 +20,9 @@ main(int ac, char * const av[])
   }
 
   if (pid == 0) {
-    execv(av[1], av+1);
+    std::vector<const char *> args(av + 1, av + ac);
+    args.push_back(nullptr);
+    execv(args[0], const_cast<char * const *>(args.data()));
     die("time: exec failed");
   }
 
