@@ -639,6 +639,9 @@ early_kalloc(size_t size, size_t align)
 void
 kmemprint(print_stream *s)
 {
+  size_t total_free = 0, total_limit = 0;
+
+  s->println();
   for (int cpu = 0; cpu < ncpu; ++cpu) {
     auto &local = cpu_mem[cpu].steal.get_local();
     s->print("cpu ", cpu, ":");
@@ -653,10 +656,21 @@ kmemprint(print_stream *s)
       s->print(" ", buddy, ":[");
       for (size_t order = 0; order <= buddy_allocator::MAX_ORDER; ++order)
         s->print(stats.nfree[order], " ");
-      s->print("free ", stats.free, " limit ", free_limit, "]");
+
+      //MIN_SIZE is the same as the page size (4 KB).
+      s->print("free (pages) ", stats.free / buddy_allocator::MIN_SIZE,
+      " limit (pages) ", free_limit / buddy_allocator::MIN_SIZE, "]");
+      total_free += stats.free;
+      total_limit += free_limit;
     }
     s->println();
   }
+
+  s->print("Total free pages: ", total_free / buddy_allocator::MIN_SIZE, " ",
+           "Total limit pages: ", total_limit / buddy_allocator::MIN_SIZE," ",
+            "Page size: ", buddy_allocator::MIN_SIZE);
+
+  s->println();
 }
 
 static int
