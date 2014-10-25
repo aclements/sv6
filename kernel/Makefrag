@@ -35,7 +35,6 @@ OBJS = \
 	pipe.o \
 	proc.o \
 	gc.o \
-        radix.o \
 	refcache.o \
 	rnd.o \
 	sampler.o \
