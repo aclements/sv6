@@ -166,6 +166,33 @@ printtrace(u64 rbp)
     __cprintf("  %016lx\n", pc[i]);
 }
 
+static uint16_t
+read_es()
+{
+  uint16_t ret;
+  asm volatile ("movw %%es, %0"
+                : "=r"(ret));
+  return ret;
+}
+
+static uint16_t
+read_fs()
+{
+  uint16_t ret;
+  asm volatile ("movw %%fs, %0"
+                : "=r"(ret));
+  return ret;
+}
+
+static uint16_t
+read_gs()
+{
+  uint16_t ret;
+  asm volatile ("movw %%gs, %0"
+                : "=r"(ret));
+  return ret;
+}
+
 void
 printtrap(struct trapframe *tf, bool lock)
 {
@@ -184,7 +211,7 @@ printtrap(struct trapframe *tf, bool lock)
     kstack = myproc()->kstack;
   }
 
-  __cprintf("trap %lu err 0x%x cpu %u cs %u ds %u ss %u\n"
+  __cprintf("trap %lu err 0x%x cpu %u cs %u ds %u ss %u es %u fs %u gs %u\n"
             // Basic machine state
             "  rip %016lx rsp %016lx rbp %016lx\n"
             "  cr2 %016lx cr3 %016lx cr4 %016lx\n"
@@ -197,7 +224,7 @@ printtrap(struct trapframe *tf, bool lock)
             "  r14 %016lx r15 %016lx rflags %016lx\n"
             // Process state
             "  proc: name %s pid %u kstack %p\n",
-            tf->trapno, tf->err, mycpu()->id, tf->cs, tf->ds, tf->ss,
+            tf->trapno, tf->err, mycpu()->id, tf->cs, tf->ds, tf->ss, read_es(), read_fs(), read_gs(),
             tf->rip, tf->rsp, tf->rbp,
             rcr2(), rcr3(), rcr4(),
             tf->rdi, tf->rsi, tf->rdx,

@@ -6,6 +6,6 @@ $(O)/tools/mkfs: tools/mkfs.c include/fs.h
 
 $(O)/tools/perf-report: tools/perf-report.cc include/sampler.h
 	$(Q)mkdir -p $(@D)
-	g++ -std=c++0x -m64 -Werror -Wall -I. -o $@ $<
+	g++ -std=c++11 -m64 -Werror -Wall -I. -o $@ $<
 
 ALL += $(O)/tools/perf-report

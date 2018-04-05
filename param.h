@@ -15,7 +15,8 @@
 #define CACHELINE    64  // cache line size
 #define CPUKSTACKS   (NPROC + NCPU*2)
 #define VICTIMAGE 1000000 // cycles a proc executes before an eligible victim
-#define VERBOSE       0  // print kernel diagnostics
+#define VERBOSE       1  // print kernel diagnostics
+#define DEBUG 1
 #define SPINLOCK_DEBUG DEBUG // Debug spin locks
 #define RCU_TYPE_DEBUG DEBUG
 #define LOCKSTAT      DEBUG
@@ -68,8 +69,8 @@
 #define NCPU          8   // maximum number of CPUs
 #define NSOCKET       2
 #define PERFSIZE      (16<<20ull)
-#define MEMIDE        0
-#define AHCIIDE       1
+#define MEMIDE        1 //0
+#define AHCIIDE       0 // 1
 #elif defined(HW_mtrace)
 #define DEBUG         0
 #define NCPU          16   // maximum number of CPUs

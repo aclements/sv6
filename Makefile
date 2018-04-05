@@ -84,9 +84,9 @@ INCLUDES := -include param.h -iquote libutil/include -I$(MTRACESRC)
 COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 endif
-COMFLAGS += -g -MD -MP -O3 -Wall -Werror -DHW_$(HW) $(INCLUDES)
+COMFLAGS += -g -MD -MP -O3 -Wall -DHW_$(HW) $(INCLUDES)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
-CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare $(CXXFLAGS)
+CXXFLAGS := $(COMFLAGS) -std=c++11 -Wno-sign-compare $(CXXFLAGS)
 ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
 
 ifeq ($(EXCEPTIONS),y)
@@ -162,7 +162,7 @@ $(O)/%.o: $(O)/%.S
 $(O)/sysroot: include/host_hdrs.hh
 	rm -rf $@.tmp $@
 	mkdir -p $@.tmp
-	tar c $$($(CXX) -E -H -std=c++0x -ffreestanding $< -o /dev/null 2>&1 \
+	tar c $$($(CXX) -E -H -std=c++11 -ffreestanding $< -o /dev/null 2>&1 \
 		| awk '/^[.]/ {print $$2}') | tar xC $@.tmp
 	mv $@.tmp $@
 
