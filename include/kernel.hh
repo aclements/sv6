@@ -11,9 +11,6 @@ extern "C" {
 #include "ref.hh"
 #include "enumbitset.hh"
 
-#define KCSEG (2<<3)  /* kernel code segment */
-#define KDSEG (3<<3)  /* kernel data segment */
-
 static inline uptr v2p(void *a) {
   uptr ua = (uptr) a;
   if (ua >= KCODE)
@@ -236,7 +233,6 @@ sref<mnode>     create(sref<mnode>, const char *, short, short, short, bool);
 void            swtch(struct context**, struct context*);
 
 // trap.c
-extern struct segdesc bootgdt[NSEGS];
 void            pushcli(void);
 void            popcli(void);
 void            getcallerpcs(void*, uptr*, int);

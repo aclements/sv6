@@ -58,7 +58,7 @@ private:
     if (level != 0) {
       for (int i = 0; i < end; i++) {
         pme_t entry = e[i].load(memory_order_relaxed);
-        if (entry & PTE_P)
+        if (entry & PTE_V)
           ((pgmap*) p2v(PTE_ADDR(entry)))->free(level - 1);
       }
     }
@@ -74,7 +74,7 @@ private:
     if (level != 0) {
       for (int i = 0; i < end; i++) {
         pme_t entry = e[i].load(memory_order_relaxed);
-        if (entry & PTE_P)
+        if (entry & PTE_V)
           count += ((pgmap*) p2v(PTE_ADDR(entry)))->internal_pages(level - 1);
       }
     }
@@ -168,7 +168,7 @@ public:
         atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
         pme_t entry = entryp->load(memory_order_relaxed);
       retry:
-        if (entry & PTE_P) {
+        if (entry & PTE_V) {
           cur = (pgmap*) p2v(PTE_ADDR(entry));
         } else if (!create) {
           cur = nullptr;
@@ -234,7 +234,7 @@ public:
     iterator &create(pme_t flags)
     {
       if (!cur)
-        resolve(flags | PTE_P | PTE_W);
+        resolve(flags | PTE_V | PTE_R | PTE_W);
       return *this;
     }
 
@@ -248,7 +248,7 @@ public:
     // Return true if this entry both exists and is marked present.
     bool is_set() const
     {
-      return cur && ((*this)->load(memory_order_relaxed) & PTE_P);
+      return cur && ((*this)->load(memory_order_relaxed) & PTE_V);
     }
 
     // Return a reference to the current page structure entry.  This
@@ -308,7 +308,7 @@ initpg(void)
       level = pgmap::L_1G;
 
       // Redo KCODE mapping with a 1GB page
-      *kpml4.find(KCODE, level).create(0) = PTE_W | PTE_P | PTE_PS | PTE_G;
+      *kpml4.find(KCODE, level).create(0) = PTE_V | PTE_R | PTE_W | PTE_X | PTE_G;
       lcr3(rcr3());
     }
 
@@ -316,7 +316,7 @@ initpg(void)
     for (auto it = kpml4.find(KBASE, level); it.index() < KBASEEND;
          it += it.span()) {
       paddr pa = it.index() - KBASE;
-      *it.create(0) = pa | PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
+      *it.create(0) = pa | PTE_V | PTE_R | PTE_W | PTE_G;
     }
     assert(!kpml4.find(KBASEEND, level).is_set());
 
@@ -332,7 +332,7 @@ initpg(void)
   }
 
   // Enable global pages.  This has to happen on every core.
-  lcr4(rcr4() | CR4_PGE);
+  // lcr4(rcr4() | CR4_PGE);
 }
 
 // Clean up mappings that were only required during early boot.
@@ -358,10 +358,10 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
     int level;
     for (level = pgmap::L_PML4; ; level--) {
       pme_t entry = ((mypgmap*)obj)->e[PX(level, va)];
-      if (!(entry & PTE_P))
+      if (!(entry & PTE_V))
         return i;
       obj = p2v(PTE_ADDR(entry));
-      if (level == 0 || (entry & PTE_PS))
+      if (level == 0 || ((entry & (PTE_R | PTE_W | PTE_X)) == 0))
         break;
     }
     ((char*)dst)[i] = ((char*)obj)[va % (1ull << PXSHIFT(level))];
@@ -369,18 +369,11 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
   return n;
 }
 
-// Switch TSS and h/w page table to correspond to process p.
+// Switch h/w page table to correspond to process p.
 void
 switchvm(struct proc *p)
 {
   scoped_cli cli;
-  u64 base = (u64) &mycpu()->ts;
-  mycpu()->gdt[TSSSEG>>3] = (struct segdesc)
-    SEGDESC(base, (sizeof(mycpu()->ts)-1), SEG_P|SEG_TSS64A);
-  mycpu()->gdt[(TSSSEG>>3)+1] = (struct segdesc) SEGDESCHI(base);
-  mycpu()->ts.rsp[0] = (u64) myproc()->kstack + KSTACKSIZE;
-  mycpu()->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
-  ltr(TSSSEG);
 
   if (*cur_page_map_cache)
     (*cur_page_map_cache)->switch_from();
@@ -394,9 +387,6 @@ switchvm(struct proc *p)
     kpml4.switch_to();
     *cur_page_map_cache = nullptr;
   }
-
-  writefs(UDSEG);
-  writemsr(MSR_FS_BASE, p->user_fs_);
 }
 
 // Set up CPU's kernel segment descriptors.
@@ -405,9 +395,7 @@ void
 inittls(struct cpu *c)
 {
   // Initialize cpu-local storage.
-  writegs(KDSEG);
-  writemsr(MSR_GS_BASE, (u64)&c->cpu);
-  writemsr(MSR_GS_KERNBASE, (u64)&c->cpu);
+  // TODO
   c->cpu = c;
   c->proc = nullptr;
 }
@@ -438,7 +426,7 @@ vmalloc_raw(size_t bytes, size_t guard, const char *name)
     void *page = kalloc(name);
     if (!page)
       throw_bad_alloc();
-    *it.create(0) = v2p(page) | PTE_P | PTE_W | PTE_G;
+    *it.create(0) = v2p(page) | PTE_V | PTE_R | PTE_W | PTE_X | PTE_G;
   }
   mtlabel(mtrace_label_heap, (void*)base, bytes, name, strlen(name));
 

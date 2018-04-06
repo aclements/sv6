@@ -6,6 +6,7 @@
 #include <type_traits>
 
 namespace std {
+/*
   template <class T>
   T&&
   forward(typename remove_reference<T>::type& t)
@@ -42,7 +43,7 @@ namespace std {
   {
     for (size_t n = 0; n < N; n++)
       swap(a[n], b[n]);
-  }
+  }*/
 
   template<class A, class B>
   struct pair {

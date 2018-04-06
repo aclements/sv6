@@ -1,12 +1,11 @@
-OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64", "elf64-x86-64")
-OUTPUT_ARCH(i386:x86-64)
-ENTRY(xxx)
+OUTPUT_ARCH(riscv)
+ENTRY(start)
 
 SECTIONS
 {
-	. = 0xFFFFFFFFC0100000;
+	. = 0xffffffc080100000;
 	PROVIDE(text = .);
-	.text : AT(0x100000) {
+	.text : AT(0x80100000) {
 		*(.text .stub .text.* .gnu.linkonce.t.*)
 	}
 	.rodata : {

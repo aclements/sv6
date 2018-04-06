@@ -19,8 +19,6 @@
 
 extern "C" void __uaccess_end(void);
 
-struct intdesc idt[256] __attribute__((aligned(16)));
-
 static char fpu_initial_state[FXSAVE_BYTES];
 
 // boot.S
@@ -330,25 +328,7 @@ trap(struct trapframe *tf)
 void
 inittrap(void)
 {
-  u64 entry;
-  u8 bits;
-  int i;
-
-  bits = INT_P | SEG_INTR64;  // present, interrupt gate
-  for(i=0; i<256; i++) {
-    entry = trapentry[i];
-    idt[i] = INTDESC(KCSEG, entry, bits);
-  }
-
-  // Conservatively reserve all legacy IRQs.  This might cause us to
-  // not be able to configure a device.
-  for (int i = 0; i < 16; ++i)
-    irq_info[i].in_use = true;
-  // Also reserve the spurious vector
-  irq_info[IRQ_SPURIOUS].in_use = true;
-  // And reserve interrupt 255 (Intel SDM Vol. 3 suggests this can't
-  // be used for MSI).
-  irq_info[255 - T_IRQ0].in_use = true;
+  for (;;);
 }
 
 void
@@ -427,46 +407,23 @@ initmsr(void)
 void
 initnmi(void)
 {
-  void *nmistackbase = kalloc("kstack", KSTACKSIZE);
+  for (;;);
+  /*void *nmistackbase = kalloc("kstack", KSTACKSIZE);
   mycpu()->ts.ist[1] = (u64) nmistackbase + KSTACKSIZE;
 
   if (mycpu()->id == 0)
-    idt[T_NMI].ist = 1;
+    idt[T_NMI].ist = 1;*/
 }
 
 void
 initdblflt(void)
 {
-  void *dfaultstackbase = kalloc("kstack", KSTACKSIZE);
+  for (;;);
+  /*void *dfaultstackbase = kalloc("kstack", KSTACKSIZE);
   mycpu()->ts.ist[2] = (uintptr_t)dfaultstackbase + KSTACKSIZE;
 
   if (mycpu()->id == 0)
-    idt[T_DBLFLT].ist = 2;
-}
-
-void
-initseg(struct cpu *c)
-{
-  volatile struct desctr dtr;
-
-  dtr.limit = sizeof(idt) - 1;
-  dtr.base = (u64)idt;
-  lidt((void *)&dtr.limit);
-
-  // Load per-CPU GDT
-  memmove(c->gdt, bootgdt, sizeof(bootgdt));
-  dtr.limit = sizeof(c->gdt) - 1;
-  dtr.base = (u64)c->gdt;
-  lgdt((void *)&dtr.limit);
-
-  // When executing a syscall instruction the CPU sets the SS selector
-  // to (star >> 32) + 8 and the CS selector to (star >> 32).
-  // When executing a sysret instruction the CPU sets the SS selector
-  // to (star >> 48) + 8 and the CS selector to (star >> 48) + 16.
-  u64 star = ((((u64)UCSEG|0x3) - 16)<<48)|((u64)KCSEG<<32);
-  writemsr(MSR_STAR, star);
-  writemsr(MSR_LSTAR, (u64)&sysentry);
-  writemsr(MSR_SFMASK, FL_TF | FL_IF);
+    idt[T_DBLFLT].ist = 2;*/
 }
 
 // Pushcli/popcli are like cli/sti except that they are matched:

@@ -20,8 +20,6 @@ struct cpu {
   cpuid_t id;                  // Index into cpus[] below
   int ncli;                    // Depth of pushcli nesting.
   int intena;                  // Were interrupts enabled before pushcli?
-  struct segdesc gdt[NSEGS];   // x86 global descriptor table
-  struct taskstate ts;         // Used by x86 to find stack for interrupt
   struct context *scheduler;   // swtch() here to enter scheduler
 
   int timer_printpc;
@@ -55,17 +53,15 @@ DECLARE_PERCPU(struct cpu, cpus);
 static inline struct cpu *
 mycpu(void)
 {
-  u64 val;
-  __asm volatile("movq %%gs:0, %0" : "=r" (val));
-  return (struct cpu *)val;
+  // TODO!
+  for (;;);
 }
 
 static inline struct proc *
 myproc(void)
 {
-  u64 val;
-  __asm volatile("movq %%gs:8, %0" : "=r" (val));
-  return (struct proc *)val;
+  // TODO!
+  for (;;);
 }
 
 static inline cpuid_t

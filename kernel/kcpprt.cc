@@ -289,8 +289,6 @@ __cxa_get_globals_fast(void)
   return myproc()->__cxa_eh_global;
 }
 
-static char fs_base[0x200]; // for %fs:0x28 in __gxx_personality_v0, ...
-
 extern "C" void __register_frame(u8*);
 void
 initcpprt(void)
@@ -298,9 +296,6 @@ initcpprt(void)
 #if EXCEPTIONS
   extern u8 __EH_FRAME_BEGIN__[];
   __register_frame(__EH_FRAME_BEGIN__);
-
-  writefs(KDSEG);
-  writemsr(MSR_FS_BASE, (uint64_t)&fs_base);
 
   // Initialize lazy exception handling data structures
   try {

@@ -13,9 +13,6 @@ void            kbdintr(void);
 struct context;
 void            swtch(struct context**, struct context*);
 
-// trap.c
-extern struct segdesc bootgdt[NSEGS];
-
 // other exported/imported functions
 void cmain(u64 mbmagic, u64 mbaddr);
 void mpboot(void);
