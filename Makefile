@@ -6,7 +6,7 @@ Q          ?= @
 # ELF.  E.g., x86_64-jos-elf-
 TOOLPREFIX ?=
 # QEMU binary
-QEMU       ?= qemu-system-x86_64
+QEMU       ?= qemu-system-riscv64
 # Number of CPUs to emulate
 QEMUSMP    ?= 8
 # RAM to simulate (in MB)
@@ -28,7 +28,7 @@ O           = o.$(HW)
 
 ifeq ($(HW),linux)
 PLATFORM   := native
-TOOLPREFIX := 
+TOOLPREFIX := riscv64-unknown-elf-
 else
 ifeq ($(HW),linuxmtrace)
 # Build the user space for mtrace'ing under Linux.  This builds an
@@ -36,9 +36,10 @@ ifeq ($(HW),linuxmtrace)
 # Make targets like qemu and mtrace.out are supported if the user
 # provides KERN=path/to/Linux/bzImage to make.
 PLATFORM   := native
-TOOLPREFIX := 
+TOOLPREFIX := riscv64-unknown-elf-
 else
 PLATFORM   := xv6
+TOOLPREFIX := riscv64-unknown-elf-
 endif
 endif
 
@@ -55,11 +56,11 @@ CXXFLAGS = -Wno-delete-non-virtual-dtor -Wno-gnu-designator -Wno-tautological-co
 CFLAGS   = -no-integrated-as
 ASFLAGS  = 
 else
-CC  ?= $(TOOLPREFIX)gcc
-CXX ?= $(TOOLPREFIX)g++
+CC  = $(TOOLPREFIX)gcc
+CXX = $(TOOLPREFIX)g++
 CXXFLAGS = -Wno-delete-non-virtual-dtor
 CFLAGS   =
-ASFLAGS  = -Wa,--divide
+ASFLAGS  =
 endif
 
 LD = $(TOOLPREFIX)ld
@@ -74,11 +75,10 @@ INCLUDES  = --sysroot=$(O)/sysroot \
 	-Istdinc $(CODEXINC) -I$(MTRACESRC) \
 	-include param.h -include libutil/include/compiler.h
 COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 \
-	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
-	    -mno-red-zone
+	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
-COMFLAGS  += -Wl,-m,elf_x86_64 -nostdlib -ffreestanding
-LDFLAGS   = -m elf_x86_64
+COMFLAGS  += -Wl,-m,elf64lriscv -nostdlib -ffreestanding
+LDFLAGS   = -m elf64lriscv
 else
 INCLUDES := -include param.h -iquote libutil/include -I$(MTRACESRC)
 COMFLAGS := -pthread -Wno-unused-result
@@ -87,7 +87,7 @@ endif
 COMFLAGS += -g -MD -MP -O3 -Wall -DHW_$(HW) $(INCLUDES)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++11 -Wno-sign-compare $(CXXFLAGS)
-ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
+ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
 
 ifeq ($(EXCEPTIONS),y)
   # Include C++ support libraries for stack unwinding and RTTI.  Some of
