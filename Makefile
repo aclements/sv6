@@ -125,9 +125,9 @@ include kernel/Makefrag
 include lib/Makefrag
 endif
 include libutil/Makefrag
-include bin/Makefrag
+# TODO include bin/Makefrag
 include tools/Makefrag
-include metis/Makefrag
+# TODO include metis/Makefrag
 
 $(O)/%.o: %.c $(O)/sysroot
 	@echo "  CC     $@"

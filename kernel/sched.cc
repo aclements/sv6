@@ -298,7 +298,7 @@ public:
     next->set_state(RUNNING);
     next->tsc = rdtsc();
 
-    if (next->context->rip != (uptr)threadstub && next->context->rip != (uptr)forkret) {
+    if (next->context->ra != (uptr)threadstub && next->context->ra != (uptr)forkret) {
       mtresume(next);
     }
     mtrec();
@@ -311,7 +311,7 @@ public:
     if (cr0 != ncr0)
       lcr0(ncr0);
 
-    swtch(&prev->context, next->context);
+    swtch(prev->context, next->context);
     mycpu()->intena = intena;
     post_swtch();
   }

@@ -273,7 +273,7 @@ proc::alloc(void)
   sp -= sizeof *p->context;
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
-  p->context->rip = (uptr)forkret;
+  p->context->ra = (uptr)forkret;
 
   return p;
 }
@@ -358,9 +358,11 @@ procdumpall(void)
             p->pid, name, state, p->cpuid, p->tsc);
     
     if(p->get_state() == SLEEPING){
-      getcallerpcs((void*)p->context->rbp, pc, NELEM(pc));
+      cprintf("  Trying to get call stack, but failing to read stack base pointer,\n");
+      cprintf("  because RISC-V does not have. :(\n");
+      /*getcallerpcs((void*)p->context->rbp, pc, NELEM(pc));
       for(int i=0; i<10 && pc[i] != 0; i++)
-        cprintf(" %lx\n", pc[i]);
+        cprintf(" %lx\n", pc[i]);*/
     }
   }
 }
@@ -539,9 +541,9 @@ threadalloc(void (*fn)(void *), void *arg)
     return 0;
 
   // XXX can threadstub be deleted?
-  p->context->rip = (u64)threadstub;
-  p->context->r12 = (u64)fn;
-  p->context->r13 = (u64)arg;
+  p->context->ra = (u64)threadstub;
+  p->context->s0 = (u64)fn;
+  p->context->s1 = (u64)arg;
   p->parent = nullptr;
   p->cwd.reset();
 

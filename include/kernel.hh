@@ -185,6 +185,7 @@ enum clone_flags
 };
 ENUM_BITSET_OPS(clone_flags);
 void            finishproc(struct proc*, bool removepid = true);
+extern "C"
 void            exit(int);
 struct proc*    doclone(clone_flags);
 int             growproc(int);
@@ -230,7 +231,7 @@ sref<file>      getfile(int fd);
 sref<mnode>     create(sref<mnode>, const char *, short, short, short, bool);
 
 // swtch.S
-void            swtch(struct context**, struct context*);
+void            swtch(struct context*, struct context*);
 
 // trap.c
 void            pushcli(void);

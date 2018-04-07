@@ -95,6 +95,8 @@ hpet::register_base(uintptr_t base)
 uint64_t
 hpet::read_nsec() const
 {
+  // TODO
+  for (;;);
   // The counter field counts in units of period_fsec_ femtoseconds
   // [HPET 2.3.4, 2.3.7]
 
@@ -103,10 +105,7 @@ hpet::read_nsec() const
   uint64_t lo = base_->counter;
   uint64_t high;
   // high(64)++lo(64) = counter * period_fsec_
-  __asm("mulq %3"
-        : "=d" (high), "=a" (lo)
-        : "%1" (lo), "r" (period_fsec_)
-        : "cc");
+
 
   uint64_t divisor = 1000000;
 

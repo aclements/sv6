@@ -58,11 +58,8 @@ private:
 
   static leaf read_leaf(uint32_t eax, uint32_t ecx = 0)
   {
-    uint32_t ebx, edx;
-    __asm volatile("cpuid"
-                   : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
-                   : "a" (eax), "c" (ecx));
-    return {true, eax, ebx, ecx, edx};
+    // TODO
+    for (;;);
   }
 
 public:

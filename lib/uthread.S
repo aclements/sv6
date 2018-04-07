@@ -1,7 +1,9 @@
-# We assume that the kernel follows the amd64 ABI, but not
+# We assume that the kernel follows the RV64 ABI, but not
 # that it saves caller-saved registers.
 .globl forkt
 forkt:
+  j forkt
+/* TODO
         pushq %r12
         andq $(~0xf), %rdi      # new stack ptr amd64 ABI alignment 
         movq %rdi, %r12
@@ -26,4 +28,4 @@ forkt:
         call exit
 1:      # parent
         popq %r12
-        ret
+        ret*/

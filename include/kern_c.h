@@ -11,7 +11,7 @@ void            kbdintr(void);
 
 // swtch.S
 struct context;
-void            swtch(struct context**, struct context*);
+void            swtch(struct context*, struct context*);
 
 // other exported/imported functions
 void cmain(u64 mbmagic, u64 mbaddr);

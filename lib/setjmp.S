@@ -1,39 +1,48 @@
+#include <riscv.h>
+
 .globl  setjmp
 setjmp:
-        pop     %rax    // %rip pushed by call
-        mov     %rax, 0x00(%rdi)
-        mov     %rsp, 0x08(%rdi)
-        mov     %rbp, 0x10(%rdi)
-        mov     %rbx, 0x18(%rdi)
-        mov     %r12, 0x20(%rdi)
-        mov     %r13, 0x28(%rdi)
-        mov     %r14, 0x30(%rdi)
-        mov     %r15, 0x38(%rdi)
-
-        push    %rax
-        mov     $0, %rax
-        ret
+  STORE ra, 0*REGBYTES(a0)
+  STORE sp, 1*REGBYTES(a0)
+  STORE s0, 2*REGBYTES(a0)
+  STORE s1, 3*REGBYTES(a0)
+  STORE s2, 4*REGBYTES(a0)
+  STORE s3, 5*REGBYTES(a0)
+  STORE s4, 6*REGBYTES(a0)
+  STORE s5, 7*REGBYTES(a0)
+  STORE s6, 8*REGBYTES(a0)
+  STORE s7, 9*REGBYTES(a0)
+  STORE s8, 10*REGBYTES(a0)
+  STORE s9, 11*REGBYTES(a0)
+  STORE s10, 12*REGBYTES(a0)
+  STORE s11, 13*REGBYTES(a0)
+  li a0, 0
+  ret
 
 .globl  longjmp
 longjmp:
-        mov     0x00(%rdi), %rax  // %rip
-        mov     0x08(%rdi), %rsp
-        mov     0x10(%rdi), %rbp
-        mov     0x18(%rdi), %rbx
-        mov     0x20(%rdi), %r12
-        mov     0x28(%rdi), %r13
-        mov     0x30(%rdi), %r14
-        mov     0x38(%rdi), %r15
-
-        push    %rax            // push %rip for ret
-        mov     %rsi, %rax
-        ret
+  LOAD ra, 0*REGBYTES(a0)
+  LOAD sp, 1*REGBYTES(a0)
+  LOAD s0, 2*REGBYTES(a0)
+  LOAD s1, 3*REGBYTES(a0)
+  LOAD s2, 4*REGBYTES(a0)
+  LOAD s3, 5*REGBYTES(a0)
+  LOAD s4, 6*REGBYTES(a0)
+  LOAD s5, 7*REGBYTES(a0)
+  LOAD s6, 8*REGBYTES(a0)
+  LOAD s7, 9*REGBYTES(a0)
+  LOAD s8, 10*REGBYTES(a0)
+  LOAD s9, 11*REGBYTES(a0)
+  LOAD s10, 12*REGBYTES(a0)
+  LOAD s11, 13*REGBYTES(a0)
+  mv a0, a1
+  ret
 
 .globl  sigsetjmp
 sigsetjmp:
-        jmp     setjmp
+  j setjmp
 
 .globl  siglongjmp
 siglongjmp:
-        jmp     longjmp
+  j longjmp
 

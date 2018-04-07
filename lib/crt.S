@@ -1,8 +1,9 @@
-.code64
-.align 8
+.balign 8
 .globl _start
 _start:
-        pop %rdi                // argc
+  j _start
+# TODO
+/*        pop %rdi                // argc
         mov %rsp, %rsi          // argv
         mov %r12, %rdx          // phdr
         mov %r13, %rcx          // phnum
@@ -10,4 +11,4 @@ _start:
         andq $~15, %rsp
         call __crt_main
         // __crt_main shouldn't exit, but just in case
-        call exit
+        call exit*/

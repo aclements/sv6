@@ -1,11 +1,11 @@
-# include <riscv.h>
+#include <riscv.h>
 # Context switch
 #
-#   void swtch(struct context **old, struct context *new);
+#   void swtch(struct context *old, struct context *new);
 # 
 # Save current register context in old
 # and then load register context from new.
-# %rdi holds old, %rsi holds new.
+# a0 holds old, a1 holds new.
 .globl swtch
 swtch:
   # save from's registers
@@ -44,7 +44,7 @@ swtch:
 
 .globl threadstub
 threadstub:
-  movq %r12, %rdi
-  movq %r13, %rsi
-  jmp threadhelper
+  mv a0, s0
+  mv a1, s1
+  j threadhelper
 

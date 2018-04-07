@@ -67,9 +67,8 @@ SYS_%(uname)s = %(num)d
 
 .globl %(uname)s
 %(uname)s:
-  movq $%(num)d, %%rax
-  movq %%rcx, %%r10
-  syscall
+  li a7, %(num)d
+  ecall
   ret
 """ % syscall.__dict__
 

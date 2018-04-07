@@ -35,12 +35,13 @@ inituser(void)
   if(p->vmap->copyout(INIT_START, _initcode_start, _initcode_size) < 0)
     panic("userinit: copyout");
   memset(p->tf, 0, sizeof(*p->tf));
-  p->tf->cs = UCSEG | 0x3;
+  // TODO
+  /*p->tf->cs = UCSEG | 0x3;
   p->tf->ds = UDSEG | 0x3;
   p->tf->ss = p->tf->ds;
   p->tf->rflags = FL_IF;
   p->tf->rsp = PGSIZE;
-  p->tf->rip = INIT_START;  // beginning of initcode.S
+  p->tf->rip = INIT_START;*/  // beginning of initcode.S
   p->data_cpuid = myid();
 
   safestrcpy(p->name, "initcode", sizeof(p->name));

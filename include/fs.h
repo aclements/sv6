@@ -12,6 +12,9 @@
 #define ROOTINO 1  // root i-number
 #define BSIZE 4096  // block size
 
+typedef unsigned int u32;
+typedef unsigned short u16;
+
 // File system super block
 struct superblock {
   u32 size;         // Size of file system image (blocks)

@@ -1,5 +1,7 @@
 .globl  sig_restore
 sig_restore:
+  j sig_restore
+/*
         add     $0xe, %rsp    // padding
         popw    %ax
         movw    %ax, %ds
@@ -23,4 +25,5 @@ sig_restore:
 
         add     $0x10, %rsp   // trapno, err, padding
         iretq
+        */
 

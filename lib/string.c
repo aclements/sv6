@@ -25,29 +25,17 @@ memcmp(const void* s1, const void* s2, size_t n)
 void *
 memmove(void *dst, const void *src, size_t n)
 {
-  const char *s;
-  char *d;
-
-  s = src;
-  d = dst;
+  const char *s = src;
+  char *d = dst;
   if (s < d && s + n > d) {
-    s += n;
-    d += n;
-    if ((intptr_t)s%4 == 0 && (intptr_t)d%4 == 0 && n%4 == 0)
-      __asm volatile("std; rep movsl\n"
-              :: "D" (d-4), "S" (s-4), "c" (n/4) : "cc", "memory");
-    else
-      __asm volatile("std; rep movsb\n"
-              :: "D" (d-1), "S" (s-1), "c" (n) : "cc", "memory");
-    // Some versions of GCC rely on DF being clear
-    __asm volatile("cld" ::: "cc");
+      s += n, d += n;
+      while (n -- > 0) {
+          *-- d = *-- s;
+      }
   } else {
-    if ((intptr_t)s%4 == 0 && (intptr_t)d%4 == 0 && n%4 == 0)
-      __asm volatile("cld; rep movsl\n"
-              :: "D" (d), "S" (s), "c" (n/4) : "cc", "memory");
-    else
-      __asm volatile("cld; rep movsb\n"
-              :: "D" (d), "S" (s), "c" (n) : "cc", "memory");
+      while (n -- > 0) {
+          *d ++ = *s ++;
+      }
   }
   return dst;
 }

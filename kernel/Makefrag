@@ -5,7 +5,6 @@ OBJS = \
 	acpidbg.o \
 	acpiosl.o \
 	bio.o \
-	bootdata.o \
 	cga.o \
 	cmdline.o \
 	condvar.o \
@@ -122,14 +121,12 @@ $(O)/kernel/%.o: $(O)/kernel/%.cc $(O)/sysroot
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(O)/kernel/incbin.o: ASFLAGS+=-DMAKE_OUT=$(O)
-$(O)/kernel/incbin.o: $(O)/kernel/initcode $(O)/kernel/bootother $(O)/fs.img
+$(O)/kernel/incbin.o: $(O)/kernel/initcode $(O)/fs.img
 
 # link initcode against sysstubs to get syscall numbers
 $(O)/kernel/initcode: TTEXT = 0x1000
 $(O)/kernel/initcode: LDEXTRA = $(O)/lib/sysstubs.o
 $(O)/kernel/initcode: $(O)/lib/sysstubs.o
-
-$(O)/kernel/bootother: TTEXT = 0x7000
 
 $(O)/kernel/%: kernel/%.S $(O)/sysroot
 	@echo "  CC     $@"

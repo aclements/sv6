@@ -54,7 +54,7 @@ class page_holder
   {
     struct batch *next;
     size_t used;
-    sref<class page_info> pages[];
+    sref<class page_info> pages[0];
 
     batch() : next(nullptr), used(0) { }
     ~batch()
@@ -75,14 +75,14 @@ class page_holder
 
   batch *cur;
   size_t curmax;
-  batch first;
   char first_buf[NLOCAL * sizeof(sref<class page_info>)];
+  batch first;
 
 public:
   page_holder() : cur(&first), curmax(NLOCAL) {
-    static_assert((char*)&((page_holder*)nullptr)->first.pages[NLOCAL] <=
+    /*static_assert((char*)&((page_holder*)nullptr)->first.pages[NLOCAL] <=
                   &((page_holder*)nullptr)->first_buf[sizeof(first_buf)],
-                "stack-local batch reservation hack failed");
+                "stack-local batch reservation hack failed");*/
   }
 
   ~page_holder()
@@ -289,9 +289,9 @@ vmap::willneed(uptr start, uptr len)
       continue;
 
     if (it->flags & vmdesc::FLAG_COW || !writable)
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U);
+      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X);
     else
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X | PTE_W);
   }
 
   shootdown.perform();
@@ -445,12 +445,12 @@ vmap::pagefault(uptr va, u32 err)
     // If this is a read COW fault, we can reuse the COW page, but
     // don't mark it writable!
     if (desc.flags & vmdesc::FLAG_COW)
-      cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
+      cache.insert(va, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X);
     else {
       if (desc.flags & vmdesc::FLAG_WRITE)
-        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+        cache.insert(va, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X | PTE_W);
       else
-        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
+        cache.insert(va, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X);
     }
 
     shootdown.perform();

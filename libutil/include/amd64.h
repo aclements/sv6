@@ -333,6 +333,7 @@ clts()
 // hardware and by trapasm.S, and passed to trap().
 // Also used by sysentry (but sparsely populated).
 struct trapframe {
+  // TODO: RV64!
   uint16_t padding3[7];
   uint16_t ds;
 

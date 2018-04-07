@@ -128,7 +128,7 @@ trapcommon:
   # Fall through to trapret
 
 .globl trapret
-.align 8
+.balign 8
 trapret:
   RESTORE_ALL
   # return from supervisor call

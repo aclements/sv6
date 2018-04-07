@@ -2,7 +2,8 @@
 #include "asmdefines.h"
 
 #define ENTRY(name) .globl name ; .align 8; name :
-
+// TODO(twd2): What's this???
+/*
 // We aren't allowed to touch rbx,rsp,rbp,r12-r15
         
 .code64
@@ -134,4 +135,4 @@ zpage_nc:
         lea     0x40(%rdi), %rdi
         loop    1b
         sfence
-        ret
+        ret*/
