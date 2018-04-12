@@ -38,13 +38,14 @@ struct pgmap {
     L_PT = 0,
     L_PD = 1,
     L_PDPT = 2,
-    L_PML4 = 3,
+    // L_PML4 = 3, // Sv39 does not have PML4
+    L_TOP = L_PDPT, // Sv39 does not have PML4, so the top level page table is PDPT.
 
     // By the size of an entry on that level
     L_4K = L_PT,
     L_2M = L_PD,
     L_1G = L_PDPT,
-    L_512G = L_PML4,
+    // L_512G = L_PML4, // Sv39 does not have PML4
 
     // Semantic names
     L_PGSIZE = L_4K,
@@ -87,7 +88,7 @@ public:
   {
     // Don't free kernel portion of the pml4 and don't kfree this
     // page, since operator delete will do that.
-    free(L_PML4, PX(L_PML4, KGLOBAL), false);
+    free(L_TOP, PX(L_TOP, KGLOBAL), false);
   }
 
   // Delete'ing a ::pgmap also frees all sub-pgmaps (except those
@@ -106,9 +107,9 @@ public:
     pgmap *pml4 = (pgmap*)kalloc("PML4");
     if (!pml4)
       throw_bad_alloc();
-    size_t k = PX(L_PML4, KGLOBAL);
-    memset(&pml4->e[0], 0, 8*k);
-    memmove(&pml4->e[k], &e[k], 8*(512-k));
+    size_t k = PX(L_TOP, KGLOBAL);
+    memset(&pml4->e[0], 0, PTE_SIZE * k);
+    memmove(&pml4->e[k], &e[k], PTE_SIZE * (512 - k));
     return pml4;
   }
 
@@ -116,15 +117,15 @@ public:
   void switch_to()
   {
     auto nreq = tlbflush_req.load();
-    u64 cr3 = v2p(this);
-    lcr3(cr3);
+    u64 ptbr = v2p(this);
+    lptbr(ptbr);
     mycpu()->tlbflush_done = nreq;
-    mycpu()->tlb_cr3 = cr3;
+    mycpu()->tlb_ptbr = ptbr;
   }
 
   u64 internal_pages() const
   {
-    return internal_pages(L_PML4, PX(L_PML4, KGLOBAL));
+    return internal_pages(L_TOP, PX(L_TOP, KGLOBAL));
   }
 
   // An iterator that references the page structure entry on a fixed
@@ -164,7 +165,7 @@ public:
     void resolve(pme_t create = 0)
     {
       cur = pml4;
-      for (reached = L_PML4; reached > level; reached--) {
+      for (reached = L_TOP; reached > level; reached--) {
         atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
         pme_t entry = entryp->load(memory_order_relaxed);
       retry:
@@ -234,7 +235,7 @@ public:
     iterator &create(pme_t flags)
     {
       if (!cur)
-        resolve(flags | PTE_V | PTE_R | PTE_W);
+        resolve(flags | PTE_V | PTE_R | PTE_W); // TODO PTE_X?
       return *this;
     }
 
@@ -309,7 +310,7 @@ initpg(void)
 
       // Redo KCODE mapping with a 1GB page
       *kpml4.find(KCODE, level).create(0) = PTE_V | PTE_R | PTE_W | PTE_X | PTE_G;
-      lcr3(rcr3());
+      lptbr(rptbr());
     }
 
     // Create direct map region
@@ -340,8 +341,8 @@ void
 cleanuppg(void)
 {
   // Remove 1GB identity mapping
-  *kpml4.find(0, pgmap::L_PML4) = 0;
-  lcr3(rcr3());
+  *kpml4.find(0, pgmap::L_TOP) = 0;
+  lptbr(rptbr());
 }
 
 size_t
@@ -351,12 +352,12 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
   struct mypgmap
   {
     pme_t e[PGSIZE / sizeof(pme_t)];
-  } *pml4 = (struct mypgmap*)p2v(rcr3());
+  } *pml4 = (struct mypgmap*)p2v(rptbr());
   for (size_t i = 0; i < n; ++i) {
     uintptr_t va = src + i;
     void *obj = pml4;
     int level;
-    for (level = pgmap::L_PML4; ; level--) {
+    for (level = pgmap::L_TOP; ; level--) {
       pme_t entry = ((mypgmap*)obj)->e[PX(level, va)];
       if (!(entry & PTE_V))
         return i;
@@ -463,7 +464,7 @@ batched_shootdown::perform() const
     return;
 
   u64 myreq = ++tlbflush_req;
-  u64 cr3 = rcr3();
+  u64 ptbr = rptbr();
 
   // the caller may not hold any spinlock, because other CPUs might
   // be spinning waiting for that spinlock, with interrupts disabled,
@@ -474,14 +475,14 @@ batched_shootdown::perform() const
   kstats::timer timer(&kstats::tlb_shootdown_cycles);
 
   for (int i = 0; i < ncpu; i++) {
-    if (cpus[i].tlb_cr3 == cr3 && cpus[i].tlbflush_done < myreq) {
+    if (cpus[i].tlb_ptbr == ptbr && cpus[i].tlbflush_done < myreq) {
       lapic->send_tlbflush(&cpus[i]);
       kstats::inc(&kstats::tlb_shootdown_targets);
     }
   }
 
   for (int i = 0; i < ncpu; i++)
-    while (cpus[i].tlb_cr3 == cr3 && cpus[i].tlbflush_done < myreq)
+    while (cpus[i].tlb_ptbr == ptbr && cpus[i].tlbflush_done < myreq)
       /* spin */ ;
 }
 
@@ -490,7 +491,7 @@ batched_shootdown::on_ipi()
 {
   pushcli();
   u64 nreq = tlbflush_req.load();
-  lcr3(rcr3());
+  lptbr(rptbr());
   mycpu()->tlbflush_done = nreq;
   popcli();
 }
@@ -516,7 +517,7 @@ void
 core_tracking_shootdown::clear_tlb() const
 {
   if (end_ > start_ && end_ - start_ > 4 * PGSIZE) {
-    lcr3(rcr3());
+    lptbr(rptbr());
   } else {
     for (uintptr_t va = start_; va < end_; va += PGSIZE)
       invlpg((void*) va);

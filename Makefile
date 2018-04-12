@@ -85,7 +85,7 @@ COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 endif
 COMFLAGS += -g -MD -MP -O3 -Wall -DHW_$(HW) $(INCLUDES)
-CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
+CFLAGS   := $(COMFLAGS) -std=gnu99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++11 -Wno-sign-compare $(CXXFLAGS)
 ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
 

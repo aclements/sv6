@@ -1,5 +1,7 @@
 #pragma once
 
+#include "riscv.h"
+
 #ifndef __ASSEMBLER__
 #include <stdint.h>
 #endif
@@ -43,5 +45,18 @@ typedef struct hwid {
 } hwid_t;
 
 #define HWID(xnum) (struct hwid){ num: (uint32_t)(xnum) }
+
+#ifndef __ASSEMBLER__
+static inline void
+lptbr(unsigned long ptbr) {
+    write_csr(satp, SATP_SV39 | (ptbr >> PGSHIFT));
+}
+
+static inline unsigned long
+rptbr() {
+    return read_csr(satp) << PGSHIFT;
+}
+#endif
+
 #endif
 

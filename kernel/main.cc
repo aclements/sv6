@@ -27,7 +27,6 @@ void initcodex(void);
 void inittrap(void);
 void initfpu(void);
 void initmsr(void);
-void initseg(struct cpu *);
 void initphysmem(paddr mbaddr);
 void initpercpu(void);
 void initpageinfo(void);
@@ -71,8 +70,7 @@ static cpuid_t bcpuid;
 void
 mpboot(void)
 {
-  initseg(&cpus[bcpuid]);
-  inittls(&cpus[bcpuid]);       // Requires initseg
+  inittls(&cpus[bcpuid]);
   initpg();
 
   // Call per-CPU static initializers.  This is the per-CPU equivalent
@@ -125,8 +123,8 @@ rstrreset(void)
 static void
 bootothers(void)
 {
-  extern u8 _bootother_start[];
-  extern u64 _bootother_size;
+  // TODO
+  return;
   extern void (*apstart)(void);
   char *stack;
   u8 *code;
@@ -135,7 +133,6 @@ bootothers(void)
   // The linker has placed the image of bootother.S in
   // _binary_bootother_start.
   code = (u8*) p2v(0x7000);
-  memmove(code, _bootother_start, _bootother_size);
 
   for (int i = 0; i < ncpu; ++i) {
     if(i == myid())  // We've started already.
@@ -179,8 +176,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initphysmem(mbaddr);
   initpg();                // Requires initphysmem
   inithz();        // CPU Hz, microdelay
-  initseg(&cpus[0]);
-  inittls(&cpus[0]);       // Requires initseg
+  inittls(&cpus[0]);
 
   initacpitables();        // Requires initpg, inittls
   initlapic();             // Requires initpg

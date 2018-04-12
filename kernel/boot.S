@@ -20,10 +20,10 @@
 .section .text, "ax", %progbits
 .globl start
 start:
-  bnez a0, start # make aps loop
+  bnez a0, start # make aps loop TODO
 
   # setup paging
-  la t0, kpdpt
+  la t0, kpml4
   srli t0, t0, PGSHIFT
   li t1, SATP_SV39
   or t0, t0, t1
@@ -53,18 +53,18 @@ apstart:
 .comm stack, STACK
 
 .balign 4096
-.global kpdpt
-kpdpt:
-  .space PX(2, PHY_MEM_BASE) * PTE_SIZE - (. - kpdpt)
+.global kpml4
+kpml4:
+  .space PX(2, PHY_MEM_BASE) * PTE_SIZE - (. - kpml4)
   # map va PHY_MEM_BASE + (0G~1G) to pa PHY_MEM_BASE + (0G~1G) (temporary)
   .quad PHY_MEM_BASE / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
-  .space PX(2, KBASE) * PTE_SIZE - (. - kpdpt)
+  .space PX(2, KBASE) * PTE_SIZE - (. - kpml4)
   # map va KBASE + (0G~4G) to pa 0G~4G
   .quad 0x00000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
   .quad 0x40000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
   .quad 0x80000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
   .quad 0xC0000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
-  .space PGSIZE - (. - kpdpt)
+  .space PGSIZE - (. - kpml4)
 
 .data
 .global cmdline
