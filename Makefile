@@ -96,7 +96,7 @@ ifeq ($(EXCEPTIONS),y)
   # objects, so the linker ignores these objects entirely.  If you start
   # getting "multiple definition" and "undefined reference" errors,
   # there's probably a new ABI symbol we need to define ourselves.
-  CXXRUNTIME = $(shell $(CC) -print-file-name=libgcc_eh.a) \
+  CXXRUNTIME = $(shell $(CC) -print-file-name=libgcc.a) \
 	  $(shell $(CC) -print-file-name=libsupc++.a)
   CXXFLAGS += -DEXCEPTIONS=1
   ifndef USE_CLANG
