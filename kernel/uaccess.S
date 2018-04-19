@@ -2,6 +2,14 @@
 #include "asmdefines.h"
 
 #define ENTRY(name) .globl name ; .align 8; name :
+
+# stubs
+ENTRY(__uaccess_int64)
+ENTRY(__uaccess_str)
+ENTRY(__uaccess_strend)
+ENTRY(__uaccess_mem)
+
+
 // TODO(twd2): What's this???
 /*
 // We aren't allowed to touch rbx,rsp,rbp,r12-r15

@@ -85,7 +85,7 @@ class concurrent_distribution
     distribution<T> dist __mpalign__;
     __padout__;
   } dists[MAX_THREADS];
-  mutable std::atomic<bool> dirty;
+  mutable std::atomic<uintptr_t> dirty;
   mutable distribution<T> combined;
 
   static int getid()

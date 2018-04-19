@@ -239,10 +239,10 @@ struct inode : public referenced, public rcu_freed
 
   // initially null, set once:
   std::atomic<dirns*> dir;
-  std::atomic<bool> valid;
+  std::atomic<uintptr_t> valid;
 
   // protected by seq/lock:
-  std::atomic<bool> busy;
+  std::atomic<uintptr_t> busy;
   std::atomic<int> readbusy;
 
   u32 size;

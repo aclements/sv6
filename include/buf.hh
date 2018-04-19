@@ -59,7 +59,7 @@ private:
   seqcount<u32> seq_;
   sleeplock write_lock_;
   sleeplock writeback_lock_;
-  std::atomic<bool> dirty_;
+  std::atomic<uintptr_t> dirty_;
 
   bufdata data_;
 
@@ -69,12 +69,12 @@ private:
   NEW_DELETE_OPS(buf);
 
   void mark_dirty() {
-    if (cmpxch(&dirty_, false, true))
+    if (cmpxch(&dirty_, (uintptr_t)false, (uintptr_t)true))
       inc();
   }
 
   void mark_clean() {
-    if (cmpxch(&dirty_, true, false))
+    if (cmpxch(&dirty_, (uintptr_t)true, (uintptr_t)false))
       dec();
   }
 };
