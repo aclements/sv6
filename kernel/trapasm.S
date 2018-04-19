@@ -2,9 +2,8 @@
 #include "asmdefines.h"
 #include <riscv.h>
 
-  .altmacro
-  .align 2
-  .macro SAVE_ALL
+.altmacro
+.macro SAVE_ALL
   LOCAL _restore_kernel_sp
   LOCAL _save_context
 
@@ -21,6 +20,7 @@ _save_context:
   # save x registers
   STORE x0, 0*REGBYTES(sp)
   STORE x1, 1*REGBYTES(sp)
+  # x2 is sp, save it later
   STORE x3, 3*REGBYTES(sp)
   STORE x4, 4*REGBYTES(sp)
   STORE x5, 5*REGBYTES(sp)
@@ -51,29 +51,30 @@ _save_context:
   STORE x30, 30*REGBYTES(sp)
   STORE x31, 31*REGBYTES(sp)
 
-  # get sr, epc, badvaddr, cause
+  # get and save status, epc, badvaddr, cause
   # Set sscratch register to 0, so that if a recursive exception
   # occurs, the exception vector knows it came from the kernel
   csrrw s0, sscratch, x0
-  csrr s1, sstatus
-  csrr s2, sepc
-  csrr s3, 0x143
-  csrr s4, scause
-
   STORE s0, 2*REGBYTES(sp)
-  STORE s1, 32*REGBYTES(sp)
-  STORE s2, 33*REGBYTES(sp)
-  STORE s3, 34*REGBYTES(sp)
-  STORE s4, 35*REGBYTES(sp)
-  .endm
 
-  .macro RESTORE_ALL
+  csrr s1, sstatus
+  STORE s1, 32*REGBYTES(sp)
+
+  csrr s2, sepc
+  STORE s2, 33*REGBYTES(sp)
+
+  csrr s3, 0x143 # stval (badvaddr)
+  STORE s3, 34*REGBYTES(sp)
+
+  csrr s4, scause
+  STORE s4, 35*REGBYTES(sp)
+.endm
+
+.macro RESTORE_ALL
   LOCAL _save_kernel_sp
   LOCAL _restore_context
 
-  LOAD s1, 32*REGBYTES(sp)
-  LOAD s2, 33*REGBYTES(sp)
-
+  LOAD s1, 32*REGBYTES(sp) # saved sstatus
   andi s0, s1, SSTATUS_SPP
   bnez s0, _restore_context
 
@@ -83,10 +84,13 @@ _save_kernel_sp:
   csrw sscratch, s0
 _restore_context:
   csrw sstatus, s1
+
+  LOAD s2, 33*REGBYTES(sp)
   csrw sepc, s2
 
   # restore x registers
   LOAD x1, 1*REGBYTES(sp)
+  # x2 is sp, load it later
   LOAD x3, 3*REGBYTES(sp)
   LOAD x4, 4*REGBYTES(sp)
   LOAD x5, 5*REGBYTES(sp)
@@ -118,11 +122,12 @@ _restore_context:
   LOAD x31, 31*REGBYTES(sp)
   # restore sp last
   LOAD x2, 2*REGBYTES(sp)
-  .endm
+.endm
 
 trapcommon:
+.balign 8
   SAVE_ALL
-  move  a0, sp
+  mv a0, sp
   jal trap_c
   # sp should be the same as before "jal trap_c"
   # Fall through to trapret

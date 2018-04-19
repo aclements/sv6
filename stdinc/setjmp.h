@@ -7,7 +7,7 @@
 BEGIN_DECLS
 
 struct __jmp_env {
-  long regs[8];
+  long regs[14];
 };
 
 typedef struct __jmp_env jmp_buf[1];
