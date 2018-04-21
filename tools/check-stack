@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RES=$(objdump -d $1 | awk '
+RES=$(riscv64-unknown-elf-objdump -d $1 | awk '
 />:$/ { FN=$2 }
 # The first regexp speeds up the script by ~50%.  Avoid matching
 # negative subtractions (see below).

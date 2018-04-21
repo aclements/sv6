@@ -30,10 +30,10 @@ start:
   csrw satp, t0
 
   # reallocate
-  la t0, reallocated
-  li t1, KBASE
+  la t0, reallocated # note: we use mcmodel=medany, which is PC-relative addressing,
+  li t1, KBASE # so following additions are needed.
   add t0, t0, t1
-  add a1, a1, t1
+  add a1, a1, t1 # fdt
   jr t0
 
 reallocated:
@@ -49,6 +49,7 @@ reallocated:
 apstart:
   j apstart # TODO
 
+.data
 # Initial stack
 .comm stack, STACK
 
