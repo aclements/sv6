@@ -24,7 +24,7 @@ void initcodex(void);
 void inittrap(void);
 void initfpu(void);
 void initmsr(void);
-void initphysmem(paddr mbaddr);
+void initphysmem(paddr fdt);
 void initpercpu(void);
 void initpageinfo(void);
 void initkalloc(void);
@@ -161,7 +161,7 @@ bootothers(void)
 }
 
 void
-cmain(u64 mbmagic, u64 mbaddr)
+cmain(u64 hartid, u64 fdt)
 {
   extern puts(const char *s);
   extern u64 cpuhz;
@@ -170,8 +170,9 @@ cmain(u64 mbmagic, u64 mbaddr)
   // in the image.  *cpu and such won't work until we inittls.
   percpu_offsets[0] = __percpu_start;
 
+  cprintf("System boot successfully!\nFDT is at %p.\n", p2v(fdt));
   puts("initphysmem...\n");
-  initphysmem(mbaddr);
+  initphysmem(fdt);
   puts("initpg...\n");
   initpg();                // Requires initphysmem
   puts("inithz...\n");

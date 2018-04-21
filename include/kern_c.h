@@ -14,7 +14,7 @@ struct context;
 void            swtch(struct context*, struct context*);
 
 // other exported/imported functions
-void cmain(u64 mbmagic, u64 mbaddr);
+void cmain(u64 hartid, u64 fdt);
 void mpboot(void);
 void trapret(void);
 void threadstub(void);

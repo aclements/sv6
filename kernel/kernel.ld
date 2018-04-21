@@ -5,7 +5,7 @@ SECTIONS
 {
 	. = 0xffffffc080200000;
 	PROVIDE(text = .);
-	.text : AT(0x80100000) {
+	.text : AT(0x80200000) {
 		*(.text .stub .text.* .gnu.linkonce.t.*)
 	}
 	.rodata : {
