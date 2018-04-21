@@ -5,7 +5,6 @@ OBJS = \
 	acpidbg.o \
 	acpiosl.o \
 	bio.o \
-	cga.o \
 	cmdline.o \
 	condvar.o \
 	console.o \
@@ -45,7 +44,6 @@ OBJS = \
 	sysfile.o \
 	sysproc.o \
 	syssocket.o\
-	uart.o \
         user.o \
 	vm.o \
 	trap.o \

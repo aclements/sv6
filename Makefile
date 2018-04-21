@@ -229,10 +229,31 @@ endif
 # User-provided QEMU options
 QEMUOPTS += $(QEMUEXTRA)
 
+ifeq ($(PLATFORM),xv6)
+KERNBBL = $(O)/bbl.elf
+$(KERNBBL): $(KERN)
+	cd riscv-pk && \
+	mkdir -p build && \
+	cd build && \
+	../configure \
+		--disable-fp-emulation \
+		--enable-logo \
+		--enable-print-device-tree \
+		--disable-vm \
+		--host=riscv64-unknown-elf \
+		--with-payload=../../$(KERN) && \
+	make && \
+	cp bbl ../../$@
+qemu: $(KERNBBL)
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERNBBL)
+gdb: $(KERNBBL)
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERNBBL) -s
+else
 qemu: $(KERN)
 	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN)
 gdb: $(KERN)
 	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -s
+endif
 
 codex: $(KERN)
 
@@ -282,6 +303,7 @@ bench:
 	/bin/echo -ne "xv6\\nbench\\nexit\\n" | nc $(HW).csail.mit.edu 23
 
 clean: 
+	-rm -fr riscv-pk/build
 	rm -fr $(O)
 
 all:	$(ALL)

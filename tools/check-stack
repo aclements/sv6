@@ -23,3 +23,5 @@ if [[ -n "$RES" ]]; then
     echo "Top stack users:"
     echo "$RES" | head -n 5 | c++filt
 fi
+
+riscv64-unknown-elf-objdump -d $1 > $1.txt

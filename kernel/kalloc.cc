@@ -587,6 +587,9 @@ static phys_map mem;
 static void
 parse_mb_map(struct Mbdata *mb)
 {
+// TODO: rewrite
+mem.add(0x80000000, 0x80000000 + 0x20000000);
+return;
   if(!(mb->flags & (1<<6)))
     panic("multiboot header has no memory map");
 

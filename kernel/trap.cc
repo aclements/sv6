@@ -169,6 +169,7 @@ trap_c(struct trapframe *tf)
 static void
 trap(struct trapframe *tf)
 {
+  // TODO: rewrite.
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
     kstats::inc(&kstats::sched_tick_count);
@@ -217,7 +218,7 @@ trap(struct trapframe *tf)
     break;
   case T_IRQ0 + IRQ_COM2:
   case T_IRQ0 + IRQ_COM1:
-    uartintr();
+    // uartintr();
     lapiceoi();
     piceoi();
     break;

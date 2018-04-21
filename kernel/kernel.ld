@@ -3,7 +3,7 @@ ENTRY(start)
 
 SECTIONS
 {
-	. = 0xffffffc080100000;
+	. = 0xffffffc080200000;
 	PROVIDE(text = .);
 	.text : AT(0x80100000) {
 		*(.text .stub .text.* .gnu.linkonce.t.*)

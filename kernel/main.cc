@@ -14,9 +14,6 @@
 
 void initpic(void);
 void initextpic(void);
-void inituart(void);
-void inituartcons(void);
-void initcga(void);
 void initconsole(void);
 void initpg(void);
 void cleanuppg(void);
@@ -166,33 +163,41 @@ bootothers(void)
 void
 cmain(u64 mbmagic, u64 mbaddr)
 {
+  extern puts(const char *s);
   extern u64 cpuhz;
 
   // Make cpus[0] work.  CPU 0's percpu data is pre-allocated directly
   // in the image.  *cpu and such won't work until we inittls.
   percpu_offsets[0] = __percpu_start;
 
-  inituart();
+  puts("initphysmem...\n");
   initphysmem(mbaddr);
+  puts("initpg...\n");
   initpg();                // Requires initphysmem
+  puts("inithz...\n");
   inithz();        // CPU Hz, microdelay
+  puts("inittls...\n");
   inittls(&cpus[0]);
 
   initacpitables();        // Requires initpg, inittls
   initlapic();             // Requires initpg
+  puts("initnuma...\n");
   initnuma();              // Requires initacpitables, initlapic
+  puts("initpercpu...\n");
   initpercpu();            // Requires initnuma
+  puts("initcpus...\n");
   initcpus();              // Requires initnuma, initpercpu,
                            // suggests initacpitables
 
+  puts("initpic...\n");
   initpic();       // interrupt controller
+  puts("initiommu...\n");
   initiommu();             // Requires initlapic
+  puts("initextpic...\n");
   initextpic();            // Requires initpic
   // Interrupt routing is now configured
 
-  inituartcons();          // Requires interrupt routing
-  initcga();
-
+  puts("initpageinfo...\n");
   initpageinfo();          // Requires initnuma
 
   // Some global constructors require mycpu()->id (via myid()) which
@@ -207,22 +212,36 @@ cmain(u64 mbmagic, u64 mbaddr)
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
       (*__init_array_start[i])(0, nullptr, nullptr);
 
+  puts("inittrap...\n");
   inittrap();
+  puts("inithpet...\n");
   inithpet();              // Requires initacpitables
+  puts("initfpu...\n");
   initfpu();               // Requires nothing
+  puts("initmsr...\n");
   initmsr();               // Requires nothing
+  puts("initcmdline...\n");
   initcmdline();
+  puts("initkalloc...\n");
   initkalloc();            // Requires initpageinfo
+  puts("initz...\n");
   initz();
+  puts("initproc...\n");
   initproc();      // process table
+  puts("initsched...\n");
   initsched();     // scheduler run queues
+  puts("initidle...\n");
   initidle();
+  puts("initgc...\n");
   initgc();        // gc epochs and threads
+  puts("initrefcache...\n");
   initrefcache();  // Requires initsched
+  puts("initconsole...\n");
   initconsole();
   initfutex();
   initsamp();
   initlockstat();
+  puts("init devices...\n");
   initacpi();              // Requires initacpitables, initkalloc?
   inite1000();             // Before initpci
   initahci();
@@ -237,8 +256,11 @@ cmain(u64 mbmagic, u64 mbaddr)
   if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);
 
+  puts("inituser...\n");
   inituser();      // first user process
+  puts("initdblflt...\n");
   initdblflt();    // Requires inittrap
+  puts("initnmi...\n");
   initnmi();
 
   // XXX hack until mnodes can load from disk
@@ -248,8 +270,10 @@ cmain(u64 mbmagic, u64 mbaddr)
 #if CODEX
   initcodex();
 #endif
+  puts("booting others...\n");
   bootothers();    // start other processors
   cleanuppg();             // Requires bootothers
+  puts("initcpprt...\n");
   initcpprt();
   initwd();                // Requires initnmi
 

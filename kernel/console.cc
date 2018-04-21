@@ -20,6 +20,7 @@
 #include "irq.hh"
 #include "kstream.hh"
 #include "bits.hh"
+#include "sbi.h"
 
 #define BACKSPACE 0x100
 
@@ -47,18 +48,16 @@ consputc(int c)
 
   switch(c) {
   case BACKSPACE:
-    uartputc('\b');
-    uartputc(' ');
-    uartputc('\b');
+    sbi_console_putchar('\b');
+    sbi_console_putchar(' ');
+    sbi_console_putchar('\b');
     break;
   case '\n':
-    uartputc('\r');
+    sbi_console_putchar('\r');
     // fall through
   default:
-    uartputc(c);    
+    sbi_console_putchar(c);
   }
-
-  cgaputc(c);
 }
 
 // Print to the console.

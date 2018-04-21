@@ -15,6 +15,7 @@
 #include "percpu.hh"
 #include "kstream.hh"
 #include "cpuid.hh"
+#include "sbi.h"
 
 #include <algorithm>
 
@@ -850,9 +851,9 @@ wdcheck(int pmc, struct trapframe* tf)
   ++*wd_count;
   if (*wd_count == 2 || *wd_count == 10) {
     auto l = wdlock.guard();
-    // uartputc guarantees some output
-    uartputc('W');
-    uartputc('D');
+    // sbi_console_putchar guarantees some output
+    sbi_console_putchar('W');
+    sbi_console_putchar('D');
     __cprintf(" cpu %u locked up for %d seconds\n", myid(), *wd_count);
     __cprintf("  %016lx\n", tf->rip);
     printtrace(tf->rbp);
