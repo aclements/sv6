@@ -11,7 +11,6 @@
 #include "kstream.hh"
 #include "bitset.hh"
 #include "critical.hh"
-#include "cpuid.hh"
 
 static console_stream verbose(true);
 
@@ -291,12 +290,12 @@ xapic_lapic::dumpall()
 bool
 initlapic_xapic(void)
 {
-  if (!cpuid::features().apic)
-    return false;
-
+  return false;
+  // TODO
+  /*
   verbose.println("xapic: Using xAPIC LAPIC");
   static xapic_lapic apic;
   apic.init();
   lapic = &apic;
-  return true;
+  return true;*/
 }

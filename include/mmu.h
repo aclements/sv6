@@ -38,6 +38,10 @@
 // Address in page table or page directory entry
 #define PTE_ADDR(pte)	(((uintptr_t)(pte) & 0xFFFFFFFFFFFFFC00u) << 2)
 
+#define MK_PTE(pa, flags) ((((uintptr_t)(pa) & 0xFFFFFFFFFFFFF000u) >> 2) | flags)
+
+#define PTE_IS_LEAF(pte) (((pte) & (PTE_R | PTE_W | PTE_X)) != 0)
+
 #ifndef __ASSEMBLER__
 // twd2: ???
 typedef struct hwid { 

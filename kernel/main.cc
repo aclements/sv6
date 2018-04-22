@@ -11,6 +11,7 @@
 #include "apic.hh"
 #include "codex.hh"
 #include "mfs.hh"
+#include "sbi.h"
 
 void initpic(void);
 void initextpic(void);
@@ -24,7 +25,7 @@ void initcodex(void);
 void inittrap(void);
 void initfpu(void);
 void initmsr(void);
-void initphysmem(paddr fdt);
+void initphysmem(void *fdt);
 void initpercpu(void);
 void initpageinfo(void);
 void initkalloc(void);
@@ -161,7 +162,7 @@ bootothers(void)
 }
 
 void
-cmain(u64 hartid, u64 fdt)
+cmain(u64 hartid, void *fdt)
 {
   extern puts(const char *s);
   extern u64 cpuhz;
@@ -170,7 +171,7 @@ cmain(u64 hartid, u64 fdt)
   // in the image.  *cpu and such won't work until we inittls.
   percpu_offsets[0] = __percpu_start;
 
-  cprintf("System boot successfully!\nFDT is at %p.\n", p2v(fdt));
+  cprintf("System boot successfully!\nFDT is at %p.\n", fdt);
   puts("initphysmem...\n");
   initphysmem(fdt);
   puts("initpg...\n");
@@ -180,6 +181,7 @@ cmain(u64 hartid, u64 fdt)
   puts("inittls...\n");
   inittls(&cpus[0]);
 
+  puts("init acpi apic...\n");
   initacpitables();        // Requires initpg, inittls
   initlapic();             // Requires initpg
   puts("initnuma...\n");
@@ -286,7 +288,7 @@ cmain(u64 hartid, u64 fdt)
 void
 halt(void)
 {
-  acpi_power_off();
+  sbi_shutdown();
 
   for (;;);
 }

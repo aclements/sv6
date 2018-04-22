@@ -61,10 +61,10 @@ kpml4:
   .quad PHY_MEM_BASE / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
   .space PX(2, KBASE) * PTE_SIZE - (. - kpml4)
   # map va KBASE + (0G~4G) to pa 0G~4G
-  .quad 0x00000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
-  .quad 0x40000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
-  .quad 0x80000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
-  .quad 0xC0000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
+  .quad 0x00000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G)
+  .quad 0x40000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G)
+  .quad 0x80000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G)
+  .quad 0xC0000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G)
   .space PGSIZE - (. - kpml4)
 
 .data

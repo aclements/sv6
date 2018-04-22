@@ -8,7 +8,6 @@
 #include "kstream.hh"
 #include "bitset.hh"
 #include "critical.hh"
-#include "cpuid.hh"
 
 #define ID      0x802   // ID
 #define VER     0x803   // Version
@@ -332,9 +331,9 @@ x2apic_lapic::dumpall()
 bool
 initlapic_x2apic(void)
 {
-  if (!cpuid::features().x2apic)
-    return false;
-
+  return false;
+  // TODO
+  /*
   // According to [Intel SDM 3A 10.12.8.1], if the BIOS initializes
   // logical processors with APIC IDs greater than 255, then it should
   // enable the x2APIC.
@@ -345,5 +344,5 @@ initlapic_x2apic(void)
   verbose.println("x2apic: Using x2APIC LAPIC");
   static x2apic_lapic apic;
   lapic = &apic;
-  return true;
+  return true;*/
 }

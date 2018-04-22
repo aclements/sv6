@@ -13,7 +13,6 @@
 #include "kstream.hh"
 #include "ipi.hh"
 #include "kstats.hh"
-#include "cpuid.hh"
 #include "vmalloc.hh"
 
 using namespace std;
@@ -182,7 +181,7 @@ public:
             throw_bad_alloc();
           memset(next, 0, sizeof *next);
           if (!atomic_compare_exchange_weak(
-                entryp, &entry, v2p(next) | create)) {
+                entryp, &entry, MK_PTE(v2p(next), create))) {
             // The above call updated entry with the current value in
             // entryp, so retry after the entry load.
             kfree(next);
@@ -301,39 +300,27 @@ initpg(void)
   if (!kpml4_initialized) {
     kpml4_initialized = true;
 
-    int level = pgmap::L_2M;
-    pgmap::iterator it;
-
-    // Can we use 1GB mappings?
-    if (cpuid::features().page1GB) {
-      level = pgmap::L_1G;
-
-      // Redo KCODE mapping with a 1GB page
-      *kpml4.find(KCODE, level).create(0) = PTE_V | PTE_R | PTE_W | PTE_X | PTE_G;
-      lptbr(rptbr());
-    }
+    int level = pgmap::L_1G;
 
     // Create direct map region
     for (auto it = kpml4.find(KBASE, level); it.index() < KBASEEND;
          it += it.span()) {
       paddr pa = it.index() - KBASE;
-      *it.create(0) = pa | PTE_V | PTE_R | PTE_W | PTE_G;
+      *it.create(0) = MK_PTE(pa, PTE_V | PTE_R | PTE_W | PTE_X | PTE_G); // TODO: PTE_X or not?
     }
     assert(!kpml4.find(KBASEEND, level).is_set());
 
     // Create KVMALLOC area.  This doesn't map anything at this point;
     // it only fills in PML4 entries that can later be shared with all
     // other page tables.
-    for (auto it = kpml4.find(KVMALLOC, pgmap::L_PDPT); it.index() < KVMALLOCEND;
+    for (auto it = kpml4.find(KVMALLOC, pgmap::L_TOP - 1); it.index() < KVMALLOCEND;
          it += it.span()) {
       it.create(0);
       assert(!it.is_set());
     }
     kvmallocpos = KVMALLOC;
+    lptbr(rptbr());
   }
-
-  // Enable global pages.  This has to happen on every core.
-  // lcr4(rcr4() | CR4_PGE);
 }
 
 // Clean up mappings that were only required during early boot.
@@ -341,7 +328,7 @@ void
 cleanuppg(void)
 {
   // Remove 1GB identity mapping
-  *kpml4.find(0, pgmap::L_TOP) = 0;
+  *kpml4.find(PHY_MEM_BASE, pgmap::L_TOP) = 0;
   lptbr(rptbr());
 }
 
@@ -362,7 +349,7 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
       if (!(entry & PTE_V))
         return i;
       obj = p2v(PTE_ADDR(entry));
-      if (level == 0 || ((entry & (PTE_R | PTE_W | PTE_X)) == 0))
+      if (level == 0 || PTE_IS_LEAF(entry))
         break;
     }
     ((char*)dst)[i] = ((char*)obj)[va % (1ull << PXSHIFT(level))];
@@ -396,7 +383,7 @@ void
 inittls(struct cpu *c)
 {
   // Initialize cpu-local storage.
-  // TODO
+  // TODO: init hart-local storage!
   c->cpu = c;
   c->proc = nullptr;
 }
@@ -427,7 +414,7 @@ vmalloc_raw(size_t bytes, size_t guard, const char *name)
     void *page = kalloc(name);
     if (!page)
       throw_bad_alloc();
-    *it.create(0) = v2p(page) | PTE_V | PTE_R | PTE_W | PTE_X | PTE_G;
+    *it.create(0) = MK_PTE(v2p(page), PTE_V | PTE_R | PTE_W | PTE_X | PTE_G);
   }
   mtlabel(mtrace_label_heap, (void*)base, bytes, name, strlen(name));
 

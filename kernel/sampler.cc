@@ -14,7 +14,6 @@
 #include "apic.hh"
 #include "percpu.hh"
 #include "kstream.hh"
-#include "cpuid.hh"
 #include "sbi.h"
 
 #include <algorithm>
@@ -111,11 +110,8 @@ public:
   bool
   try_init() override
   {
-    if (cpuid::model().family < 0x10)
-      return false;
-    // 4 counters are supported
-    console.println("sampler: Enabling AMD support");
-    return true;
+    // TODO
+    return false;
   }
 
   void
@@ -240,13 +236,14 @@ public:
   bool
   try_init() override
   {
-    auto info = cpuid::perfmon();
-    if (info.version < 2) {
+    // TODO
+    //auto info = cpuid::perfmon();
+    if (true /*info.version < 2*/) {
       cprintf("initsamp: Unsupported performance monitor version %d\n",
-              info.version);
+              0);
       return false;
     }
-    console.println("sampler: Enabling Intel support");
+    /*console.println("sampler: Enabling Intel support");
     num_pmcs = info.num_counters;
     if (cpuid::features().pdcm && cpuid::features().ds &&
         !(readmsr(MSR_INTEL_MISC_ENABLE) & MISC_ENABLE_PEBS_UNAVAILABLE)) {
@@ -264,7 +261,7 @@ public:
         have_pebs = true;
       }
     }
-    return true;
+    return true;*/
   }
 
   void
@@ -430,7 +427,7 @@ private:
     while (pos < ds->pebs_index) {
       auto record = (pebs_record_v1*)pos;
       ev.ints_disabled = !(record->rflags & FL_IF);
-      ev.kernel = record->rip >= KCODE;
+      ev.kernel = record->rip >= KBASE;
       ev.rip = record->rip;
       if (pebs_version >= 1) {
         ev.latency = record->latency;
@@ -636,7 +633,7 @@ samplog(int pmc, struct trapframe *tf)
   struct pmuevent ev{};
   ev.idle = (myproc() == idleproc());
   ev.ints_disabled = !(tf->rflags & FL_IF);
-  ev.kernel = tf->rip >= KCODE;
+  ev.kernel = tf->rip >= KBASE;
   ev.count = 1;
   ev.rip = tf->rip;
   getcallerpcs((void*)tf->rbp, ev.trace, NELEM(ev.trace));
@@ -767,6 +764,8 @@ enable_nehalem_workaround(void)
     0x4300B1
   };
 
+  return; // TODO
+  /*
   if (cpuid::perfmon().version == 0)
     return;
   int num = cpuid::perfmon().num_counters;
@@ -789,6 +788,7 @@ enable_nehalem_workaround(void)
   }
 
   writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, 0x3);
+  */
 }
 
 void
@@ -799,11 +799,11 @@ initsamp(void)
   static class no_pmu no_pmu;
 
   if (myid() == 0) {
-    if (cpuid::vendor_is_amd() && amd_pmu.try_init())
+    /*if (cpuid::vendor_is_amd() && amd_pmu.try_init())
       pmu = &amd_pmu;
     else if (cpuid::vendor_is_intel() && intel_pmu.try_init())
       pmu = &intel_pmu;
-    else {
+    else*/ { // TODO
       cprintf("initsamp: Unknown manufacturer\n");
       pmu = &no_pmu;
       return;

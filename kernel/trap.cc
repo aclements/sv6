@@ -15,7 +15,6 @@
 #include "kstream.hh"
 #include "hwvm.hh"
 #include "refcache.hh"
-#include "cpuid.hh"
 
 extern "C" void __uaccess_end(void);
 
@@ -351,58 +350,8 @@ initfpu(void)
 void
 initmsr(void)
 {
-  // XXX Where should this code live?
-
-#if defined(DISABLE_PREFETCH_STREAM)
-#define CONTROL_PREFETCH_STREAM 1
-#else
-#define CONTROL_PREFETCH_STREAM 0
-#define DISABLE_PREFETCH_STREAM 0
-#endif
-#if defined(DISABLE_PREFETCH_ADJ)
-#define CONTROL_PREFETCH_ADJ 1
-#else
-#define CONTROL_PREFETCH_ADJ 0
-#define DISABLE_PREFETCH_ADJ 0
-#endif
-
-  if (CONTROL_PREFETCH_STREAM || CONTROL_PREFETCH_ADJ) {
-    // Is the MISC_FEATURE_CONTROL MSR valid?
-    auto m = cpuid::model();
-    if (!(cpuid::vendor_is_intel() && m.family == 6 &&
-          (m.model == 0x1a || m.model == 0x1e || m.model == 0x1f || // Nehalem
-           m.model == 0x25 || m.model == 0x2c || // Westmere
-           m.model == 0x2e || // Nehalem-EX
-           m.model == 0x2f)))  // Westmere-EX
-      panic("Cannot control hardware prefetcher for this CPU model");
-
-    uint64_t mfc = readmsr(MSR_INTEL_MISC_FEATURE_CONTROL);
-
-    if (DISABLE_PREFETCH_STREAM)
-      mfc |= MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_STREAMER;
-    else if (CONTROL_PREFETCH_STREAM)
-      mfc &= ~MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_STREAMER;
-
-    if (DISABLE_PREFETCH_ADJ)
-      mfc |= MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_SPATIAL;
-    else if (CONTROL_PREFETCH_ADJ)
-      mfc &= ~MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_SPATIAL;
-
-    writemsr(MSR_INTEL_MISC_FEATURE_CONTROL, mfc);
-
-    if (myid() == 0) {
-      if (CONTROL_PREFETCH_STREAM)
-        cprintf("msr: MLC stream prefetcher %s\n",
-                DISABLE_PREFETCH_STREAM ? "disabled" : "enabled");
-      if (CONTROL_PREFETCH_ADJ)
-        cprintf("msr: Adjacent cache line prefetcher %s\n",
-                DISABLE_PREFETCH_ADJ ? "disabled" : "enabled");
-    }
-
-    // XXX There are also the DCU prefetchers.  ben's BIOS doesn't
-    // disable these when I set "Hardware prefetcher" to disable, so
-    // I'm not convinced the bits are right.
-  }
+  // TODO
+  for (;;);
 }
 
 void

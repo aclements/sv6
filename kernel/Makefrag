@@ -12,6 +12,7 @@ OBJS = \
 	e1000.o \
 	ahci.o \
 	exec.o \
+	fdt.o \
 	file.o \
 	fmt.o \
 	fs.o \
@@ -70,7 +71,6 @@ OBJS = \
 	mfs.o \
 	mfsload.o \
 	hpet.o \
-	cpuid.o \
 	ctype.o \
 	unixsock.o \
 	heapprof.o \

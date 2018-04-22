@@ -22,6 +22,7 @@
 #include "file.hh"
 #include "major.h"
 #include "heapprof.hh"
+#include "fdt.h"
 
 #include <algorithm>
 #include <iterator>
@@ -585,47 +586,11 @@ static phys_map mem;
 
 // Parse a multiboot memory map.
 static void
-parse_mb_map(struct Mbdata *mb)
+parse_mem_map(void *fdt)
 {
-// TODO: rewrite
-mem.add(0x80000000, 0x80000000 + 0x20000000);
-return;
-  if(!(mb->flags & (1<<6)))
-    panic("multiboot header has no memory map");
-
-  // Print the map
-  uint8_t *p = (uint8_t*) p2v(mb->mmap_addr);
-  uint8_t *ep = p + mb->mmap_length;
-  // XXX QEMU's pc-bios/optionrom/multiboot.S has a bug that makes
-  // mmap_length one entry short.
-  while (p < ep) {
-    struct Mbmem *mbmem = (Mbmem *)p;
-    p += 4 + mbmem->size;
-    console.println("e820: ", shex(mbmem->base).width(18).pad(), "-",
-                    shex(mbmem->base + mbmem->length - 1).width(18).pad(), " ",
-                    mbmem->type == 1 ? "usable" : "reserved");
-  }
-
-  // The E820 map can be out of order and it can have overlapping
-  // regions, so we have to clean it up.
-
-  // Add and merge usable regions
-  p = (uint8_t*) p2v(mb->mmap_addr);
-  while (p < ep) {
-    struct Mbmem *mbmem = (Mbmem *)p;
-    p += 4 + mbmem->size;
-    if (mbmem->type == 1)
-      mem.add(mbmem->base, mbmem->base + mbmem->length);
-  }
-
-  // Remove unusable regions
-  p = (uint8_t*) p2v(mb->mmap_addr);
-  while (p < ep) {
-    struct Mbmem *mbmem = (Mbmem *)p;
-    p += 4 + mbmem->size;
-    if (mbmem->type != 1)
-      mem.remove(mbmem->base, mbmem->base + mbmem->length);
-  }
+  // TODO: rewrite
+  mem.add(0x80000000, 0x80000000 + 0x20000000);
+  return;
 }
 
 // Simple allocator to get off the ground during boot.  Works directly
@@ -967,12 +932,12 @@ initpageinfo(void)
 
 // Initialize physical memory map
 void
-initphysmem(paddr mbaddr)
+initphysmem(void *fdt)
 {
   // First address after kernel loaded from ELF file
   extern char end[];
 
-  parse_mb_map((Mbdata*) p2v(mbaddr));
+  parse_mem_map(fdt);
 
   // Consider first 1MB of memory unusable
   mem.remove(0, 0x100000);
@@ -982,6 +947,12 @@ initphysmem(paddr mbaddr)
 
   // Reserve kernel ELF image
   mem.remove(0, v2p(end));
+  // Reserve FDT
+  fdt_header *fh = (fdt_header *)fdt;
+  mem.remove(v2p(fdt), v2p(fdt) + fdt_bswap(fh->totalsize));
+
+  console.println("After reserving memory map:");
+  mem.print();
 }
 
 // Initialize free list of physical pages.

@@ -12,11 +12,7 @@ extern "C" {
 #include "enumbitset.hh"
 
 static inline uptr v2p(void *a) {
-  uptr ua = (uptr) a;
-  if (ua >= KCODE)
-    return ua - KCODE;
-  else
-    return ua - KBASE;
+  return (uptr) a - KBASE;
 }
 
 static inline void *p2v(uptr a) {
@@ -253,7 +249,7 @@ char*           zalloc(const char* name);
 void            zfree(void* p);
 
 // other exported/imported functions
-void cmain(u64 hartid, u64 fdt);
+void cmain(u64 hartid, void *fdt);
 void mpboot(void);
 void trapret(void);
 void threadstub(void);
