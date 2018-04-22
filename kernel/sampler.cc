@@ -11,7 +11,6 @@
 #include "cpu.hh"
 #include "sampler.h"
 #include "major.h"
-#include "apic.hh"
 #include "percpu.hh"
 #include "kstream.hh"
 #include "sbi.h"
@@ -589,7 +588,7 @@ sampstart(void)
   for (int i = 0; i < ncpu; ++i) {
     if (i == myid())
       continue;
-    lapic->send_sampconf(&cpus[i]);
+    // TODO: lapic->send_sampconf(&cpus[i]);
   }
   sampconf();
   popcli();
@@ -608,7 +607,7 @@ sampintr(struct trapframe *tf)
   pmu->pause();
 
   // Performance events mask LAPIC.PC.  Unmask it.
-  lapic->mask_pc(false);
+  // TODO: lapic->mask_pc(false);
 
   u64 overflow = pmu->get_overflow(&r);
 

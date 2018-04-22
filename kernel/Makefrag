@@ -1,9 +1,7 @@
 # -*- makefile-gmake -*-
 
 OBJS = \
-	acpi.o \
-	acpidbg.o \
-	acpiosl.o \
+	numa.o \
 	bio.o \
 	cmdline.o \
 	condvar.o \
@@ -18,7 +16,6 @@ OBJS = \
 	fs.o \
         futex.o \
         idle.o \
-	ioapic.o \
 	hwvm.o \
 	hz.o \
 	kalloc.o \
@@ -29,7 +26,6 @@ OBJS = \
 	ide.o \
 	mp.o \
 	net.o \
-	pci.o \
 	picirq.o \
 	pipe.o \
 	proc.o \
@@ -50,8 +46,6 @@ OBJS = \
 	trap.o \
         uaccess.o \
 	trapasm.o \
-	xapic.o \
-	x2apic.o \
         zalloc.o \
 	incbin.o \
 	sysvectors.o \
@@ -64,13 +58,11 @@ OBJS = \
 	dev.o \
 	codex.o \
 	benchcodex.o \
-	iommu.o \
 	rtc.o \
 	timemath.o \
 	mnode.o \
 	mfs.o \
 	mfsload.o \
-	hpet.o \
 	ctype.o \
 	unixsock.o \
 	heapprof.o \
@@ -80,10 +72,6 @@ OBJS = \
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
 OBJS += $(CXXRUNTIME)
-
-# Include ACPICA fragment after we've set up the kernel object list,
-# but before the kernel build rules
-include kernel/Makefrag.acpica
 
 KERN = $(O)/kernel.elf
 ALL += $(KERN)

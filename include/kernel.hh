@@ -39,29 +39,6 @@ class print_stream;
 class mnode;
 class buf;
 
-// acpi.c
-typedef void *ACPI_HANDLE;
-bool            acpi_setup_iommu(class abstract_iommu *iommu);
-bool            acpi_setup_ioapic(class ioapic *apic);
-bool            acpi_setup_hpet(class hpet *hpet);
-bool            acpi_pci_scan_roots(int (*scan)(struct pci_bus *bus));
-ACPI_HANDLE     acpi_pci_resolve_handle(struct pci_func *func);
-ACPI_HANDLE     acpi_pci_resolve_handle(struct pci_bus *bus);
-irq             acpi_pci_resolve_irq(struct pci_func *func);
-void            acpi_power_off(void);
-
-// acpidbg.c
-struct sacpi_handle
-{
-  ACPI_HANDLE handle;
-};
-sacpi_handle    sacpi(ACPI_HANDLE handle);
-void            to_stream(print_stream *s, const sacpi_handle &o);
-void            to_stream(print_stream *s, const struct acpi_device_info &o);
-void            to_stream(print_stream *s, const struct acpi_pci_routing_table &o);
-void            to_stream(print_stream *s, const struct acpi_resource &r);
-void            to_stream(print_stream *s, const struct acpi_resource_source &r);
-
 // bio.c
 void            binit(void);
 buf*            bread(u32, u64, int writer);

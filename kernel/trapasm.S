@@ -127,6 +127,7 @@ _restore_context:
   LOAD x2, 2*REGBYTES(sp)
 .endm
 
+.globl trapcommon
 trapcommon:
 .balign 8
   SAVE_ALL

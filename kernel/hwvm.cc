@@ -9,7 +9,6 @@
 #include "condvar.hh"
 #include "proc.hh"
 #include "vm.hh"
-#include "apic.hh"
 #include "kstream.hh"
 #include "ipi.hh"
 #include "kstats.hh"
@@ -463,7 +462,7 @@ batched_shootdown::perform() const
 
   for (int i = 0; i < ncpu; i++) {
     if (cpus[i].tlb_ptbr == ptbr && cpus[i].tlbflush_done < myreq) {
-      lapic->send_tlbflush(&cpus[i]);
+      // TODO: lapic->send_tlbflush(&cpus[i]);
       kstats::inc(&kstats::tlb_shootdown_targets);
     }
   }

@@ -16,7 +16,6 @@
 #include <stdarg.h>
 #include "fmt.hh"
 #include "major.h"
-#include "apic.hh"
 #include "irq.hh"
 #include "kstream.hh"
 #include "bits.hh"
@@ -452,5 +451,5 @@ initconsole(void)
   devsw[MAJ_CONSOLE].write = consolewrite;
   devsw[MAJ_CONSOLE].read = consoleread;
 
-  extpic->map_isa_irq(IRQ_KBD).enable();
+  // TODO: enable kbd irq
 }

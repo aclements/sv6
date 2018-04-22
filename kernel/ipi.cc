@@ -1,6 +1,5 @@
 #include "ipi.hh"
 
-#include "apic.hh"
 #include "traps.h"
 #include "bits.hh"
 
@@ -35,8 +34,8 @@ ipi_call::start(unsigned cpu)
     *q.tail = this;
     q.tail = &this->next[cpu];
   }
-  if (need_ipi)
-    lapic->send_ipi(&cpus[cpu], T_IPICALL);
+  if (need_ipi);
+    // TODO: lapic->send_ipi(&cpus[cpu], T_IPICALL);
 }
 
 void

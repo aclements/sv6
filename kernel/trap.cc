@@ -10,7 +10,6 @@
 #include "kmtrace.hh"
 #include "bits.hh"
 #include "kalloc.hh"
-#include "apic.hh"
 #include "irq.hh"
 #include "kstream.hh"
 #include "hwvm.hh"
@@ -84,7 +83,7 @@ do_pagefault(struct trapframe *tf)
 static inline void
 lapiceoi()
 {
-  lapic->eoi();
+  // TODO: eoi
 }
 
 namespace {
@@ -96,6 +95,7 @@ namespace {
 extern "C" void
 trap_c(struct trapframe *tf)
 {
+  panic("NOT IMPL: trap");
   if (tf->trapno == T_NMI) {
     // An NMI can come in after popcli() drops ncli to zero and intena
     // is 1, but before popcli() checks intena and calls sti.  If the
@@ -328,12 +328,16 @@ trap(struct trapframe *tf)
 void
 inittrap(void)
 {
-  for (;;);
+  extern char trapcommon[];
+  cprintf("stvec: %p\n", trapcommon);
+  write_csr(stvec, (uintptr_t)trapcommon);
 }
 
 void
 initfpu(void)
 {
+  // TODO: FPU
+  return;
   // Allow ourselves to use FPU instructions.  We'll clear this before
   // we schedule anything.
   lcr0(rcr0() & ~(CR0_TS | CR0_EM));
@@ -348,13 +352,6 @@ initfpu(void)
 }
 
 void
-initmsr(void)
-{
-  // TODO
-  for (;;);
-}
-
-void
 initnmi(void)
 {
   for (;;);
@@ -363,17 +360,6 @@ initnmi(void)
 
   if (mycpu()->id == 0)
     idt[T_NMI].ist = 1;*/
-}
-
-void
-initdblflt(void)
-{
-  for (;;);
-  /*void *dfaultstackbase = kalloc("kstack", KSTACKSIZE);
-  mycpu()->ts.ist[2] = (uintptr_t)dfaultstackbase + KSTACKSIZE;
-
-  if (mycpu()->id == 0)
-    idt[T_DBLFLT].ist = 2;*/
 }
 
 // Pushcli/popcli are like cli/sti except that they are matched:

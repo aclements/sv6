@@ -8,23 +8,18 @@
 #include "hwvm.hh"
 #include "condvar.hh"
 #include "proc.hh"
-#include "apic.hh"
 #include "codex.hh"
 #include "mfs.hh"
 #include "sbi.h"
 
-void initpic(void);
-void initextpic(void);
 void initconsole(void);
 void initpg(void);
 void cleanuppg(void);
 void inittls(struct cpu *);
 void initnmi(void);
-void initdblflt(void);
 void initcodex(void);
 void inittrap(void);
 void initfpu(void);
-void initmsr(void);
 void initphysmem(void *fdt);
 void initpercpu(void);
 void initpageinfo(void);
@@ -38,7 +33,6 @@ void inituser(void);
 void initsamp(void);
 void inite1000(void);
 void initahci(void);
-void initpci(void);
 void initnet(void);
 void initsched(void);
 void initlockstat(void);
@@ -47,15 +41,9 @@ void initcpprt(void);
 void initfutex(void);
 void initcmdline(void);
 void initrefcache(void);
-void initacpitables(void);
 void initnuma(void);
-void initcpus(void);
-void initlapic(void);
-void initiommu(void);
-void initacpi(void);
 void initwd(void);
 void initdev(void);
-void inithpet(void);
 void initrtc(void);
 void initmfs(void);
 void idleloop(void);
@@ -78,12 +66,9 @@ mpboot(void)
   for (size_t i = 0; i < __percpuinit_array_end - __percpuinit_array_start; i++)
       (*__percpuinit_array_start[i])(bcpuid);
 
-  initlapic();
   initfpu();
-  initmsr();
   initsamp();
   initidle();
-  initdblflt();
   initnmi();
   initwd();                     // Requires initnmi
   bstate.store(1);
@@ -91,74 +76,10 @@ mpboot(void)
 }
 
 static void
-warmreset(u32 addr)
-{
-  volatile u16 *wrv;
-
-  // "The BSP must initialize CMOS shutdown code to 0AH
-  // and the warm reset vector (DWORD based at 40:67) to point at
-  // the AP startup code prior to the [universal startup algorithm]."
-  outb(IO_RTC, 0xF);  // offset 0xF is shutdown code
-  outb(IO_RTC+1, 0x0A);
-  wrv = (u16*)p2v(0x40<<4 | 0x67);  // Warm reset vector
-  wrv[0] = 0;
-  wrv[1] = addr >> 4;
-}
-
-static void
-rstrreset(void)
-{
-  volatile u16 *wrv;
-
-  // Paranoid: set warm reset code and vector back to defaults
-  outb(IO_RTC, 0xF);
-  outb(IO_RTC+1, 0);
-  wrv = (u16*)p2v(0x40<<4 | 0x67);
-  wrv[0] = 0;
-  wrv[1] = 0;
-}
-
-static void
 bootothers(void)
 {
   // TODO
   return;
-  extern void (*apstart)(void);
-  char *stack;
-  u8 *code;
-
-  // Write bootstrap code to unused memory at 0x7000.
-  // The linker has placed the image of bootother.S in
-  // _binary_bootother_start.
-  code = (u8*) p2v(0x7000);
-
-  for (int i = 0; i < ncpu; ++i) {
-    if(i == myid())  // We've started already.
-      continue;
-    struct cpu *c = &cpus[i];
-
-    warmreset(v2p(code));
-
-    // Tell bootother.S what stack to use and the address of apstart;
-    // it expects to find these two addresses stored just before
-    // its first instruction.
-    stack = (char*) kalloc("kstack", KSTACKSIZE);
-    *(u32*)(code-4) = (u32)v2p(&apstart);
-    *(u64*)(code-12) = (u64)stack + KSTACKSIZE;
-    // bootother.S sets this to 0x0a55face early on
-    *(u32*)(code-64) = 0;
-
-    bstate.store(0);
-    bcpuid = c->id;
-    lapic->start_ap(c, v2p(code));
-#if CODEX
-    codex_magic_action_run_thread_create(c->id);
-#endif
-    // Wait for cpu to finish mpmain()
-    while(bstate.load() == 0)
-      nop_pause();
-    rstrreset();
-  }
 }
 
 void
@@ -180,24 +101,12 @@ cmain(u64 hartid, void *fdt)
   inithz();        // CPU Hz, microdelay
   puts("inittls...\n");
   inittls(&cpus[0]);
-
-  puts("init acpi apic...\n");
-  initacpitables();        // Requires initpg, inittls
-  initlapic();             // Requires initpg
   puts("initnuma...\n");
+  ncpu = 8;
   initnuma();              // Requires initacpitables, initlapic
   puts("initpercpu...\n");
   initpercpu();            // Requires initnuma
-  puts("initcpus...\n");
-  initcpus();              // Requires initnuma, initpercpu,
-                           // suggests initacpitables
 
-  puts("initpic...\n");
-  initpic();       // interrupt controller
-  puts("initiommu...\n");
-  initiommu();             // Requires initlapic
-  puts("initextpic...\n");
-  initextpic();            // Requires initpic
   // Interrupt routing is now configured
 
   puts("initpageinfo...\n");
@@ -217,12 +126,8 @@ cmain(u64 hartid, void *fdt)
 
   puts("inittrap...\n");
   inittrap();
-  puts("inithpet...\n");
-  inithpet();              // Requires initacpitables
   puts("initfpu...\n");
   initfpu();               // Requires nothing
-  puts("initmsr...\n");
-  initmsr();               // Requires nothing
   puts("initcmdline...\n");
   initcmdline();
   puts("initkalloc...\n");
@@ -245,10 +150,8 @@ cmain(u64 hartid, void *fdt)
   initsamp();
   initlockstat();
   puts("init devices...\n");
-  initacpi();              // Requires initacpitables, initkalloc?
   inite1000();             // Before initpci
   initahci();
-  initpci();               // Suggests initacpi
   initnet();
   initrtc();               // Requires inithpet
   initdev();               // Misc /dev nodes
@@ -261,8 +164,6 @@ cmain(u64 hartid, void *fdt)
 
   puts("inituser...\n");
   inituser();      // first user process
-  puts("initdblflt...\n");
-  initdblflt();    // Requires inittrap
   puts("initnmi...\n");
   initnmi();
 
