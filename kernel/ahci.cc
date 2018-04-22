@@ -11,6 +11,7 @@
 #include "spinlock.hh"
 #include "condvar.hh"
 #include "cpu.hh"
+#include "riscv.h"
 
 enum { fis_debug = 0 };
 
@@ -353,7 +354,7 @@ ahci_port::dump()
 int
 ahci_port::wait()
 {
-  u64 ts_start = rdtsc();
+  u64 ts_start = rdcycle();
 
   for (;;) {
     u32 tfd = preg->tfd;
@@ -361,7 +362,7 @@ ahci_port::wait()
     if (!(stat & IDE_STAT_BSY) && !(preg->ci & 1))
       return 0;
 
-    u64 ts_diff = rdtsc() - ts_start;
+    u64 ts_diff = rdcycle() - ts_start;
     if (ts_diff > 1000 * 1000 * 1000) {
       cprintf("ahci_port::wait: stuck for %lx cycles\n", ts_diff);
       dump();

@@ -1,6 +1,6 @@
 #include "types.h"
 #include "kernel.hh"
-#include "amd64.h"
+#include "riscv.h"
 #include "spinlock.hh"
 #include "condvar.hh"
 #include "proc.hh"
@@ -70,7 +70,7 @@ idleloop(void)
 //  }
 //#endif
 
-  sti();
+  intr_enable();
   for (;;) {
     acquire(&myproc()->lock);
     myproc()->set_state(RUNNABLE);
@@ -80,7 +80,7 @@ idleloop(void)
         // XXX(Austin) This will prevent us from immediately picking
         // up work that's trying to push itself to this core (pinned
         // thread).  Use an IPI to poke idle cores.
-        asm volatile("hlt");
+        asm volatile("wfi");
     }
   }
 }

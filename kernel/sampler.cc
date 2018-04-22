@@ -813,10 +813,6 @@ initsamp(void)
   if (pmu == &no_pmu)
     return;
 
-  // enable RDPMC at CPL > 0
-  u64 cr4 = rcr4();
-  lcr4(cr4 | CR4_PCE);
-
   for (int i = 0; i < LOG_SEGMENTS_PER_CPU; ++i) {
     auto l = &pmulog[myid()];
     l->segments[i] = (pmuevent*)kmalloc(LOG_SEGMENT_SZ, "perf");

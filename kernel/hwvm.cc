@@ -382,10 +382,10 @@ switchvm(struct proc *p)
 void
 inittls(struct cpu *c)
 {
-  // Initialize cpu-local storage.
-  // TODO: init hart-local storage!
+  // Initialize hart-local storage.
   c->cpu = c;
   c->proc = nullptr;
+  write_csr(sscratch, (uintptr_t)c); // FIXME: not tested.
 }
 
 // Allocate 'bytes' bytes in the KVMALLOC area, surrounded by at least

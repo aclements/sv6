@@ -83,11 +83,11 @@ __cxa_guard_acquire(s64 *guard)
   volatile u32 *l = (u32*) (x+4);
 
   pushcli();
-  while (xchg32(l, 1) != 0)
+  while (__atomic_exchange_n(l, 1, __ATOMIC_ACQ_REL) != 0)
     ; /* spin */
 
   if (*x) {
-    xchg32(l, 0);
+    __atomic_exchange_n(l, 0, __ATOMIC_ACQ_REL);
     popcli();
     return 0;
   }
@@ -102,7 +102,7 @@ __cxa_guard_release(s64 *guard)
 
   *x = 1;
   __sync_synchronize();
-  xchg32(l, 0);
+  __atomic_exchange_n(l, 0, __ATOMIC_ACQ_REL);
   popcli();
 }
 
@@ -112,7 +112,7 @@ __cxa_guard_abort(s64 *guard)
   volatile u8 *x = (u8*) guard;
   volatile u32 *l = (u32*) (x+4);
 
-  xchg32(l, 0);
+  __atomic_exchange_n(l, 0, __ATOMIC_ACQ_REL);
   popcli();
 }
 

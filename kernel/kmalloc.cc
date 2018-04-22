@@ -56,7 +56,7 @@ morecore(int c, int b)
 #if CODEX
   u8 r = rnd() % 11;
 #else
-  u8 r = rdtsc() % 11;
+  u8 r = rdcycle() % 11;
 #endif
 #else
   u8 r = 0;

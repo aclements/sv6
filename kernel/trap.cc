@@ -60,7 +60,7 @@ do_pagefault(struct trapframe *tf)
     if (addr >= USERTOP)
       panic("do_pagefault: %lx", addr);
 
-    sti();
+    intr_enable();
     if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
       return 0;
     }
@@ -70,13 +70,13 @@ do_pagefault(struct trapframe *tf)
     tf->rip = (u64)__uaccess_end;
     return 0;
   } else if (tf->err & FEC_U) {
-      sti();
+      intr_enable();
       if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
         return 0;
       }
       uerr.println("pagefault from user for ", shex(addr),
                    " err ", (int)tf->err);
-      cli();
+      intr_disable();
   }
   return -1;
 }
@@ -382,43 +382,41 @@ initdblflt(void)
 void
 pushcli(void)
 {
-  u64 rflags;
-
-  rflags = readrflags();
-  cli();
+  u64 status = read_csr(sstatus);
+  intr_disable();
   if(mycpu()->ncli++ == 0)
-    mycpu()->intena = rflags & FL_IF;
+    mycpu()->intena = status & SSTATUS_SIE;
 }
 
 void
 popcli(void)
 {
-  if(readrflags()&FL_IF)
+  if(read_csr(sstatus) & SSTATUS_SIE)
     panic("popcli - interruptible");
   if(--mycpu()->ncli < 0)
     panic("popcli");
   if(mycpu()->ncli == 0 && mycpu()->intena)
-    sti();
+    intr_enable();
 }
 
 // Record the current call stack in pcs[] by following the %rbp chain.
 void
 getcallerpcs(void *v, uptr pcs[], int n)
 {
-  uintptr_t rbp;
+  uintptr_t fp;
   int i;
 
-  rbp = (uintptr_t)v;
+  fp = (uintptr_t)v;
   for(i = 0; i < n; i++){
-    // Read saved %rip
-    uintptr_t saved_rip;
-    if (safe_read_vm(&saved_rip, rbp + sizeof(uintptr_t), sizeof(saved_rip)) !=
-        sizeof(saved_rip))
+    // Read saved pc
+    uintptr_t saved_pc;
+    if (safe_read_vm(&saved_pc, fp + sizeof(uintptr_t), sizeof(saved_pc)) !=
+        sizeof(saved_pc))
       break;
     // Subtract 1 so it points to the call instruction
-    pcs[i] = saved_rip - 1;
-    // Read saved %rbp
-    if (safe_read_vm(&rbp, rbp, sizeof(rbp)) != sizeof(rbp))
+    pcs[i] = saved_pc - 1;
+    // Read saved fp
+    if (safe_read_vm(&fp, fp, sizeof(fp)) != sizeof(fp))
       break;
   }
   for(; i < n; i++)

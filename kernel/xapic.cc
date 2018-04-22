@@ -183,12 +183,6 @@ xapic_lapic::mask_pc(bool mask)
 hwid_t
 xapic_lapic::id()
 {
-  if (readrflags() & FL_IF) {
-    cli();
-    panic("xapic_lapic::id() called from %p with interrupts enabled\n",
-      __builtin_return_address(0));
-  }
-
   return HWID(xapic[ID]>>24);
 }
 

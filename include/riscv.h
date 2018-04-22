@@ -242,6 +242,16 @@
 
 #define barrier() __asm__ __volatile__ ("fence" ::: "memory")
 
+/* intr_enable - enable interrupt */
+#define intr_enable() do { set_csr(sstatus, SSTATUS_SIE); } while (0)
+
+/* intr_disable - disable interrupt */
+#define intr_disable() do { clear_csr(sstatus, SSTATUS_SIE); } while (0)
+
+#define read_fp() ({ unsigned long __tmp; \
+  asm volatile ("mv %0, s0" : "=r"(__tmp)); \
+  __tmp; }) // s0 is fp
+
 #endif
 
 #endif

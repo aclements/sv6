@@ -41,7 +41,7 @@ static void
 consputc(int c)
 {
   if(panicked){
-    cli();
+    intr_disable();
     for(;;)
       ;
   }
@@ -156,40 +156,13 @@ puts(const char *s)
 }
 
 void
-printtrace(u64 rbp)
+printtrace(u64 fp)
 {
   uptr pc[10];
 
-  getcallerpcs((void*)rbp, pc, NELEM(pc));
+  getcallerpcs((void*)fp, pc, NELEM(pc));
   for (int i = 0; i < NELEM(pc) && pc[i] != 0; i++)
     __cprintf("  %016lx\n", pc[i]);
-}
-
-static uint16_t
-read_es()
-{
-  uint16_t ret;
-  asm volatile ("movw %%es, %0"
-                : "=r"(ret));
-  return ret;
-}
-
-static uint16_t
-read_fs()
-{
-  uint16_t ret;
-  asm volatile ("movw %%fs, %0"
-                : "=r"(ret));
-  return ret;
-}
-
-static uint16_t
-read_gs()
-{
-  uint16_t ret;
-  asm volatile ("movw %%gs, %0"
-                : "=r"(ret));
-  return ret;
 }
 
 void
@@ -210,7 +183,8 @@ printtrap(struct trapframe *tf, bool lock)
     kstack = myproc()->kstack;
   }
 
-  __cprintf("trap %lu err 0x%x cpu %u cs %u ds %u ss %u es %u fs %u gs %u\n"
+  // TODO: registers changed
+  __cprintf("trap %lu err 0x%x cpu %u cs %u ds %u ss %u\n"
             // Basic machine state
             "  rip %016lx rsp %016lx rbp %016lx\n"
             "  cr2 %016lx cr3 %016lx cr4 %016lx\n"
@@ -223,9 +197,9 @@ printtrap(struct trapframe *tf, bool lock)
             "  r14 %016lx r15 %016lx rflags %016lx\n"
             // Process state
             "  proc: name %s pid %u kstack %p\n",
-            tf->trapno, tf->err, mycpu()->id, tf->cs, tf->ds, tf->ss, read_es(), read_fs(), read_gs(),
+            tf->trapno, tf->err, mycpu()->id, tf->cs, tf->ds, tf->ss,
             tf->rip, tf->rsp, tf->rbp,
-            rcr2(), rcr3(), rcr4(),
+            0xdeadbeef, 0xdeadbeef, 0xdeadbeef,
             tf->rdi, tf->rsi, tf->rdx,
             tf->rcx, tf->r8, tf->r9,
             tf->rax, tf->rbx, tf->r10,
@@ -239,7 +213,7 @@ printtrap(struct trapframe *tf, bool lock)
               "protection violation" :
               "non-present page",
               tf->err & FEC_WR ? "writing" : "reading",
-              rcr2(),
+              0xdeadbeef,
               tf->err & FEC_U ? "user" : "kernel");
   }
   if (kstack && tf->rsp < (uintptr_t)kstack)
@@ -249,7 +223,7 @@ printtrap(struct trapframe *tf, bool lock)
 void __noret__
 kerneltrap(struct trapframe *tf)
 {
-  cli();
+  intr_disable();
   acquire(&cons.lock);
 
   __cprintf("kernel ");
@@ -267,7 +241,7 @@ panic(const char *fmt, ...)
 {
   va_list ap;
 
-  cli();
+  intr_disable();
   acquire(&cons.lock);
 
   __cprintf("cpu%d-%s: panic: ",
@@ -277,7 +251,7 @@ panic(const char *fmt, ...)
   vprintfmt(writecons, 0, fmt, ap);
   va_end(ap);
   __cprintf("\n");
-  printtrace(rrbp());
+  printtrace(read_fp());
 
   panicked = 1;
   halt();
@@ -444,7 +418,7 @@ console_stream::write(sbuf buf)
 bool
 panic_stream::begin_print()
 {
-  cli();
+  intr_disable();
   console_stream::begin_print();
   if (cons.nesting_count == 1) {
     print("cpu ", myid(), " (", myproc() ? myproc()->name : "unknown",
@@ -459,7 +433,7 @@ panic_stream::end_print()
   if (cons.nesting_count > 1) {
     console_stream::end_print();
   } else {
-    printtrace(rrbp());
+    printtrace(read_fp());
     panicked = 1;
     halt();
     for(;;);

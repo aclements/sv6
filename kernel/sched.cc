@@ -256,12 +256,12 @@ public:
     if(readrflags()&FL_IF)
       panic("sched interruptible");
     intena = mycpu()->intena;
-    myproc()->curcycles += rdtsc() - myproc()->tsc;
+    myproc()->curcycles += rdcycle() - myproc()->tsc;
 
     // Interrupts are disabled
     next = this->next();
 
-    u64 t = rdtsc();
+    u64 t = rdcycle();
     if (myproc() == idleproc())
       schedule_[mycpu()->id]->stats_.idle += t - schedule_[mycpu()->id]->stats_.schedstart;
     else
@@ -296,7 +296,7 @@ public:
 
     switchvm(next);
     next->set_state(RUNNING);
-    next->tsc = rdtsc();
+    next->tsc = rdcycle();
 
     if (next->context->ra != (uptr)threadstub && next->context->ra != (uptr)forkret) {
       mtresume(next);

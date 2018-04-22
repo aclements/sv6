@@ -1,6 +1,7 @@
 #pragma once
 #define NCPU_PER_SOCKET (NCPU/NSOCKET)
 
+#include "riscv.h"
 #include "rnd.hh"
 #include "percpu.hh"
 
@@ -21,7 +22,7 @@ struct random_permutation {
 #if CODEX
     int r = rnd() % (N - i_);
 #else
-    int r = rdtsc() % (N - i_);
+    int r = rdcycle() % (N - i_);
 #endif
     std::swap(x_[i_], x_[r]);
     return x_[i_++];

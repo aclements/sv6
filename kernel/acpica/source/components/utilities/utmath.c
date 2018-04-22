@@ -303,10 +303,10 @@ AcpiUtDivide (
 
         /* Partial divide */
 
-        ACPI_DIV_64_BY_32 (NormalizedDividend.Part.Hi,
+        /*ACPI_DIV_64_BY_32 (NormalizedDividend.Part.Hi,
                            NormalizedDividend.Part.Lo,
                            NormalizedDivisor.Part.Lo,
-                           Quotient.Part.Lo, Partial1);
+                           Quotient.Part.Lo, Partial1);*/ // TODO
 
         /*
          * The quotient is always 32 bits, and simply requires adjustment.

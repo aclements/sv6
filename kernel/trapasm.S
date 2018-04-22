@@ -10,6 +10,8 @@
   # If coming from userspace, preserve the user stack pointer and load
   # the kernel stack pointer. If we came from the kernel, sscratch
   # will contain 0, and we should continue on the current stack.
+
+# TODO: rewrite here since the meaning of sscratch changed.
   csrrw sp, sscratch, sp
   bnez sp, _save_context
 
@@ -78,6 +80,7 @@ _save_context:
   andi s0, s1, SSTATUS_SPP
   bnez s0, _restore_context
 
+# TODO: rewrite here since the meaning of sscratch changed.
 _save_kernel_sp:
   # Save unwound kernel stack pointer in sscratch
   addi s0, sp, 36 * REGBYTES

@@ -328,7 +328,7 @@ static sref<inode>
 try_ialloc(u32 inum, u32 dev, short type)
 {
   sref<inode> ip = iget(dev, inum);
-  if (ip->type || !cmpxch(&ip->type, (short) 0, type))
+  if (ip->type || !cmpxch(&ip->type, (long) 0, (long) type))
     return sref<inode>();
 
   ilock(ip, 1);

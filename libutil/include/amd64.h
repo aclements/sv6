@@ -4,13 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static inline void
-cpuid(uint32_t info, uint32_t *eaxp, uint32_t *ebxp,
-      uint32_t *ecxp, uint32_t *edxp)
-{
-  for (;;);
-}
-
 static inline uint8_t
 inb(uint16_t port)
 {
@@ -59,38 +52,8 @@ outsl(uint16_t port, const void *addr, uint64_t cnt)
   for (;;);
 }
 
-static inline void
-stosb(void *addr, int data, size_t cnt)
-{
-  for (;;);
-}
-
-static inline uint32_t
-xchg32(volatile uint32_t *addr, uint32_t newval)
-{
-  for (;;);
-}
-
-static inline uint64_t
-xchg(uint64_t *ptr, uint64_t val)
-{
-  for (;;);
-}
-
 static inline uint64_t
 readrflags(void)
-{
-  for (;;);
-}
-
-static inline void
-cli(void)
-{
-  for (;;);
-}
-
-static inline void
-sti(void)
 {
   for (;;);
 }
@@ -103,48 +66,6 @@ nop_pause(void)
 
 static inline void
 rep_nop(void)
-{
-  for (;;);
-}
-
-static inline void
-lidt(void *p)
-{
-  for (;;);
-}
-
-static inline void
-lgdt(void *p)
-{
-  for (;;);
-}
-
-static inline void
-ltr(uint16_t sel)
-{
-  for (;;);
-}
-
-static inline void
-writefs(uint16_t v)
-{
-  for (;;);
-}
-
-static inline uint16_t
-readfs(void)
-{
-  for (;;);
-}
-
-static inline void
-writegs(uint16_t v)
-{
-  for (;;);
-}
-
-static inline uint16_t
-readgs(void)
 {
   for (;;);
 }
@@ -162,24 +83,17 @@ writemsr(uint64_t msr, uint64_t val)
 }
 
 static inline uint64_t
-rdtsc(void)
-{
-  for (;;);
-}
-
-static inline uint64_t
 rdpmc(uint32_t ecx)
 {
   for (;;);
 }
-
 
 static inline
 void hlt(void)
 {
   for (;;);
 }
-
+/*
 static inline uint64_t
 rrsp(void)
 {
@@ -191,31 +105,7 @@ rrbp(void)
 {
   for (;;);
 }
-
-static inline void
-lcr4(uint64_t val)
-{
-  for (;;);
-}
-
-static inline uint64_t
-rcr4(void)
-{
-  for (;;);
-}
-
-static inline void
-lcr3(uint64_t val)
-{
-  for (;;);
-}
-
-static inline uint64_t
-rcr3(void)
-{
-  for (;;);
-}
-
+*/
 static inline uintptr_t
 rcr2(void)
 {

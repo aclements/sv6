@@ -181,7 +181,7 @@ x2apic_lapic::clearintr()
   unsigned long long tsc = 0, ntsc;
   long long max_loops = 2400000;
 
-  tsc = rdtsc();
+  tsc = rdcycle();
   do {
     queued = 0;
     for (i = ISR_NR - 1; i >= 0; i--)
@@ -201,7 +201,7 @@ x2apic_lapic::clearintr()
               acked);
       break;
     }
-    ntsc = rdtsc();
+    ntsc = rdcycle();
     max_loops = (2400000 << 10) - (ntsc - tsc);
   } while (queued && max_loops > 0);
 }
