@@ -1,5 +1,5 @@
 #!/bin/bash
 
 export LANG=en_US
-export PATH=$PATH:/opt/riscv/toolchain/bin
+export PATH=$PATH:/home/yyf/Desktop/os_project/toolchain/bin
 

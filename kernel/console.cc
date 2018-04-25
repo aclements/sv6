@@ -9,7 +9,8 @@
 #include "fs.h"
 #include "condvar.hh"
 #include "file.hh"
-#include "amd64.h"
+//#include "amd64.h"
+#include "riscv.h"
 #include "proc.hh"
 #include "traps.h"
 #include "lib.h"
@@ -165,6 +166,52 @@ printtrace(u64 fp)
 }
 
 void
+print_regs(struct pushregs* gpr) {
+    cprintf("  zero     0x%08lx\n", gpr->zero);
+    cprintf("  ra       0x%08lx\n", gpr->ra);
+    cprintf("  sp       0x%08lx\n", gpr->sp);
+    cprintf("  gp       0x%08lx\n", gpr->gp);
+    cprintf("  tp       0x%08lx\n", gpr->tp);
+    cprintf("  t0       0x%08lx\n", gpr->t0);
+    cprintf("  t1       0x%08lx\n", gpr->t1);
+    cprintf("  t2       0x%08lx\n", gpr->t2);
+    cprintf("  s0       0x%08lx\n", gpr->s0);
+    cprintf("  s1       0x%08lx\n", gpr->s1);
+    cprintf("  a0       0x%08lx\n", gpr->a0);
+    cprintf("  a1       0x%08lx\n", gpr->a1);
+    cprintf("  a2       0x%08lx\n", gpr->a2);
+    cprintf("  a3       0x%08lx\n", gpr->a3);
+    cprintf("  a4       0x%08lx\n", gpr->a4);
+    cprintf("  a5       0x%08lx\n", gpr->a5);
+    cprintf("  a6       0x%08lx\n", gpr->a6);
+    cprintf("  a7       0x%08lx\n", gpr->a7);
+    cprintf("  s2       0x%08lx\n", gpr->s2);
+    cprintf("  s3       0x%08lx\n", gpr->s3);
+    cprintf("  s4       0x%08lx\n", gpr->s4);
+    cprintf("  s5       0x%08lx\n", gpr->s5);
+    cprintf("  s6       0x%08lx\n", gpr->s6);
+    cprintf("  s7       0x%08lx\n", gpr->s7);
+    cprintf("  s8       0x%08lx\n", gpr->s8);
+    cprintf("  s9       0x%08lx\n", gpr->s9);
+    cprintf("  s10      0x%08lx\n", gpr->s10);
+    cprintf("  s11      0x%08lx\n", gpr->s11);
+    cprintf("  t3       0x%08lx\n", gpr->t3);
+    cprintf("  t4       0x%08lx\n", gpr->t4);
+    cprintf("  t5       0x%08lx\n", gpr->t5);
+    cprintf("  t6       0x%08lx\n", gpr->t6);
+}
+
+void
+print_trapframe(struct trapframe *tf) {
+    cprintf("trapframe at %p\n", tf);
+    print_regs(&tf->gpr);
+    cprintf("  status   0x%08lx\n", tf->status);
+    cprintf("  epc      0x%08lx\n", tf->epc);
+    cprintf("  badvaddr 0x%08lx\n", tf->badvaddr);
+    cprintf("  cause    0x%08lx\n", tf->cause);
+}
+
+void
 printtrap(struct trapframe *tf, bool lock)
 {
   const char *name = "(no name)";
@@ -182,31 +229,11 @@ printtrap(struct trapframe *tf, bool lock)
     kstack = myproc()->kstack;
   }
 
-  // TODO: registers changed
-  __cprintf("trap %lu err 0x%x cpu %u cs %u ds %u ss %u\n"
-            // Basic machine state
-            "  rip %016lx rsp %016lx rbp %016lx\n"
-            "  cr2 %016lx cr3 %016lx cr4 %016lx\n"
-            // Function arguments (AMD64 ABI)
-            "  rdi %016lx rsi %016lx rdx %016lx\n"
-            "  rcx %016lx r8  %016lx r9  %016lx\n"
-            // Everything else
-            "  rax %016lx rbx %016lx r10 %016lx\n"
-            "  r11 %016lx r12 %016lx r13 %016lx\n"
-            "  r14 %016lx r15 %016lx rflags %016lx\n"
-            // Process state
-            "  proc: name %s pid %u kstack %p\n",
-            tf->trapno, tf->err, mycpu()->id, tf->cs, tf->ds, tf->ss,
-            tf->rip, tf->rsp, tf->rbp,
-            0xdeadbeef, 0xdeadbeef, 0xdeadbeef,
-            tf->rdi, tf->rsi, tf->rdx,
-            tf->rcx, tf->r8, tf->r9,
-            tf->rax, tf->rbx, tf->r10,
-            tf->r11, tf->r12, tf->r13,
-            tf->r14, tf->r15, tf->rflags,
-            name, pid, kstack);
+  print_trapframe(tf);
+  
   // Trap decoding
-  if (tf->trapno == T_PGFLT) {
+  // TODO
+  /*if (tf->trapno == T_PGFLT) {
     __cprintf("  page fault: %s %s %016lx from %s mode\n",
               tf->err & FEC_PR ?
               "protection violation" :
@@ -214,8 +241,8 @@ printtrap(struct trapframe *tf, bool lock)
               tf->err & FEC_WR ? "writing" : "reading",
               0xdeadbeef,
               tf->err & FEC_U ? "user" : "kernel");
-  }
-  if (kstack && tf->rsp < (uintptr_t)kstack)
+  }*/
+  if (kstack && tf->gpr.sp < (uintptr_t)kstack)
     __cprintf("  possible stack overflow\n");
 }
 
@@ -227,7 +254,7 @@ kerneltrap(struct trapframe *tf)
 
   __cprintf("kernel ");
   printtrap(tf, false);
-  printtrace(tf->rbp);
+  printtrace(tf->gpr.s0);
 
   panicked = 1;
   halt();

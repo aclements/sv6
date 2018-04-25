@@ -631,11 +631,11 @@ samplog(int pmc, struct trapframe *tf)
 {
   struct pmuevent ev{};
   ev.idle = (myproc() == idleproc());
-  ev.ints_disabled = !(tf->rflags & FL_IF);
-  ev.kernel = tf->rip >= KBASE;
+  ev.ints_disabled = !(tf->status & SSTATUS_SIE);
+  ev.kernel = tf->epc >= KBASE;
   ev.count = 1;
-  ev.rip = tf->rip;
-  getcallerpcs((void*)tf->rbp, ev.trace, NELEM(ev.trace));
+  ev.rip = tf->epc;
+  getcallerpcs((void*)tf->gpr.s0, ev.trace, NELEM(ev.trace));
 
   if (!pmulog->log(ev)) {
     selectors[pmc].enable = false;
@@ -850,8 +850,8 @@ wdcheck(int pmc, struct trapframe* tf)
     sbi_console_putchar('W');
     sbi_console_putchar('D');
     __cprintf(" cpu %u locked up for %d seconds\n", myid(), *wd_count);
-    __cprintf("  %016lx\n", tf->rip);
-    printtrace(tf->rbp);
+    __cprintf("  %016lx\n", tf->epc);
+    printtrace(tf->gpr.s0);
   }
 }
 

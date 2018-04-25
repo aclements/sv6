@@ -51,10 +51,11 @@ sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
   return r;
 }
 
+// TODO
 int
 do_pagefault(struct trapframe *tf)
 {
-  uptr addr = rcr2();
+  /*uptr addr = tf->badvaddr;
   if (myproc()->uaccess_) {
     if (addr >= USERTOP)
       panic("do_pagefault: %lx", addr);
@@ -64,9 +65,9 @@ do_pagefault(struct trapframe *tf)
       return 0;
     }
     console.println("pagefault accessing user address from kernel (addr ",
-                    (void*)addr, " rip ", (void*)tf->rip, ")");
+                    (void*)addr, " rip ", (void*)tf->epc, ")");
     tf->rax = -1;
-    tf->rip = (u64)__uaccess_end;
+    tf->epc = (u64)__uaccess_end;
     return 0;
   } else if (tf->err & FEC_U) {
       intr_enable();
@@ -76,7 +77,7 @@ do_pagefault(struct trapframe *tf)
       uerr.println("pagefault from user for ", shex(addr),
                    " err ", (int)tf->err);
       intr_disable();
-  }
+  }*/
   return -1;
 }
 
@@ -91,11 +92,12 @@ namespace {
   DEFINE_PERCPU(int, nmi_swallow);
 }
 
+// TODO
 // C/C++ entry point for traps; called by assembly trap stub
 extern "C" void
 trap_c(struct trapframe *tf)
 {
-  panic("NOT IMPL: trap");
+  /*panic("NOT IMPL: trap");
   if (tf->trapno == T_NMI) {
     // An NMI can come in after popcli() drops ncli to zero and intena
     // is 1, but before popcli() checks intena and calls sti.  If the
@@ -122,8 +124,8 @@ trap_c(struct trapframe *tf)
 
     // Is this a back-to-back NMI?  If so, we might have handled all
     // of the NMI sources already.
-    bool repeat = (*nmi_lastpc == tf->rip);
-    *nmi_lastpc = tf->rip;
+    bool repeat = (*nmi_lastpc == tf->epc);
+    *nmi_lastpc = tf->epc;
     if (!repeat)
       *nmi_swallow = 0;
 
@@ -162,14 +164,14 @@ trap_c(struct trapframe *tf)
   mtstop(myproc());
   if (myproc()->mtrace_stacks.curr >= 0)
     mtresume(myproc());
-#endif
+#endif*/
 }
 
 static void
 trap(struct trapframe *tf)
 {
   // TODO: rewrite.
-  switch(tf->trapno){
+  /*switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
     kstats::inc(&kstats::sched_tick_count);
     // for now, just care about timer interrupts
@@ -180,7 +182,7 @@ trap(struct trapframe *tf)
       cprintf("cpu%d: proc %s rip %lx rsp %lx cs %x\n",
               mycpu()->id,
               myproc() ? myproc()->name : "(none)",
-              tf->rip, tf->rsp, tf->cs);
+              tf->epc, tf->gpr.sp, tf->cs);
       if (mycpu()->timer_printpc == 2 && tf->rbp > KBASE) {
         uptr pc[10];
         getcallerpcs((void *) tf->rbp, pc, NELEM(pc));
@@ -224,7 +226,7 @@ trap(struct trapframe *tf)
   case T_IRQ0 + 7:
   case T_IRQ0 + IRQ_SPURIOUS:
     cprintf("cpu%d: spurious interrupt at %x:%lx\n",
-            mycpu()->id, tf->cs, tf->rip);
+            mycpu()->id, tf->cs, tf->epc);
     // [Intel SDM 10.9 Spurious Interrupt] The spurious interrupt
     // vector handler should return without an EOI.
     //lapiceoi();
@@ -301,8 +303,8 @@ trap(struct trapframe *tf)
     // In user space, assume process misbehaved.
     uerr.println("pid ", myproc()->pid, ' ', myproc()->name,
                  ": trap ", (u64)tf->trapno, " err ", (u32)tf->err,
-                 " on cpu ", myid(), " rip ", shex(tf->rip),
-                 " rsp ", shex(tf->rsp), " addr ", shex(rcr2()),
+                 " on cpu ", myid(), " rip ", shex(tf->epc),
+                 " rsp ", shex(tf->rsp), " addr ", shex(tf->badvaddr),
                  "--kill proc");
     myproc()->killed = 1;
   }
@@ -322,7 +324,7 @@ trap(struct trapframe *tf)
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == 0x3)
-    exit(-1);
+    exit(-1);*/
 }
 
 void

@@ -403,7 +403,7 @@ doclone(clone_flags flags)
   memcpy(np->sig, myproc()->sig, sizeof(np->sig));
 
   // Clear %eax so that fork returns 0 in the child.
-  np->tf->rax = 0;
+  np->tf->gpr.a0 = 0;
 
   if (flags & CLONE_SHARE_FTABLE) {
     np->ftable = myproc()->ftable;
@@ -579,17 +579,17 @@ proc::deliver_signal(int signo)
     return false;
 
   trapframe tf_save = *tf;
-  tf->rsp -= 128;   // skip redzone
-  tf->rsp -= sizeof(tf_save);
-  if (putmem((void*) tf->rsp, &tf_save, sizeof(tf_save)) < 0)
+  tf->gpr.sp -= 128;   // skip redzone
+  tf->gpr.sp -= sizeof(tf_save);
+  if (putmem((void*) tf->gpr.sp, &tf_save, sizeof(tf_save)) < 0)
     return false;
 
-  tf->rsp -= 8;
-  if (putmem((void*) tf->rsp, &sig[signo].sa_restorer, 8) < 0)
+  tf->gpr.sp -= 8;
+  if (putmem((void*) tf->gpr.sp, &sig[signo].sa_restorer, 8) < 0)
     return false;
 
-  tf->rip = (u64) sig[signo].sa_handler;
-  tf->rdi = signo;
+  tf->epc = (u64) sig[signo].sa_handler;
+  tf->gpr.a0 = signo;
   return true;
 }
 
