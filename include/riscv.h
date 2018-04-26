@@ -1509,6 +1509,7 @@ DECLARE_CAUSE("store page fault", CAUSE_STORE_PAGE_FAULT)
 #ifdef __GNUC__
 #ifndef __RISCV_TRAPFRAME__
 #define __RISCV_TRAPFRAME__
+#include "types.h"
 struct pushregs {
     uintptr_t zero;  // Hard-wired zero
     uintptr_t ra;    // Return address
