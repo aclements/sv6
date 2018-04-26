@@ -130,6 +130,12 @@ _restore_context:
 .globl trapcommon
 trapcommon:
 .balign 8
+  # TODO: just for debugging propose when trap handlers are not ready.
+  csrr t0, sstatus
+  csrr t1, sepc
+  csrr t2, scause
+  csrr t3, 0x143 # stval (badvaddr)
+1: j 1b
   SAVE_ALL
   mv a0, sp
   jal trap_c

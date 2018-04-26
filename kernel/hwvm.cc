@@ -179,8 +179,13 @@ public:
           if (!next)
             throw_bad_alloc();
           memset(next, 0, sizeof *next);
+          uintptr_t pte = MK_PTE(v2p(next), create);
+          if (reached != level + 1) {
+            // is not the last level
+            pte &= ~(PTE_R | PTE_W | PTE_X);
+          }
           if (!atomic_compare_exchange_weak(
-                entryp, &entry, MK_PTE(v2p(next), create))) {
+                entryp, &entry, pte)) {
             // The above call updated entry with the current value in
             // entryp, so retry after the entry load.
             kfree(next);
@@ -233,7 +238,7 @@ public:
     iterator &create(pme_t flags)
     {
       if (!cur)
-        resolve(flags | PTE_V | PTE_R | PTE_W); // TODO PTE_X?
+        resolve(flags | PTE_V); // TODO PTE_X?
       return *this;
     }
 
