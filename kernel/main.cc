@@ -42,6 +42,7 @@ void initfutex(void);
 void initcmdline(void);
 void initrefcache(void);
 void initnuma(void);
+void initcpus(void);
 void initwd(void);
 void initdev(void);
 void initrtc(void);
@@ -106,6 +107,8 @@ cmain(u64 hartid, void *fdt)
   initnuma();              // Requires initacpitables, initlapic
   puts("initpercpu...\n");
   initpercpu();            // Requires initnuma
+  puts("initcpus...\n");
+  initcpus();              // Requires initpercpu
 
   // Interrupt routing is now configured
 
