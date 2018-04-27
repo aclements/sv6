@@ -74,7 +74,7 @@ public:
   // Remove @c pos from the bit set.
   bitset &atomic_reset(std::size_t pos) noexcept
   {
-    locked_reset_bit(pos % BITS_PER_WORD, &words[pos / BITS_PER_WORD]);
+    locked_clear_bit(pos % BITS_PER_WORD, &words[pos / BITS_PER_WORD]);
     return *this;
   }
 

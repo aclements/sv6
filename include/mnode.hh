@@ -406,7 +406,7 @@ public:
       if (flag)
         locked_set_bit(FLAG_PARTIAL_PAGE_BIT, &value_);
       else
-        locked_reset_bit(FLAG_PARTIAL_PAGE_BIT, &value_);
+        locked_clear_bit(FLAG_PARTIAL_PAGE_BIT, &value_);
     }
   };
 
