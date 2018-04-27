@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "kernel.hh"
+#include "cpu_struct.hh"
 
 // A critical section can be protected against several forms of
 // interruption.  critical_mask controls this.
@@ -37,15 +38,14 @@ class scoped_critical
     // address and then modify the variable.  If we instead had known
     // %gs offsets for general per-CPU variables, we wouldn't need
     // special support for this one.
-    // TODO!
-    panic("modify_no_sched_count");
+    // TODO: This needs to be done in a single instruction???
+    mycpu()->no_sched_count += delta;
   }
 
   static inline uint64_t
   get_no_sched_count()
   {
-    // TODO!
-    panic("get_no_sched_count");
+    return mycpu()->no_sched_count;
   }
 
   void release_yield();
