@@ -1,7 +1,7 @@
 #include "types.h"
 #include "mmu.h"
 #include "kernel.hh"
-#include "amd64.h"
+#include "riscv.h"
 #include "cpu.hh"
 #include "traps.h"
 #include "spinlock.hh"
@@ -379,7 +379,7 @@ pushcli(void)
 void
 popcli(void)
 {
-  if(read_csr(sstatus) & SSTATUS_SIE)
+  if(is_intr_enabled())
     panic("popcli - interruptible");
   if(--mycpu()->ncli < 0)
     panic("popcli");
@@ -481,7 +481,7 @@ check_critical(critical_mask mask)
 {
   if (mask == NO_CRITICAL)
     return true;
-  bool safe = !(readrflags() & FL_IF);
+  bool safe = !is_intr_enabled();
   if (mask & NO_INT)
     return safe;
   safe = safe || mycpu()->no_sched_count;

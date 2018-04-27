@@ -1,7 +1,7 @@
 #include "types.h"
 #include "kernel.hh"
 #include "mmu.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "spinlock.hh"
 #include "condvar.hh"
 #include "proc.hh"
@@ -253,7 +253,7 @@ public:
       panic("sched locks (ncli = %d)", mycpu()->ncli);
     if(myproc()->get_state() == RUNNING)
       panic("sched running");
-    if(readrflags()&FL_IF)
+    if(is_intr_enabled())
       panic("sched interruptible");
     intena = mycpu()->intena;
     myproc()->curcycles += rdcycle() - myproc()->tsc;

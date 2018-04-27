@@ -248,6 +248,8 @@
 /* intr_disable - disable interrupt */
 #define intr_disable() do { clear_csr(sstatus, SSTATUS_SIE); } while (0)
 
+#define is_intr_enabled() (read_csr(sstatus) & SSTATUS_SIE)
+
 #define read_fp() ({ unsigned long __tmp; \
   asm volatile ("mv %0, s0" : "=r"(__tmp)); \
   __tmp; }) // s0 is fp

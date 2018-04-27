@@ -52,12 +52,6 @@ outsl(uint16_t port, const void *addr, uint64_t cnt)
   for (;;);
 }
 
-static inline uint64_t
-readrflags(void)
-{
-  for (;;);
-}
-
 static inline void
 nop_pause(void)
 {
@@ -93,19 +87,7 @@ void hlt(void)
 {
   for (;;);
 }
-/*
-static inline uint64_t
-rrsp(void)
-{
-  for (;;);
-}
 
-static inline uint64_t
-rrbp(void)
-{
-  for (;;);
-}
-*/
 static inline uintptr_t
 rcr2(void)
 {
