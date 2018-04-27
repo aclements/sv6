@@ -26,7 +26,6 @@ OBJS = \
 	ide.o \
 	mp.o \
 	net.o \
-	picirq.o \
 	pipe.o \
 	proc.o \
 	gc.o \

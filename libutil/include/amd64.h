@@ -4,54 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static inline uint8_t
-inb(uint16_t port)
-{
-  for (;;);
-}
-
-static inline uint16_t
-inw(uint16_t port)
-{
-  for (;;);
-}
-
-static inline uint32_t
-inl(uint16_t port)
-{
-  for (;;);
-}
-
-static inline void
-outb(uint16_t port, uint8_t data)
-{
-  for (;;);
-}
-
-static inline void
-outw(uint16_t port, uint16_t data)
-{
-  for (;;);
-}
-
-static inline void
-outl(uint16_t port, uint32_t data)
-{
-  for (;;);
-}
-
-static inline void
-insl(uint16_t port, void *addr, uint64_t cnt)
-{
-  for (;;);
-}
-
-static inline void
-outsl(uint16_t port, const void *addr, uint64_t cnt)
-{
-  for (;;);
-}
-
 static inline void
 nop_pause(void)
 {
@@ -78,12 +30,6 @@ writemsr(uint64_t msr, uint64_t val)
 
 static inline uint64_t
 rdpmc(uint32_t ecx)
-{
-  for (;;);
-}
-
-static inline
-void hlt(void)
 {
   for (;;);
 }

@@ -38,14 +38,14 @@ class scoped_critical
     // %gs offsets for general per-CPU variables, we wouldn't need
     // special support for this one.
     // TODO!
-    for (;;);
+    panic("modify_no_sched_count");
   }
 
   static inline uint64_t
   get_no_sched_count()
   {
     // TODO!
-    for (;;);
+    panic("get_no_sched_count");
   }
 
   void release_yield();

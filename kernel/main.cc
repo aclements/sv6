@@ -153,10 +153,10 @@ cmain(u64 hartid, void *fdt)
   initsamp();
   initlockstat();
   puts("init devices...\n");
-  inite1000();             // Before initpci
-  initahci();
+  //inite1000();             // Before initpci
+  //initahci();
   initnet();
-  initrtc();               // Requires inithpet
+  //initrtc();               // Requires inithpet
   initdev();               // Misc /dev nodes
   initdisk();      // disk
   initinode();     // inode cache
