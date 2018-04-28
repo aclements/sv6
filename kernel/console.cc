@@ -230,6 +230,7 @@ printtrap(struct trapframe *tf, bool lock)
   }
 
   print_trapframe(tf);
+  cprintf("  proc: name %s pid %u kstack %p\n", name, pid, kstack);
   
   // Trap decoding
   // TODO

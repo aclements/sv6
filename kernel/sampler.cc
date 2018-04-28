@@ -425,7 +425,7 @@ private:
     ev.count = 1;
     while (pos < ds->pebs_index) {
       auto record = (pebs_record_v1*)pos;
-      ev.ints_disabled = !(record->rflags & FL_IF);
+      ev.ints_disabled = !is_intr_enabled();
       ev.kernel = record->rip >= KBASE;
       ev.rip = record->rip;
       if (pebs_version >= 1) {
@@ -631,7 +631,7 @@ samplog(int pmc, struct trapframe *tf)
 {
   struct pmuevent ev{};
   ev.idle = (myproc() == idleproc());
-  ev.ints_disabled = !(tf->status & SSTATUS_SIE);
+  ev.ints_disabled = !is_intr_enabled();
   ev.kernel = tf->epc >= KBASE;
   ev.count = 1;
   ev.rip = tf->epc;
