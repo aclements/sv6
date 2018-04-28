@@ -145,6 +145,7 @@ trapcommon:
 .globl trapret
 .balign 8
 trapret:
+j trapret # TODO
   RESTORE_ALL
   # return from supervisor call
   sret

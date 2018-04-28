@@ -7,13 +7,9 @@
 static inline void
 nop_pause(void)
 {
-  for (;;);
-}
-
-static inline void
-rep_nop(void)
-{
-  for (;;);
+  // doing nothing is okay, but in x86, `pause` is recommended to save energy
+  // but RISC-V seems do not have the corresponding instruction.
+  // -- twd2
 }
 
 static inline uint64_t
@@ -30,12 +26,6 @@ writemsr(uint64_t msr, uint64_t val)
 
 static inline uint64_t
 rdpmc(uint32_t ecx)
-{
-  for (;;);
-}
-
-static inline uintptr_t
-rcr2(void)
 {
   for (;;);
 }
@@ -76,13 +66,12 @@ popcnt64(uint64_t v)
   for (;;);
 }
 
-void puts(const char *); // FIXME
+// TODO: move out
 
 // Atomically set bit nr of *a.  nr must be <= 64.
 static inline void
 locked_set_bit(int nr, volatile uint64_t *a)
 {
-  puts("locked_set_bit\n");
   uint64_t mask = 1UL << nr;
   __atomic_fetch_or(a, mask, __ATOMIC_ACQ_REL);
 }
@@ -91,7 +80,6 @@ locked_set_bit(int nr, volatile uint64_t *a)
 static inline void
 locked_clear_bit(int nr, volatile uint64_t *a)
 {
-  puts("locked_clear_bit\n");
   uint64_t mask = ~(1UL << nr);
   __atomic_fetch_and(a, mask, __ATOMIC_ACQ_REL);
 }
@@ -102,7 +90,6 @@ locked_test_and_set_bit(int nr, volatile uint64_t *a)
 {
   uint64_t mask = 1UL << nr;
   uint64_t old = __atomic_fetch_or(a, mask, __ATOMIC_ACQ_REL) & mask;
-  puts("locked_test_and_set_bit\n");
   return old != 0;
 }
 
@@ -111,7 +98,6 @@ locked_test_and_set_bit(int nr, volatile uint64_t *a)
 static inline void
 clear_bit(int nr, volatile uint64_t *a)
 {
-  puts("clear_bit\n");
   uint64_t mask = ~(1UL << nr);
   *a &= mask;
 }
@@ -144,8 +130,3 @@ ldmxcsr(uint32_t mxcsr)
   for (;;);
 }
 
-static inline void
-clts()
-{
-  for (;;);
-}

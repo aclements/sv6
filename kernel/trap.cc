@@ -333,6 +333,10 @@ inittrap(void)
   extern char trapcommon[];
   cprintf("stvec: %p\n", trapcommon);
   write_csr(stvec, (uintptr_t)trapcommon);
+  /* Allow kernel to access user memory */
+  set_csr(sstatus, SSTATUS_SUM);
+  /* Allow keyboard interrupt */
+  set_csr(sie, MIP_SSIP);
 }
 
 void
@@ -351,17 +355,6 @@ initfpu(void)
   // FPU state
   if (myid() == 0)
     fxsave(&fpu_initial_state);
-}
-
-void
-initnmi(void)
-{
-  for (;;);
-  /*void *nmistackbase = kalloc("kstack", KSTACKSIZE);
-  mycpu()->ts.ist[1] = (u64) nmistackbase + KSTACKSIZE;
-
-  if (mycpu()->id == 0)
-    idt[T_NMI].ist = 1;*/
 }
 
 // Pushcli/popcli are like cli/sti except that they are matched:

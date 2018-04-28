@@ -111,11 +111,9 @@ extern void puts(const char *);
   }                                                                 \
                                                                     \
   static void* operator new(unsigned long nbytes) {                 \
-    puts("newing " #classname "...\n");                             \
     void *p = classname::operator new(nbytes, std::nothrow);        \
     if (p == nullptr)                                               \
       throw_bad_alloc();                                            \
-    puts("newed " #classname "...\n");                              \
     return p;                                                       \
   }                                                                 \
                                                                     \

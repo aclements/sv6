@@ -16,7 +16,6 @@ void initconsole(void);
 void initpg(void);
 void cleanuppg(void);
 void inittls(struct cpu *);
-void initnmi(void);
 void initcodex(void);
 void inittrap(void);
 void initfpu(void);
@@ -70,8 +69,7 @@ mpboot(void)
   initfpu();
   initsamp();
   initidle();
-  initnmi();
-  initwd();                     // Requires initnmi
+  initwd();
   bstate.store(1);
   idleloop();
 }
@@ -167,8 +165,6 @@ cmain(u64 hartid, void *fdt)
 
   puts("inituser...\n");
   inituser();      // first user process
-  puts("initnmi...\n");
-  initnmi();
 
   // XXX hack until mnodes can load from disk
   extern void mfsload();
@@ -183,7 +179,7 @@ cmain(u64 hartid, void *fdt)
   puts("initcpprt...\n");
   initcpprt();
   initwd();                // Requires initnmi
-
+  puts("System initialized successfully...\n");
   idleloop();
 
   panic("Unreachable");

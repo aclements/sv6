@@ -48,3 +48,7 @@ threadstub:
   mv a1, s1
   j threadhelper
 
+.globl forkret_wrapper
+forkret_wrapper:
+  call forkret
+  j trapret

@@ -121,6 +121,7 @@ yield(void)
 
 // A fork child's very first scheduling by scheduler()
 // will swtch here.  "Return" to user space.
+extern "C" // for swtch.S
 void
 forkret(void)
 {
@@ -138,7 +139,7 @@ forkret(void)
   if (myproc()->cwd_m == nullptr)
     myproc()->cwd_m = namei(myproc()->cwd_m, "/");
 
-  // Return to "caller", actually trapret (see allocproc).
+  // Return to caller, actually forkret_wrapper.
 }
 
 // Exit the current process.  Does not return.
@@ -218,6 +219,8 @@ freeproc(struct proc *p)
   delete p;
 }
 
+extern "C" void forkret_wrapper();
+
 proc*
 proc::alloc(void)
 {
@@ -260,20 +263,15 @@ proc::alloc(void)
   sp -= sizeof *p->tf;
   p->tf = (struct trapframe*)sp;
 
-  // amd64 ABI mandates sp % 16 == 0 before a call instruction
-  // (or after executing a ret instruction)
+  // align
   if ((uptr) sp % 16)
     panic("allocproc: misaligned sp");
-
-  // Set up new context to start executing at forkret,
-  // which returns to trapret.
-  sp -= 8;
-  *(u64*)sp = (u64)trapret;
 
   sp -= sizeof *p->context;
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
-  p->context->ra = (uptr)forkret;
+  p->context->sp = (uptr)sp + sizeof(*p->context);
+  p->context->ra = (uptr)forkret_wrapper;
 
   return p;
 }
@@ -402,7 +400,7 @@ doclone(clone_flags flags)
   np->user_fs_ = myproc()->user_fs_;
   memcpy(np->sig, myproc()->sig, sizeof(np->sig));
 
-  // Clear %eax so that fork returns 0 in the child.
+  // Clear return value register so that fork returns 0 in the child.
   np->tf->gpr.a0 = 0;
 
   if (flags & CLONE_SHARE_FTABLE) {
