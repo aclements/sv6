@@ -128,7 +128,7 @@ $(O)/kernel/asmdefines.S: kernel/asmdefines.cc $(O)/sysroot
 $(O)/include/asmdefines.h: $(O)/kernel/asmdefines.S
 	@echo "  GEN    $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)sed -n 's/remove\$$//p' $(O)/kernel/asmdefines.S > $@
+	$(Q)sed -n 's/ magicmagicmagic/ /p' $(O)/kernel/asmdefines.S > $@
 $(O)/kernel/trapasm.o: $(O)/include/asmdefines.h
 $(O)/kernel/uaccess.o: $(O)/include/asmdefines.h
 

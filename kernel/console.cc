@@ -167,48 +167,68 @@ printtrace(u64 fp)
 
 void
 print_regs(struct pushregs* gpr) {
-    cprintf("  zero     0x%08lx\n", gpr->zero);
-    cprintf("  ra       0x%08lx\n", gpr->ra);
-    cprintf("  sp       0x%08lx\n", gpr->sp);
-    cprintf("  gp       0x%08lx\n", gpr->gp);
-    cprintf("  tp       0x%08lx\n", gpr->tp);
-    cprintf("  t0       0x%08lx\n", gpr->t0);
-    cprintf("  t1       0x%08lx\n", gpr->t1);
-    cprintf("  t2       0x%08lx\n", gpr->t2);
-    cprintf("  s0       0x%08lx\n", gpr->s0);
-    cprintf("  s1       0x%08lx\n", gpr->s1);
-    cprintf("  a0       0x%08lx\n", gpr->a0);
-    cprintf("  a1       0x%08lx\n", gpr->a1);
-    cprintf("  a2       0x%08lx\n", gpr->a2);
-    cprintf("  a3       0x%08lx\n", gpr->a3);
-    cprintf("  a4       0x%08lx\n", gpr->a4);
-    cprintf("  a5       0x%08lx\n", gpr->a5);
-    cprintf("  a6       0x%08lx\n", gpr->a6);
-    cprintf("  a7       0x%08lx\n", gpr->a7);
-    cprintf("  s2       0x%08lx\n", gpr->s2);
-    cprintf("  s3       0x%08lx\n", gpr->s3);
-    cprintf("  s4       0x%08lx\n", gpr->s4);
-    cprintf("  s5       0x%08lx\n", gpr->s5);
-    cprintf("  s6       0x%08lx\n", gpr->s6);
-    cprintf("  s7       0x%08lx\n", gpr->s7);
-    cprintf("  s8       0x%08lx\n", gpr->s8);
-    cprintf("  s9       0x%08lx\n", gpr->s9);
-    cprintf("  s10      0x%08lx\n", gpr->s10);
-    cprintf("  s11      0x%08lx\n", gpr->s11);
-    cprintf("  t3       0x%08lx\n", gpr->t3);
-    cprintf("  t4       0x%08lx\n", gpr->t4);
-    cprintf("  t5       0x%08lx\n", gpr->t5);
-    cprintf("  t6       0x%08lx\n", gpr->t6);
+    __cprintf("  zero     0x%016lx\n", gpr->zero);
+    __cprintf("  ra       0x%016lx\n", gpr->ra);
+    __cprintf("  sp       0x%016lx\n", gpr->sp);
+    __cprintf("  gp       0x%016lx\n", gpr->gp);
+    __cprintf("  tp       0x%016lx\n", gpr->tp);
+    __cprintf("  t0       0x%016lx\n", gpr->t0);
+    __cprintf("  t1       0x%016lx\n", gpr->t1);
+    __cprintf("  t2       0x%016lx\n", gpr->t2);
+    __cprintf("  s0       0x%016lx\n", gpr->s0);
+    __cprintf("  s1       0x%016lx\n", gpr->s1);
+    __cprintf("  a0       0x%016lx\n", gpr->a0);
+    __cprintf("  a1       0x%016lx\n", gpr->a1);
+    __cprintf("  a2       0x%016lx\n", gpr->a2);
+    __cprintf("  a3       0x%016lx\n", gpr->a3);
+    __cprintf("  a4       0x%016lx\n", gpr->a4);
+    __cprintf("  a5       0x%016lx\n", gpr->a5);
+    __cprintf("  a6       0x%016lx\n", gpr->a6);
+    __cprintf("  a7       0x%016lx\n", gpr->a7);
+    __cprintf("  s2       0x%016lx\n", gpr->s2);
+    __cprintf("  s3       0x%016lx\n", gpr->s3);
+    __cprintf("  s4       0x%016lx\n", gpr->s4);
+    __cprintf("  s5       0x%016lx\n", gpr->s5);
+    __cprintf("  s6       0x%016lx\n", gpr->s6);
+    __cprintf("  s7       0x%016lx\n", gpr->s7);
+    __cprintf("  s8       0x%016lx\n", gpr->s8);
+    __cprintf("  s9       0x%016lx\n", gpr->s9);
+    __cprintf("  s10      0x%016lx\n", gpr->s10);
+    __cprintf("  s11      0x%016lx\n", gpr->s11);
+    __cprintf("  t3       0x%016lx\n", gpr->t3);
+    __cprintf("  t4       0x%016lx\n", gpr->t4);
+    __cprintf("  t5       0x%016lx\n", gpr->t5);
+    __cprintf("  t6       0x%016lx\n", gpr->t6);
 }
+
+static const char *cause_str[16];
 
 void
 print_trapframe(struct trapframe *tf) {
-    cprintf("trapframe at %p\n", tf);
+#define DECLARE_CAUSE(str, i) cause_str[i] = str;
+DECLARE_CAUSE("misaligned fetch", CAUSE_MISALIGNED_FETCH)
+DECLARE_CAUSE("fetch access", CAUSE_FETCH_ACCESS)
+DECLARE_CAUSE("illegal instruction", CAUSE_ILLEGAL_INSTRUCTION)
+DECLARE_CAUSE("breakpoint", CAUSE_BREAKPOINT)
+DECLARE_CAUSE("misaligned load", CAUSE_MISALIGNED_LOAD)
+DECLARE_CAUSE("load access", CAUSE_LOAD_ACCESS)
+DECLARE_CAUSE("misaligned store", CAUSE_MISALIGNED_STORE)
+DECLARE_CAUSE("store access", CAUSE_STORE_ACCESS)
+DECLARE_CAUSE("user_ecall", CAUSE_USER_ECALL)
+DECLARE_CAUSE("supervisor_ecall", CAUSE_SUPERVISOR_ECALL)
+DECLARE_CAUSE("hypervisor_ecall", CAUSE_HYPERVISOR_ECALL)
+DECLARE_CAUSE("machine_ecall", CAUSE_MACHINE_ECALL)
+DECLARE_CAUSE("fetch page fault", CAUSE_FETCH_PAGE_FAULT)
+DECLARE_CAUSE("load page fault", CAUSE_LOAD_PAGE_FAULT)
+DECLARE_CAUSE("store page fault", CAUSE_STORE_PAGE_FAULT)
+#undef DECLARE_CAUSE
+    __cprintf("trapframe at %p\n", tf);
     print_regs(&tf->gpr);
-    cprintf("  status   0x%08lx\n", tf->status);
-    cprintf("  epc      0x%08lx\n", tf->epc);
-    cprintf("  badvaddr 0x%08lx\n", tf->badvaddr);
-    cprintf("  cause    0x%08lx\n", tf->cause);
+    __cprintf("  status   0x%016lx\n", tf->status);
+    __cprintf("  epc      0x%016lx\n", tf->epc);
+    __cprintf("  badvaddr 0x%016lx\n", tf->badvaddr);
+    __cprintf("  cause    0x%016lx %s\n", tf->cause,
+              (tf->cause < 16 && cause_str[tf->cause]) ? cause_str[tf->cause] : "?");
 }
 
 void
@@ -230,7 +250,7 @@ printtrap(struct trapframe *tf, bool lock)
   }
 
   print_trapframe(tf);
-  cprintf("  proc: name %s pid %u kstack %p\n", name, pid, kstack);
+  __cprintf("  proc: name %s pid %u kstack %p\n", name, pid, kstack);
   
   // Trap decoding
   // TODO

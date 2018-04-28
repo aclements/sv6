@@ -37,6 +37,8 @@ struct cpu {
   struct cpu *cpu;
   struct proc *proc;           // The currently-running process.
   struct cpu_mem *mem;         // The per-core memory metadata
+  void *kstack;
+  uintptr_t scratch0;
   u64 syscallno;               // Temporary used by sysentry
   void *percpu_base;           // Per-CPU memory region base
   uint64_t no_sched_count;     // sched disable count; high bit means

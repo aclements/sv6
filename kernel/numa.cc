@@ -32,6 +32,7 @@ initcpus()
   {
     auto c = &cpus[i];
     c->id = i;
+    c->kstack = nullptr;
     if (c->node)
       panic("CPU %d is in multiple NUMA nodes", c->id);
     c->node = &node;

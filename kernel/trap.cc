@@ -97,8 +97,9 @@ namespace {
 extern "C" void
 trap_c(struct trapframe *tf)
 {
-  /*panic("NOT IMPL: trap");
-  if (tf->trapno == T_NMI) {
+  printtrap(tf, true);
+  panic("NOT IMPL: trap");
+  /*if (tf->trapno == T_NMI) {
     // An NMI can come in after popcli() drops ncli to zero and intena
     // is 1, but before popcli() checks intena and calls sti.  If the
     // NMI handler acquires any lock, acquire() will call pushcli(),

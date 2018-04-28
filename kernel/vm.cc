@@ -289,9 +289,9 @@ vmap::willneed(uptr start, uptr len)
       continue;
 
     if (it->flags & vmdesc::FLAG_COW || !writable)
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X);
+      cache.insert(it.index() * PGSIZE, &*it, MK_PTE(page->pa(), PTE_V | PTE_U | PTE_R | PTE_X));
     else
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X | PTE_W);
+      cache.insert(it.index() * PGSIZE, &*it, MK_PTE(page->pa(), PTE_V | PTE_U | PTE_R | PTE_X | PTE_W));
   }
 
   shootdown.perform();
@@ -445,12 +445,12 @@ vmap::pagefault(uptr va, u32 err)
     // If this is a read COW fault, we can reuse the COW page, but
     // don't mark it writable!
     if (desc.flags & vmdesc::FLAG_COW)
-      cache.insert(va, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X);
+      cache.insert(va, &*it, MK_PTE(page->pa(), PTE_V | PTE_U | PTE_R | PTE_X));
     else {
       if (desc.flags & vmdesc::FLAG_WRITE)
-        cache.insert(va, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X | PTE_W);
+        cache.insert(va, &*it, MK_PTE(page->pa(), PTE_V | PTE_U | PTE_R | PTE_X | PTE_W));
       else
-        cache.insert(va, &*it, page->pa() | PTE_V | PTE_U | PTE_R | PTE_X);
+        cache.insert(va, &*it, MK_PTE(page->pa(), PTE_V | PTE_U | PTE_R | PTE_X));
     }
 
     shootdown.perform();

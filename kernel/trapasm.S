@@ -11,20 +11,23 @@
   # the kernel stack pointer. If we came from the kernel, sscratch
   # will contain 0, and we should continue on the current stack.
 
-# TODO: rewrite here since the meaning of sscratch changed.
-  csrrw sp, sscratch, sp
+  csrrw tp, sscratch, tp
+  # save sp
+  STORE sp, CPU_SCRATCH0_OFFSET(tp)
+  LOAD sp, CPU_KSTACK_OFFSET(tp)
   bnez sp, _save_context
 
 _restore_kernel_sp:
-  csrr sp, sscratch
+  LOAD sp, CPU_SCRATCH0_OFFSET(tp)
 _save_context:
+  STORE zero, CPU_KSTACK_OFFSET(tp)
   addi sp, sp, -36 * REGBYTES
   # save x registers
   STORE x0, 0*REGBYTES(sp)
   STORE x1, 1*REGBYTES(sp)
   # x2 is sp, save it later
   STORE x3, 3*REGBYTES(sp)
-  STORE x4, 4*REGBYTES(sp)
+  # x4 is tp, save it later
   STORE x5, 5*REGBYTES(sp)
   STORE x6, 6*REGBYTES(sp)
   STORE x7, 7*REGBYTES(sp)
@@ -53,12 +56,13 @@ _save_context:
   STORE x30, 30*REGBYTES(sp)
   STORE x31, 31*REGBYTES(sp)
 
-  # get and save status, epc, badvaddr, cause
-  # Set sscratch register to 0, so that if a recursive exception
-  # occurs, the exception vector knows it came from the kernel
-  csrrw s0, sscratch, x0
+  LOAD s0, CPU_SCRATCH0_OFFSET(tp)
   STORE s0, 2*REGBYTES(sp)
 
+  csrrw s0, sscratch, tp # read old tp to s0, restore sscratch
+  STORE s0, 4*REGBYTES(sp)
+
+  # get and save status, epc, badvaddr, cause
   csrr s1, sstatus
   STORE s1, 32*REGBYTES(sp)
 
@@ -80,11 +84,11 @@ _save_context:
   andi s0, s1, SSTATUS_SPP
   bnez s0, _restore_context
 
-# TODO: rewrite here since the meaning of sscratch changed.
 _save_kernel_sp:
   # Save unwound kernel stack pointer in sscratch
+  csrr tp, sscratch
   addi s0, sp, 36 * REGBYTES
-  csrw sscratch, s0
+  STORE s0, CPU_KSTACK_OFFSET(tp)
 _restore_context:
   csrw sstatus, s1
 
@@ -130,12 +134,6 @@ _restore_context:
 .globl trapcommon
 trapcommon:
 .balign 8
-  # TODO: just for debugging propose when trap handlers are not ready.
-  csrr t0, sstatus
-  csrr t1, sepc
-  csrr t2, scause
-  csrr t3, 0x143 # stval (badvaddr)
-1: j 1b
   SAVE_ALL
   mv a0, sp
   jal trap_c
@@ -145,7 +143,6 @@ trapcommon:
 .globl trapret
 .balign 8
 trapret:
-j trapret # TODO
   RESTORE_ALL
   # return from supervisor call
   sret
