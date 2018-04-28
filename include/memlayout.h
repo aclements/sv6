@@ -12,6 +12,6 @@
 #define KBASE       0xffffffc000000000
 #define KBASEEND    0xffffffe000000000  // 128GB
 
-#define USERTOP     0x0000003fffffffff
+#define USERTOP     0x0000004000000000
 
 #define PHY_MEM_BASE 0x80000000
