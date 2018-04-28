@@ -254,6 +254,8 @@
   asm volatile ("mv %0, s0" : "=r"(__tmp)); \
   __tmp; }) // s0 is fp
 
+#define tf_is_kernel(tf) (((tf)->status & SSTATUS_SPP) != 0)
+
 #endif
 
 #endif

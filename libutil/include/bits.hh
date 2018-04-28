@@ -22,7 +22,6 @@
 #define FL_ID           0x00200000      // ID flag
 
 // Page fault error codes
-#define FEC_PR          0x1     // Page fault caused by protection violation
 #define FEC_WR          0x2     // Page fault caused by a write
 #define FEC_U           0x4     // Page fault occured while in user mode
 

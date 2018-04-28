@@ -55,29 +55,39 @@ sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 int
 do_pagefault(struct trapframe *tf)
 {
-  /*uptr addr = tf->badvaddr;
+  uptr addr = tf->badvaddr;
+  uptr err = 0;
+  if (!tf_is_kernel(tf))
+  {
+    err |= FEC_U;
+  }
+  if (tf->cause == CAUSE_STORE_PAGE_FAULT)
+  {
+    err |= FEC_WR;
+  }
   if (myproc()->uaccess_) {
     if (addr >= USERTOP)
       panic("do_pagefault: %lx", addr);
 
     intr_enable();
-    if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
+    if(pagefault(myproc()->vmap.get(), addr, err) >= 0){
       return 0;
     }
     console.println("pagefault accessing user address from kernel (addr ",
-                    (void*)addr, " rip ", (void*)tf->epc, ")");
-    tf->rax = -1;
-    tf->epc = (u64)__uaccess_end;
+                    (void*)addr, " epc ", (void*)tf->epc, ")");
+    tf->gpr.a0 = -1;
+    //tf->epc = (u64)__uaccess_end;
+    panic("TODO: __uaccess_end");
     return 0;
-  } else if (tf->err & FEC_U) {
+  } else if (err & FEC_U) {
       intr_enable();
-      if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
+      if(pagefault(myproc()->vmap.get(), addr, err) >= 0){
         return 0;
       }
       uerr.println("pagefault from user for ", shex(addr),
-                   " err ", (int)tf->err);
+                   " err ", (int)err);
       intr_disable();
-  }*/
+  }
   return -1;
 }
 
@@ -92,14 +102,11 @@ namespace {
   DEFINE_PERCPU(int, nmi_swallow);
 }
 
-// TODO
 // C/C++ entry point for traps; called by assembly trap stub
 extern "C" void
 trap_c(struct trapframe *tf)
 {
-  printtrap(tf, true);
-  panic("NOT IMPL: trap");
-  /*if (tf->trapno == T_NMI) {
+  /*if (tf->trapno == T_NMI) { // TODO
     // An NMI can come in after popcli() drops ncli to zero and intena
     // is 1, but before popcli() checks intena and calls sti.  If the
     // NMI handler acquires any lock, acquire() will call pushcli(),
@@ -150,7 +157,7 @@ trap_c(struct trapframe *tf)
   }
 
   if (tf->trapno == T_DBLFLT)
-    kerneltrap(tf);
+    kerneltrap(tf);*/
 
 #if MTRACE
   if (myproc()->mtrace_stacks.curr >= 0)
@@ -165,12 +172,111 @@ trap_c(struct trapframe *tf)
   mtstop(myproc());
   if (myproc()->mtrace_stacks.curr >= 0)
     mtresume(myproc());
-#endif*/
+#endif
 }
 
 static void
 trap(struct trapframe *tf)
 {
+  bool is_timer_intr = false;
+  if (tf->cause < 0)
+  {
+    uintptr_t cause = (tf->cause << 1) >> 1;
+    switch (cause) {
+    case 5: // S timer intr
+      cprintf("+++ tick!\n");
+      is_timer_intr = true;
+      kstats::inc(&kstats::sched_tick_count);
+      // for now, just care about timer interrupts
+#if CODEX
+      codex_magic_action_run_async_event(5);
+#endif
+      if (mycpu()->timer_printpc) {
+        cprintf("cpu%d: proc %s epc %lx sp %lx\n",
+                mycpu()->id,
+                myproc() ? myproc()->name : "(none)",
+                tf->epc, tf->gpr.sp);
+        if (mycpu()->timer_printpc == 2 && tf->gpr.s0 > KBASE) {
+          uptr pc[10];
+          getcallerpcs((void *) tf->gpr.s0, pc, NELEM(pc));
+          for (int i = 0; i < 10 && pc[i]; i++)
+            cprintf("cpu%d:   %lx\n", mycpu()->id, pc[i]);
+        }
+        mycpu()->timer_printpc = 0;
+      }
+      if (mycpu()->id == 0)
+        timerintr();
+      refcache::mycache->tick();
+      lapiceoi();
+      if (mycpu()->no_sched_count) {
+        kstats::inc(&kstats::sched_blocked_tick_count);
+        // Request a yield when no_sched_count is released.  We can
+        // modify this without protection because interrupts are
+        // disabled.
+        mycpu()->no_sched_count |= NO_SCHED_COUNT_YIELD_REQUESTED;
+        return;
+      }
+      break;
+    default:
+      printtrap(tf, true);
+      panic("unhandled interrupt");
+    }
+  }
+  else
+  {
+    uintptr_t cause = tf->cause;
+    bool is_page_fault = cause == CAUSE_FETCH_PAGE_FAULT ||
+                         cause == CAUSE_LOAD_PAGE_FAULT ||
+                         cause == CAUSE_STORE_PAGE_FAULT;
+    switch (cause) {
+    case CAUSE_USER_ECALL: {
+      uint16_t inst = *(uint16_t *)tf->epc;
+      if ((inst & 0b11) != 0b11)
+      {
+        tf->epc += 2;
+      }
+      else if (((inst & 0b11) == 0b11) && ((inst & 0b11100) != 0b11100))
+      {
+        tf->epc += 4;
+      }
+      else
+      {
+        panic("???");
+      }
+      sysentry_c(tf->gpr.a0, tf->gpr.a1, tf->gpr.a2, tf->gpr.a3, tf->gpr.a4,
+                 tf->gpr.a5, tf->gpr.a7);
+      return;
+    }
+    default:
+      /*if (tf->trapno >= T_IRQ0 && irq_info[tf->trapno - T_IRQ0].handlers) {
+        for (auto h = irq_info[tf->trapno - T_IRQ0].handlers; h; h = h->next)
+          h->handle_irq();
+        lapiceoi();
+        piceoi();
+        return;
+      }*/
+
+      if (is_page_fault) {
+        if (do_pagefault(tf) == 0)
+          return;
+
+        // XXX distinguish between SIGSEGV and SIGBUS?
+        if (myproc()->deliver_signal(SIGSEGV))
+          return;
+      }
+
+      if (myproc() == 0 || tf_is_kernel(tf))
+        kerneltrap(tf);
+
+      // In user space, assume process misbehaved.
+      uerr.println("pid ", myproc()->pid, ' ', myproc()->name,
+                   ": trap ", (u64)tf->cause,
+                   " on cpu ", myid(), " epc ", shex(tf->epc),
+                   " sp ", shex(tf->gpr.sp), " addr ", shex(tf->badvaddr),
+                   "--kill proc");
+      myproc()->killed = 1;
+    }
+  }
   // TODO: rewrite.
   /*switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
@@ -308,24 +414,24 @@ trap(struct trapframe *tf)
                  " rsp ", shex(tf->rsp), " addr ", shex(tf->badvaddr),
                  "--kill proc");
     myproc()->killed = 1;
-  }
+  }*/
 
   // Force process exit if it has been killed and is in user space.
   // (If it is still executing in the kernel, let it keep running
   // until it gets to the regular system call return.)
-  if(myproc() && myproc()->killed && (tf->cs&3) == 0x3)
+  if(myproc() && myproc()->killed && !tf_is_kernel(tf))
     exit(-1);
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->get_state() == RUNNING &&
-     (tf->trapno == T_IRQ0+IRQ_TIMER || myproc()->yield_)) {
+     (is_timer_intr || myproc()->yield_)) {
     yield();
   }
 
   // Check if the process has been killed since we yielded
-  if(myproc() && myproc()->killed && (tf->cs&3) == 0x3)
-    exit(-1);*/
+  if(myproc() && myproc()->killed && !tf_is_kernel(tf))
+    exit(-1);
 }
 
 void
