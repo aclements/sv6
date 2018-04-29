@@ -1,6 +1,6 @@
 #pragma once
 
-#include "riscv.h"
+#include "../libutil/include/riscv.h"
 
 #ifndef __ASSEMBLER__
 #include <stdint.h>

@@ -1,6 +1,6 @@
 #include "mmu.h"
 #include "asmdefines.h"
-#include <riscv.h>
+#include "../libutil/include/riscv.h"
 
 .altmacro
 .macro SAVE_ALL

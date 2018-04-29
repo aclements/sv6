@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
-#include "amd64.h"
+#include "riscv.h"
 #include "xsys.h"
 #if !defined(XV6_USER)
 #include <sys/wait.h>
@@ -50,7 +50,7 @@ void child(int id)
   // printf("run client %d on cpu %d\n", getpid(), id);
   if (setaffinity(get_cpu_order(id)) < 0)
     die("setaffinity err");
-  uint64_t t0 = rdtsc();
+  uint64_t t0 = rdcycle();
   for (int i = 0; i < nfork; i++) {
     int pid = fork();
     if (pid < 0) {
@@ -64,7 +64,7 @@ void child(int id)
       }
     }
   }
-  uint64_t t1 = rdtsc();
+  uint64_t t1 = rdcycle();
   printf("client %d ncycles %lu for nfork %d cycles/fork %lu\n", getpid(), t1-t0, nfork, (t1-t0)/nfork);
 }
 
@@ -81,7 +81,7 @@ main(int argc, char *argv[])
   ncore = atoi(argv[1]);
   nfork = atoi(argv[2]);
 
-  uint64_t t0 = rdtsc();
+  uint64_t t0 = rdcycle();
   uint64_t usec0 = now_usec();
   for (int i = 0; i < ncore; i++) {
     int pid = fork();
@@ -96,7 +96,7 @@ main(int argc, char *argv[])
   for (int i = 0; i < ncore; i++) {
     wait(NULL);
   }
-  uint64_t t1 = rdtsc();
+  uint64_t t1 = rdcycle();
   uint64_t usec1 = now_usec();
 
   printf("%d %f # ncores tput in forks/msec; ncycles %lu nfork %d cycles/fork %lu\n", ncore, 1000.0 * ((double) nfork * ncore)/(usec1-usec0), t1-t0, nfork, (t1-t0)/nfork);

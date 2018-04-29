@@ -97,7 +97,7 @@ ifeq ($(EXCEPTIONS),y)
   # objects, so the linker ignores these objects entirely.  If you start
   # getting "multiple definition" and "undefined reference" errors,
   # there's probably a new ABI symbol we need to define ourselves.
-  CXXRUNTIME = libgcc.a libsupc++.a
+  CXXRUNTIME = $(shell pwd)/libgcc.a $(shell pwd)/libsupc++.a
   CXXFLAGS += -DEXCEPTIONS=1
   ifndef USE_CLANG
     CXXFLAGS += -fnothrow-opt -Wnoexcept
@@ -125,7 +125,7 @@ include kernel/Makefrag
 include lib/Makefrag
 endif
 include libutil/Makefrag
-# TODO include bin/Makefrag
+include bin/Makefrag
 include tools/Makefrag
 # TODO include metis/Makefrag
 

@@ -12,7 +12,7 @@
 #include <sys/types.h>
 
 #include "libutil.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "rnd.hh"
 #include "xsys.h"
 
@@ -210,7 +210,7 @@ thr(void *arg)
   if (__builtin_expect(mywarmup, 0) && !warmup) {       \
     mywarmup = false;                                   \
     myiters = mypages = myunderflows = 0;               \
-    tsc1 = rdtsc();                                     \
+    tsc1 = rdcycle();                                     \
     CHECK_STAGE_PMC();                                  \
   }
 
@@ -361,7 +361,7 @@ thr(void *arg)
     break;
   }
   }
-  stop_tscs[cpu] = rdtsc();
+  stop_tscs[cpu] = rdcycle();
   start_tscs[cpu] = tsc1;
 #ifdef RECORD_PMC
   pmcs[cpu] = rdpmc(PMCNO) - pmc1;

@@ -1,7 +1,7 @@
 #include "types.h"
 #include "user.h"
 #include "mtrace.h"
-#include "amd64.h"
+#include "riscv.h"
 #include <stdio.h>
 #include <unistd.h>
 
@@ -30,7 +30,7 @@ master(void)
   u64 pcount = 0;
   u64 i = 0;
 
-  u64 t0 = rdtsc();
+  u64 t0 = rdcycle();
   while (i < NITERS) {
     while (pcount < PROCMAX) {
       int pid;
@@ -54,7 +54,7 @@ master(void)
     wait(NULL);
     pcount--;
   }
-  u64 t1 = rdtsc();
+  u64 t1 = rdcycle();
 
   printf("%lu\n", (t1-t0)/i);
 }

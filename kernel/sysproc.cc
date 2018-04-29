@@ -248,9 +248,9 @@ sys_cpuhz(void)
 int
 sys_setfs(u64 base)
 {
+  // actually, set tp for RISC-V
   proc *p = myproc();
-  p->user_fs_ = base;
-  switchvm(p);
+  p->tf->gpr.tp = base;
   return 0;
 }
 

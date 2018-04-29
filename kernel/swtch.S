@@ -1,4 +1,4 @@
-#include <riscv.h>
+#include "../libutil/include/riscv.h"
 # Context switch
 #
 #   void swtch(struct context *old, struct context *new);

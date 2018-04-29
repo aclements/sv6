@@ -1,5 +1,5 @@
 #include "types.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "mmu.h"
 #include "cpu.hh"
 #include "kernel.hh"
@@ -511,7 +511,7 @@ core_tracking_shootdown::clear_tlb() const
     lptbr(rptbr());
   } else {
     for (uintptr_t va = start_; va < end_; va += PGSIZE)
-      invlpg((void*) va);
+      tlb_invl((void*) va);
   }
 }
 
@@ -651,7 +651,7 @@ namespace mmu_per_core_page_table {
       if (it.is_set()) {
         it->store(0, memory_order_relaxed);
         if (current)
-          invlpg((void*)it.index());
+          tlb_invl((void*)it.index());
       }
     }
   }

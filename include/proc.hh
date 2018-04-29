@@ -100,7 +100,6 @@ struct proc {
   ilink<proc> cv_waiters;      // Linked list of processes waiting for oncv
   ilink<proc> cv_sleep;        // Linked list of processes sleeping on a cv
   struct spinlock futex_lock;
-  u64 user_fs_;
   u64 unmap_tlbreq_;
   int data_cpuid;              // Where vmap and kstack is likely to be cached
   int run_cpuid_;

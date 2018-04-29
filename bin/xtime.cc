@@ -1,6 +1,6 @@
 #include "types.h"
 #include "user.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "pmc.hh"
 #include "bits.hh"
 #include <stdio.h>
@@ -59,7 +59,7 @@ main(int ac, char * const av[])
   sys_stat* s0 = sys_stat::read();
   pmc_count::config(pmc_selector[pmci].sel);
   pmc_count pmc0 = pmc_count::read(0);
-  u64 t0 = rdtsc();
+  u64 t0 = rdcycle();
 
   int pid = fork();
   if (pid < 0)
@@ -73,7 +73,7 @@ main(int ac, char * const av[])
   wait(NULL);
   sys_stat* s1 = sys_stat::read();
   pmc_count pmc1 = pmc_count::read(0);
-  u64 t1 = rdtsc();
+  u64 t1 = rdcycle();
   sys_stat* s2 = s1->delta(s0);
 
   printf("%s cycles\n", valstr(t1-t0));

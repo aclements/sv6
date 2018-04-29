@@ -1,6 +1,6 @@
 #include "types.h"
 #include "user.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "lib.h"
 #include <xv6/perf.h>
 
@@ -127,14 +127,14 @@ child()
     stats(0);
   }
   if (cpu == 0) perf_start(selector, period);
-  u64 t0 = rdtsc();
+  u64 t0 = rdcycle();
   u64 t1;
   do {
     for(int i = 0; i < 10; i++) {
       gctest(filename);
       n++;
     }
-    t1 = rdtsc();
+    t1 = rdcycle();
   } while((t1 - t0) < nsec);
 
   // printf("%d: %d ops in %d sec\n", cpu, n, s);

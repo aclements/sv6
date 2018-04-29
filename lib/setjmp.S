@@ -1,4 +1,4 @@
-#include <riscv.h>
+#include "../libutil/include/riscv.h"
 
 .globl  setjmp
 setjmp:

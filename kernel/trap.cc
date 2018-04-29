@@ -178,6 +178,7 @@ trap_c(struct trapframe *tf)
 static void
 trap(struct trapframe *tf)
 {
+  //printtrap(tf, true);
   bool is_timer_intr = false;
   if (tf->cause < 0)
   {
@@ -243,8 +244,8 @@ trap(struct trapframe *tf)
       {
         panic("???");
       }
-      sysentry_c(tf->gpr.a0, tf->gpr.a1, tf->gpr.a2, tf->gpr.a3, tf->gpr.a4,
-                 tf->gpr.a5, tf->gpr.a7);
+      tf->gpr.a0 = sysentry_c(tf->gpr.a0, tf->gpr.a1, tf->gpr.a2, tf->gpr.a3,
+                              tf->gpr.a4, tf->gpr.a5, tf->gpr.a7);
       return;
     }
     default:

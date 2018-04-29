@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "libutil.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "xsys.h"
 
 // To build on Linux:
@@ -103,7 +103,7 @@ main(int ac, char** av)
 
   mtenable_type(mtrace_record_ascope, "xv6-dirbench");
 
-  uint64_t t0 = rdtsc();
+  uint64_t t0 = rdcycle();
   for(uint32_t i = 0; i < nthread; i++) {
     int pid = fork();
     if (pid == 0) {
@@ -114,7 +114,7 @@ main(int ac, char** av)
 
   for (uint32_t i = 0; i < nthread; i++)
     wait(NULL);
-  uint64_t t1 = rdtsc();
+  uint64_t t1 = rdcycle();
   mtdisable("xv6-dirbench");
 
   printf("dirbench: %lu\n", t1-t0);

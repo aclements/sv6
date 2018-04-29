@@ -131,21 +131,18 @@ pthread_key_create(pthread_key_t *key, void (*destructor)(void*))
 void*
 pthread_getspecific(pthread_key_t key)
 {
-  // TODO
-  for (;;);
-  /*
-  u64 v;
-  __asm volatile("movq %%fs:(%1), %0" : "=r" (v) : "r" ((u64) key * 8));
-  return (void*) v;*/
+  void **tp;
+  asm volatile ("mv %0, tp" : "=r"(tp));
+  return *(void **)(tp + (u64)key);
 }
 
 int
 pthread_setspecific(pthread_key_t key, void* value)
 {
-  // TODO
-  for (;;);
-  /*__asm volatile("movq %0, %%fs:(%1)" : : "r" (value), "r" ((u64) key * 8) : "memory");
-  return 0;*/
+  void **tp;
+  asm volatile ("mv %0, tp" : "=r"(tp));
+  *(void **)(tp + (u64)key) = value;
+  return 0;
 }
 
 int

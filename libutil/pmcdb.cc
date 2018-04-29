@@ -1,5 +1,4 @@
 #include "pmcdb.hh"
-#include "cpuid.hh"
 #include "bits.hh"
 #include "vector.hh"
 
@@ -43,7 +42,7 @@ class name_map
 public:
   name_map()
   {
-    if (cpuid::vendor_is_amd()) {
+    /*if (cpuid::vendor_is_amd()) {
       if (cpuid::model().family < 0x10)
         return;
       maps.push_back(names_common);
@@ -60,7 +59,7 @@ public:
         maps.push_back(names_westmere);
         break;
       }
-    }
+    }*/
   }
 
   uint64_t lookup(const char *name)

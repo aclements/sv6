@@ -37,7 +37,7 @@ proc::proc(int npid) :
   tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
   cpu_pin(0), oncv(0), cv_wakeup(0),
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
-  user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
+  unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0),
   uaccess_(0), yield_(false),
   upath(nullptr), uargv(nullptr),
   exception_inuse(0), magic(PROC_MAGIC), unmapped_hint(0), state_(EMBRYO)
@@ -397,7 +397,6 @@ doclone(clone_flags flags)
   np->cpu_pin = myproc()->cpu_pin;
   np->data_cpuid = myproc()->data_cpuid;
   np->run_cpuid_ = myproc()->run_cpuid_;
-  np->user_fs_ = myproc()->user_fs_;
   memcpy(np->sig, myproc()->sig, sizeof(np->sig));
 
   // Clear return value register so that fork returns 0 in the child.
