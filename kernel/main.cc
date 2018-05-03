@@ -71,6 +71,7 @@ mpboot(void)
   initidle();
   initwd();
   bstate.store(1);
+  inittimer();
   idleloop();
 }
 
@@ -163,9 +164,13 @@ cmain(u64 hartid, void *fdt)
   if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);
 
+  puts("inittimer...\n");
+  inittimer();
+
   puts("inituser...\n");
   inituser();      // first user process
 
+  puts("mfsload...\n");
   // XXX hack until mnodes can load from disk
   extern void mfsload();
   mfsload();

@@ -61,7 +61,7 @@ typedef enum procstate {
   RUNNABLE,
   RUNNING,
   ZOMBIE 
-} procstate_t;;
+} procstate_t;
 
 #define PROC_MAGIC 0xfeedfacedeadd00dULL
 
@@ -74,7 +74,7 @@ struct proc {
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status
   struct trapframe *tf;        // Trap frame for current syscall
-  struct context *context;     // swtch() here to run process
+  struct context context;     // swtch() here to run process
   int killed;                  // If non-zero, have been killed
   sref<filetable> ftable;      // File descriptor table
   sref<inode> cwd;             // Current directory

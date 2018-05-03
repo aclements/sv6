@@ -1,31 +1,29 @@
 # We assume that the kernel follows the RV64 ABI, but not
 # that it saves caller-saved registers.
 .globl forkt
+# a0 new stack
+# a1 func
+# a2 arg
+# a3 flags
 forkt:
-  j forkt
-/* TODO
-        pushq %r12
-        andq $(~0xf), %rdi      # new stack ptr amd64 ABI alignment 
-        movq %rdi, %r12
-        subq $0x10, %r12
-        movq %rdx, 0x00(%r12)   # arg
-        movq %rsi, 0x08(%r12)   # function ptr
+  # swap a0, a3
+  mv t0, a0
+  mv a0, a3
+  mv a3, t0
+  la a7, SYS_fork_flags
+  ecall
+  bnez a0, 1f
 
-        movq %rcx, %rdi         # flag for sys_fork
-        movq $SYS_fork_flags, %rax
-        syscall
+  # child
+  mv sp, a3
+  mv s0, a1
+  mv s1, a2
+  call forkt_setup
+  mv a0, s1
+  jalr s0
+  call exit
+  
+1:
+  # parent
+  ret
 
-        cmpq $0, %rax           # pid/tid
-        jne 1f
-
-        # child
-        movq %r12, %rsp
-        movq %rax, %rdi
-        call forkt_setup
-        popq %rdi
-        popq %rax
-        call *%rax
-        call exit
-1:      # parent
-        popq %r12
-        ret*/

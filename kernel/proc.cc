@@ -33,7 +33,7 @@ struct kstack_tag kstack_tag[NCPU];
 enum { sched_debug = 0 };
 
 proc::proc(int npid) :
-  kstack(0), pid(npid), parent(0), tf(0), context(0), killed(0),
+  kstack(0), pid(npid), parent(0), tf(0), context(), killed(0),
   tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
   cpu_pin(0), oncv(0), cv_wakeup(0),
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
@@ -267,11 +267,9 @@ proc::alloc(void)
   if ((uptr) sp % 16)
     panic("allocproc: misaligned sp");
 
-  sp -= sizeof *p->context;
-  p->context = (struct context*)sp;
-  memset(p->context, 0, sizeof *p->context);
-  p->context->sp = (uptr)sp + sizeof(*p->context);
-  p->context->ra = (uptr)forkret_wrapper;
+  memset(&p->context, 0, sizeof(p->context));
+  p->context.sp = (uptr)sp;
+  p->context.ra = (uptr)forkret_wrapper;
 
   return p;
 }
@@ -358,7 +356,7 @@ procdumpall(void)
     if(p->get_state() == SLEEPING){
       cprintf("  Trying to get call stack, but failing to read stack base pointer,\n");
       cprintf("  because RISC-V does not have. :(\n");
-      /*getcallerpcs((void*)p->context->rbp, pc, NELEM(pc));
+      /*getcallerpcs((void*)p->context.s0, pc, NELEM(pc));
       for(int i=0; i<10 && pc[i] != 0; i++)
         cprintf(" %lx\n", pc[i]);*/
     }
@@ -474,25 +472,25 @@ wait(int wpid,  userptr<int> status)
       proc &p = *it;
       acquire(&p.lock);
       if (wpid == -1 || wpid == p.pid) {
-	havekids = 1;
-	if(p.get_state() == ZOMBIE){
-	  release(&p.lock);	// noone else better be trying to lock p
-	  pid = p.pid;
-          myproc()->childq.erase(it);
-	  release(&myproc()->lock);
+	      havekids = 1;
+	      if(p.get_state() == ZOMBIE){
+	        release(&p.lock);	// noone else better be trying to lock p
+	        pid = p.pid;
+                myproc()->childq.erase(it);
+	        release(&myproc()->lock);
 
-          if (status) {
-            status.store(&p.status);
-          }
+                if (status) {
+                  status.store(&p.status);
+                }
 
-          proc *np = &p;
-          if (!xnspid->remove(pid, &np))
-            panic("wait: ns_remove");
+                proc *np = &p;
+                if (!xnspid->remove(pid, &np))
+                  panic("wait: ns_remove");
 
-          finishproc_work *w = new finishproc_work(&p);
-          assert(dwork_push(w, p.run_cpuid_) >= 0);
-	  return pid;
-	}
+                finishproc_work *w = new finishproc_work(&p);
+                assert(dwork_push(w, p.run_cpuid_) >= 0);
+	        return pid;
+	      }
       }
       release(&p.lock);
     }
@@ -538,9 +536,9 @@ threadalloc(void (*fn)(void *), void *arg)
     return 0;
 
   // XXX can threadstub be deleted?
-  p->context->ra = (u64)threadstub;
-  p->context->s0 = (u64)fn;
-  p->context->s1 = (u64)arg;
+  p->context.ra = (u64)threadstub;
+  p->context.s0 = (u64)fn;
+  p->context.s1 = (u64)arg;
   p->parent = nullptr;
   p->cwd.reset();
 

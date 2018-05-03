@@ -201,6 +201,24 @@ print_regs(struct pushregs* gpr) {
     __cprintf("  t6       0x%016lx\n", gpr->t6);
 }
 
+void
+print_context(struct context* ctx) {
+    __cprintf("  ra       0x%016lx\n", ctx->ra);
+    __cprintf("  sp       0x%016lx\n", ctx->sp);
+    __cprintf("  s0       0x%016lx\n", ctx->s0);
+    __cprintf("  s1       0x%016lx\n", ctx->s1);
+    __cprintf("  s2       0x%016lx\n", ctx->s2);
+    __cprintf("  s3       0x%016lx\n", ctx->s3);
+    __cprintf("  s4       0x%016lx\n", ctx->s4);
+    __cprintf("  s5       0x%016lx\n", ctx->s5);
+    __cprintf("  s6       0x%016lx\n", ctx->s6);
+    __cprintf("  s7       0x%016lx\n", ctx->s7);
+    __cprintf("  s8       0x%016lx\n", ctx->s8);
+    __cprintf("  s9       0x%016lx\n", ctx->s9);
+    __cprintf("  s10      0x%016lx\n", ctx->s10);
+    __cprintf("  s11      0x%016lx\n", ctx->s11);
+}
+
 static const char *cause_str[16];
 
 void

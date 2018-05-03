@@ -2059,7 +2059,7 @@ run_test(const char *name, void (*test)())
 int
 main(int argc, char *argv[])
 {
-  printf("usertests starting\n");
+  printf("usertests starting\n"); for(;;);
 
   if(open("usertests.ran", 0) >= 0)
     die("already ran user tests -- rebuild fs.img");

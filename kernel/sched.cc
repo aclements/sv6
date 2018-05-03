@@ -191,6 +191,8 @@ schedule::try_dwork(void)
   }
 }
 
+extern "C" void forkret_wrapper();
+
 struct sched_dir {
 private:
   balancer<sched_dir, schedule> b_;
@@ -236,7 +238,6 @@ public:
   void
   sched(void)
   {
-    extern void forkret(void);
     int intena;
     proc* prev;
     proc* next;
@@ -298,12 +299,19 @@ public:
     next->set_state(RUNNING);
     next->tsc = rdcycle();
 
-    if (next->context->ra != (uptr)threadstub && next->context->ra != (uptr)forkret) {
+    if (next->context.ra != (uptr)threadstub && next->context.ra != (uptr)forkret_wrapper) {
       mtresume(next);
     }
     mtrec();
+    
+    // FIXME
+    /*cprintf("sched: swtch from %d to %d\n", prev->pid, next->pid);
+    cprintf("old @ %p:\n", &prev->context);
+    print_context(&prev->context);
+    cprintf("new @ %p:\n", &next->context);
+    print_context(&next->context);*/
 
-    swtch(prev->context, next->context);
+    swtch(&prev->context, &next->context);
     mycpu()->intena = intena;
     post_swtch();
   }

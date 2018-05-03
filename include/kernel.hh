@@ -56,6 +56,7 @@ void            vsnprintf(char *buf, u32 n, const char *fmt, va_list ap);
 void            snprintf(char *buf, u32 n, const char *fmt, ...);
 void            printtrap(struct trapframe *, bool lock = true);
 void            printtrace(u64 rbp);
+void            print_context(struct context *);
 
 // exec.c
 int             exec(const char*, const char* const*);
@@ -117,6 +118,10 @@ void            kmemprint(print_stream *s);
 // kbd.c
 void            kbdintr(void);
 
+// timer.cc
+void inittimer();
+void timer_set_next_event();
+
 // main.c
 void            halt(void) __attribute__((noreturn));
 
@@ -129,11 +134,6 @@ void*           netalloc(void);
 void            netrx(void *va, u16 len);
 int             nettx(void *va, u16 len);
 void            nethwaddr(u8 *hwaddr);
-
-// picirq.c
-void            picenable(int);
-void            piceoi(void);
-void            picdump(void);
 
 // pipe.c
 int             pipealloc(sref<file>*, sref<file>*, int flags);

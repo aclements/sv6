@@ -2,11 +2,12 @@
 #include "riscv.h"
 #include "kernel.hh"
 #include "kbd.h"
+#include "sbi.h"
 
 int
 kbdgetc(void)
 {
-  panic("kbdgetc");
+  return sbi_console_getchar();
 }
 
 void

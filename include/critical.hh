@@ -39,7 +39,9 @@ class scoped_critical
     // %gs offsets for general per-CPU variables, we wouldn't need
     // special support for this one.
     // TODO: This needs to be done in a single instruction???
+    pushcli();
     mycpu()->no_sched_count += delta;
+    popcli();
   }
 
   static inline uint64_t

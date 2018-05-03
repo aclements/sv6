@@ -21,6 +21,7 @@ OBJS = \
 	kalloc.o \
 	kmalloc.o \
 	kbd.o \
+	timer.o \
 	main.o \
 	memide.o \
 	ide.o \

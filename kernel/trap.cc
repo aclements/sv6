@@ -71,6 +71,7 @@ do_pagefault(struct trapframe *tf)
 
     intr_enable();
     if(pagefault(myproc()->vmap.get(), addr, err) >= 0){
+      intr_disable();
       return 0;
     }
     console.println("pagefault accessing user address from kernel (addr ",
@@ -78,16 +79,19 @@ do_pagefault(struct trapframe *tf)
     tf->gpr.a0 = -1;
     //tf->epc = (u64)__uaccess_end;
     panic("TODO: __uaccess_end");
+    intr_disable();
     return 0;
   } else if (err & FEC_U) {
       intr_enable();
       if(pagefault(myproc()->vmap.get(), addr, err) >= 0){
+        intr_disable();
         return 0;
       }
       uerr.println("pagefault from user for ", shex(addr),
                    " err ", (int)err);
       intr_disable();
   }
+  printtrap(tf, true);
   return -1;
 }
 
@@ -166,7 +170,27 @@ trap_c(struct trapframe *tf)
   // XXX mt_ascope ascope("trap:%d", tf->trapno);
 #endif
 
+  /*cprintf("cpu%d: proc #%d %s\n",
+        mycpu()->id, myproc() ? myproc()->pid : -1,
+        myproc() ? myproc()->name : "(none)");
+  cprintf("before trap(%p), epc=%p, SPIE=%d, SIE=%d, SPP=%d, cause=%lx\n",
+          tf, tf->epc, (tf->status & SSTATUS_SPIE) != 0, (tf->status & SSTATUS_SIE) != 0,
+          (tf->status & SSTATUS_SPP) != 0, tf->cause);
+  cprintf("current SIE=%d\n", is_intr_enabled() != 0);*/
   trap(tf);
+  /*cprintf("cpu%d: proc #%d %s\n",
+        mycpu()->id, myproc() ? myproc()->pid : -1,
+        myproc() ? myproc()->name : "(none)");
+  cprintf("after trap(%p), epc=%p, SPIE=%d, SIE=%d, SPP=%d, cause=%lx\n",
+          tf, tf->epc, (tf->status & SSTATUS_SPIE) != 0, (tf->status & SSTATUS_SIE) != 0,
+          (tf->status & SSTATUS_SPP) != 0, tf->cause);
+  cprintf("current SIE=%d\n", is_intr_enabled() != 0);*/
+
+  if(is_intr_enabled())
+    panic("interruptible");
+
+  if((tf->status & SSTATUS_SIE) != 0)
+    panic("tf->status is interruptible");
 
 #if MTRACE
   mtstop(myproc());
@@ -180,12 +204,14 @@ trap(struct trapframe *tf)
 {
   //printtrap(tf, true);
   bool is_timer_intr = false;
-  if (tf->cause < 0)
+  if ((intptr_t)tf->cause < 0)
   {
     uintptr_t cause = (tf->cause << 1) >> 1;
     switch (cause) {
-    case 5: // S timer intr
-      cprintf("+++ tick!\n");
+    case IRQ_S_TIMER:
+      timer_set_next_event();
+      clear_csr(sip, SIP_STIP);
+      //cprintf("+++ tick!\n");
       is_timer_intr = true;
       kstats::inc(&kstats::sched_tick_count);
       // for now, just care about timer interrupts
@@ -207,8 +233,9 @@ trap(struct trapframe *tf)
       }
       if (mycpu()->id == 0)
         timerintr();
+      kbdintr(); // FIXME!
       refcache::mycache->tick();
-      lapiceoi();
+      // TODO: lapiceoi();
       if (mycpu()->no_sched_count) {
         kstats::inc(&kstats::sched_blocked_tick_count);
         // Request a yield when no_sched_count is released.  We can
@@ -266,7 +293,7 @@ trap(struct trapframe *tf)
           return;
       }
 
-      if (myproc() == 0 || tf_is_kernel(tf))
+      if (!myproc() || tf_is_kernel(tf))
         kerneltrap(tf);
 
       // In user space, assume process misbehaved.
@@ -387,34 +414,6 @@ trap(struct trapframe *tf)
     mycpu()->fpu_owner = myproc();
     break;
   }
-  default:
-    if (tf->trapno >= T_IRQ0 && irq_info[tf->trapno - T_IRQ0].handlers) {
-      for (auto h = irq_info[tf->trapno - T_IRQ0].handlers; h; h = h->next)
-        h->handle_irq();
-      lapiceoi();
-      piceoi();
-      return;
-    }
-
-    if (tf->trapno == T_PGFLT) {
-      if (do_pagefault(tf) == 0)
-        return;
-
-      // XXX distinguish between SIGSEGV and SIGBUS?
-      if (myproc()->deliver_signal(SIGSEGV))
-        return;
-    }
-
-    if (myproc() == 0 || (tf->cs&3) == 0)
-      kerneltrap(tf);
-
-    // In user space, assume process misbehaved.
-    uerr.println("pid ", myproc()->pid, ' ', myproc()->name,
-                 ": trap ", (u64)tf->trapno, " err ", (u32)tf->err,
-                 " on cpu ", myid(), " rip ", shex(tf->epc),
-                 " rsp ", shex(tf->rsp), " addr ", shex(tf->badvaddr),
-                 "--kill proc");
-    myproc()->killed = 1;
   }*/
 
   // Force process exit if it has been killed and is in user space.
@@ -444,7 +443,7 @@ inittrap(void)
   /* Allow kernel to access user memory */
   set_csr(sstatus, SSTATUS_SUM);
   /* Allow keyboard interrupt */
-  set_csr(sie, MIP_SSIP);
+  set_csr(sie, SIP_SSIP);
 }
 
 void

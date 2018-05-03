@@ -205,6 +205,8 @@ QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-machine virt \
 	-nographic \
+  -d in_asm \
+  -D qemu.log \
 	-netdev type=user,hostfwd=tcp::2323-:23,hostfwd=tcp::8080-:80,id=net0 \
 	-device virtio-net-device,netdev=net0 \
 	$(if $(QEMUAPPEND),-append "$(QEMUAPPEND)",) \
