@@ -172,17 +172,14 @@ size_t _dl_phnum;
 
 void
 __crt_main(uint64_t argc, char **argv, uint64_t elf_phdr, uint64_t elf_phnum)
-{printf(".\n");
+{
   extern void __cpprt_init(void);
   extern void __cpprt_fini(void);
 
   _dl_phdr = (struct proghdr*) elf_phdr;
   _dl_phnum = elf_phnum;
-printf("..\n");
   forkt_setup(getpid());
-printf("...\n");
   __cpprt_init();
-printf("....\n");
   // Run global initializers.  (Note that gcc 4.7 eliminated the
   // .ctors section entirely, but gcc has supported .init_array for
   // some time.)  The third argument is envp, which we don't use.
@@ -195,7 +192,7 @@ printf("....\n");
   extern void (*__init_array_end[])(int, char **, char **);
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
       (*__init_array_start[i])(argc, argv, 0);
-printf(".....\n");
+
   // Run main
   extern int main(int argc, char **argv);
   int res = main(argc, argv);

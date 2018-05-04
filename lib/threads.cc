@@ -46,7 +46,7 @@ forkt_setup(u64 pid)
   memcpy((void*)tptr, initimage, filesz);
   tlsdata* t = (tlsdata*) (tptr + memsz_align);
   t->tlsptr[0] = t;
-  setfs((u64) t);
+  setfs((u64) tptr); // FIXME(twd2) ???
 }
 
 int

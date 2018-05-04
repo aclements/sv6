@@ -665,6 +665,7 @@ namespace mmu_per_core_page_table {
     // tracker), but it would probably require more communication.
     if (targets.none())
       return;
+    cprintf("start=%p, end=%p\n", start, end);
     assert(start < end && end <= USERTOP);
     kstats::inc(&kstats::tlb_shootdown_count);
     kstats::inc(&kstats::tlb_shootdown_targets, targets.count());
