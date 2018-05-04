@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 // Random number generator for randomized tests
-static __thread uint64_t rseed;
+static thread_local uint64_t rseed;
 
 uint64_t
 rnd(void)

@@ -19,8 +19,8 @@
 #include "elf.hh"
 
 extern char _end[], __ehdr_start[];
-__thread sigjmp_buf pf_jmpbuf;
-__thread int pf_active;
+thread_local sigjmp_buf pf_jmpbuf;
+thread_local int pf_active;
 
 class double_barrier {
   spin_barrier enter_;

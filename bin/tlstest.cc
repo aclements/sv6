@@ -3,8 +3,8 @@
 #include "pthread.h"
 #include <stdio.h>
 
-__thread u8 b = 0xee;
-__thread u64 a = 0xdeadbeef001234;
+thread_local u8 b = 0xee;
+thread_local u64 a = 0xdeadbeef001234;
 
 void*
 th(void*)

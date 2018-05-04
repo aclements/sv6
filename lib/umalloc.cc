@@ -138,7 +138,7 @@ namespace {
     block_list &operator=(block_list &&) = delete;
 
   public:
-    // NOTE: block_list is used in __thread globals, which means it
+    // NOTE: block_list is used in thread_local globals, which means it
     // must have a default constructor.  Since this is the *only*
     // place it's used, the global will take care of zeroing head.
     block_list() = default;

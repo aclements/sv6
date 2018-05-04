@@ -167,7 +167,7 @@ pthread_cancel(int tid)
 extern "C" void*
 __cxa_get_globals(void)
 {
-  static __thread uint8_t __cxa_eh_global[16];
+  static thread_local uint8_t __cxa_eh_global[16];
   return __cxa_eh_global;
 }
 

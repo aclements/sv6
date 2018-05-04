@@ -91,8 +91,8 @@ class concurrent_distribution
   static int getid()
   {
     static std::atomic<int> nextid;
-    static __thread bool haveid;
-    static __thread int myid;
+    static thread_local bool haveid;
+    static thread_local int myid;
     if (!haveid) {
       myid = nextid++;
       haveid = true;
