@@ -238,7 +238,7 @@ namespace {
   // Linear allocator (used for pages radix array)
   //
 
-  __thread char *linear_pos, *linear_end;
+  thread_local char *linear_pos, *linear_end;
 
   template<typename T>
   class linear_allocator
@@ -368,8 +368,8 @@ namespace {
 
   // Page info radix array.  The +1 on the size is a lame way to avoid
   // having to constantly check our iterators against pages.end().
-  radix_array<page_info, (1ULL<<47)/PGSIZE + 1, 4096,
-                                linear_allocator<page_info> > pages;
+  radix_array<page_info, (1ULL<<38)/PGSIZE, 4096,
+                         linear_allocator<page_info> > pages;
 
   // Convert page pointer to pages index
   size_t idx(void *ptr)
