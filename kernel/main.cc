@@ -155,7 +155,7 @@ cmain(u64 hartid, void *fdt)
   //inite1000();             // Before initpci
   //initahci();
   initnet();
-  //initrtc();               // Requires inithpet
+  initrtc();
   initdev();               // Misc /dev nodes
   initdisk();      // disk
   initinode();     // inode cache

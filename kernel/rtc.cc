@@ -1,6 +1,6 @@
 #include "types.h"
 #include "kernel.hh"
-#include "amd64.h"
+#include "riscv.h"
 #include "fs.h"
 #include "file.hh"
 #include "major.h"
@@ -24,7 +24,7 @@ rtcread1(uint8_t reg, bool bcd = false, bool twelvehour = false)
 static time_t
 rtcread()
 {
-  panic("rtcread");
+  return 1525132800;
 }
 
 void

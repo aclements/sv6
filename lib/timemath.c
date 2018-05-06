@@ -5,7 +5,7 @@
 static bool
 isleap(int year)
 {
-  return (year % 400 == 0) && !(year % 100 == 0) && (year % 4 == 0);
+  return (year % 400 == 0) || ((year % 100 != 0) && (year % 4 == 0));
 }
 
 static const int month_offset_nonleap[] =
