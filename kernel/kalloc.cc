@@ -585,13 +585,7 @@ public:
 static phys_map mem;
 
 // Parse a multiboot memory map.
-static void
-parse_mem_map(void *fdt)
-{
-  // TODO: rewrite
-  mem.add(0x80000000, 0x80000000 + 0x20000000);
-  return;
-}
+static void parse_mem_map(void *fdt);
 
 // Simple allocator to get off the ground during boot.  Works directly
 // with the physical memory map.
@@ -951,7 +945,7 @@ initphysmem(void *fdt)
   fdt_header *fh = (fdt_header *)fdt;
   mem.remove(v2p(fdt), v2p(fdt) + fdt_bswap(fh->totalsize));
 
-  console.println("After reserving memory map:");
+  console.println("Usable memory map:");
   mem.print();
 }
 
@@ -1178,4 +1172,61 @@ void
 ksfree(int slab, void *v)
 {
   kfree(v, 1 << slabmem[slab].order);
+}
+
+// mem scan
+
+struct mem_scan {
+  int memory;
+  const uint32_t *reg_value;
+  int reg_len;
+};
+
+static void mem_open(const struct fdt_scan_node *node, void *extra)
+{
+  struct mem_scan *scan = (struct mem_scan *)extra;
+  memset(scan, 0, sizeof(*scan));
+}
+
+static void mem_prop(const struct fdt_scan_prop *prop, void *extra)
+{
+  struct mem_scan *scan = (struct mem_scan *)extra;
+  if (!strcmp(prop->name, "device_type") && !strcmp((const char*)prop->value, "memory")) {
+    scan->memory = 1;
+  } else if (!strcmp(prop->name, "reg")) {
+    scan->reg_value = prop->value;
+    scan->reg_len = prop->len;
+  }
+}
+
+static void mem_done(const struct fdt_scan_node *node, void *extra)
+{
+  struct mem_scan *scan = (struct mem_scan *)extra;
+  const uint32_t *value = scan->reg_value;
+  const uint32_t *end = value + scan->reg_len/4;
+
+  if (!scan->memory) return;
+  assert (scan->reg_value && scan->reg_len % 4 == 0);
+
+  while (end - value > 0) {
+    uint64_t base, size;
+    value = fdt_get_address(node->parent, value, &base);
+    value = fdt_get_size   (node->parent, value, &size);
+    mem.add(base, base + size);
+  }
+  assert (end == value);
+}
+
+static void parse_mem_map(void *fdt)
+{
+  struct fdt_cb cb;
+  struct mem_scan scan;
+
+  memset(&cb, 0, sizeof(cb));
+  cb.open = mem_open;
+  cb.prop = mem_prop;
+  cb.done = mem_done;
+  cb.extra = &scan;
+
+  fdt_scan((uintptr_t)fdt, &cb);
 }
