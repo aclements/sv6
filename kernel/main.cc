@@ -98,12 +98,12 @@ cmain(u64 hartid, void *fdt)
   puts("initpg...\n");
   initpg();                // Requires initphysmem
   puts("inithz...\n");
-  inithz();        // CPU Hz, microdelay
+  inithz(fdt);        // CPU Hz, microdelay
   puts("inittls...\n");
   inittls(&cpus[0]);
   puts("initnuma...\n");
-  ncpu = 8;
-  initnuma();              // Requires initacpitables, initlapic
+  // ncpu = 8;
+  initnuma();
   puts("initpercpu...\n");
   initpercpu();            // Requires initnuma
   puts("initcpus...\n");

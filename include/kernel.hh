@@ -89,7 +89,7 @@ long            futexwake(futexkey_t key, u64 nwake);
 
 // hz.c
 void            microdelay(u64);
-void            inithz(void);
+void            inithz(void *);
 
 // ide.c
 void            ideinit(void);
