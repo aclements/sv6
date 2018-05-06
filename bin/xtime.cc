@@ -8,19 +8,17 @@
 
 #include <vector>
 
-#define CMN PERF_SEL_USR|PERF_SEL_OS|PERF_SEL_ENABLE
-
 struct selector {
   const char* name;
   u64 sel;
 };
 
 static struct selector pmc_selector[] = {
-  { "not halted",      CMN|0x76 },
-  { "remote probes",   CMN|(0x4|0x8)<<8|0xec },
-  { "L2 misses",       CMN|(0x2|0x8)<<8|0x7e },
-  { "MAB requests",    CMN|(0x1)<<8|0x68 },
-  { "MAB cycles",      CMN|(0x1)<<8|0x69 },
+  { "not halted",      0x76 },
+  { "remote probes",   (0x4|0x8)<<8|0xec },
+  { "L2 misses",       (0x2|0x8)<<8|0x7e },
+  { "MAB requests",    (0x1)<<8|0x68 },
+  { "MAB cycles",      (0x1)<<8|0x69 },
 };
 
 static const char*

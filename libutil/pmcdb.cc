@@ -81,5 +81,5 @@ public:
 uint64_t
 pmcdb_parse_selector(const char *str)
 {
-  return name_map::get_instance().lookup(str) | PERF_SEL_USR | PERF_SEL_OS;
+  return name_map::get_instance().lookup(str);
 }

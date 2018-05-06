@@ -451,17 +451,6 @@ initfpu(void)
 {
   // TODO: FPU
   return;
-  // Allow ourselves to use FPU instructions.  We'll clear this before
-  // we schedule anything.
-  lcr0(rcr0() & ~(CR0_TS | CR0_EM));
-  // Initialize FPU, ignoring pending FP exceptions
-  fninit();
-  // Don't generate interrupts for any SSE exceptions
-  ldmxcsr(0x1f80);
-  // Stash away the initial FPU state to use as each process' initial
-  // FPU state
-  if (myid() == 0)
-    fxsave(&fpu_initial_state);
 }
 
 // Pushcli/popcli are like cli/sti except that they are matched:
