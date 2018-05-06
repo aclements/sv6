@@ -102,7 +102,7 @@ cmain(u64 hartid, void *fdt)
   puts("inittls...\n");
   inittls(&cpus[0]);
   puts("initnuma...\n");
-  // ncpu = 8;
+  ncpu = 1;
   initnuma();
   puts("initpercpu...\n");
   initpercpu();            // Requires initnuma
