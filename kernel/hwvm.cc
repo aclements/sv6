@@ -468,6 +468,7 @@ batched_shootdown::perform() const
   for (int i = 0; i < ncpu; i++) {
     if (cpus[i].tlb_ptbr == ptbr && cpus[i].tlbflush_done < myreq) {
       // TODO: lapic->send_tlbflush(&cpus[i]);
+      panic("send_tlbflush not implemented");
       kstats::inc(&kstats::tlb_shootdown_targets);
     }
   }

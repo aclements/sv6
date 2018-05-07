@@ -1,4 +1,5 @@
 #include "ipi.hh"
+#include "sbi.h"
 
 #include "traps.h"
 #include "bits.hh"
@@ -36,8 +37,8 @@ ipi_call::start(unsigned cpu)
   }
   if (need_ipi)
   {
-    // TODO: lapic->send_ipi(&cpus[cpu], T_IPICALL);
-    panic("send_ipi not implemented");
+    const unsigned long mask = 1UL << cpu;
+    sbi_send_ipi(&mask);
   }
 }
 

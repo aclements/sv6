@@ -17,6 +17,9 @@
 .section .text, "ax", %progbits
 .globl start
 start:
+  li t1, NPROC
+  bge a0, t1, __die
+
   # setup paging
   la t0, kpml4
   srli t0, t0, PGSHIFT
@@ -46,7 +49,10 @@ reallocated:
   # call into C code.
   j mpboot
 
+__die:
+  csrrci zero, sstatus, SSTATUS_SIE
 1:
+  wfi
   j 1b
 
 .data

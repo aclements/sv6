@@ -64,9 +64,7 @@ mpboot(u64 hartid, void *fdt)
 {
   while (boot_ticket.load() != hartid); // wait for ticket
 
-  puts("inittls...\n");
   inittls(&cpus[hartid]);
-  puts("initpg...\n");
   initpg();
 
   // Call per-CPU static initializers.  This is the per-CPU equivalent
@@ -76,7 +74,6 @@ mpboot(u64 hartid, void *fdt)
   for (size_t i = 0; i < __percpuinit_array_end - __percpuinit_array_start; i++)
       (*__percpuinit_array_start[i])(hartid);
 
-  puts("inittrap...\n");
   inittrap();
   initfpu();
   initsamp();
@@ -94,12 +91,8 @@ bootothers(void)
 {
   for (u64 hartid = 1; hartid < ncpu; ++hartid)
   {
-    cprintf("booting cpu %ld\n", hartid);
-    puts("reset bstates\n");
     bstate.store(0);
-    puts("set boot_ticket\n");
     boot_ticket.store(hartid);
-    puts("waiting...\n");
     while (!bstate.load()); // wait for the other hart to boot
   }
 }
@@ -114,26 +107,17 @@ cmain(u64 hartid, void *fdt)
   // in the image.  *cpu and such won't work until we inittls.
   percpu_offsets[0] = __percpu_start;
 
-  //cprintf("System boot successfully!\nFDT is at %p.\n", fdt);
-  //puts("initphysmem...\n");
   initphysmem(fdt);
-  //puts("initpg...\n");
   initpg();                // Requires initphysmem
-  //puts("inithz...\n");
   inithz(fdt);        // CPU Hz, microdelay
-  //puts("inittls...\n");
   inittls(&cpus[0]);
-  //puts("initnuma...\n");
   //ncpu = 1;
   initnuma();
-  //puts("initpercpu...\n");
   initpercpu();            // Requires initnuma
-  //puts("initcpus...\n");
   initcpus();              // Requires initpercpu
 
   // Interrupt routing is now configured
 
-  //puts("initpageinfo...\n");
   initpageinfo();          // Requires initnuma
 
   // Some global constructors require mycpu()->id (via myid()) which
@@ -148,34 +132,21 @@ cmain(u64 hartid, void *fdt)
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
       (*__init_array_start[i])(0, nullptr, nullptr);
 
-  //puts("inittrap...\n");
   inittrap();
-  //puts("initfpu...\n");
   initfpu();               // Requires nothing
-  //puts("initcmdline...\n");
   initcmdline();
-  //puts("initkalloc...\n");
   initkalloc();            // Requires initpageinfo
-  //puts("initz...\n");
   initz();
-  //puts("initproc...\n");
   initproc();      // process table
-  //puts("initsched...\n");
   initsched();     // scheduler run queues
-  //puts("initidle...\n");
   initidle();
-  //puts("initgc...\n");
   initgc();        // gc epochs and threads
-  //puts("initrefcache...\n");
   initrefcache();  // Requires initsched
-  //puts("initconsole...\n");
   initconsole();
   initfutex();
   initsamp();
   initlockstat();
-  //puts("init devices...\n");
   //inite1000();             // Before initpci
-  //initahci();
   initnet();
   initrtc();
   initdev();               // Misc /dev nodes
@@ -186,10 +157,8 @@ cmain(u64 hartid, void *fdt)
   if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);
 
-  //puts("inittimer...\n");
   inittimer();
 
-  //puts("inituser...\n");
   inituser();      // first user process
 
   puts("mfsload...\n");
@@ -203,11 +172,11 @@ cmain(u64 hartid, void *fdt)
   puts("booting others...\n");
   bootothers();    // start other processors
   cleanuppg();             // Requires bootothers
-  puts("initcpprt...\n");
   initcpprt();
   initwd();                // Requires initnmi
-  cprintf("System boot successfully!\nFDT is at %p.\n", fdt);
-  puts("System initialized successfully...\n");
+  cprintf("cpu %ld boot successfully!\n", hartid);
+  print_stack(hartid);
+  cprintf("System initialized successfully!\nFDT is at %p.\n", fdt);
   idleloop();
 
   panic("Unreachable");

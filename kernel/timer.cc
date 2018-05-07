@@ -12,8 +12,6 @@ void inittimer()
   timebase = 1e7 / 10;
   timer_set_next_event();
   set_csr(sie, SIP_STIP);
-
-  cprintf("++ setup timer interrupts\n");
 }
 
 void timer_set_next_event()

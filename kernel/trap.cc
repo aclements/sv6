@@ -14,6 +14,7 @@
 #include "kstream.hh"
 #include "hwvm.hh"
 #include "refcache.hh"
+#include "sbi.h"
 
 extern "C" void __uaccess_end(void);
 
@@ -208,10 +209,16 @@ trap(struct trapframe *tf)
   {
     uintptr_t cause = (tf->cause << 1) >> 1;
     switch (cause) {
+    case IRQ_S_SOFT: {
+      // TODO(twd2): how to determine it is a ipi call?
+      extern void on_ipicall();
+      sbi_clear_ipi();
+      on_ipicall();
+      break;
+    }
     case IRQ_S_TIMER:
       timer_set_next_event();
       clear_csr(sip, SIP_STIP);
-      //cprintf("+++ tick!\n");
       is_timer_intr = true;
       kstats::inc(&kstats::sched_tick_count);
       // for now, just care about timer interrupts
