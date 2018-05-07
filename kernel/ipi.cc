@@ -34,8 +34,11 @@ ipi_call::start(unsigned cpu)
     *q.tail = this;
     q.tail = &this->next[cpu];
   }
-  if (need_ipi);
+  if (need_ipi)
+  {
     // TODO: lapic->send_ipi(&cpus[cpu], T_IPICALL);
+    panic("send_ipi not implemented");
+  }
 }
 
 void

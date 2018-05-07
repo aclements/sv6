@@ -231,9 +231,10 @@ trap(struct trapframe *tf)
         }
         mycpu()->timer_printpc = 0;
       }
-      if (mycpu()->id == 0)
+      if (mycpu()->id == 0) {
         timerintr();
-      kbdintr(); // FIXME!
+        kbdintr(); // FIXME!
+      }
       refcache::mycache->tick();
       // TODO: lapiceoi();
       if (mycpu()->no_sched_count) {

@@ -14,14 +14,9 @@
 # physical address.
 #define PADDR(x) ((x) - KBASE)
 
-# STACK is the size of the bootstrap stack.
-#define STACK KSTACKSIZE
-
 .section .text, "ax", %progbits
 .globl start
 start:
-  bnez a0, start # make aps loop TODO
-
   # setup paging
   la t0, kpml4
   srli t0, t0, PGSHIFT
@@ -33,27 +28,32 @@ start:
   la t0, reallocated # note: we use mcmodel=medany, which is PC-relative addressing,
   li t1, KBASE # so following additions are needed.
   add t0, t0, t1
-  add a1, a1, t1 # fdt
+  add a1, a1, t1 # reallocate fdt
   jr t0
 
 reallocated:
 
   # Load VA stack pointer
-  la sp, stack + STACK
+  la sp, stack + KSTACKSIZE
+  slli t0, a0, KSTACKSHIFT
+  add sp, sp, t0
+
+  mv s0, zero # clear frame pointer
+
   # call into C code.
-  tail cmain
+  beqz a0, cmain
+
+  # call into C code.
+  j mpboot
+
 1:
   j 1b
 
-.globl apstart
-apstart:
-  j apstart # TODO
-
 .data
 # Initial stack
-.comm stack, STACK
+.comm stack, KSTACKSIZE * 8 # FIXME: NPROC
 
-.balign 4096
+.balign PGSIZE
 .global kpml4
 kpml4:
   .space PX(2, PHY_MEM_BASE) * PTE_SIZE - (. - kpml4)

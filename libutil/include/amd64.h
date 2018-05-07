@@ -60,12 +60,6 @@ invlpg(void *a)
   for (;;);
 }
 
-static inline int
-popcnt64(uint64_t v)
-{
-  for (;;);
-}
-
 // TODO: move out
 
 // Atomically set bit nr of *a.  nr must be <= 64.

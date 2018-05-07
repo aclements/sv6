@@ -50,13 +50,23 @@ void idleloop(void);
 
 #define IO_RTC  0x70
 
-static std::atomic<int> bstate;
-static cpuid_t bcpuid;
+static std::atomic<uintptr_t> bstate;
+static std::atomic<uint64_t> boot_ticket(0);
+
+static void print_stack(u64 hartid)
+{
+  register uintptr_t sp asm ("sp");
+  cprintf("cpu %ld sp = 0x%016lx\n", hartid, sp);
+}
 
 void
-mpboot(void)
+mpboot(u64 hartid, void *fdt)
 {
-  inittls(&cpus[bcpuid]);
+  while (boot_ticket.load() != hartid); // wait for ticket
+
+  puts("inittls...\n");
+  inittls(&cpus[hartid]);
+  puts("initpg...\n");
   initpg();
 
   // Call per-CPU static initializers.  This is the per-CPU equivalent
@@ -64,12 +74,16 @@ mpboot(void)
   extern void (*__percpuinit_array_start[])(size_t);
   extern void (*__percpuinit_array_end[])(size_t);
   for (size_t i = 0; i < __percpuinit_array_end - __percpuinit_array_start; i++)
-      (*__percpuinit_array_start[i])(bcpuid);
+      (*__percpuinit_array_start[i])(hartid);
 
+  puts("inittrap...\n");
+  inittrap();
   initfpu();
   initsamp();
   initidle();
   initwd();
+  cprintf("cpu %ld boot successfully!\n", hartid);
+  print_stack(hartid);
   bstate.store(1);
   inittimer();
   idleloop();
@@ -78,8 +92,16 @@ mpboot(void)
 static void
 bootothers(void)
 {
-  // TODO
-  return;
+  for (u64 hartid = 1; hartid < ncpu; ++hartid)
+  {
+    cprintf("booting cpu %ld\n", hartid);
+    puts("reset bstates\n");
+    bstate.store(0);
+    puts("set boot_ticket\n");
+    boot_ticket.store(hartid);
+    puts("waiting...\n");
+    while (!bstate.load()); // wait for the other hart to boot
+  }
 }
 
 void
@@ -92,26 +114,26 @@ cmain(u64 hartid, void *fdt)
   // in the image.  *cpu and such won't work until we inittls.
   percpu_offsets[0] = __percpu_start;
 
-  cprintf("System boot successfully!\nFDT is at %p.\n", fdt);
-  puts("initphysmem...\n");
+  //cprintf("System boot successfully!\nFDT is at %p.\n", fdt);
+  //puts("initphysmem...\n");
   initphysmem(fdt);
-  puts("initpg...\n");
+  //puts("initpg...\n");
   initpg();                // Requires initphysmem
-  puts("inithz...\n");
+  //puts("inithz...\n");
   inithz(fdt);        // CPU Hz, microdelay
-  puts("inittls...\n");
+  //puts("inittls...\n");
   inittls(&cpus[0]);
-  puts("initnuma...\n");
-  ncpu = 1;
+  //puts("initnuma...\n");
+  //ncpu = 1;
   initnuma();
-  puts("initpercpu...\n");
+  //puts("initpercpu...\n");
   initpercpu();            // Requires initnuma
-  puts("initcpus...\n");
+  //puts("initcpus...\n");
   initcpus();              // Requires initpercpu
 
   // Interrupt routing is now configured
 
-  puts("initpageinfo...\n");
+  //puts("initpageinfo...\n");
   initpageinfo();          // Requires initnuma
 
   // Some global constructors require mycpu()->id (via myid()) which
@@ -126,32 +148,32 @@ cmain(u64 hartid, void *fdt)
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
       (*__init_array_start[i])(0, nullptr, nullptr);
 
-  puts("inittrap...\n");
+  //puts("inittrap...\n");
   inittrap();
-  puts("initfpu...\n");
+  //puts("initfpu...\n");
   initfpu();               // Requires nothing
-  puts("initcmdline...\n");
+  //puts("initcmdline...\n");
   initcmdline();
-  puts("initkalloc...\n");
+  //puts("initkalloc...\n");
   initkalloc();            // Requires initpageinfo
-  puts("initz...\n");
+  //puts("initz...\n");
   initz();
-  puts("initproc...\n");
+  //puts("initproc...\n");
   initproc();      // process table
-  puts("initsched...\n");
+  //puts("initsched...\n");
   initsched();     // scheduler run queues
-  puts("initidle...\n");
+  //puts("initidle...\n");
   initidle();
-  puts("initgc...\n");
+  //puts("initgc...\n");
   initgc();        // gc epochs and threads
-  puts("initrefcache...\n");
+  //puts("initrefcache...\n");
   initrefcache();  // Requires initsched
-  puts("initconsole...\n");
+  //puts("initconsole...\n");
   initconsole();
   initfutex();
   initsamp();
   initlockstat();
-  puts("init devices...\n");
+  //puts("init devices...\n");
   //inite1000();             // Before initpci
   //initahci();
   initnet();
@@ -164,10 +186,10 @@ cmain(u64 hartid, void *fdt)
   if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);
 
-  puts("inittimer...\n");
+  //puts("inittimer...\n");
   inittimer();
 
-  puts("inituser...\n");
+  //puts("inituser...\n");
   inituser();      // first user process
 
   puts("mfsload...\n");
@@ -184,6 +206,7 @@ cmain(u64 hartid, void *fdt)
   puts("initcpprt...\n");
   initcpprt();
   initwd();                // Requires initnmi
+  cprintf("System boot successfully!\nFDT is at %p.\n", fdt);
   puts("System initialized successfully...\n");
   idleloop();
 
