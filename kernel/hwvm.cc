@@ -13,6 +13,7 @@
 #include "ipi.hh"
 #include "kstats.hh"
 #include "vmalloc.hh"
+#include "sbi.h"
 
 using namespace std;
 
@@ -467,8 +468,8 @@ batched_shootdown::perform() const
 
   for (int i = 0; i < ncpu; i++) {
     if (cpus[i].tlb_ptbr == ptbr && cpus[i].tlbflush_done < myreq) {
-      // TODO: lapic->send_tlbflush(&cpus[i]);
-      panic("send_tlbflush not implemented");
+      const unsigned long mask = 1UL << i;
+      sbi_remote_sfence_vma(&mask, 0, 0);
       kstats::inc(&kstats::tlb_shootdown_targets);
     }
   }
