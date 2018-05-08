@@ -117,6 +117,7 @@ public:
   {
     auto nreq = tlbflush_req.load();
     u64 ptbr = v2p(this);
+    tlb_invl_all();
     lptbr(ptbr);
     mycpu()->tlbflush_done = nreq;
     mycpu()->tlb_ptbr = ptbr;
@@ -324,7 +325,7 @@ initpg(void)
       assert(!it.is_set());
     }
     kvmallocpos = KVMALLOC;
-    lptbr(rptbr());
+    tlb_invl_all();
   }
 }
 
@@ -334,7 +335,7 @@ cleanuppg(void)
 {
   // Remove 1GB identity mapping
   *kpml4.find(PHY_MEM_BASE, pgmap::L_TOP) = 0;
-  lptbr(rptbr());
+  tlb_invl_all();
 }
 
 size_t
@@ -484,7 +485,7 @@ batched_shootdown::on_ipi()
 {
   pushcli();
   u64 nreq = tlbflush_req.load();
-  lptbr(rptbr());
+  tlb_invl_all();
   mycpu()->tlbflush_done = nreq;
   popcli();
 }
@@ -510,7 +511,7 @@ void
 core_tracking_shootdown::clear_tlb() const
 {
   if (end_ > start_ && end_ - start_ > 4 * PGSIZE) {
-    lptbr(rptbr());
+    tlb_invl_all();
   } else {
     for (uintptr_t va = start_; va < end_; va += PGSIZE)
       tlb_invl((void*) va);
