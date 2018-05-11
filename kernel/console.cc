@@ -361,11 +361,11 @@ consoleintr(int (*getc)(void))
       procdumpall();
       break;
     case C('E'):  // Print user-space PCs.
-      for (u32 i = 0; i < NCPU; i++)
+      for (u32 i = 0; i < ncpu; i++)
         cpus[i].timer_printpc = 1;
       break;
     case C('T'):  // Print user-space PCs and stack traces.
-      for (u32 i = 0; i < NCPU; i++)
+      for (u32 i = 0; i < ncpu; i++)
         cpus[i].timer_printpc = 2;
       break;
     case C('U'):  // Kill line.
