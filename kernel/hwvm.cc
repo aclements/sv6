@@ -609,6 +609,7 @@ namespace mmu_per_core_page_table {
     auto mypml4 = *pml4;
     assert(mypml4);
     mypml4->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
+    tlb_invl(va);
     t->tracker_cores.set(myid());
   }
 
@@ -662,7 +663,6 @@ namespace mmu_per_core_page_table {
   void
   shootdown::perform() const
   {
-    puts("shootdown::perform()\n");
     // XXX Alternatively, we could reach into the per-core page tables
     // directly from invalidate.  Then it would be able to zero them
     // directly and gather PTE_P bits (instead of using a separate
@@ -676,6 +676,6 @@ namespace mmu_per_core_page_table {
     kstats::timer timer(&kstats::tlb_shootdown_cycles);
     run_on_cpus(targets, [this]() {
         cache->clear(start, end);
-      });
+    });
   }
 }

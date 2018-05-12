@@ -453,7 +453,6 @@ vmap::pagefault(uptr va, u32 err)
         cache.insert(va, &*it, MK_PTE(page->pa(), PTE_V | PTE_U | PTE_R | PTE_X));
     }
 
-    puts("shootdown.perform()\n");
     shootdown.perform();
   }
   return 1;
