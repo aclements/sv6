@@ -33,11 +33,11 @@ struct kstack_tag kstack_tag[NCPU];
 enum { sched_debug = 0 };
 
 proc::proc(int npid) :
-  kstack(0), pid(npid), parent(0), tf(0), context(0), killed(0),
+  kstack(0), pid(npid), parent(0), tf(0), context(), killed(0),
   tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
   cpu_pin(0), oncv(0), cv_wakeup(0),
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
-  user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
+  unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0),
   uaccess_(0), yield_(false),
   upath(nullptr), uargv(nullptr),
   exception_inuse(0), magic(PROC_MAGIC), unmapped_hint(0), state_(EMBRYO)
@@ -121,6 +121,7 @@ yield(void)
 
 // A fork child's very first scheduling by scheduler()
 // will swtch here.  "Return" to user space.
+extern "C" // for swtch.S
 void
 forkret(void)
 {
@@ -138,7 +139,7 @@ forkret(void)
   if (myproc()->cwd_m == nullptr)
     myproc()->cwd_m = namei(myproc()->cwd_m, "/");
 
-  // Return to "caller", actually trapret (see allocproc).
+  // Return to caller, actually forkret_wrapper.
 }
 
 // Exit the current process.  Does not return.
@@ -218,6 +219,8 @@ freeproc(struct proc *p)
   delete p;
 }
 
+extern "C" void forkret_wrapper();
+
 proc*
 proc::alloc(void)
 {
@@ -260,20 +263,13 @@ proc::alloc(void)
   sp -= sizeof *p->tf;
   p->tf = (struct trapframe*)sp;
 
-  // amd64 ABI mandates sp % 16 == 0 before a call instruction
-  // (or after executing a ret instruction)
+  // align
   if ((uptr) sp % 16)
     panic("allocproc: misaligned sp");
 
-  // Set up new context to start executing at forkret,
-  // which returns to trapret.
-  sp -= 8;
-  *(u64*)sp = (u64)trapret;
-
-  sp -= sizeof *p->context;
-  p->context = (struct context*)sp;
-  memset(p->context, 0, sizeof *p->context);
-  p->context->rip = (uptr)forkret;
+  memset(&p->context, 0, sizeof(p->context));
+  p->context.sp = (uptr)sp;
+  p->context.ra = (uptr)forkret_wrapper;
 
   return p;
 }
@@ -358,9 +354,11 @@ procdumpall(void)
             p->pid, name, state, p->cpuid, p->tsc);
     
     if(p->get_state() == SLEEPING){
-      getcallerpcs((void*)p->context->rbp, pc, NELEM(pc));
+      cprintf("  Trying to get call stack, but failing to read stack base pointer,\n");
+      cprintf("  because RISC-V does not have. :(\n");
+      /*getcallerpcs((void*)p->context.s0, pc, NELEM(pc));
       for(int i=0; i<10 && pc[i] != 0; i++)
-        cprintf(" %lx\n", pc[i]);
+        cprintf(" %lx\n", pc[i]);*/
     }
   }
 }
@@ -397,11 +395,10 @@ doclone(clone_flags flags)
   np->cpu_pin = myproc()->cpu_pin;
   np->data_cpuid = myproc()->data_cpuid;
   np->run_cpuid_ = myproc()->run_cpuid_;
-  np->user_fs_ = myproc()->user_fs_;
   memcpy(np->sig, myproc()->sig, sizeof(np->sig));
 
-  // Clear %eax so that fork returns 0 in the child.
-  np->tf->rax = 0;
+  // Clear return value register so that fork returns 0 in the child.
+  np->tf->gpr.a0 = 0;
 
   if (flags & CLONE_SHARE_FTABLE) {
     np->ftable = myproc()->ftable;
@@ -475,25 +472,25 @@ wait(int wpid,  userptr<int> status)
       proc &p = *it;
       acquire(&p.lock);
       if (wpid == -1 || wpid == p.pid) {
-	havekids = 1;
-	if(p.get_state() == ZOMBIE){
-	  release(&p.lock);	// noone else better be trying to lock p
-	  pid = p.pid;
-          myproc()->childq.erase(it);
-	  release(&myproc()->lock);
+	      havekids = 1;
+	      if(p.get_state() == ZOMBIE){
+	        release(&p.lock);	// noone else better be trying to lock p
+	        pid = p.pid;
+                myproc()->childq.erase(it);
+	        release(&myproc()->lock);
 
-          if (status) {
-            status.store(&p.status);
-          }
+                if (status) {
+                  status.store(&p.status);
+                }
 
-          proc *np = &p;
-          if (!xnspid->remove(pid, &np))
-            panic("wait: ns_remove");
+                proc *np = &p;
+                if (!xnspid->remove(pid, &np))
+                  panic("wait: ns_remove");
 
-          finishproc_work *w = new finishproc_work(&p);
-          assert(dwork_push(w, p.run_cpuid_) >= 0);
-	  return pid;
-	}
+                finishproc_work *w = new finishproc_work(&p);
+                assert(dwork_push(w, p.run_cpuid_) >= 0);
+	        return pid;
+	      }
       }
       release(&p.lock);
     }
@@ -539,9 +536,9 @@ threadalloc(void (*fn)(void *), void *arg)
     return 0;
 
   // XXX can threadstub be deleted?
-  p->context->rip = (u64)threadstub;
-  p->context->r12 = (u64)fn;
-  p->context->r13 = (u64)arg;
+  p->context.ra = (u64)threadstub;
+  p->context.s0 = (u64)fn;
+  p->context.s1 = (u64)arg;
   p->parent = nullptr;
   p->cwd.reset();
 
@@ -577,17 +574,17 @@ proc::deliver_signal(int signo)
     return false;
 
   trapframe tf_save = *tf;
-  tf->rsp -= 128;   // skip redzone
-  tf->rsp -= sizeof(tf_save);
-  if (putmem((void*) tf->rsp, &tf_save, sizeof(tf_save)) < 0)
+  tf->gpr.sp -= 128;   // skip redzone
+  tf->gpr.sp -= sizeof(tf_save);
+  if (putmem((void*) tf->gpr.sp, &tf_save, sizeof(tf_save)) < 0)
     return false;
 
-  tf->rsp -= 8;
-  if (putmem((void*) tf->rsp, &sig[signo].sa_restorer, 8) < 0)
+  tf->gpr.sp -= 8;
+  if (putmem((void*) tf->gpr.sp, &sig[signo].sa_restorer, 8) < 0)
     return false;
 
-  tf->rip = (u64) sig[signo].sa_handler;
-  tf->rdi = signo;
+  tf->epc = (u64) sig[signo].sa_handler;
+  tf->gpr.a0 = signo;
   return true;
 }
 

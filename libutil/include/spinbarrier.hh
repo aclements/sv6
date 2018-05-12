@@ -39,7 +39,7 @@ public:
   {
     // Wait if the barrier is in the exit phase
     while (entered_ & phase_mask)
-      asm volatile("pause":::);
+      asm volatile("nop":::);
 
     // Enter the barrier
     auto v = ++entered_;
@@ -52,7 +52,7 @@ public:
 
     // Wait until the barrier switches to the exit phase
     while (!(entered_.load(std::memory_order_relaxed) & phase_mask))
-      asm volatile("pause":::);
+      asm volatile("nop":::);
 
     // Exit the batter
     if ((v = --entered_) == phase_mask)

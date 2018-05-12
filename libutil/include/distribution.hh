@@ -85,14 +85,14 @@ class concurrent_distribution
     distribution<T> dist __mpalign__;
     __padout__;
   } dists[MAX_THREADS];
-  mutable std::atomic<bool> dirty;
+  mutable std::atomic<uintptr_t> dirty;
   mutable distribution<T> combined;
 
   static int getid()
   {
     static std::atomic<int> nextid;
-    static __thread bool haveid;
-    static __thread int myid;
+    static thread_local bool haveid;
+    static thread_local int myid;
     if (!haveid) {
       myid = nextid++;
       haveid = true;

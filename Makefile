@@ -6,9 +6,9 @@ Q          ?= @
 # ELF.  E.g., x86_64-jos-elf-
 TOOLPREFIX ?=
 # QEMU binary
-QEMU       ?= qemu-system-x86_64
+QEMU       ?= qemu-system-riscv64
 # Number of CPUs to emulate
-QEMUSMP    ?= 8
+QEMUSMP    ?= 5
 # RAM to simulate (in MB)
 QEMUMEM    ?= 512
 # Default hardware build target.  See param.h for others.
@@ -28,7 +28,7 @@ O           = o.$(HW)
 
 ifeq ($(HW),linux)
 PLATFORM   := native
-TOOLPREFIX := 
+TOOLPREFIX := riscv64-unknown-elf-
 else
 ifeq ($(HW),linuxmtrace)
 # Build the user space for mtrace'ing under Linux.  This builds an
@@ -36,9 +36,10 @@ ifeq ($(HW),linuxmtrace)
 # Make targets like qemu and mtrace.out are supported if the user
 # provides KERN=path/to/Linux/bzImage to make.
 PLATFORM   := native
-TOOLPREFIX := 
+TOOLPREFIX := riscv64-unknown-elf-
 else
 PLATFORM   := xv6
+TOOLPREFIX := riscv64-unknown-elf-
 endif
 endif
 
@@ -55,11 +56,11 @@ CXXFLAGS = -Wno-delete-non-virtual-dtor -Wno-gnu-designator -Wno-tautological-co
 CFLAGS   = -no-integrated-as
 ASFLAGS  = 
 else
-CC  ?= $(TOOLPREFIX)gcc
-CXX ?= $(TOOLPREFIX)g++
+CC  = $(TOOLPREFIX)gcc
+CXX = $(TOOLPREFIX)g++
 CXXFLAGS = -Wno-delete-non-virtual-dtor
 CFLAGS   =
-ASFLAGS  = -Wa,--divide
+ASFLAGS  =
 endif
 
 LD = $(TOOLPREFIX)ld
@@ -74,20 +75,20 @@ INCLUDES  = --sysroot=$(O)/sysroot \
 	-Istdinc $(CODEXINC) -I$(MTRACESRC) \
 	-include param.h -include libutil/include/compiler.h
 COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 \
-	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
-	    -mno-red-zone
+	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions
 COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector) -I$(shell $(CC) -print-file-name=include)
-COMFLAGS  += -Wl,-m,elf_x86_64 -nostdlib -ffreestanding
-LDFLAGS   = -m elf_x86_64
+COMFLAGS  += -Wl,-m,elf64lriscv -nostdlib -ffreestanding
+LDFLAGS   = -m elf64lriscv
 else
 INCLUDES := -include param.h -iquote libutil/include -I$(MTRACESRC)
 COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 endif
-COMFLAGS += -g -MD -MP -O3 -Wall -Werror -DHW_$(HW) $(INCLUDES)
-CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
-CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare $(CXXFLAGS)
-ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
+O3 := -O3
+COMFLAGS += -g -MD -MP $(O3) -Wall -DHW_$(HW) $(INCLUDES)
+CFLAGS   := $(COMFLAGS) -std=gnu99 $(CFLAGS)
+CXXFLAGS := $(COMFLAGS) -std=c++11 -Wno-sign-compare $(CXXFLAGS)
+ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
 
 ifeq ($(EXCEPTIONS),y)
   # Include C++ support libraries for stack unwinding and RTTI.  Some of
@@ -96,8 +97,7 @@ ifeq ($(EXCEPTIONS),y)
   # objects, so the linker ignores these objects entirely.  If you start
   # getting "multiple definition" and "undefined reference" errors,
   # there's probably a new ABI symbol we need to define ourselves.
-  CXXRUNTIME = $(shell $(CC) -print-file-name=libgcc_eh.a) \
-	  $(shell $(CC) -print-file-name=libsupc++.a)
+  CXXRUNTIME = $(shell pwd)/libgcc.a $(shell pwd)/libsupc++.a
   CXXFLAGS += -DEXCEPTIONS=1
   ifndef USE_CLANG
     CXXFLAGS += -fnothrow-opt -Wnoexcept
@@ -127,7 +127,7 @@ endif
 include libutil/Makefrag
 include bin/Makefrag
 include tools/Makefrag
-include metis/Makefrag
+# TODO include metis/Makefrag
 
 $(O)/%.o: %.c $(O)/sysroot
 	@echo "  CC     $@"
@@ -162,7 +162,7 @@ $(O)/%.o: $(O)/%.S
 $(O)/sysroot: include/host_hdrs.hh
 	rm -rf $@.tmp $@
 	mkdir -p $@.tmp
-	tar c $$($(CXX) -E -H -std=c++0x -ffreestanding $< -o /dev/null 2>&1 \
+	tar c $$($(CXX) -E -H -std=c++11 -ffreestanding $< -o /dev/null 2>&1 \
 		| awk '/^[.]/ {print $$2}') | tar xC $@.tmp
 	mv $@.tmp $@
 
@@ -203,11 +203,14 @@ endif
 
 QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
+	-machine virt \
 	-nographic \
-	-numa node -numa node \
-	-net user -net nic,model=e1000 \
-	$(if $(QEMUNOREDIR),,-redir tcp:2323::23 -redir tcp:8080::80) \
+  -d in_asm \
+  -D qemu.log \
+	-netdev type=user,hostfwd=tcp::2323-:23,hostfwd=tcp::8080-:80,id=net0 \
+	-device virtio-net-device,netdev=net0 \
 	$(if $(QEMUAPPEND),-append "$(QEMUAPPEND)",) \
+	# -numa node -numa node \
 
 ## One NUMA node per CPU when mtrace'ing
 ifeq ($(HW),linuxmtrace)
@@ -217,9 +220,9 @@ QEMUOPTS += -numa node -numa node
 endif
 
 ifeq ($(PLATFORM),xv6)
-QEMUOPTS += -device ahci,id=ahci0 \
-	    -drive if=none,file=$(O)/fs.img,format=raw,id=drive-sata0-0-0 \
-	    -device ide-drive,bus=ahci0.0,drive=drive-sata0-0-0,id=sata0-0-0
+QEMUOPTS += \
+	    -drive file=$(O)/fs.img,format=raw,id=hd0 \
+	    -device virtio-blk-device,drive=hd0
 qemu: $(O)/fs.img
 endif
 ifeq ($(PLATFORM),native)
@@ -229,10 +232,43 @@ endif
 # User-provided QEMU options
 QEMUOPTS += $(QEMUEXTRA)
 
+KERNBBL = $(O)/bbl.elf
+$(KERNBBL): $(KERN)
+	cd riscv-pk && \
+	mkdir -p build && \
+	cd build && \
+	../configure \
+		--disable-fp-emulation \
+		--enable-logo \
+		--enable-print-device-tree \
+		--disable-vm \
+		--host=riscv64-unknown-elf \
+		--with-payload=../../$(KERN) && \
+	make && \
+	cp bbl ../../$@
+
+KERNBIN = $(O)/bbl.bin
+$(KERNBIN): $(KERNBBL)
+	$(OBJCOPY) -S -O binary --change-addresses -0x80000000 $< $@
+
+KERNIMG = $(O)/sd.img
+$(KERNIMG): $(KERNBIN)
+	./mkimg.sh $< $@
+
+ifeq ($(PLATFORM),xv6)
+.PHONY: sdimg
+sdimg: $(KERNIMG)
+
+qemu: $(KERNBBL)
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERNBBL)
+gdb: $(KERNBBL)
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERNBBL) -s
+else
 qemu: $(KERN)
 	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN)
 gdb: $(KERN)
 	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -s
+endif
 
 codex: $(KERN)
 
@@ -282,6 +318,7 @@ bench:
 	/bin/echo -ne "xv6\\nbench\\nexit\\n" | nc $(HW).csail.mit.edu 23
 
 clean: 
+	-rm -fr riscv-pk/build
 	rm -fr $(O)
 
 all:	$(ALL)

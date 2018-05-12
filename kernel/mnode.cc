@@ -74,7 +74,7 @@ mnode::mnode(mfs* fs, u64 inum)
 void
 mnode::cache_pin(bool flag)
 {
-  if (cache_pin_ == flag || !cmpxch(&cache_pin_, !flag, flag))
+  if ((bool)cache_pin_ == flag || !cmpxch(&cache_pin_, (uintptr_t)!flag, (uintptr_t)flag))
     return;
 
   if (flag)

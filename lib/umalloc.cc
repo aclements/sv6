@@ -138,7 +138,7 @@ namespace {
     block_list &operator=(block_list &&) = delete;
 
   public:
-    // NOTE: block_list is used in __thread globals, which means it
+    // NOTE: block_list is used in thread_local globals, which means it
     // must have a default constructor.  Since this is the *only*
     // place it's used, the global will take care of zeroing head.
     block_list() = default;
@@ -238,7 +238,7 @@ namespace {
   // Linear allocator (used for pages radix array)
   //
 
-  __thread char *linear_pos, *linear_end;
+  thread_local char *linear_pos, *linear_end;
 
   template<typename T>
   class linear_allocator
@@ -310,8 +310,9 @@ namespace {
 
     T* default_allocate()
     {
-      static_assert(std::has_trivial_default_constructor<T>::value,
-                    "T does not have a trivial default constructor");
+      /* static_assert(std::has_trivial_default_constructor<T>::value,
+                    "T does not have a trivial default constructor"); */
+      // twd2: commented because has_trivial_default_constructor is deprecated.
       return allocate(1);
     }
   };
@@ -363,12 +364,12 @@ namespace {
 
   // Page free lists indexed by size class.  The smaller size classes
   // are unused.
-  __thread block_list free_runs[MAX_LARGE_CLASS];
+  thread_local block_list free_runs[MAX_LARGE_CLASS];
 
   // Page info radix array.  The +1 on the size is a lame way to avoid
   // having to constantly check our iterators against pages.end().
-  radix_array<page_info, (1ULL<<47)/PGSIZE + 1, 4096,
-                                linear_allocator<page_info> > pages;
+  radix_array<page_info, (1ULL<<38)/PGSIZE, 4096,
+                         linear_allocator<page_info> > pages;
 
   // Convert page pointer to pages index
   size_t idx(void *ptr)
@@ -547,7 +548,7 @@ namespace {
   // Fragment free lists by size class (ceil(log2(bytes))).  Fragments
   // must be at least sizeof(block_list::block), so the smaller
   // classes are unused.
-  __thread block_list free_fragments[13];
+  thread_local block_list free_fragments[13];
 
   // Header for pages owned by the small allocator.  Following this
   // header, a page is divided into equal-size fragments.

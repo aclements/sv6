@@ -227,7 +227,7 @@ struct inode : public referenced, public rcu_freed
 
   // const unless inode is reused:
   u32 gen;
-  std::atomic<short> type;
+  std::atomic<long> type;
   short major;
   short minor;
 
@@ -239,10 +239,10 @@ struct inode : public referenced, public rcu_freed
 
   // initially null, set once:
   std::atomic<dirns*> dir;
-  std::atomic<bool> valid;
+  std::atomic<uintptr_t> valid;
 
   // protected by seq/lock:
-  std::atomic<bool> busy;
+  std::atomic<uintptr_t> busy;
   std::atomic<int> readbusy;
 
   u32 size;

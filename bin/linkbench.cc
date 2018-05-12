@@ -17,7 +17,7 @@
 #include <stdexcept>
 #include <thread>
 
-#include "amd64.h"
+#include "riscv.h"
 #include "histogram.hh"
 #include "libutil.h"
 #include "xsys.h"
@@ -90,18 +90,18 @@ do_stat(int cpu)
       mywarmup = warmup;
       mycount = 0;
       start_usec.add(now_usec());
-      tsc1 = start_tsc.add(rdtsc());
+      tsc1 = start_tsc.add(rdcycle());
       if (record_pmc)
-        pmc1 = rdpmc(RECORD_PMC);
+        pmc1 = 0; // TODO: rdpmc(RECORD_PMC);
     }
     mystat();
     ++mycount;
   }
   if (record_pmc)
-    pmc2 = rdpmc(RECORD_PMC);
+    pmc2 = 0; // TODO: rdpmc(RECORD_PMC);
 
   stop_usec.add(now_usec());
-  tsc2 = stop_tsc.add(rdtsc());
+  tsc2 = stop_tsc.add(rdcycle());
   count_stat.add(mycount);
   tsc_stat.add(tsc2 - tsc1);
   pmc_stat.add(pmc2 - pmc1);
@@ -128,7 +128,7 @@ do_link(int cpu)
       mywarmup = warmup;
       mycount = 0;
       start_usec.add(now_usec());
-      tsc1 = start_tsc.add(rdtsc());
+      tsc1 = start_tsc.add(rdcycle());
     }
     link("0/file", path);
     unlink(path);
@@ -136,7 +136,7 @@ do_link(int cpu)
   }
 
   stop_usec.add(now_usec());
-  tsc2 = stop_tsc.add(rdtsc());
+  tsc2 = stop_tsc.add(rdcycle());
   count_link.add(mycount);
   tsc_link.add(tsc2 - tsc1);
 }

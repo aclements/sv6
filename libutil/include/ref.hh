@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <utility>
+#include <atomic>
 
 template <class T, typename = void>
 class sref {
@@ -168,7 +169,7 @@ public:
   //   ref_.invalid ? 0 : ref_.count+1;
 
   inline void inc() {
-    asm volatile("lock; incq %0" : "+m" (ref_.v) :: "memory", "cc");
+    ((std::atomic<uint64_t> *)(&ref_.v))->fetch_add(1);
   }
 
   // Attempt to increment the reference count, failing if the count is
@@ -178,17 +179,15 @@ public:
     // If references is 0 (i.e. ref_.count is 0xffffffff) a 32-bit 
     // increment will increases ref_.count to 0, but ref_.invalid
     // will remain unchanged.
-    asm volatile("lock; incl %0" : "+m" (ref_.count) :: "memory", "cc");
+    ((std::atomic<uint32_t> *)(&ref_.count))->fetch_add(1);
     return ref_.invalid == 0;
   }
 
   inline void dec() {
-    unsigned char c;
     // If references is 1 (i.e. ref_.v is 0), a 64-bit decrement will
     // underflow ref_.invalid to 0xffffffff (and ref_.count to 0xffffffff).
-    asm volatile("lock; decq %0; sets %1" : "+m" (ref_.v), "=qm" (c) 
-                 :: "memory", "cc");
-    if (c)
+    int64_t newv = (int64_t)(((std::atomic<uint64_t> *)(&ref_.v))->fetch_sub(1) - 1);
+    if (newv < 0)
       onzero();
   }
 

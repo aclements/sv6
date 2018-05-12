@@ -1,7 +1,7 @@
 #include "types.h"
 #include "mmu.h"
 #include "kernel.hh"
-#include "amd64.h"
+#include "riscv.h"
 #include "cpu.hh"
 #include "traps.h"
 #include "spinlock.hh"
@@ -10,16 +10,13 @@
 #include "kmtrace.hh"
 #include "bits.hh"
 #include "kalloc.hh"
-#include "apic.hh"
 #include "irq.hh"
 #include "kstream.hh"
 #include "hwvm.hh"
 #include "refcache.hh"
-#include "cpuid.hh"
+#include "sbi.h"
 
 extern "C" void __uaccess_end(void);
-
-struct intdesc idt[256] __attribute__((aligned(16)));
 
 static char fpu_initial_state[FXSAVE_BYTES];
 
@@ -55,39 +52,55 @@ sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
   return r;
 }
 
+// TODO
 int
 do_pagefault(struct trapframe *tf)
 {
-  uptr addr = rcr2();
+  if (TRAP_DEBUG) printtrap(tf, true);
+  uptr addr = tf->badvaddr;
+  uptr err = 0;
+  if (!tf_is_kernel(tf))
+  {
+    err |= FEC_U;
+  }
+  if (tf->cause == CAUSE_STORE_PAGE_FAULT)
+  {
+    err |= FEC_WR;
+  }
   if (myproc()->uaccess_) {
     if (addr >= USERTOP)
       panic("do_pagefault: %lx", addr);
 
-    sti();
-    if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
+    intr_enable();
+    if(pagefault(myproc()->vmap.get(), addr, err) >= 0){
+      intr_disable();
       return 0;
     }
     console.println("pagefault accessing user address from kernel (addr ",
-                    (void*)addr, " rip ", (void*)tf->rip, ")");
-    tf->rax = -1;
-    tf->rip = (u64)__uaccess_end;
+                    (void*)addr, " epc ", (void*)tf->epc, ")");
+    tf->gpr.a0 = -1;
+    //tf->epc = (u64)__uaccess_end;
+    panic("TODO: __uaccess_end");
+    intr_disable();
     return 0;
-  } else if (tf->err & FEC_U) {
-      sti();
-      if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
+  } else if (err & FEC_U) {
+      intr_enable();
+      if(pagefault(myproc()->vmap.get(), addr, err) >= 0){
+        intr_disable();
         return 0;
       }
       uerr.println("pagefault from user for ", shex(addr),
-                   " err ", (int)tf->err);
-      cli();
+                   " err ", (int)err);
+      intr_disable();
   }
+  printtrap(tf, true);
   return -1;
 }
 
 static inline void
 lapiceoi()
 {
-  lapic->eoi();
+  // TODO: eoi
 }
 
 namespace {
@@ -99,7 +112,7 @@ namespace {
 extern "C" void
 trap_c(struct trapframe *tf)
 {
-  if (tf->trapno == T_NMI) {
+  /*if (tf->trapno == T_NMI) { // TODO
     // An NMI can come in after popcli() drops ncli to zero and intena
     // is 1, but before popcli() checks intena and calls sti.  If the
     // NMI handler acquires any lock, acquire() will call pushcli(),
@@ -125,8 +138,8 @@ trap_c(struct trapframe *tf)
 
     // Is this a back-to-back NMI?  If so, we might have handled all
     // of the NMI sources already.
-    bool repeat = (*nmi_lastpc == tf->rip);
-    *nmi_lastpc = tf->rip;
+    bool repeat = (*nmi_lastpc == tf->epc);
+    *nmi_lastpc = tf->epc;
     if (!repeat)
       *nmi_swallow = 0;
 
@@ -150,7 +163,7 @@ trap_c(struct trapframe *tf)
   }
 
   if (tf->trapno == T_DBLFLT)
-    kerneltrap(tf);
+    kerneltrap(tf);*/
 
 #if MTRACE
   if (myproc()->mtrace_stacks.curr >= 0)
@@ -159,7 +172,27 @@ trap_c(struct trapframe *tf)
   // XXX mt_ascope ascope("trap:%d", tf->trapno);
 #endif
 
+  /*cprintf("cpu%d: proc #%d %s\n",
+        mycpu()->id, myproc() ? myproc()->pid : -1,
+        myproc() ? myproc()->name : "(none)");
+  cprintf("before trap(%p), epc=%p, SPIE=%d, SIE=%d, SPP=%d, cause=%lx\n",
+          tf, tf->epc, (tf->status & SSTATUS_SPIE) != 0, (tf->status & SSTATUS_SIE) != 0,
+          (tf->status & SSTATUS_SPP) != 0, tf->cause);
+  cprintf("current SIE=%d\n", is_intr_enabled() != 0);*/
   trap(tf);
+  /*cprintf("cpu%d: proc #%d %s\n",
+        mycpu()->id, myproc() ? myproc()->pid : -1,
+        myproc() ? myproc()->name : "(none)");
+  cprintf("after trap(%p), epc=%p, SPIE=%d, SIE=%d, SPP=%d, cause=%lx\n",
+          tf, tf->epc, (tf->status & SSTATUS_SPIE) != 0, (tf->status & SSTATUS_SIE) != 0,
+          (tf->status & SSTATUS_SPP) != 0, tf->cause);
+  cprintf("current SIE=%d\n", is_intr_enabled() != 0);*/
+
+  if(is_intr_enabled())
+    panic("interruptible");
+
+  if((tf->status & SSTATUS_SIE) != 0)
+    panic("tf->status is interruptible");
 
 #if MTRACE
   mtstop(myproc());
@@ -171,7 +204,118 @@ trap_c(struct trapframe *tf)
 static void
 trap(struct trapframe *tf)
 {
-  switch(tf->trapno){
+  //printtrap(tf, true);
+  bool is_timer_intr = false;
+  if ((intptr_t)tf->cause < 0)
+  {
+    uintptr_t cause = (tf->cause << 1) >> 1;
+    switch (cause) {
+    case IRQ_S_SOFT: {
+      // TODO(twd2): how to determine it is a ipi call?
+      extern void on_ipicall();
+      sbi_clear_ipi();
+      on_ipicall();
+      break;
+    }
+    case IRQ_S_TIMER:
+      timer_set_next_event();
+      clear_csr(sip, SIP_STIP);
+      is_timer_intr = true;
+      kstats::inc(&kstats::sched_tick_count);
+      // for now, just care about timer interrupts
+#if CODEX
+      codex_magic_action_run_async_event(5);
+#endif
+      if (mycpu()->timer_printpc) {
+        cprintf("cpu%d: proc %s epc %lx sp %lx\n",
+                mycpu()->id,
+                myproc() ? myproc()->name : "(none)",
+                tf->epc, tf->gpr.sp);
+        if (mycpu()->timer_printpc == 2 && tf->gpr.s0 > KBASE) {
+          uptr pc[10];
+          getcallerpcs((void *) tf->gpr.s0, pc, NELEM(pc));
+          for (int i = 0; i < 10 && pc[i]; i++)
+            cprintf("cpu%d:   %lx\n", mycpu()->id, pc[i]);
+        }
+        mycpu()->timer_printpc = 0;
+      }
+      if (mycpu()->id == 0) {
+        timerintr();
+        kbdintr(); // FIXME!
+      }
+      refcache::mycache->tick();
+      // TODO: lapiceoi();
+      if (mycpu()->no_sched_count) {
+        kstats::inc(&kstats::sched_blocked_tick_count);
+        // Request a yield when no_sched_count is released.  We can
+        // modify this without protection because interrupts are
+        // disabled.
+        mycpu()->no_sched_count |= NO_SCHED_COUNT_YIELD_REQUESTED;
+        return;
+      }
+      break;
+    default:
+      printtrap(tf, true);
+      panic("unhandled interrupt");
+    }
+  }
+  else
+  {
+    uintptr_t cause = tf->cause;
+    bool is_page_fault = cause == CAUSE_FETCH_PAGE_FAULT ||
+                         cause == CAUSE_LOAD_PAGE_FAULT ||
+                         cause == CAUSE_STORE_PAGE_FAULT;
+    switch (cause) {
+    case CAUSE_USER_ECALL: {
+      uint16_t inst = *(uint16_t *)tf->epc;
+      if ((inst & 0b11) != 0b11)
+      {
+        tf->epc += 2;
+      }
+      else if (((inst & 0b11) == 0b11) && ((inst & 0b11100) != 0b11100))
+      {
+        tf->epc += 4;
+      }
+      else
+      {
+        panic("???");
+      }
+      tf->gpr.a0 = sysentry_c(tf->gpr.a0, tf->gpr.a1, tf->gpr.a2, tf->gpr.a3,
+                              tf->gpr.a4, tf->gpr.a5, tf->gpr.a7);
+      return;
+    }
+    default:
+      /*if (tf->trapno >= T_IRQ0 && irq_info[tf->trapno - T_IRQ0].handlers) {
+        for (auto h = irq_info[tf->trapno - T_IRQ0].handlers; h; h = h->next)
+          h->handle_irq();
+        lapiceoi();
+        piceoi();
+        return;
+      }*/
+
+      if (is_page_fault) {
+        if (do_pagefault(tf) == 0)
+          return;
+
+        // XXX distinguish between SIGSEGV and SIGBUS?
+        if (myproc()->deliver_signal(SIGSEGV))
+          return;
+      }
+
+      if (!myproc() || tf_is_kernel(tf))
+        kerneltrap(tf);
+
+      // In user space, assume process misbehaved.
+      uerr.println("pid ", myproc()->pid, ' ', myproc()->name,
+                   ": trap ", (u64)tf->cause,
+                   " on cpu ", myid(), " epc ", shex(tf->epc),
+                   " sp ", shex(tf->gpr.sp), " addr ", shex(tf->badvaddr),
+                   "--kill proc");
+      myproc()->killed = 1;
+    }
+  }
+  // TODO: rewrite.
+  /*switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
     kstats::inc(&kstats::sched_tick_count);
     // for now, just care about timer interrupts
@@ -182,7 +326,7 @@ trap(struct trapframe *tf)
       cprintf("cpu%d: proc %s rip %lx rsp %lx cs %x\n",
               mycpu()->id,
               myproc() ? myproc()->name : "(none)",
-              tf->rip, tf->rsp, tf->cs);
+              tf->epc, tf->gpr.sp, tf->cs);
       if (mycpu()->timer_printpc == 2 && tf->rbp > KBASE) {
         uptr pc[10];
         getcallerpcs((void *) tf->rbp, pc, NELEM(pc));
@@ -219,14 +363,14 @@ trap(struct trapframe *tf)
     break;
   case T_IRQ0 + IRQ_COM2:
   case T_IRQ0 + IRQ_COM1:
-    uartintr();
+    // uartintr();
     lapiceoi();
     piceoi();
     break;
   case T_IRQ0 + 7:
   case T_IRQ0 + IRQ_SPURIOUS:
     cprintf("cpu%d: spurious interrupt at %x:%lx\n",
-            mycpu()->id, tf->cs, tf->rip);
+            mycpu()->id, tf->cs, tf->epc);
     // [Intel SDM 10.9 Spurious Interrupt] The spurious interrupt
     // vector handler should return without an EOI.
     //lapiceoi();
@@ -279,194 +423,43 @@ trap(struct trapframe *tf)
     mycpu()->fpu_owner = myproc();
     break;
   }
-  default:
-    if (tf->trapno >= T_IRQ0 && irq_info[tf->trapno - T_IRQ0].handlers) {
-      for (auto h = irq_info[tf->trapno - T_IRQ0].handlers; h; h = h->next)
-        h->handle_irq();
-      lapiceoi();
-      piceoi();
-      return;
-    }
-
-    if (tf->trapno == T_PGFLT) {
-      if (do_pagefault(tf) == 0)
-        return;
-
-      // XXX distinguish between SIGSEGV and SIGBUS?
-      if (myproc()->deliver_signal(SIGSEGV))
-        return;
-    }
-
-    if (myproc() == 0 || (tf->cs&3) == 0)
-      kerneltrap(tf);
-
-    // In user space, assume process misbehaved.
-    uerr.println("pid ", myproc()->pid, ' ', myproc()->name,
-                 ": trap ", (u64)tf->trapno, " err ", (u32)tf->err,
-                 " on cpu ", myid(), " rip ", shex(tf->rip),
-                 " rsp ", shex(tf->rsp), " addr ", shex(rcr2()),
-                 "--kill proc");
-    myproc()->killed = 1;
-  }
+  }*/
 
   // Force process exit if it has been killed and is in user space.
   // (If it is still executing in the kernel, let it keep running
   // until it gets to the regular system call return.)
-  if(myproc() && myproc()->killed && (tf->cs&3) == 0x3)
+  if(myproc() && myproc()->killed && !tf_is_kernel(tf))
     exit(-1);
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->get_state() == RUNNING &&
-     (tf->trapno == T_IRQ0+IRQ_TIMER || myproc()->yield_)) {
+     (is_timer_intr || myproc()->yield_)) {
     yield();
   }
 
   // Check if the process has been killed since we yielded
-  if(myproc() && myproc()->killed && (tf->cs&3) == 0x3)
+  if(myproc() && myproc()->killed && !tf_is_kernel(tf))
     exit(-1);
 }
 
 void
 inittrap(void)
 {
-  u64 entry;
-  u8 bits;
-  int i;
-
-  bits = INT_P | SEG_INTR64;  // present, interrupt gate
-  for(i=0; i<256; i++) {
-    entry = trapentry[i];
-    idt[i] = INTDESC(KCSEG, entry, bits);
-  }
-
-  // Conservatively reserve all legacy IRQs.  This might cause us to
-  // not be able to configure a device.
-  for (int i = 0; i < 16; ++i)
-    irq_info[i].in_use = true;
-  // Also reserve the spurious vector
-  irq_info[IRQ_SPURIOUS].in_use = true;
-  // And reserve interrupt 255 (Intel SDM Vol. 3 suggests this can't
-  // be used for MSI).
-  irq_info[255 - T_IRQ0].in_use = true;
+  extern char trapcommon[];
+  cprintf("stvec: %p\n", trapcommon);
+  write_csr(stvec, (uintptr_t)trapcommon);
+  /* Allow kernel to access user memory */
+  set_csr(sstatus, SSTATUS_SUM);
+  /* Allow keyboard interrupt */
+  set_csr(sie, SIP_SSIP);
 }
 
 void
 initfpu(void)
 {
-  // Allow ourselves to use FPU instructions.  We'll clear this before
-  // we schedule anything.
-  lcr0(rcr0() & ~(CR0_TS | CR0_EM));
-  // Initialize FPU, ignoring pending FP exceptions
-  fninit();
-  // Don't generate interrupts for any SSE exceptions
-  ldmxcsr(0x1f80);
-  // Stash away the initial FPU state to use as each process' initial
-  // FPU state
-  if (myid() == 0)
-    fxsave(&fpu_initial_state);
-}
-
-void
-initmsr(void)
-{
-  // XXX Where should this code live?
-
-#if defined(DISABLE_PREFETCH_STREAM)
-#define CONTROL_PREFETCH_STREAM 1
-#else
-#define CONTROL_PREFETCH_STREAM 0
-#define DISABLE_PREFETCH_STREAM 0
-#endif
-#if defined(DISABLE_PREFETCH_ADJ)
-#define CONTROL_PREFETCH_ADJ 1
-#else
-#define CONTROL_PREFETCH_ADJ 0
-#define DISABLE_PREFETCH_ADJ 0
-#endif
-
-  if (CONTROL_PREFETCH_STREAM || CONTROL_PREFETCH_ADJ) {
-    // Is the MISC_FEATURE_CONTROL MSR valid?
-    auto m = cpuid::model();
-    if (!(cpuid::vendor_is_intel() && m.family == 6 &&
-          (m.model == 0x1a || m.model == 0x1e || m.model == 0x1f || // Nehalem
-           m.model == 0x25 || m.model == 0x2c || // Westmere
-           m.model == 0x2e || // Nehalem-EX
-           m.model == 0x2f)))  // Westmere-EX
-      panic("Cannot control hardware prefetcher for this CPU model");
-
-    uint64_t mfc = readmsr(MSR_INTEL_MISC_FEATURE_CONTROL);
-
-    if (DISABLE_PREFETCH_STREAM)
-      mfc |= MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_STREAMER;
-    else if (CONTROL_PREFETCH_STREAM)
-      mfc &= ~MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_STREAMER;
-
-    if (DISABLE_PREFETCH_ADJ)
-      mfc |= MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_SPATIAL;
-    else if (CONTROL_PREFETCH_ADJ)
-      mfc &= ~MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_MLC_SPATIAL;
-
-    writemsr(MSR_INTEL_MISC_FEATURE_CONTROL, mfc);
-
-    if (myid() == 0) {
-      if (CONTROL_PREFETCH_STREAM)
-        cprintf("msr: MLC stream prefetcher %s\n",
-                DISABLE_PREFETCH_STREAM ? "disabled" : "enabled");
-      if (CONTROL_PREFETCH_ADJ)
-        cprintf("msr: Adjacent cache line prefetcher %s\n",
-                DISABLE_PREFETCH_ADJ ? "disabled" : "enabled");
-    }
-
-    // XXX There are also the DCU prefetchers.  ben's BIOS doesn't
-    // disable these when I set "Hardware prefetcher" to disable, so
-    // I'm not convinced the bits are right.
-  }
-}
-
-void
-initnmi(void)
-{
-  void *nmistackbase = kalloc("kstack", KSTACKSIZE);
-  mycpu()->ts.ist[1] = (u64) nmistackbase + KSTACKSIZE;
-
-  if (mycpu()->id == 0)
-    idt[T_NMI].ist = 1;
-}
-
-void
-initdblflt(void)
-{
-  void *dfaultstackbase = kalloc("kstack", KSTACKSIZE);
-  mycpu()->ts.ist[2] = (uintptr_t)dfaultstackbase + KSTACKSIZE;
-
-  if (mycpu()->id == 0)
-    idt[T_DBLFLT].ist = 2;
-}
-
-void
-initseg(struct cpu *c)
-{
-  volatile struct desctr dtr;
-
-  dtr.limit = sizeof(idt) - 1;
-  dtr.base = (u64)idt;
-  lidt((void *)&dtr.limit);
-
-  // Load per-CPU GDT
-  memmove(c->gdt, bootgdt, sizeof(bootgdt));
-  dtr.limit = sizeof(c->gdt) - 1;
-  dtr.base = (u64)c->gdt;
-  lgdt((void *)&dtr.limit);
-
-  // When executing a syscall instruction the CPU sets the SS selector
-  // to (star >> 32) + 8 and the CS selector to (star >> 32).
-  // When executing a sysret instruction the CPU sets the SS selector
-  // to (star >> 48) + 8 and the CS selector to (star >> 48) + 16.
-  u64 star = ((((u64)UCSEG|0x3) - 16)<<48)|((u64)KCSEG<<32);
-  writemsr(MSR_STAR, star);
-  writemsr(MSR_LSTAR, (u64)&sysentry);
-  writemsr(MSR_SFMASK, FL_TF | FL_IF);
+  // TODO: FPU
+  return;
 }
 
 // Pushcli/popcli are like cli/sti except that they are matched:
@@ -475,43 +468,41 @@ initseg(struct cpu *c)
 void
 pushcli(void)
 {
-  u64 rflags;
-
-  rflags = readrflags();
-  cli();
+  u64 status = read_csr(sstatus);
+  intr_disable();
   if(mycpu()->ncli++ == 0)
-    mycpu()->intena = rflags & FL_IF;
+    mycpu()->intena = status & SSTATUS_SIE;
 }
 
 void
 popcli(void)
 {
-  if(readrflags()&FL_IF)
+  if(is_intr_enabled())
     panic("popcli - interruptible");
   if(--mycpu()->ncli < 0)
     panic("popcli");
   if(mycpu()->ncli == 0 && mycpu()->intena)
-    sti();
+    intr_enable();
 }
 
 // Record the current call stack in pcs[] by following the %rbp chain.
 void
 getcallerpcs(void *v, uptr pcs[], int n)
 {
-  uintptr_t rbp;
+  uintptr_t fp;
   int i;
 
-  rbp = (uintptr_t)v;
+  fp = (uintptr_t)v;
   for(i = 0; i < n; i++){
-    // Read saved %rip
-    uintptr_t saved_rip;
-    if (safe_read_vm(&saved_rip, rbp + sizeof(uintptr_t), sizeof(saved_rip)) !=
-        sizeof(saved_rip))
+    // Read saved pc
+    uintptr_t saved_pc;
+    if (safe_read_vm(&saved_pc, fp + sizeof(uintptr_t), sizeof(saved_pc)) !=
+        sizeof(saved_pc))
       break;
     // Subtract 1 so it points to the call instruction
-    pcs[i] = saved_rip - 1;
-    // Read saved %rbp
-    if (safe_read_vm(&rbp, rbp, sizeof(rbp)) != sizeof(rbp))
+    pcs[i] = saved_pc - 1;
+    // Read saved fp
+    if (safe_read_vm(&fp, fp, sizeof(fp)) != sizeof(fp))
       break;
   }
   for(; i < n; i++)
@@ -588,7 +579,7 @@ check_critical(critical_mask mask)
 {
   if (mask == NO_CRITICAL)
     return true;
-  bool safe = !(readrflags() & FL_IF);
+  bool safe = !is_intr_enabled();
   if (mask & NO_INT)
     return safe;
   safe = safe || mycpu()->no_sched_count;

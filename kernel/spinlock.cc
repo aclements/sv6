@@ -58,7 +58,7 @@ locking(struct spinlock *lk)
   if (lockstat_enable && lk->stat != nullptr) {
     if (lk->stat == &klockstat_lazy)
       lockstat_init(lk, true);
-    mylockstat(lk)->locking_ts = rdtsc();
+    mylockstat(lk)->locking_ts = rdcycle();
   }
 #endif
 
@@ -82,7 +82,7 @@ locked(struct spinlock *lk, u64 retries)
     if (retries > 0)
       s->contends++;
     s->acquires++;
-    s->locked_ts = rdtsc();
+    s->locked_ts = rdcycle();
   }
 #endif
 }
@@ -107,7 +107,7 @@ releasing(struct spinlock *lk)
 #if LOCKSTAT
   if (lockstat_enable && lk->stat != nullptr) {
     struct cpulockstat *s = mylockstat(lk);
-    u64 ts = rdtsc();
+    u64 ts = rdcycle();
     s->locking += ts - s->locking_ts;
     s->locked += ts - s->locked_ts;
   }

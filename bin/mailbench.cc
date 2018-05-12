@@ -1,4 +1,4 @@
-#include "amd64.h"
+#include "riscv.h"
 #include "distribution.hh"
 #include "spinbarrier.hh"
 #include "libutil.h"
@@ -130,7 +130,7 @@ do_mua(int cpu, string spooldir, string msgpath, size_t batch_size)
       mywarmup = warmup;
       mycount = 0;
       start_usec.add(now_usec());
-      start_tsc.add(rdtsc());
+      start_tsc.add(rdcycle());
     }
 
     if (pid == 0) {
@@ -191,7 +191,7 @@ do_mua(int cpu, string spooldir, string msgpath, size_t batch_size)
   }
 
   stop_usec.add(now_usec());
-  stop_tsc.add(rdtsc());
+  stop_tsc.add(rdcycle());
   count.add(mycount);
 }
 

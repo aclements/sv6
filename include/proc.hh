@@ -26,13 +26,20 @@ class mnode;
 // Saved registers for kernel context switches.
 // (also implicitly defined in swtch.S)
 struct context {
-  u64 r15;
-  u64 r14;
-  u64 r13;
-  u64 r12;
-  u64 rbp;
-  u64 rbx;
-  u64 rip;
+  uintptr_t ra;
+  uintptr_t sp;
+  uintptr_t s0;
+  uintptr_t s1;
+  uintptr_t s2;
+  uintptr_t s3;
+  uintptr_t s4;
+  uintptr_t s5;
+  uintptr_t s6;
+  uintptr_t s7;
+  uintptr_t s8;
+  uintptr_t s9;
+  uintptr_t s10;
+  uintptr_t s11;
 } __attribute__((packed));
 
 // Per-process, per-stack meta data for mtrace
@@ -54,7 +61,7 @@ typedef enum procstate {
   RUNNABLE,
   RUNNING,
   ZOMBIE 
-} procstate_t;;
+} procstate_t;
 
 #define PROC_MAGIC 0xfeedfacedeadd00dULL
 
@@ -67,7 +74,7 @@ struct proc {
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status
   struct trapframe *tf;        // Trap frame for current syscall
-  struct context *context;     // swtch() here to run process
+  struct context context;     // swtch() here to run process
   int killed;                  // If non-zero, have been killed
   sref<filetable> ftable;      // File descriptor table
   sref<inode> cwd;             // Current directory
@@ -93,7 +100,6 @@ struct proc {
   ilink<proc> cv_waiters;      // Linked list of processes waiting for oncv
   ilink<proc> cv_sleep;        // Linked list of processes sleeping on a cv
   struct spinlock futex_lock;
-  u64 user_fs_;
   u64 unmap_tlbreq_;
   int data_cpuid;              // Where vmap and kstack is likely to be cached
   int run_cpuid_;

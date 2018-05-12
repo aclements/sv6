@@ -17,7 +17,7 @@
 #include "compiler.h"
 #include "types.h"
 #include "user.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "pthread.h"
 #include "bits.hh"
 #include "kstats.hh"
@@ -125,7 +125,7 @@ thr(void *arg)
 
   pthread_barrier_wait(&bar);
 
-  start_tscs[cpu] = rdtsc();
+  start_tscs[cpu] = rdcycle();
   uint64_t myiters = 0;
 #ifdef RECORD_PMC
   uint64_t pmc1 = rdpmc(PMCNO);
@@ -140,7 +140,7 @@ thr(void *arg)
     ++myiters;
   }
 
-  stop_tscs[cpu] = rdtsc();
+  stop_tscs[cpu] = rdcycle();
 #ifdef RECORD_PMC
   pmcs += rdpmc(PMCNO) - pmc1;
 #endif

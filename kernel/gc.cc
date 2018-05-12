@@ -94,7 +94,7 @@ gc_inc_global_epoch(void)
   int r = tryacquire(&gc_lock.l);
   if (r == 0) return;
   assert(r == 1);
-  u64 t0 = rdtsc();
+  u64 t0 = rdcycle();
   u64 global = global_epoch;  // make "local" copy
   u64 minfree = global;
   u64 minepoch = global;
@@ -115,7 +115,7 @@ gc_inc_global_epoch(void)
   }
 done:
   release(&gc_lock.l);
-  u64 t1 = rdtsc();
+  u64 t1 = rdcycle();
   stat[mycpu()->id].ncycles += (t1-t0);
   stat[mycpu()->id].nop++;
 }
@@ -126,7 +126,7 @@ done:
 void
 gc_state::inc_cur_epoch(void)
 {
-  u64 t0 = rdtsc();
+  u64 t0 = rdcycle();
   if (mycpu()->id == 0) {
     u64 min = gc_states[ngc_cpu-1].global_min;
     if (min >= cur_epoch - 2) {
@@ -144,7 +144,7 @@ gc_state::inc_cur_epoch(void)
     global_min = neighbor_global_min > nexttofree_epoch ?
       global_min = nexttofree_epoch.load() :  global_min = neighbor_global_min;
   }
-  u64 t1 = rdtsc();
+  u64 t1 = rdcycle();
   stat[mycpu()->id].ncycles += (t1-t0);
   stat[mycpu()->id].nop++;
 }

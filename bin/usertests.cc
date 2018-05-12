@@ -1610,16 +1610,16 @@ tls_test(void)
 
     u64 x;
     u64 exp = 0x11deadbeef2200 + i;
-    __asm volatile("movq %%fs:0, %0" : "=r" (x));
+    __asm volatile("ld %0, 0(tp)" : "=r" (x));
     if (x != buf[i] || x != exp)
       fprintf(stderr, "tls_test: 0x%lx != 0x%lx\n", x, buf[0]);
 
     getpid();  // make sure syscalls don't trash %fs
-    __asm volatile("movq %%fs:0, %0" : "=r" (x));
+    __asm volatile("ld %0, 0(tp)" : "=r" (x));
     if (x != buf[i] || x != exp)
       fprintf(stderr, "tls_test: 0x%lx != 0x%lx again\n", x, buf[0]);
 
-    __asm volatile("movq %%fs:8, %0" : "=r" (x));
+    __asm volatile("ld %0, 8(tp)" : "=r" (x));
     if (x != buf[i+1] || x != exp+1)
       fprintf(stderr, "tls_test: 0x%lx != 0x%lx next\n", x, buf[0]);
   }

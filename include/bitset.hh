@@ -74,7 +74,7 @@ public:
   // Remove @c pos from the bit set.
   bitset &atomic_reset(std::size_t pos) noexcept
   {
-    locked_reset_bit(pos % BITS_PER_WORD, &words[pos / BITS_PER_WORD]);
+    locked_clear_bit(pos % BITS_PER_WORD, &words[pos / BITS_PER_WORD]);
     return *this;
   }
 
@@ -127,9 +127,7 @@ public:
   {
     std::size_t res = 0;
     for (size_t i = 0; i < NWORDS; ++i)
-      // We would use the GCC intrinsic, but that requires enabling
-      // SSE4.2, and we don't want GCC to use SSE otherwise.
-      res += popcnt64(words[i]);
+      res += __builtin_popcountll(words[i]);
     return res;
   }
 

@@ -115,6 +115,7 @@ syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
         {
           mt_ascope ascope("syscall:%ld", num);
           r = syscalls[num](a0, a1, a2, a3, a4, a5);
+          if (SYSCALL_DEBUG) cprintf("syscall %ld(%lx, %lx, %lx, %lx, %lx, %lx)=%lx\n", num, a0, a1, a2, a3, a4, a5, r);
         }
         mtstop(myproc());
         mtign();

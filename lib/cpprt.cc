@@ -167,7 +167,7 @@ pthread_cancel(int tid)
 extern "C" void*
 __cxa_get_globals(void)
 {
-  static __thread uint8_t __cxa_eh_global[16];
+  static thread_local uint8_t __cxa_eh_global[16];
   return __cxa_eh_global;
 }
 
@@ -177,11 +177,11 @@ __cxa_get_globals_fast(void)
   return __cxa_get_globals();
 }
 
-extern "C" void __register_frame(u8*);
+extern "C" void __register_frame(uint8_t*);
 extern "C" void
 __cpprt_init(void)
 {
-  extern u8 __EH_FRAME_BEGIN__[];
+  extern uint8_t __EH_FRAME_BEGIN__[];
   __register_frame(__EH_FRAME_BEGIN__);
 }
 

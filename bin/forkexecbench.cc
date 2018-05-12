@@ -1,7 +1,7 @@
 #include "types.h"
 #include "user.h"
 #include "mtrace.h"
-#include "amd64.h"
+#include "riscv.h"
 #include <stdio.h>
 #include <unistd.h>
 
@@ -10,7 +10,7 @@
 static void
 execbench(void)
 {
-  u64 s = rdtsc();
+  u64 s = rdcycle();
   mtenable("xv6-forkexecbench");
   for (int i = 0; i < NITERS; i++) {
     int pid = fork();
@@ -28,7 +28,7 @@ execbench(void)
   mtops(NITERS);
   mtdisable("xv6-forkexecbench");
 
-  u64 e = rdtsc();
+  u64 e = rdcycle();
   printf("%lu\n", (e-s) / NITERS);
 }
 

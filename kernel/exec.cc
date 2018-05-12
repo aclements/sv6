@@ -286,12 +286,12 @@ load_image(proc *p, const char *path, const char * const *argv,
     *oldvmap_out = std::move(p->vmap);
 
   p->vmap = vmp;
-  p->tf->rip = elf->entry;
-  p->tf->rsp = sp;
+  p->tf->epc = elf->entry;
+  p->tf->gpr.sp = sp;
   // Additional arguments.  We can't pass these in ABI argument
   // registers because the sysentry return path doesn't restore those.
-  p->tf->r12 = phdr;         // AT_PHDR
-  p->tf->r13 = elf->phnum;   // AT_PHNUM
+  p->tf->gpr.s0 = phdr;         // AT_PHDR
+  p->tf->gpr.s1 = elf->phnum;   // AT_PHNUM
   p->run_cpuid_ = myid();
   p->data_cpuid = myid();
   memset(p->sig, 0, sizeof(p->sig));

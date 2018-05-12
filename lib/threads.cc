@@ -46,7 +46,7 @@ forkt_setup(u64 pid)
   memcpy((void*)tptr, initimage, filesz);
   tlsdata* t = (tlsdata*) (tptr + memsz_align);
   t->tlsptr[0] = t;
-  setfs((u64) t);
+  setfs((u64) tptr); // FIXME(twd2) ???
 }
 
 int
@@ -131,15 +131,17 @@ pthread_key_create(pthread_key_t *key, void (*destructor)(void*))
 void*
 pthread_getspecific(pthread_key_t key)
 {
-  u64 v;
-  __asm volatile("movq %%fs:(%1), %0" : "=r" (v) : "r" ((u64) key * 8));
-  return (void*) v;
+  void **tp;
+  asm volatile ("mv %0, tp" : "=r"(tp));
+  return *(void **)(tp + (u64)key);
 }
 
 int
 pthread_setspecific(pthread_key_t key, void* value)
 {
-  __asm volatile("movq %0, %%fs:(%1)" : : "r" (value), "r" ((u64) key * 8) : "memory");
+  void **tp;
+  asm volatile ("mv %0, tp" : "=r"(tp));
+  *(void **)(tp + (u64)key) = value;
   return 0;
 }
 

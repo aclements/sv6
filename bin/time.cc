@@ -1,6 +1,6 @@
 #include "types.h"
 #include "user.h"
-#include "amd64.h"
+#include "riscv.h"
 #include <stdio.h>
 #include <unistd.h>
 
@@ -12,7 +12,7 @@ main(int ac, char * const av[])
   if (ac <= 1)
     die("usage: %s command...", av[0]);
 
-  u64 t0 = rdtsc();
+  u64 t0 = rdcycle();
 
   int pid = fork();
   if (pid < 0) {
@@ -27,7 +27,7 @@ main(int ac, char * const av[])
   }
 
   wait(NULL);
-  u64 t1 = rdtsc();
+  u64 t1 = rdcycle();
   printf("%lu cycles\n", t1-t0);
   return 0;
 }

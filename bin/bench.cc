@@ -1,6 +1,6 @@
 #include "types.h"
 #include "user.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "lib.h"
 
 #include <stdio.h>
@@ -11,7 +11,7 @@
 static u64
 time_this(const char *av[])
 {
-  u64 t0 = rdtsc();
+  u64 t0 = rdcycle();
 
   int pid = fork();
   if (pid < 0)
@@ -23,7 +23,7 @@ time_this(const char *av[])
   }
 
   wait(NULL);
-  u64 t1 = rdtsc();
+  u64 t1 = rdcycle();
   return t1-t0;
 }
 

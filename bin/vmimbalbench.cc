@@ -13,7 +13,7 @@
 #include <pthread.h>
 #endif
 
-#include "amd64.h"
+#include "riscv.h"
 #include "xsys.h"
 
 
@@ -49,7 +49,7 @@ void
 consumer()
 {
   printf("Starting consumer on cpu %d\n", consumercpu);
-  uint64_t t0 = rdtsc();
+  uint64_t t0 = rdcycle();
   uint64_t t1;
   for (uint64_t alloc = STARTADDR;
        alloc < (STARTADDR + npages * PAGESIZE);
@@ -59,7 +59,7 @@ consumer()
     // XXX Do I need any kind of memory fence to make producers see these updates sequentially?...
     alloctop = alloc + PAGECHUNK;
   }
-  t1 = rdtsc();
+  t1 = rdcycle();
   printf("Consumer %d: %" PRIu64 " cycles/page\n", consumercpu, (t1-t0)/(uint64_t)npages);
 }
 

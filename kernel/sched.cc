@@ -1,7 +1,7 @@
 #include "types.h"
 #include "kernel.hh"
 #include "mmu.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "spinlock.hh"
 #include "condvar.hh"
 #include "proc.hh"
@@ -191,6 +191,8 @@ schedule::try_dwork(void)
   }
 }
 
+extern "C" void forkret_wrapper();
+
 struct sched_dir {
 private:
   balancer<sched_dir, schedule> b_;
@@ -236,7 +238,6 @@ public:
   void
   sched(void)
   {
-    extern void forkret(void);
     int intena;
     proc* prev;
     proc* next;
@@ -253,15 +254,15 @@ public:
       panic("sched locks (ncli = %d)", mycpu()->ncli);
     if(myproc()->get_state() == RUNNING)
       panic("sched running");
-    if(readrflags()&FL_IF)
+    if(is_intr_enabled())
       panic("sched interruptible");
     intena = mycpu()->intena;
-    myproc()->curcycles += rdtsc() - myproc()->tsc;
+    myproc()->curcycles += rdcycle() - myproc()->tsc;
 
     // Interrupts are disabled
     next = this->next();
 
-    u64 t = rdtsc();
+    u64 t = rdcycle();
     if (myproc() == idleproc())
       schedule_[mycpu()->id]->stats_.idle += t - schedule_[mycpu()->id]->stats_.schedstart;
     else
@@ -296,22 +297,21 @@ public:
 
     switchvm(next);
     next->set_state(RUNNING);
-    next->tsc = rdtsc();
+    next->tsc = rdcycle();
 
-    if (next->context->rip != (uptr)threadstub && next->context->rip != (uptr)forkret) {
+    if (next->context.ra != (uptr)threadstub && next->context.ra != (uptr)forkret_wrapper) {
       mtresume(next);
     }
     mtrec();
+    
+    // FIXME
+    /*cprintf("sched: swtch from %d to %d\n", prev->pid, next->pid);
+    cprintf("old @ %p:\n", &prev->context);
+    print_context(&prev->context);
+    cprintf("new @ %p:\n", &next->context);
+    print_context(&next->context);*/
 
-    // Set task-switched and monitor coprocessor bit and clear emulation
-    // bit so we get a #NM exception if the new process tries to use FPU
-    // or MMX instructions.
-    auto cr0 = rcr0();
-    auto ncr0 = (cr0 | CR0_TS | CR0_MP) & ~CR0_EM;
-    if (cr0 != ncr0)
-      lcr0(ncr0);
-
-    swtch(&prev->context, next->context);
+    swtch(&prev->context, &next->context);
     mycpu()->intena = intena;
     post_swtch();
   }

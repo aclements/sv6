@@ -78,9 +78,9 @@ protected:
 private:
   void onzero() override;
 
-  std::atomic<bool> cache_pin_;
-  std::atomic<bool> dirty_;
-  std::atomic<bool> valid_;
+  std::atomic<uintptr_t> cache_pin_;
+  std::atomic<uintptr_t> dirty_;
+  std::atomic<uintptr_t> valid_;
 };
 
 /*
@@ -406,7 +406,7 @@ public:
       if (flag)
         locked_set_bit(FLAG_PARTIAL_PAGE_BIT, &value_);
       else
-        locked_reset_bit(FLAG_PARTIAL_PAGE_BIT, &value_);
+        locked_clear_bit(FLAG_PARTIAL_PAGE_BIT, &value_);
     }
   };
 

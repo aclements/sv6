@@ -11,10 +11,9 @@
 #include "cpu.hh"
 #include "sampler.h"
 #include "major.h"
-#include "apic.hh"
 #include "percpu.hh"
 #include "kstream.hh"
-#include "cpuid.hh"
+#include "sbi.h"
 
 #include <algorithm>
 
@@ -86,364 +85,6 @@ public:
 } __mpalign__;
 
 DEFINE_PERCPU(struct pmulog, pmulog);
-
-//
-// AMD PMU
-//
-
-class amd_pmu : public pmu
-{
-  enum {
-    COUNTER_BITS = 48,
-    MAX_PERIOD = (1ull << 47) - 1,
-  };
-
-  struct local
-  {
-    // Canonicalized selectors.  Only selector and period are used.
-    perf_selector sel[MAX_PMCS];
-  };
-
-  percpu<struct local> local;
-
-public:
-  bool
-  try_init() override
-  {
-    if (cpuid::model().family < 0x10)
-      return false;
-    // 4 counters are supported
-    console.println("sampler: Enabling AMD support");
-    return true;
-  }
-
-  void
-  configure(int ctr, const perf_selector &selector) override
-  {
-    uint64_t sel =
-      (selector.selector & ~(uint64_t)(PERF_SEL_INT | PERF_SEL_ENABLE));
-    uint64_t val = std::min(selector.period, (uint64_t)MAX_PERIOD);
-    if (val)
-      sel |= PERF_SEL_INT;
-    if (selector.enable)
-      sel |= PERF_SEL_ENABLE;
-    local->sel[ctr].selector = sel;
-    local->sel[ctr].period = val;
-
-    writemsr(MSR_AMD_PERF_SEL0 + ctr, 0);
-    if (!selector.enable)
-      return;
-    writemsr(MSR_AMD_PERF_CNT0 + ctr, -val);
-    writemsr(MSR_AMD_PERF_SEL0 + ctr, sel);
-  }
-
-  uint64_t
-  get_overflow(int *handled) override
-  {
-    uint64_t ovf = 0;
-    for (int pmc = 0; pmc < MAX_PMCS; ++pmc) {
-      if (!(local->sel[pmc].selector & PERF_SEL_INT))
-        continue;
-      uint64_t cnt = rdpmc(pmc);
-      if ((cnt & (1ull << (COUNTER_BITS - 1))) == 0)
-        ovf |= 1 << pmc;
-    }
-    return ovf;
-  }
-
-  void
-  pause() override
-  {
-    for (size_t i = 0; i < MAX_PMCS; ++i)
-      writemsr(MSR_AMD_PERF_SEL0 + i,
-               local->sel[i].selector & ~(uint64_t)PERF_SEL_ENABLE);
-  }
-
-  void
-  rearm(uint64_t mask) override
-  {
-    for (size_t i = 0; i < MAX_PMCS; ++i)
-      if (mask & (1ull << i) && (local->sel[i].selector & PERF_SEL_ENABLE))
-        writemsr(MSR_AMD_PERF_CNT0 + i, -local->sel[i].period);
-  }
-
-  void
-  resume() override
-  {
-    for (size_t i = 0; i < MAX_PMCS; ++i)
-      if (local->sel[i].selector & PERF_SEL_ENABLE)
-        writemsr(MSR_AMD_PERF_SEL0 + i, local->sel[i].selector);
-  }
-};
-
-//
-// Intel PMU
-//
-
-class intel_pmu : public pmu
-{
-  enum {
-    // From Intel Arch. Vol 3b:
-    //   "On write operations, the lower 32-bits of the MSR may be
-    //   written with any value, and the high-order bits are
-    //   sign-extended from the value of bit 31."
-    MAX_PERIOD = (1ull << 31) - 1,
-  };
-
-  struct ds_area
-  {
-    char *bts_base;
-    char *bts_index;
-    char *bts_limit;
-    char *bts_threshold;
-
-    char *pebs_base;
-    char *pebs_index;
-    char *pebs_limit;
-    char *pebs_threshold;
-    uint64_t pebs_reset[4];
-
-    uint64_t reserved;
-  };
-
-  struct pebs_record_v0
-  {
-    uint64_t rflags, rip, rax, rbx, rcx, rdx, rsi, rdi, ebp, esp;
-    uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
-  };
-
-  struct pebs_record_v1 : public pebs_record_v0
-  {
-    uint64_t perf_global_status, data_linear_address, data_source;
-    uint64_t latency;
-  };
-
-  int num_pmcs;
-
-  struct local
-  {
-    // Canonicalized selectors.  Only selector, period, precise, and
-    // load_latency are used.
-    perf_selector sel[MAX_PMCS];
-    // Debug store area for PEBS
-    struct ds_area ds_area;
-  };
-
-  percpu<struct local> local;
-
-  bool have_pebs;
-  int pebs_version;
-  size_t pebs_record_size;
-
-public:
-  bool
-  try_init() override
-  {
-    auto info = cpuid::perfmon();
-    if (info.version < 2) {
-      cprintf("initsamp: Unsupported performance monitor version %d\n",
-              info.version);
-      return false;
-    }
-    console.println("sampler: Enabling Intel support");
-    num_pmcs = info.num_counters;
-    if (cpuid::features().pdcm && cpuid::features().ds &&
-        !(readmsr(MSR_INTEL_MISC_ENABLE) & MISC_ENABLE_PEBS_UNAVAILABLE)) {
-      // Get PEBS version
-      auto perfcap = readmsr(MSR_INTEL_PERF_CAPABILITIES);
-      pebs_version = (perfcap >> 8) & 0xF;
-      if (pebs_version > 1) {
-        console.println("sampler: Unknown PEBS version ", pebs_version);
-      } else {
-        if (pebs_version == 0)
-          pebs_record_size = sizeof(pebs_record_v0);
-        else if (pebs_version == 1)
-          pebs_record_size = sizeof(pebs_record_v1);
-        console.println("sampler: PEBS version ", pebs_version, " enabled");
-        have_pebs = true;
-      }
-    }
-    return true;
-  }
-
-  void
-  initcore() override
-  {
-    enable_nehalem_workaround();
-    if (have_pebs)
-      writemsr(MSR_INTEL_DS_AREA, (uintptr_t)&local->ds_area);
-  }
-
-  void
-  configure(int ctr, const perf_selector &selector) override
-  {
-    uint64_t sel =
-      (selector.selector & ~(uint64_t)(PERF_SEL_INT | PERF_SEL_ENABLE));
-    uint64_t val = std::min(selector.period, (uint64_t)MAX_PERIOD);
-    bool precise = selector.precise && have_pebs && val;
-    uint16_t load_latency = selector.load_latency;
-    if (val && !precise)
-      sel |= PERF_SEL_INT;
-    if (selector.enable)
-      sel |= PERF_SEL_ENABLE;
-    if (!precise || pebs_version < 1 || (sel & 0xFF80FFFF) != 0x100b)
-      load_latency = 0;
-    else if (load_latency)
-      load_latency = std::max((int)load_latency, 4);
-
-    // XXX Should this fail if we can't provide the requested record
-    // fields?  It would be pretty annoying to ask for load latency
-    // data and not get it, for example.
-    local->sel[ctr].selector = sel;
-    local->sel[ctr].period = val;
-    local->sel[ctr].precise = precise;
-    local->sel[ctr].load_latency = load_latency;
-
-    writemsr(MSR_INTEL_PERF_SEL0 + ctr, 0);
-    if (!selector.enable)
-      return;
-    pause();
-    // Configure PEBS
-    if (have_pebs) {
-      if (precise) {
-        if (!local->ds_area.pebs_base)
-          pebs_init();
-        if (load_latency)
-          // The CPU will record loads > what we set in the MSR, but
-          // load_latency is the more natural >=.
-          writemsr(MSR_INTEL_PEBS_LD_LAT, load_latency - 1);
-        // Set automatic reset value
-        local->ds_area.pebs_reset[ctr] = -val;
-      }
-    }
-    // Clear the overflow indicator
-    writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, 1<<ctr);
-    writemsr(MSR_INTEL_PERF_CNT0 + ctr, -val);
-    writemsr(MSR_INTEL_PERF_SEL0 + ctr, sel);
-    // Enable appropriate counters, PEBS, and LL
-    resume();
-  }
-
-  uint64_t
-  get_overflow(int *handled) override
-  {
-    uint64_t mask = 0;
-    for (size_t i = 0; i < MAX_PMCS; ++i)
-      if (local->sel[i].selector & PERF_SEL_INT)
-        mask |= 1ull << i;
-    if (have_pebs)
-      mask |= PERF_GLOBAL_STATUS_PEBS;
-    auto status = readmsr(MSR_INTEL_PERF_GLOBAL_STATUS) & mask;
-    if (status & PERF_GLOBAL_STATUS_PEBS) {
-      // PEBS buffer reached threshold
-      pebs_drain();
-      ++*handled;
-    }
-    return status;
-  }
-
-  void
-  pause() override
-  {
-    writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, 0);
-    if (have_pebs)
-      writemsr(MSR_INTEL_PEBS_ENABLE, 0);
-  }
-
-  void
-  rearm(uint64_t mask) override
-  {
-    // Reset counter values
-    for (size_t i = 0; i < MAX_PMCS; ++i)
-      if (mask & (1ull << i))
-        writemsr(MSR_INTEL_PERF_CNT0 + i, -local->sel[i].period);
-    // Clear overflow status
-    writemsr(MSR_INTEL_PERF_GLOBAL_OVF_CTRL, mask);
-  }
-
-  void
-  resume() override
-  {
-    uint64_t mask = 0, pebs_mask = 0;
-    for (size_t i = 0; i < MAX_PMCS; ++i) {
-      if (local->sel[i].selector & PERF_SEL_ENABLE)
-        mask |= 1ull << i;
-      if (local->sel[i].precise)
-        pebs_mask |= 1ull << i;
-      if (local->sel[i].load_latency)
-        pebs_mask |= 1ull << (32 + i);
-    }
-    if (pebs_mask)
-      writemsr(MSR_INTEL_PEBS_ENABLE, pebs_mask);
-    writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, mask);
-  }
-
-  void
-  dump() override
-  {
-    console.println(
-      "Intel PMU CPU ", myid(), "\n",
-      "  0: SEL ", shex(readmsr(MSR_INTEL_PERF_SEL0)),
-      " CNT ", shex(readmsr(MSR_INTEL_PERF_CNT0)), "\n",
-      "  1: SEL ", shex(readmsr(MSR_INTEL_PERF_SEL0+1)),
-      " CNT ", shex(readmsr(MSR_INTEL_PERF_CNT0+1)), "\n",
-      "  STATUS ", shex(readmsr(MSR_INTEL_PERF_GLOBAL_STATUS)), "\n",
-      "  CTRL   ", shex(readmsr(MSR_INTEL_PERF_GLOBAL_CTRL)));
-    if (have_pebs) {
-      console.println(
-        "  PEBSEN ", shex(readmsr(MSR_INTEL_PEBS_ENABLE)), "\n",
-        "  PEBS base  ", (void*)local->ds_area.pebs_base,
-        " index  ", (void*)local->ds_area.pebs_index, "\n"
-        "       limit ", (void*)local->ds_area.pebs_limit,
-        " thresh ", (void*)local->ds_area.pebs_threshold);
-      if (pebs_version >= 1)
-        console.println("  PEBS_LD_LAT ", readmsr(MSR_INTEL_PEBS_LD_LAT));
-    }
-  }
-
-private:
-  void
-  pebs_init()
-  {
-    // Lazy debug store initialization
-    char *pebs_buf = (char*)kalloc("pebs_buf", PGSIZE);
-    if (!pebs_buf)
-      panic("sampler: Out of memory");
-    auto ds = &local->ds_area;
-    ds->pebs_base = ds->pebs_index = pebs_buf;
-    size_t nrecords = PGSIZE / pebs_record_size;
-    ds->pebs_limit = pebs_buf + nrecords * pebs_record_size;
-    // Take an interrupt after each record
-    // XXX This is sort of lame.  It would be nice to use a bigger
-    // buffer and force-flush it when we're done.
-    ds->pebs_threshold = pebs_buf + pebs_record_size;
-  }
-
-  void
-  pebs_drain()
-  {
-    pmuevent ev{};
-    auto ds = &local->ds_area;
-    char *pos = ds->pebs_base;
-    ev.count = 1;
-    while (pos < ds->pebs_index) {
-      auto record = (pebs_record_v1*)pos;
-      ev.ints_disabled = !(record->rflags & FL_IF);
-      ev.kernel = record->rip >= KCODE;
-      ev.rip = record->rip;
-      if (pebs_version >= 1) {
-        ev.latency = record->latency;
-        ev.data_source = record->data_source;
-        ev.load_address = record->data_linear_address;
-      }
-      pmulog->log(ev);
-      pos += pebs_record_size;
-    }
-
-    // Reset PEBS buffer
-    ds->pebs_index = ds->pebs_base;
-  }
-};
 
 //
 // No PMU
@@ -591,7 +232,7 @@ sampstart(void)
   for (int i = 0; i < ncpu; ++i) {
     if (i == myid())
       continue;
-    lapic->send_sampconf(&cpus[i]);
+    // TODO: lapic->send_sampconf(&cpus[i]);
   }
   sampconf();
   popcli();
@@ -610,7 +251,7 @@ sampintr(struct trapframe *tf)
   pmu->pause();
 
   // Performance events mask LAPIC.PC.  Unmask it.
-  lapic->mask_pc(false);
+  // TODO: lapic->mask_pc(false);
 
   u64 overflow = pmu->get_overflow(&r);
 
@@ -634,11 +275,11 @@ samplog(int pmc, struct trapframe *tf)
 {
   struct pmuevent ev{};
   ev.idle = (myproc() == idleproc());
-  ev.ints_disabled = !(tf->rflags & FL_IF);
-  ev.kernel = tf->rip >= KCODE;
+  ev.ints_disabled = !is_intr_enabled();
+  ev.kernel = tf->epc >= KBASE;
   ev.count = 1;
-  ev.rip = tf->rip;
-  getcallerpcs((void*)tf->rbp, ev.trace, NELEM(ev.trace));
+  ev.rip = tf->epc;
+  getcallerpcs((void*)tf->gpr.s0, ev.trace, NELEM(ev.trace));
 
   if (!pmulog->log(ev)) {
     selectors[pmc].enable = false;
@@ -766,6 +407,8 @@ enable_nehalem_workaround(void)
     0x4300B1
   };
 
+  return; // TODO
+  /*
   if (cpuid::perfmon().version == 0)
     return;
   int num = cpuid::perfmon().num_counters;
@@ -788,21 +431,20 @@ enable_nehalem_workaround(void)
   }
 
   writemsr(MSR_INTEL_PERF_GLOBAL_CTRL, 0x3);
+  */
 }
 
 void
 initsamp(void)
 {
-  static class amd_pmu amd_pmu;
-  static class intel_pmu intel_pmu;
   static class no_pmu no_pmu;
 
   if (myid() == 0) {
-    if (cpuid::vendor_is_amd() && amd_pmu.try_init())
+    /*if (cpuid::vendor_is_amd() && amd_pmu.try_init())
       pmu = &amd_pmu;
     else if (cpuid::vendor_is_intel() && intel_pmu.try_init())
       pmu = &intel_pmu;
-    else {
+    else*/ { // TODO
       cprintf("initsamp: Unknown manufacturer\n");
       pmu = &no_pmu;
       return;
@@ -811,10 +453,6 @@ initsamp(void)
 
   if (pmu == &no_pmu)
     return;
-
-  // enable RDPMC at CPL > 0
-  u64 cr4 = rcr4();
-  lcr4(cr4 | CR4_PCE);
 
   for (int i = 0; i < LOG_SEGMENTS_PER_CPU; ++i) {
     auto l = &pmulog[myid()];
@@ -850,12 +488,12 @@ wdcheck(int pmc, struct trapframe* tf)
   ++*wd_count;
   if (*wd_count == 2 || *wd_count == 10) {
     auto l = wdlock.guard();
-    // uartputc guarantees some output
-    uartputc('W');
-    uartputc('D');
+    // sbi_console_putchar guarantees some output
+    sbi_console_putchar('W');
+    sbi_console_putchar('D');
     __cprintf(" cpu %u locked up for %d seconds\n", myid(), *wd_count);
-    __cprintf("  %016lx\n", tf->rip);
-    printtrace(tf->rbp);
+    __cprintf("  %016lx\n", tf->epc);
+    printtrace(tf->gpr.s0);
   }
 }
 
@@ -876,13 +514,7 @@ initwd(void)
   if (!configured) {
     extern uint64_t cpuhz;
     configured = true;
-    if (dynamic_cast<intel_pmu*>(pmu)) {
-      wd_selector.selector =
-        0x3c | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT);
-    } else if (dynamic_cast<amd_pmu*>(pmu)) {
-      wd_selector.selector =
-        0x76 | PERF_SEL_USR | PERF_SEL_OS | (1ull << PERF_SEL_CMASK_SHIFT);
-    } else {
+    {
       return;
     }
     wd_selector.enable = true;

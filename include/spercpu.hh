@@ -15,6 +15,7 @@
 #pragma once
 
 #include "critical.hh"
+#include "cpu_struct.hh"
 
 #include <cstddef>
 #include <new>
@@ -68,14 +69,8 @@ struct static_percpu
 
   T* get_unchecked() const
   {
-    uintptr_t val;
-    // The per-CPU memory offset is stored at %gs:32.
-    // XXX Having to subtract __percpu_start makes this several
-    // instructions longer than strictly necessary.  Alternatively, we
-    // could locate .percpu at address 0 and use the key as a direct
-    // offset.
-    __asm("add %%gs:32, %0" : "=r" (val) : "0" ((char*)key - __percpu_start));
-    return (T*)val;
+    // FIXME: not tested.
+    return (T *)((char *)mybase() + ((char*)key - __percpu_start));
   }
 
   T* get() const

@@ -2,8 +2,8 @@
 
 #include <setjmp.h>
 
-extern __thread sigjmp_buf pf_jmpbuf;
-extern __thread int pf_active;
+extern thread_local sigjmp_buf pf_jmpbuf;
+extern thread_local int pf_active;
 
 struct fstestproc {
   void (*setup_proc)(void);

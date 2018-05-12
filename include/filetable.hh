@@ -278,5 +278,5 @@ private:
   // Modifications to this array are protected by the fdinfo lock.
   // Lock-free readers should double-check the O_CLOEXEC bit in
   // fdinfo.
-  percpu<std::atomic<bool>[NOFILE]> cloexec_;
+  percpu<std::atomic<uintptr_t>[NOFILE]> cloexec_;
 };

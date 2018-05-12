@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "amd64.h"
+#include "riscv.h"
 #include "pstream.hh"
 
 #ifdef XV6_KERNEL
@@ -117,7 +117,7 @@ struct kstats
     uint64_t start;
 
   public:
-    timer(uint64_t kstats::* field) : field(field), start(rdtsc()) { }
+    timer(uint64_t kstats::* field) : field(field), start(rdcycle()) { }
 
     ~timer()
     {
@@ -127,7 +127,7 @@ struct kstats
     void end()
     {
       if (field)
-        kstats::inc(field, rdtsc() - start);
+        kstats::inc(field, rdcycle() - start);
       field = nullptr;
     }
 

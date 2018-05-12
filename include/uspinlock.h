@@ -8,20 +8,20 @@ struct uspinlock {
 static void inline __attribute__((always_inline))
 acquire(struct uspinlock *lk)
 {
-  while(xchg32(&lk->locked, 1) != 0)
+  while(__atomic_exchange_n(&lk->locked, 1, __ATOMIC_ACQ_REL) != 0)
     ;
 }
 
 static void inline __attribute__((always_inline))
 release(struct uspinlock *lk)
 {
-  xchg32(&lk->locked, 0);
+  __atomic_exchange_n(&lk->locked, 0, __ATOMIC_ACQ_REL);
 }
 
 static int inline
 tryacquire(struct uspinlock *lk)
 {
-  return xchg32(&lk->locked, 1) == 0;
+  return __atomic_exchange_n(&lk->locked, 1, __ATOMIC_ACQ_REL) == 0;
 }
 
 static void inline

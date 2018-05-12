@@ -1,5 +1,5 @@
 #include "types.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "mmu.h"
 #include "cpu.hh"
 #include "kernel.hh"
@@ -9,12 +9,11 @@
 #include "condvar.hh"
 #include "proc.hh"
 #include "vm.hh"
-#include "apic.hh"
 #include "kstream.hh"
 #include "ipi.hh"
 #include "kstats.hh"
-#include "cpuid.hh"
 #include "vmalloc.hh"
+#include "sbi.h"
 
 using namespace std;
 
@@ -38,13 +37,14 @@ struct pgmap {
     L_PT = 0,
     L_PD = 1,
     L_PDPT = 2,
-    L_PML4 = 3,
+    // L_PML4 = 3, // Sv39 does not have PML4
+    L_TOP = L_PDPT, // Sv39 does not have PML4, so the top level page table is PDPT.
 
     // By the size of an entry on that level
     L_4K = L_PT,
     L_2M = L_PD,
     L_1G = L_PDPT,
-    L_512G = L_PML4,
+    // L_512G = L_PML4, // Sv39 does not have PML4
 
     // Semantic names
     L_PGSIZE = L_4K,
@@ -58,7 +58,7 @@ private:
     if (level != 0) {
       for (int i = 0; i < end; i++) {
         pme_t entry = e[i].load(memory_order_relaxed);
-        if (entry & PTE_P)
+        if (entry & PTE_V)
           ((pgmap*) p2v(PTE_ADDR(entry)))->free(level - 1);
       }
     }
@@ -74,7 +74,7 @@ private:
     if (level != 0) {
       for (int i = 0; i < end; i++) {
         pme_t entry = e[i].load(memory_order_relaxed);
-        if (entry & PTE_P)
+        if (entry & PTE_V)
           count += ((pgmap*) p2v(PTE_ADDR(entry)))->internal_pages(level - 1);
       }
     }
@@ -87,7 +87,7 @@ public:
   {
     // Don't free kernel portion of the pml4 and don't kfree this
     // page, since operator delete will do that.
-    free(L_PML4, PX(L_PML4, KGLOBAL), false);
+    free(L_TOP, PX(L_TOP, KGLOBAL), false);
   }
 
   // Delete'ing a ::pgmap also frees all sub-pgmaps (except those
@@ -106,9 +106,9 @@ public:
     pgmap *pml4 = (pgmap*)kalloc("PML4");
     if (!pml4)
       throw_bad_alloc();
-    size_t k = PX(L_PML4, KGLOBAL);
-    memset(&pml4->e[0], 0, 8*k);
-    memmove(&pml4->e[k], &e[k], 8*(512-k));
+    size_t k = PX(L_TOP, KGLOBAL);
+    memset(&pml4->e[0], 0, PTE_SIZE * k);
+    memmove(&pml4->e[k], &e[k], PTE_SIZE * (512 - k));
     return pml4;
   }
 
@@ -116,15 +116,16 @@ public:
   void switch_to()
   {
     auto nreq = tlbflush_req.load();
-    u64 cr3 = v2p(this);
-    lcr3(cr3);
+    u64 ptbr = v2p(this);
+    tlb_invl_all();
+    lptbr(ptbr);
     mycpu()->tlbflush_done = nreq;
-    mycpu()->tlb_cr3 = cr3;
+    mycpu()->tlb_ptbr = ptbr;
   }
 
   u64 internal_pages() const
   {
-    return internal_pages(L_PML4, PX(L_PML4, KGLOBAL));
+    return internal_pages(L_TOP, PX(L_TOP, KGLOBAL));
   }
 
   // An iterator that references the page structure entry on a fixed
@@ -164,11 +165,11 @@ public:
     void resolve(pme_t create = 0)
     {
       cur = pml4;
-      for (reached = L_PML4; reached > level; reached--) {
+      for (reached = L_TOP; reached > level; reached--) {
         atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
         pme_t entry = entryp->load(memory_order_relaxed);
       retry:
-        if (entry & PTE_P) {
+        if (entry & PTE_V) {
           cur = (pgmap*) p2v(PTE_ADDR(entry));
         } else if (!create) {
           cur = nullptr;
@@ -180,8 +181,13 @@ public:
           if (!next)
             throw_bad_alloc();
           memset(next, 0, sizeof *next);
+          uintptr_t pte = MK_PTE(v2p(next), create);
+          /*if (reached != level + 1)*/ {
+            // is not the last level
+            pte &= ~(PTE_R | PTE_W | PTE_X | PTE_A | PTE_D | PTE_U);
+          }
           if (!atomic_compare_exchange_weak(
-                entryp, &entry, v2p(next) | create)) {
+                entryp, &entry, pte)) {
             // The above call updated entry with the current value in
             // entryp, so retry after the entry load.
             kfree(next);
@@ -234,7 +240,7 @@ public:
     iterator &create(pme_t flags)
     {
       if (!cur)
-        resolve(flags | PTE_P | PTE_W);
+        resolve(flags | PTE_V); // TODO PTE_X?
       return *this;
     }
 
@@ -248,7 +254,7 @@ public:
     // Return true if this entry both exists and is marked present.
     bool is_set() const
     {
-      return cur && ((*this)->load(memory_order_relaxed) & PTE_P);
+      return cur && ((*this)->load(memory_order_relaxed) & PTE_V);
     }
 
     // Return a reference to the current page structure entry.  This
@@ -300,39 +306,27 @@ initpg(void)
   if (!kpml4_initialized) {
     kpml4_initialized = true;
 
-    int level = pgmap::L_2M;
-    pgmap::iterator it;
-
-    // Can we use 1GB mappings?
-    if (cpuid::features().page1GB) {
-      level = pgmap::L_1G;
-
-      // Redo KCODE mapping with a 1GB page
-      *kpml4.find(KCODE, level).create(0) = PTE_W | PTE_P | PTE_PS | PTE_G;
-      lcr3(rcr3());
-    }
+    int level = pgmap::L_1G;
 
     // Create direct map region
     for (auto it = kpml4.find(KBASE, level); it.index() < KBASEEND;
          it += it.span()) {
       paddr pa = it.index() - KBASE;
-      *it.create(0) = pa | PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
+      *it.create(0) = MK_PTE(pa, PTE_V | PTE_R | PTE_W | PTE_X | PTE_G); // TODO: PTE_X or not?
     }
     assert(!kpml4.find(KBASEEND, level).is_set());
 
     // Create KVMALLOC area.  This doesn't map anything at this point;
     // it only fills in PML4 entries that can later be shared with all
     // other page tables.
-    for (auto it = kpml4.find(KVMALLOC, pgmap::L_PDPT); it.index() < KVMALLOCEND;
+    for (auto it = kpml4.find(KVMALLOC, pgmap::L_TOP - 1); it.index() < KVMALLOCEND;
          it += it.span()) {
       it.create(0);
       assert(!it.is_set());
     }
     kvmallocpos = KVMALLOC;
+    tlb_invl_all();
   }
-
-  // Enable global pages.  This has to happen on every core.
-  lcr4(rcr4() | CR4_PGE);
 }
 
 // Clean up mappings that were only required during early boot.
@@ -340,8 +334,8 @@ void
 cleanuppg(void)
 {
   // Remove 1GB identity mapping
-  *kpml4.find(0, pgmap::L_PML4) = 0;
-  lcr3(rcr3());
+  *kpml4.find(PHY_MEM_BASE, pgmap::L_TOP) = 0;
+  tlb_invl_all();
 }
 
 size_t
@@ -351,17 +345,17 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
   struct mypgmap
   {
     pme_t e[PGSIZE / sizeof(pme_t)];
-  } *pml4 = (struct mypgmap*)p2v(rcr3());
+  } *pml4 = (struct mypgmap*)p2v(rptbr());
   for (size_t i = 0; i < n; ++i) {
     uintptr_t va = src + i;
     void *obj = pml4;
     int level;
-    for (level = pgmap::L_PML4; ; level--) {
+    for (level = pgmap::L_TOP; ; level--) {
       pme_t entry = ((mypgmap*)obj)->e[PX(level, va)];
-      if (!(entry & PTE_P))
+      if (!(entry & PTE_V))
         return i;
       obj = p2v(PTE_ADDR(entry));
-      if (level == 0 || (entry & PTE_PS))
+      if (level == 0 || PTE_IS_LEAF(entry))
         break;
     }
     ((char*)dst)[i] = ((char*)obj)[va % (1ull << PXSHIFT(level))];
@@ -369,18 +363,11 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
   return n;
 }
 
-// Switch TSS and h/w page table to correspond to process p.
+// Switch h/w page table to correspond to process p.
 void
 switchvm(struct proc *p)
 {
   scoped_cli cli;
-  u64 base = (u64) &mycpu()->ts;
-  mycpu()->gdt[TSSSEG>>3] = (struct segdesc)
-    SEGDESC(base, (sizeof(mycpu()->ts)-1), SEG_P|SEG_TSS64A);
-  mycpu()->gdt[(TSSSEG>>3)+1] = (struct segdesc) SEGDESCHI(base);
-  mycpu()->ts.rsp[0] = (u64) myproc()->kstack + KSTACKSIZE;
-  mycpu()->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
-  ltr(TSSSEG);
 
   if (*cur_page_map_cache)
     (*cur_page_map_cache)->switch_from();
@@ -394,9 +381,6 @@ switchvm(struct proc *p)
     kpml4.switch_to();
     *cur_page_map_cache = nullptr;
   }
-
-  writefs(UDSEG);
-  writemsr(MSR_FS_BASE, p->user_fs_);
 }
 
 // Set up CPU's kernel segment descriptors.
@@ -404,12 +388,10 @@ switchvm(struct proc *p)
 void
 inittls(struct cpu *c)
 {
-  // Initialize cpu-local storage.
-  writegs(KDSEG);
-  writemsr(MSR_GS_BASE, (u64)&c->cpu);
-  writemsr(MSR_GS_KERNBASE, (u64)&c->cpu);
+  // Initialize hart-local storage.
   c->cpu = c;
   c->proc = nullptr;
+  write_csr(sscratch, (uintptr_t)c); // FIXME: not tested.
 }
 
 // Allocate 'bytes' bytes in the KVMALLOC area, surrounded by at least
@@ -438,7 +420,7 @@ vmalloc_raw(size_t bytes, size_t guard, const char *name)
     void *page = kalloc(name);
     if (!page)
       throw_bad_alloc();
-    *it.create(0) = v2p(page) | PTE_P | PTE_W | PTE_G;
+    *it.create(0) = MK_PTE(v2p(page), PTE_V | PTE_R | PTE_W | PTE_X | PTE_G);
   }
   mtlabel(mtrace_label_heap, (void*)base, bytes, name, strlen(name));
 
@@ -475,7 +457,7 @@ batched_shootdown::perform() const
     return;
 
   u64 myreq = ++tlbflush_req;
-  u64 cr3 = rcr3();
+  u64 ptbr = rptbr();
 
   // the caller may not hold any spinlock, because other CPUs might
   // be spinning waiting for that spinlock, with interrupts disabled,
@@ -486,14 +468,15 @@ batched_shootdown::perform() const
   kstats::timer timer(&kstats::tlb_shootdown_cycles);
 
   for (int i = 0; i < ncpu; i++) {
-    if (cpus[i].tlb_cr3 == cr3 && cpus[i].tlbflush_done < myreq) {
-      lapic->send_tlbflush(&cpus[i]);
+    if (cpus[i].tlb_ptbr == ptbr && cpus[i].tlbflush_done < myreq) {
+      const unsigned long mask = 1UL << (i + HARTID_START);
+      sbi_remote_sfence_vma(&mask, 0, 0);
       kstats::inc(&kstats::tlb_shootdown_targets);
     }
   }
 
   for (int i = 0; i < ncpu; i++)
-    while (cpus[i].tlb_cr3 == cr3 && cpus[i].tlbflush_done < myreq)
+    while (cpus[i].tlb_ptbr == ptbr && cpus[i].tlbflush_done < myreq)
       /* spin */ ;
 }
 
@@ -502,7 +485,7 @@ batched_shootdown::on_ipi()
 {
   pushcli();
   u64 nreq = tlbflush_req.load();
-  lcr3(rcr3());
+  tlb_invl_all();
   mycpu()->tlbflush_done = nreq;
   popcli();
 }
@@ -528,10 +511,10 @@ void
 core_tracking_shootdown::clear_tlb() const
 {
   if (end_ > start_ && end_ - start_ > 4 * PGSIZE) {
-    lcr3(rcr3());
+    tlb_invl_all();
   } else {
     for (uintptr_t va = start_; va < end_; va += PGSIZE)
-      invlpg((void*) va);
+      tlb_invl((void*) va);
   }
 }
 
@@ -626,6 +609,7 @@ namespace mmu_per_core_page_table {
     auto mypml4 = *pml4;
     assert(mypml4);
     mypml4->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
+    tlb_invl(va);
     t->tracker_cores.set(myid());
   }
 
@@ -671,7 +655,7 @@ namespace mmu_per_core_page_table {
       if (it.is_set()) {
         it->store(0, memory_order_relaxed);
         if (current)
-          invlpg((void*)it.index());
+          tlb_invl((void*)it.index());
       }
     }
   }
@@ -685,12 +669,13 @@ namespace mmu_per_core_page_table {
     // tracker), but it would probably require more communication.
     if (targets.none())
       return;
+    cprintf("start=%p, end=%p\n", start, end);
     assert(start < end && end <= USERTOP);
     kstats::inc(&kstats::tlb_shootdown_count);
     kstats::inc(&kstats::tlb_shootdown_targets, targets.count());
     kstats::timer timer(&kstats::tlb_shootdown_cycles);
     run_on_cpus(targets, [this]() {
         cache->clear(start, end);
-      });
+    });
   }
 }

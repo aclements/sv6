@@ -38,7 +38,7 @@ ready(void)
     --barrier;
   } else {
     while (barrier)
-      asm volatile("pause");
+      asm volatile("nop");
   }
 }
 
@@ -71,7 +71,7 @@ vm2sharing(void *arg)
 
   while (true) {
     while (round % ncore != i)
-      asm volatile("pause");
+      asm volatile("nop");
     if (round >= 50) {
       round++;
       return 0;

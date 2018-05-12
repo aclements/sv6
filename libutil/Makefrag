@@ -10,7 +10,6 @@ LIBUTIL_OBJS := \
 	pstream.o \
 	urnd.o \
 	libutil.o \
-	cpuid.o \
 	pmcdb.o \
 	shutil.o \
 

@@ -1,6 +1,6 @@
 #include "types.h"
 #include "user.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "pthread.h"
 #include "futex.h"
 #include "errno.h"
@@ -87,9 +87,9 @@ main(int ac, char** av)
   nsleep(1000*1000);
 
   mtenable("xv6-schedbench");
-  u64 t0 = rdtsc();
+  u64 t0 = rdcycle();
   master0();
-  u64 t1 = rdtsc();
+  u64 t1 = rdcycle();
   mtdisable("xv6-schedbench");
   printf("%lu\n", (t1-t0)/iters);
   return 0;

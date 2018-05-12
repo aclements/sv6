@@ -1,6 +1,6 @@
 #include "ipi.hh"
+#include "sbi.h"
 
-#include "apic.hh"
 #include "traps.h"
 #include "bits.hh"
 
@@ -36,7 +36,10 @@ ipi_call::start(unsigned cpu)
     q.tail = &this->next[cpu];
   }
   if (need_ipi)
-    lapic->send_ipi(&cpus[cpu], T_IPICALL);
+  {
+    const unsigned long mask = 1UL << (cpu + HARTID_START);
+    sbi_send_ipi(&mask);
+  }
 }
 
 void
@@ -46,7 +49,7 @@ ipi_call::run_on(const bitset<NCPU> &cpus)
   // migrated during this, but it's also safe to self-IPI.  If we're
   // called with interrupts disabled, then we can't self-IPI, but it's
   // safe to do a local call.
-  bool interruptable = readrflags() & FL_IF;
+  bool interruptable = is_intr_enabled();
   unsigned id = interruptable ? -1 : myid();
   waiting = cpus.count() - (!interruptable && cpus[id]);
   for (auto cpu : cpus)
@@ -62,7 +65,7 @@ ipi_call::run_on(const bitset<NCPU> &cpus)
 void
 on_ipicall()
 {
-  assert(!(readrflags() & FL_IF));
+  assert(!is_intr_enabled());
   auto id = myid();
   while (true) {
     // Get the IPI call list

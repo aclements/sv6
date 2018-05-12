@@ -18,7 +18,7 @@
 #include <atomic>
 #include <stdexcept>
 
-#include "amd64.h"
+#include "riscv.h"
 #include "libutil.h"
 #include "xsys.h"
 #include "pmcdb.hh"
@@ -81,18 +81,18 @@ do_bench(void *opaque)
       mywarmup = warmup;
       mycount = 0;
       start_usec[cpu] = now_usec();
-      start_tsc[cpu] = rdtsc();
+      start_tsc[cpu] = rdcycle();
       if (record_pmc)
-        pmc1 = rdpmc(RECORD_PMC);
+        pmc1 = 0; //rdpmc(RECORD_PMC);
     }
     close(open(fname, open_flags));
     ++mycount;
   }
   if (record_pmc)
-    pmc2 = rdpmc(RECORD_PMC);
+    pmc2 = 0; //rdpmc(RECORD_PMC);
 
   stop_usec[cpu] = now_usec();
-  stop_tsc[cpu] = rdtsc();
+  stop_tsc[cpu] = rdcycle();
   opens += mycount;
   tsc_total += stop_tsc[cpu] - start_tsc[cpu];
   usec_total += stop_usec[cpu] - start_usec[cpu];

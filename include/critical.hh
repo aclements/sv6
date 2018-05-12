@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "kernel.hh"
+#include "cpu_struct.hh"
 
 // A critical section can be protected against several forms of
 // interruption.  critical_mask controls this.
@@ -37,15 +38,16 @@ class scoped_critical
     // address and then modify the variable.  If we instead had known
     // %gs offsets for general per-CPU variables, we wouldn't need
     // special support for this one.
-    __asm volatile("addq %0, %%gs:(8*5)" :: "r" (delta) : "cc");
+    // TODO: This needs to be done in a single instruction???
+    pushcli();
+    mycpu()->no_sched_count += delta;
+    popcli();
   }
 
   static inline uint64_t
   get_no_sched_count()
   {
-    uint64_t val;
-    __asm volatile("movq %%gs:(8*5), %0" : "=r" (val));
-    return val;
+    return mycpu()->no_sched_count;
   }
 
   void release_yield();

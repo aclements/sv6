@@ -22,6 +22,7 @@
 #include "file.hh"
 #include "major.h"
 #include "heapprof.hh"
+#include "fdt.h"
 
 #include <algorithm>
 #include <iterator>
@@ -584,46 +585,7 @@ public:
 static phys_map mem;
 
 // Parse a multiboot memory map.
-static void
-parse_mb_map(struct Mbdata *mb)
-{
-  if(!(mb->flags & (1<<6)))
-    panic("multiboot header has no memory map");
-
-  // Print the map
-  uint8_t *p = (uint8_t*) p2v(mb->mmap_addr);
-  uint8_t *ep = p + mb->mmap_length;
-  // XXX QEMU's pc-bios/optionrom/multiboot.S has a bug that makes
-  // mmap_length one entry short.
-  while (p < ep) {
-    struct Mbmem *mbmem = (Mbmem *)p;
-    p += 4 + mbmem->size;
-    console.println("e820: ", shex(mbmem->base).width(18).pad(), "-",
-                    shex(mbmem->base + mbmem->length - 1).width(18).pad(), " ",
-                    mbmem->type == 1 ? "usable" : "reserved");
-  }
-
-  // The E820 map can be out of order and it can have overlapping
-  // regions, so we have to clean it up.
-
-  // Add and merge usable regions
-  p = (uint8_t*) p2v(mb->mmap_addr);
-  while (p < ep) {
-    struct Mbmem *mbmem = (Mbmem *)p;
-    p += 4 + mbmem->size;
-    if (mbmem->type == 1)
-      mem.add(mbmem->base, mbmem->base + mbmem->length);
-  }
-
-  // Remove unusable regions
-  p = (uint8_t*) p2v(mb->mmap_addr);
-  while (p < ep) {
-    struct Mbmem *mbmem = (Mbmem *)p;
-    p += 4 + mbmem->size;
-    if (mbmem->type != 1)
-      mem.remove(mbmem->base, mbmem->base + mbmem->length);
-  }
-}
+static void parse_mem_map(void *fdt);
 
 // Simple allocator to get off the ground during boot.  Works directly
 // with the physical memory map.
@@ -964,12 +926,12 @@ initpageinfo(void)
 
 // Initialize physical memory map
 void
-initphysmem(paddr mbaddr)
+initphysmem(void *fdt)
 {
   // First address after kernel loaded from ELF file
   extern char end[];
 
-  parse_mb_map((Mbdata*) p2v(mbaddr));
+  parse_mem_map(fdt);
 
   // Consider first 1MB of memory unusable
   mem.remove(0, 0x100000);
@@ -979,6 +941,12 @@ initphysmem(paddr mbaddr)
 
   // Reserve kernel ELF image
   mem.remove(0, v2p(end));
+  // Reserve FDT
+  fdt_header *fh = (fdt_header *)fdt;
+  mem.remove(v2p(fdt), v2p(fdt) + fdt_bswap(fh->totalsize));
+
+  console.println("Usable memory map:");
+  mem.print();
 }
 
 // Initialize free list of physical pages.
@@ -1204,4 +1172,61 @@ void
 ksfree(int slab, void *v)
 {
   kfree(v, 1 << slabmem[slab].order);
+}
+
+// mem scan
+
+struct mem_scan {
+  int memory;
+  const uint32_t *reg_value;
+  int reg_len;
+};
+
+static void mem_open(const struct fdt_scan_node *node, void *extra)
+{
+  struct mem_scan *scan = (struct mem_scan *)extra;
+  memset(scan, 0, sizeof(*scan));
+}
+
+static void mem_prop(const struct fdt_scan_prop *prop, void *extra)
+{
+  struct mem_scan *scan = (struct mem_scan *)extra;
+  if (!strcmp(prop->name, "device_type") && !strcmp((const char*)prop->value, "memory")) {
+    scan->memory = 1;
+  } else if (!strcmp(prop->name, "reg")) {
+    scan->reg_value = prop->value;
+    scan->reg_len = prop->len;
+  }
+}
+
+static void mem_done(const struct fdt_scan_node *node, void *extra)
+{
+  struct mem_scan *scan = (struct mem_scan *)extra;
+  const uint32_t *value = scan->reg_value;
+  const uint32_t *end = value + scan->reg_len/4;
+
+  if (!scan->memory) return;
+  assert (scan->reg_value && scan->reg_len % 4 == 0);
+
+  while (end - value > 0) {
+    uint64_t base, size;
+    value = fdt_get_address(node->parent, value, &base);
+    value = fdt_get_size   (node->parent, value, &size);
+    mem.add(base, base + size);
+  }
+  assert (end == value);
+}
+
+static void parse_mem_map(void *fdt)
+{
+  struct fdt_cb cb;
+  struct mem_scan scan;
+
+  memset(&cb, 0, sizeof(cb));
+  cb.open = mem_open;
+  cb.prop = mem_prop;
+  cb.done = mem_done;
+  cb.extra = &scan;
+  cprintf("parse_mem_map...\n");
+  fdt_scan((uintptr_t)fdt, &cb);
 }

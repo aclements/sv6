@@ -10,7 +10,7 @@
 #if defined(XV6_USER)
 #include "user.h"
 #endif
-#include "amd64.h"
+#include "riscv.h"
 #include "rnd.hh"
 #include "xsys.h"
 
@@ -70,7 +70,7 @@ main(int ac, char** av)
   if (pipe(fds) < 0)
     die("pipe failed");
 
-  uint64_t t0 = rdtsc();
+  uint64_t t0 = rdcycle();
   for(int i = 0; i < nproc; i++) {
     int pid = fork();
     if (pid == 0) {
@@ -81,7 +81,7 @@ main(int ac, char** av)
 
   for (int i = 0; i < nproc; i++)
     wait(NULL);
-  uint64_t t1 = rdtsc();
+  uint64_t t1 = rdcycle();
 
   printf("%s: %lu\n", av[0], t1-t0);
 

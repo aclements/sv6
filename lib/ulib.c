@@ -180,7 +180,6 @@ __crt_main(uint64_t argc, char **argv, uint64_t elf_phdr, uint64_t elf_phnum)
   _dl_phnum = elf_phnum;
   forkt_setup(getpid());
   __cpprt_init();
-
   // Run global initializers.  (Note that gcc 4.7 eliminated the
   // .ctors section entirely, but gcc has supported .init_array for
   // some time.)  The third argument is envp, which we don't use.

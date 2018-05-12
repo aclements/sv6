@@ -89,7 +89,7 @@ public:
     if (cli == cli_internal)
       pushcli();
 #endif
-    while (locked_test_and_set_bit(bit_, lock_) != 0)
+    while (locked_test_and_set_bit(bit_, (volatile unsigned long*)lock_) != 0)
       nop_pause();
   }
 
@@ -99,7 +99,7 @@ public:
     if (cli == cli_internal)
       pushcli();
 #endif
-    if (locked_test_and_set_bit(bit_, lock_) != 0) {
+    if (locked_test_and_set_bit(bit_, (volatile unsigned long*)lock_) != 0) {
 #ifdef XV6_KERNEL
       if (cli == cli_internal)
         popcli();
@@ -114,7 +114,7 @@ public:
 #if BIT_SPINLOCK_DEBUG
     assert(is_locked());
 #endif
-    clear_bit(bit_, lock_);
+    clear_bit(bit_, (volatile unsigned long*)lock_);
 #ifdef XV6_KERNEL
     if (cli == cli_internal)
       popcli();

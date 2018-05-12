@@ -1,5 +1,5 @@
 #include "types.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "kernel.hh"
 #include "percpu.hh"
 #include "cpputil.hh"
@@ -7,8 +7,16 @@
 #include "mtrace.h"
 #include "work.hh"
 
-extern "C" void zpage(void*);
-extern "C" void zpage_nc(void*);
+static void zpage(void *p)
+{
+  memset(p, 0, PGSIZE);
+}
+
+static void zpage_nc(void *p)
+{
+  memset(p, 0, PGSIZE);
+  barrier();
+}
 
 static const bool prezero = true;
 

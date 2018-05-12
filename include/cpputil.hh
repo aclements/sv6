@@ -101,6 +101,8 @@ extern "C" void __cxa_guard_abort(s64 *guard_object);
 extern "C" int  __cxa_atexit(void (*f)(void *), void *p, void *d);
 extern void *__dso_handle;
 
+extern void puts(const char *);
+
 #define NEW_DELETE_OPS(classname)                                   \
   static void* operator new(unsigned long nbytes,                   \
                             const std::nothrow_t&) noexcept {       \

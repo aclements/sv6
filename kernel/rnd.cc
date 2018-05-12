@@ -19,7 +19,7 @@ rnd(void)
 #if CODEX
     rstate->seed = 0xdeadbeef;
 #else
-    rstate->seed = rdtsc();
+    rstate->seed = rdcycle();
 #endif
   }
   rstate->seed = rstate->seed *  6364136223846793005 + 1442695040888963407;

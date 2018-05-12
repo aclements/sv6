@@ -1,12 +1,8 @@
 # -*- makefile-gmake -*-
 
 OBJS = \
-	acpi.o \
-	acpidbg.o \
-	acpiosl.o \
+	numa.o \
 	bio.o \
-	bootdata.o \
-	cga.o \
 	cmdline.o \
 	condvar.o \
 	console.o \
@@ -14,24 +10,23 @@ OBJS = \
 	e1000.o \
 	ahci.o \
 	exec.o \
+	fdt.o \
 	file.o \
 	fmt.o \
 	fs.o \
         futex.o \
         idle.o \
-	ioapic.o \
 	hwvm.o \
 	hz.o \
 	kalloc.o \
 	kmalloc.o \
 	kbd.o \
+	timer.o \
 	main.o \
 	memide.o \
 	ide.o \
 	mp.o \
 	net.o \
-	pci.o \
-	picirq.o \
 	pipe.o \
 	proc.o \
 	gc.o \
@@ -46,14 +41,11 @@ OBJS = \
 	sysfile.o \
 	sysproc.o \
 	syssocket.o\
-	uart.o \
         user.o \
 	vm.o \
 	trap.o \
         uaccess.o \
 	trapasm.o \
-	xapic.o \
-	x2apic.o \
         zalloc.o \
 	incbin.o \
 	sysvectors.o \
@@ -66,14 +58,11 @@ OBJS = \
 	dev.o \
 	codex.o \
 	benchcodex.o \
-	iommu.o \
 	rtc.o \
 	timemath.o \
 	mnode.o \
 	mfs.o \
 	mfsload.o \
-	hpet.o \
-	cpuid.o \
 	ctype.o \
 	unixsock.o \
 	heapprof.o \
@@ -84,15 +73,11 @@ OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
 OBJS += $(CXXRUNTIME)
 
-# Include ACPICA fragment after we've set up the kernel object list,
-# but before the kernel build rules
-include kernel/Makefrag.acpica
-
 KERN = $(O)/kernel.elf
 ALL += $(KERN)
 
-$(O)/kernel/%.o: CFLAGS+=-mcmodel=kernel -DXV6_KERNEL -mno-sse
-$(O)/kernel/%.o: CXXFLAGS+=-mcmodel=kernel -DXV6_KERNEL -mno-sse
+$(O)/kernel/%.o: CFLAGS+=-mcmodel=medany -DXV6_KERNEL
+$(O)/kernel/%.o: CXXFLAGS+=-mcmodel=medany -DXV6_KERNEL
 
 $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	@echo "  LD     $@"
@@ -122,14 +107,12 @@ $(O)/kernel/%.o: $(O)/kernel/%.cc $(O)/sysroot
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(O)/kernel/incbin.o: ASFLAGS+=-DMAKE_OUT=$(O)
-$(O)/kernel/incbin.o: $(O)/kernel/initcode $(O)/kernel/bootother $(O)/fs.img
+$(O)/kernel/incbin.o: $(O)/kernel/initcode $(O)/fs.img
 
 # link initcode against sysstubs to get syscall numbers
 $(O)/kernel/initcode: TTEXT = 0x1000
 $(O)/kernel/initcode: LDEXTRA = $(O)/lib/sysstubs.o
 $(O)/kernel/initcode: $(O)/lib/sysstubs.o
-
-$(O)/kernel/bootother: TTEXT = 0x7000
 
 $(O)/kernel/%: kernel/%.S $(O)/sysroot
 	@echo "  CC     $@"
@@ -146,7 +129,7 @@ $(O)/kernel/asmdefines.S: kernel/asmdefines.cc $(O)/sysroot
 $(O)/include/asmdefines.h: $(O)/kernel/asmdefines.S
 	@echo "  GEN    $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)sed -n 's/remove\$$//p' $(O)/kernel/asmdefines.S > $@
+	$(Q)sed -n 's/ magicmagicmagic/ /p' $(O)/kernel/asmdefines.S > $@
 $(O)/kernel/trapasm.o: $(O)/include/asmdefines.h
 $(O)/kernel/uaccess.o: $(O)/include/asmdefines.h
 

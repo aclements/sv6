@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "amd64.h"
+#include "riscv.h"
 
 void
 srand(unsigned int seed)
@@ -9,5 +9,5 @@ srand(unsigned int seed)
 int
 rand(void)
 {
-  return rdtsc();
+  return rdcycle();
 }

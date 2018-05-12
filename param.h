@@ -1,6 +1,8 @@
 #pragma once
+#define HARTID_START 1 // FIXME: for hifive unleashed
 #define NPROC        64  // maximum number of processes
-#define KSTACKSIZE 32768 // size of per-process kernel stack
+#define KSTACKSHIFT 15
+#define KSTACKSIZE (1UL << KSTACKSHIFT) // size of per-process kernel stack
 #define NOFILE      100  // open files per process
 #define NFILE       100  // open files per system
 #define NBUF      10000  // size of disk block cache
@@ -15,16 +17,20 @@
 #define CACHELINE    64  // cache line size
 #define CPUKSTACKS   (NPROC + NCPU*2)
 #define VICTIMAGE 1000000 // cycles a proc executes before an eligible victim
-#define VERBOSE       0  // print kernel diagnostics
+#define VERBOSE       1  // print kernel diagnostics
+#define DEBUG 1
 #define SPINLOCK_DEBUG DEBUG // Debug spin locks
 #define RCU_TYPE_DEBUG DEBUG
 #define LOCKSTAT      DEBUG
-#define ALLOC_MEMSET  DEBUG
+#define ALLOC_MEMSET  0 //DEBUG
 #define BUDDY_DEBUG   DEBUG
 #define REFCACHE_DEBUG DEBUG
 #define RADIX_DEBUG   DEBUG
 #define SEQLOCK_DEBUG DEBUG
 #define KSTACK_DEBUG  DEBUG // use guard pages for over/underflow protection
+#define SYSCALL_DEBUG 1
+#define TRAP_DEBUG    0
+#define TLB_INVL_DEBUG 0
 #define USTACKPAGES   8
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
 #define GC_GLOBAL     true
@@ -68,8 +74,8 @@
 #define NCPU          8   // maximum number of CPUs
 #define NSOCKET       2
 #define PERFSIZE      (16<<20ull)
-#define MEMIDE        0
-#define AHCIIDE       1
+#define MEMIDE        1 //0
+#define AHCIIDE       0 // 1
 #elif defined(HW_mtrace)
 #define DEBUG         0
 #define NCPU          16   // maximum number of CPUs

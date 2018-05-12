@@ -1,6 +1,5 @@
 #pragma once
 
-#include "apic.hh"
 #include "cpputil.hh"
 
 class irq_handler
@@ -73,13 +72,15 @@ public:
   // Mask or unmask this IRQ
   void enable(bool enable = true)
   {
-    extpic->enable_irq(*this, enable);
+    // TODO!
+    panic("irq::enable");
   }
 
   // Acknowledge this IRQ
   void eoi()
   {
-    extpic->eoi_irq(*this);
+    // TODO!
+    panic("irq::eoi");
   }
 
   // Register a handler for this IRQ.  Multiple handlers may be

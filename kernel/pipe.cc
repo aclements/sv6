@@ -25,7 +25,7 @@ struct ordered : pipe {
   struct spinlock lock_close;
   struct condvar  empty;
   struct condvar  full;
-  std::atomic<bool> readopen;   // read fd is still open
+  std::atomic<uintptr_t> readopen;   // read fd is still open
   int writeopen;  // write fd is still open
   std::atomic<size_t> nread;  // number of bytes read
   std::atomic<size_t> nwrite; // number of bytes written

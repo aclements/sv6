@@ -1,19 +1,8 @@
-// Intel 8253/8254/82C54 Programmable Interval Timer (PIT).
-// http://en.wikipedia.org/wiki/Intel_8253
-
 #include "types.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "kernel.hh"
-
-#define IO_TIMER1       0x040           // 8253 Timer #1
-#define TIMER_FREQ      1193182
-#define	TIMER_CNTR      (IO_TIMER1 + 0)	// timer counter port
-#define TIMER_MODE      (IO_TIMER1 + 3) // timer mode port
-#define TIMER_SEL0      0x00    // select counter 0
-#define TIMER_TCOUNT    0x00    // mode 0, terminal count
-#define TIMER_16BIT     0x30    // r/w counter 16 bits, LSB first
-#define TIMER_STAT      0xe0    // read status mode
-#define TIMER_STAT0     (TIMER_STAT | 0x2)  // status mode counter 0
+#include "string.h"
+#include "fdt.h"
 
 u64 cpuhz;
 
@@ -21,31 +10,92 @@ void
 microdelay(u64 delay)
 {
   u64 tscdelay = (cpuhz * delay) / 1000000;
-  u64 s = rdtsc();
-  while (rdtsc() - s < tscdelay)
-    nop_pause();
+  u64 s = rdcycle();
+  while (rdcycle() - s < tscdelay);
 }
 
+void query_harts(uintptr_t fdt);
+
 void
-inithz(void)
+inithz(void *fdt)
 {
-  // Setup PIT for terminal count starting from 2^16 - 1
-  u64 xticks = 0x000000000000FFFFull;
-  outb(TIMER_MODE, TIMER_SEL0 | TIMER_TCOUNT | TIMER_16BIT);  
-  outb(IO_TIMER1, xticks % 256);
-  outb(IO_TIMER1, xticks / 256);
+  query_harts((uintptr_t)fdt);
+}
 
-  // Wait until OUT bit of status byte is set
-  u64 s = rdtsc();
-  do {
-    outb(TIMER_MODE, TIMER_STAT0);
-    if (rdtsc() - s > 1ULL<<32) {
-      cprintf("inithz: PIT stuck, assuming 2GHz\n");
-      cpuhz = 2 * 1000 * 1000 * 1000;
-      return;
+struct hart_scan {
+  const struct fdt_scan_node *cpu;
+  int hart;
+  const struct fdt_scan_node *controller;
+  int cells;
+  uint32_t phandle;
+  uint32_t freq;
+};
+
+static void hart_open(const struct fdt_scan_node *node, void *extra)
+{
+  struct hart_scan *scan = (struct hart_scan *)extra;
+  if (!scan->cpu) {
+    scan->hart = -1;
+  }
+  if (!scan->controller) {
+    scan->cells = 0;
+    scan->phandle = 0;
+  }
+}
+
+static void hart_prop(const struct fdt_scan_prop *prop, void *extra)
+{
+  struct hart_scan *scan = (struct hart_scan *)extra;
+  if (!strcmp(prop->name, "device_type") && !strcmp((const char*)prop->value, "cpu")) {
+    scan->cpu = prop->node;
+  } else if (!strcmp(prop->name, "interrupt-controller")) {
+    scan->controller = prop->node;
+  } else if (!strcmp(prop->name, "#interrupt-cells")) {
+    scan->cells = fdt_bswap(prop->value[0]);
+  } else if (!strcmp(prop->name, "phandle")) {
+    scan->phandle = fdt_bswap(prop->value[0]);
+  } else if (!strcmp(prop->name, "reg")) {
+    uint64_t reg;
+    fdt_get_address(prop->node->parent, prop->value, &reg);
+    scan->hart = reg;
+  } else if (!strcmp(prop->name, "clock-frequency")) {
+    scan->freq = fdt_bswap(prop->value[0]);
+    cpuhz = scan->freq;
+  }
+}
+
+static void hart_done(const struct fdt_scan_node *node, void *extra)
+{
+  struct hart_scan *scan = (struct hart_scan *)extra;
+
+  if (scan->controller == node && scan->cpu) {
+    if (scan->hart < NCPU) {
+      ++ncpu;
     }
-  } while (!(inb(TIMER_CNTR) & 0x80));
-  u64 e = rdtsc();
+  }
+}
 
-  cpuhz = ((e-s)*10000000) / ((xticks*10000000)/TIMER_FREQ);
+static int hart_close(const struct fdt_scan_node *node, void *extra)
+{
+  struct hart_scan *scan = (struct hart_scan *)extra;
+  if (scan->cpu == node) scan->cpu = 0;
+  if (scan->controller == node) scan->controller = 0;
+  return 0;
+}
+
+void query_harts(uintptr_t fdt)
+{
+  struct fdt_cb cb;
+  struct hart_scan scan;
+
+  memset(&cb, 0, sizeof(cb));
+  memset(&scan, 0, sizeof(scan));
+  cb.open = hart_open;
+  cb.prop = hart_prop;
+  cb.done = hart_done;
+  cb.close= hart_close;
+  cb.extra = &scan;
+
+  ncpu = 0;
+  fdt_scan(fdt, &cb);
 }

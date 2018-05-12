@@ -8,7 +8,7 @@
 #if defined(XV6_USER)
 #include "mtrace.h"
 #endif
-#include "amd64.h"
+#include "riscv.h"
 #include "xsys.h"
 
 #define CHUNKSZ 512
@@ -85,7 +85,7 @@ main(int ac, char **av)
   close(fd);
 
   //mtenable("xv6-filebench");
-  uint64_t t0 = rdtsc();
+  uint64_t t0 = rdcycle();
   for (int i = 0; i < nthread; i++) {
     int pid = fork();
     if (pid == 0) {
@@ -97,7 +97,7 @@ main(int ac, char **av)
 
   for (int i = 0; i < nthread; i++)
     wait(NULL);
-  uint64_t t1 = rdtsc();
+  uint64_t t1 = rdcycle();
   mtdisable("xv6-filebench");
 
   printf("filebench: %lu\n", t1-t0);

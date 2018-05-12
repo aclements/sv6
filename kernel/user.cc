@@ -1,7 +1,7 @@
 #include "types.h"
 #include "kernel.hh"
 #include "mmu.h"
-#include "amd64.h"
+#include "riscv.h"
 #include "spinlock.hh"
 #include "condvar.hh"
 #include "proc.hh"
@@ -35,12 +35,9 @@ inituser(void)
   if(p->vmap->copyout(INIT_START, _initcode_start, _initcode_size) < 0)
     panic("userinit: copyout");
   memset(p->tf, 0, sizeof(*p->tf));
-  p->tf->cs = UCSEG | 0x3;
-  p->tf->ds = UDSEG | 0x3;
-  p->tf->ss = p->tf->ds;
-  p->tf->rflags = FL_IF;
-  p->tf->rsp = PGSIZE;
-  p->tf->rip = INIT_START;  // beginning of initcode.S
+  p->tf->status = read_csr(sstatus) & ~SSTATUS_SPIE;
+  p->tf->gpr.sp = PGSIZE;
+  p->tf->epc = INIT_START; // beginning of initcode.S
   p->data_cpuid = myid();
 
   safestrcpy(p->name, "initcode", sizeof(p->name));

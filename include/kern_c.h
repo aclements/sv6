@@ -11,14 +11,11 @@ void            kbdintr(void);
 
 // swtch.S
 struct context;
-void            swtch(struct context**, struct context*);
-
-// trap.c
-extern struct segdesc bootgdt[NSEGS];
+void            swtch(struct context*, struct context*);
 
 // other exported/imported functions
-void cmain(u64 mbmagic, u64 mbaddr);
-void mpboot(void);
+void cmain(u64 hartid, void *fdt);
+void mpboot(u64 hartid, void *fdt);
 void trapret(void);
 void threadstub(void);
 void threadhelper(void (*fn)(void *), void *arg);

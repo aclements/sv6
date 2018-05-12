@@ -1,8 +1,6 @@
 #include "types.h"
 #include "amd64.h"
 #include "kernel.hh"
-#include "pci.hh"
-#include "pcireg.hh"
 #include "disk.hh"
 #include "ahcireg.hh"
 #include "satareg.hh"
@@ -11,6 +9,8 @@
 #include "spinlock.hh"
 #include "condvar.hh"
 #include "cpu.hh"
+#include "riscv.h"
+#include "irq.hh"
 
 enum { fis_debug = 0 };
 
@@ -111,28 +111,24 @@ private:
 void
 initahci(void)
 {
-  pci_register_class_driver(PCI_CLASS_MASS_STORAGE,
-                            PCI_SUBCLASS_MASS_STORAGE_SATA,
-                            &ahci_hba::attach);
+
 }
 
 int
 ahci_hba::attach(struct pci_func *pcif)
 {
-  if (PCI_INTERFACE(pcif->dev_class) != 0x01) {
     console.println("AHCI: not an AHCI controller");
     return 0;
-  }
 
   console.println("AHCI: attaching");
-  pci_func_enable(pcif);
+
   ahci_hba *hba __attribute__((unused)) = new ahci_hba(pcif);
   console.println("AHCI: done");
   return 1;
 }
 
 ahci_hba::ahci_hba(struct pci_func *pcif)
-  : membase(pcif->reg_base[5]),
+  : membase(0),
     reg((ahci_reg*) p2v(membase))
 {
   reg->g.ghc |= AHCI_GHC_AE;
@@ -143,9 +139,6 @@ ahci_hba::ahci_hba(struct pci_func *pcif)
     }
   }
 
-  irq ahci_irq = extpic->map_pci_irq(pcif);
-  ahci_irq.enable();
-  ahci_irq.register_handler(this);
   reg->g.ghc |= AHCI_GHC_IE;
 }
 
@@ -353,7 +346,7 @@ ahci_port::dump()
 int
 ahci_port::wait()
 {
-  u64 ts_start = rdtsc();
+  u64 ts_start = rdcycle();
 
   for (;;) {
     u32 tfd = preg->tfd;
@@ -361,7 +354,7 @@ ahci_port::wait()
     if (!(stat & IDE_STAT_BSY) && !(preg->ci & 1))
       return 0;
 
-    u64 ts_diff = rdtsc() - ts_start;
+    u64 ts_diff = rdcycle() - ts_start;
     if (ts_diff > 1000 * 1000 * 1000) {
       cprintf("ahci_port::wait: stuck for %lx cycles\n", ts_diff);
       dump();

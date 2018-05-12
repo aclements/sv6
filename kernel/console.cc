@@ -9,17 +9,18 @@
 #include "fs.h"
 #include "condvar.hh"
 #include "file.hh"
-#include "amd64.h"
+//#include "amd64.h"
+#include "riscv.h"
 #include "proc.hh"
 #include "traps.h"
 #include "lib.h"
 #include <stdarg.h>
 #include "fmt.hh"
 #include "major.h"
-#include "apic.hh"
 #include "irq.hh"
 #include "kstream.hh"
 #include "bits.hh"
+#include "sbi.h"
 
 #define BACKSPACE 0x100
 
@@ -40,25 +41,23 @@ static void
 consputc(int c)
 {
   if(panicked){
-    cli();
+    intr_disable();
     for(;;)
       ;
   }
 
   switch(c) {
   case BACKSPACE:
-    uartputc('\b');
-    uartputc(' ');
-    uartputc('\b');
+    sbi_console_putchar('\b');
+    sbi_console_putchar(' ');
+    sbi_console_putchar('\b');
     break;
   case '\n':
-    uartputc('\r');
+    sbi_console_putchar('\r');
     // fall through
   default:
-    uartputc(c);    
+    sbi_console_putchar(c);
   }
-
-  cgaputc(c);
 }
 
 // Print to the console.
@@ -157,13 +156,97 @@ puts(const char *s)
 }
 
 void
-printtrace(u64 rbp)
+printtrace(u64 fp)
 {
   uptr pc[10];
 
-  getcallerpcs((void*)rbp, pc, NELEM(pc));
+  getcallerpcs((void*)fp, pc, NELEM(pc));
   for (int i = 0; i < NELEM(pc) && pc[i] != 0; i++)
     __cprintf("  %016lx\n", pc[i]);
+}
+
+void
+print_regs(struct pushregs* gpr) {
+    __cprintf("  zero     0x%016lx\n", gpr->zero);
+    __cprintf("  ra       0x%016lx\n", gpr->ra);
+    __cprintf("  sp       0x%016lx\n", gpr->sp);
+    __cprintf("  gp       0x%016lx\n", gpr->gp);
+    __cprintf("  tp       0x%016lx\n", gpr->tp);
+    __cprintf("  t0       0x%016lx\n", gpr->t0);
+    __cprintf("  t1       0x%016lx\n", gpr->t1);
+    __cprintf("  t2       0x%016lx\n", gpr->t2);
+    __cprintf("  s0       0x%016lx\n", gpr->s0);
+    __cprintf("  s1       0x%016lx\n", gpr->s1);
+    __cprintf("  a0       0x%016lx\n", gpr->a0);
+    __cprintf("  a1       0x%016lx\n", gpr->a1);
+    __cprintf("  a2       0x%016lx\n", gpr->a2);
+    __cprintf("  a3       0x%016lx\n", gpr->a3);
+    __cprintf("  a4       0x%016lx\n", gpr->a4);
+    __cprintf("  a5       0x%016lx\n", gpr->a5);
+    __cprintf("  a6       0x%016lx\n", gpr->a6);
+    __cprintf("  a7       0x%016lx\n", gpr->a7);
+    __cprintf("  s2       0x%016lx\n", gpr->s2);
+    __cprintf("  s3       0x%016lx\n", gpr->s3);
+    __cprintf("  s4       0x%016lx\n", gpr->s4);
+    __cprintf("  s5       0x%016lx\n", gpr->s5);
+    __cprintf("  s6       0x%016lx\n", gpr->s6);
+    __cprintf("  s7       0x%016lx\n", gpr->s7);
+    __cprintf("  s8       0x%016lx\n", gpr->s8);
+    __cprintf("  s9       0x%016lx\n", gpr->s9);
+    __cprintf("  s10      0x%016lx\n", gpr->s10);
+    __cprintf("  s11      0x%016lx\n", gpr->s11);
+    __cprintf("  t3       0x%016lx\n", gpr->t3);
+    __cprintf("  t4       0x%016lx\n", gpr->t4);
+    __cprintf("  t5       0x%016lx\n", gpr->t5);
+    __cprintf("  t6       0x%016lx\n", gpr->t6);
+}
+
+void
+print_context(struct context* ctx) {
+    __cprintf("  ra       0x%016lx\n", ctx->ra);
+    __cprintf("  sp       0x%016lx\n", ctx->sp);
+    __cprintf("  s0       0x%016lx\n", ctx->s0);
+    __cprintf("  s1       0x%016lx\n", ctx->s1);
+    __cprintf("  s2       0x%016lx\n", ctx->s2);
+    __cprintf("  s3       0x%016lx\n", ctx->s3);
+    __cprintf("  s4       0x%016lx\n", ctx->s4);
+    __cprintf("  s5       0x%016lx\n", ctx->s5);
+    __cprintf("  s6       0x%016lx\n", ctx->s6);
+    __cprintf("  s7       0x%016lx\n", ctx->s7);
+    __cprintf("  s8       0x%016lx\n", ctx->s8);
+    __cprintf("  s9       0x%016lx\n", ctx->s9);
+    __cprintf("  s10      0x%016lx\n", ctx->s10);
+    __cprintf("  s11      0x%016lx\n", ctx->s11);
+}
+
+static const char *cause_str[16];
+
+void
+print_trapframe(struct trapframe *tf) {
+#define DECLARE_CAUSE(str, i) cause_str[i] = str;
+DECLARE_CAUSE("misaligned fetch", CAUSE_MISALIGNED_FETCH)
+DECLARE_CAUSE("fetch access", CAUSE_FETCH_ACCESS)
+DECLARE_CAUSE("illegal instruction", CAUSE_ILLEGAL_INSTRUCTION)
+DECLARE_CAUSE("breakpoint", CAUSE_BREAKPOINT)
+DECLARE_CAUSE("misaligned load", CAUSE_MISALIGNED_LOAD)
+DECLARE_CAUSE("load access", CAUSE_LOAD_ACCESS)
+DECLARE_CAUSE("misaligned store", CAUSE_MISALIGNED_STORE)
+DECLARE_CAUSE("store access", CAUSE_STORE_ACCESS)
+DECLARE_CAUSE("user_ecall", CAUSE_USER_ECALL)
+DECLARE_CAUSE("supervisor_ecall", CAUSE_SUPERVISOR_ECALL)
+DECLARE_CAUSE("hypervisor_ecall", CAUSE_HYPERVISOR_ECALL)
+DECLARE_CAUSE("machine_ecall", CAUSE_MACHINE_ECALL)
+DECLARE_CAUSE("fetch page fault", CAUSE_FETCH_PAGE_FAULT)
+DECLARE_CAUSE("load page fault", CAUSE_LOAD_PAGE_FAULT)
+DECLARE_CAUSE("store page fault", CAUSE_STORE_PAGE_FAULT)
+#undef DECLARE_CAUSE
+    __cprintf("trapframe at %p\n", tf);
+    print_regs(&tf->gpr);
+    __cprintf("  status   0x%016lx\n", tf->status);
+    __cprintf("  epc      0x%016lx\n", tf->epc);
+    __cprintf("  badvaddr 0x%016lx\n", tf->badvaddr);
+    __cprintf("  cause    0x%016lx %s\n", tf->cause,
+              (tf->cause < 16 && cause_str[tf->cause]) ? cause_str[tf->cause] : "?");
 }
 
 void
@@ -184,51 +267,33 @@ printtrap(struct trapframe *tf, bool lock)
     kstack = myproc()->kstack;
   }
 
-  __cprintf("trap %lu err 0x%x cpu %u cs %u ds %u ss %u\n"
-            // Basic machine state
-            "  rip %016lx rsp %016lx rbp %016lx\n"
-            "  cr2 %016lx cr3 %016lx cr4 %016lx\n"
-            // Function arguments (AMD64 ABI)
-            "  rdi %016lx rsi %016lx rdx %016lx\n"
-            "  rcx %016lx r8  %016lx r9  %016lx\n"
-            // Everything else
-            "  rax %016lx rbx %016lx r10 %016lx\n"
-            "  r11 %016lx r12 %016lx r13 %016lx\n"
-            "  r14 %016lx r15 %016lx rflags %016lx\n"
-            // Process state
-            "  proc: name %s pid %u kstack %p\n",
-            tf->trapno, tf->err, mycpu()->id, tf->cs, tf->ds, tf->ss,
-            tf->rip, tf->rsp, tf->rbp,
-            rcr2(), rcr3(), rcr4(),
-            tf->rdi, tf->rsi, tf->rdx,
-            tf->rcx, tf->r8, tf->r9,
-            tf->rax, tf->rbx, tf->r10,
-            tf->r11, tf->r12, tf->r13,
-            tf->r14, tf->r15, tf->rflags,
-            name, pid, kstack);
+  print_trapframe(tf);
+  __cprintf("  proc: name %s pid %u kstack %p\n", name, pid, kstack);
+  
   // Trap decoding
-  if (tf->trapno == T_PGFLT) {
+  // TODO
+  /*if (tf->trapno == T_PGFLT) {
     __cprintf("  page fault: %s %s %016lx from %s mode\n",
               tf->err & FEC_PR ?
               "protection violation" :
               "non-present page",
               tf->err & FEC_WR ? "writing" : "reading",
-              rcr2(),
+              0xdeadbeef,
               tf->err & FEC_U ? "user" : "kernel");
-  }
-  if (kstack && tf->rsp < (uintptr_t)kstack)
+  }*/
+  if (kstack && tf->gpr.sp < (uintptr_t)kstack)
     __cprintf("  possible stack overflow\n");
 }
 
 void __noret__
 kerneltrap(struct trapframe *tf)
 {
-  cli();
+  intr_disable();
   acquire(&cons.lock);
 
   __cprintf("kernel ");
   printtrap(tf, false);
-  printtrace(tf->rbp);
+  printtrace(tf->gpr.s0);
 
   panicked = 1;
   halt();
@@ -241,7 +306,7 @@ panic(const char *fmt, ...)
 {
   va_list ap;
 
-  cli();
+  intr_disable();
   acquire(&cons.lock);
 
   __cprintf("cpu%d-%s: panic: ",
@@ -251,7 +316,7 @@ panic(const char *fmt, ...)
   vprintfmt(writecons, 0, fmt, ap);
   va_end(ap);
   __cprintf("\n");
-  printtrace(rrbp());
+  printtrace(read_fp());
 
   panicked = 1;
   halt();
@@ -296,11 +361,11 @@ consoleintr(int (*getc)(void))
       procdumpall();
       break;
     case C('E'):  // Print user-space PCs.
-      for (u32 i = 0; i < NCPU; i++)
+      for (u32 i = 0; i < ncpu; i++)
         cpus[i].timer_printpc = 1;
       break;
     case C('T'):  // Print user-space PCs and stack traces.
-      for (u32 i = 0; i < NCPU; i++)
+      for (u32 i = 0; i < ncpu; i++)
         cpus[i].timer_printpc = 2;
       break;
     case C('U'):  // Kill line.
@@ -418,7 +483,7 @@ console_stream::write(sbuf buf)
 bool
 panic_stream::begin_print()
 {
-  cli();
+  intr_disable();
   console_stream::begin_print();
   if (cons.nesting_count == 1) {
     print("cpu ", myid(), " (", myproc() ? myproc()->name : "unknown",
@@ -433,7 +498,7 @@ panic_stream::end_print()
   if (cons.nesting_count > 1) {
     console_stream::end_print();
   } else {
-    printtrace(rrbp());
+    printtrace(read_fp());
     panicked = 1;
     halt();
     for(;;);
@@ -452,5 +517,5 @@ initconsole(void)
   devsw[MAJ_CONSOLE].write = consolewrite;
   devsw[MAJ_CONSOLE].read = consoleread;
 
-  extpic->map_isa_irq(IRQ_KBD).enable();
+  // TODO: enable kbd irq
 }

@@ -1,10 +1,7 @@
 #include "types.h"
 #include "amd64.h"
 #include "kernel.hh"
-#include "pci.hh"
-#include "pcireg.hh"
 #include "spinlock.hh"
-#include "apic.hh"
 #include "irq.hh"
 #include "e1000reg.hh"
 #include "kstream.hh"
@@ -338,25 +335,7 @@ e1000::attach(struct pci_func *pcif)
   if (the_netdev)
     return 0;
 
-  int devid = PCI_PRODUCT(pcif->dev_id);
-  e1000_model *model = nullptr;
-  for (auto &m : e1000_models) {
-    if (devid == m.devid) {
-      model = &m;
-      break;
-    }
-  }
-  if (!model)
-    panic("e1000attach: unrecognized devid %x", devid);
-  console.println("e1000: Found ", model->name);
-
-  // On dual-ported devices, PCI functions 0 and 1 are ports 0 and 1.
-  if ((model->flags & MODEL_FLAG_DUAL_PORT) && pcif->func != E1000_PORT)
-    return 0;
-
-  pci_func_enable(pcif);
-
-  class e1000 *e1000 = new class e1000(model, pcif);
+  class e1000 *e1000 = new class e1000(nullptr, pcif);
   if (!e1000->valid()) {
     delete e1000;
     return 0;
@@ -368,7 +347,7 @@ e1000::attach(struct pci_func *pcif)
 }
 
 e1000::e1000(const struct e1000_model *model, struct pci_func *pcif)
-  : model_(model), membase_(pcif->reg_base[0]), iobase_(pcif->reg_base[2]),
+  : model_(model), membase_(0), iobase_(0),
     txclean_(0), txinuse_(0), rxclean_(0), rxuse_(0), txd_{}, rxd_{},
     lk_("e1000", true), valid_(false)
 {
@@ -385,12 +364,12 @@ e1000::e1000(const struct e1000_model *model, struct pci_func *pcif)
   if (model_->flags & MODEL_FLAG_PCIE) {
     // Non-PCIe models advertise MSI support, but it doesn't seem to
     // work.  Probably our bug, but Linux doesn't enable it either.
-    e1000irq = pci_map_msi_irq(pcif);
+    //e1000irq = pci_map_msi_irq(pcif);
   }
   if (!e1000irq.valid()) {
     // XXX Annoying that the device needs to know about the extpic.
     // Better if it just knew about PCI and PCI knew to do this.
-    e1000irq = extpic->map_pci_irq(pcif);
+    //e1000irq = extpic->map_pci_irq(pcif);
     // XXX Annoying that the device needs to know to only enable if it
     // came from the extpic.
     e1000irq.enable();
@@ -598,6 +577,5 @@ e1000::init_tx()
 void
 inite1000(void)
 {
-  for (auto &m : e1000_models)
-    pci_register_driver(0x8086, m.devid, e1000::attach);
+  for (auto &m : e1000_models);
 }
