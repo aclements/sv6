@@ -28,6 +28,9 @@
 #define RADIX_DEBUG   DEBUG
 #define SEQLOCK_DEBUG DEBUG
 #define KSTACK_DEBUG  DEBUG // use guard pages for over/underflow protection
+#define SYSCALL_DEBUG 1
+#define TRAP_DEBUG    1
+#define TLB_INVL_DEBUG 1
 #define USTACKPAGES   8
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
 #define GC_GLOBAL     true

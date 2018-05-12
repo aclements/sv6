@@ -230,9 +230,9 @@
 #define rdcycle() read_csr(cycle)
 #define rdinstret() read_csr(instret)
 
-#define tlb_invl(va) do { asm volatile ("sfence.vma %0" : : "r"((uintptr_t)(va))); } while (0)
+#define tlb_invl(va) do { if (TLB_INVL_DEBUG) puts("tlb_invl\n"); asm volatile ("sfence.vma %0" : : "r"((uintptr_t)(va))); } while (0)
 
-#define tlb_invl_all() do { asm volatile ("sfence.vma"); } while (0)
+#define tlb_invl_all() do { if (TLB_INVL_DEBUG) puts("tlb_invl_all\n"); asm volatile ("sfence.vma"); } while (0)
 
 #endif
 
