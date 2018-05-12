@@ -28,6 +28,7 @@
 #define PTE_G  0x020
 #define PTE_A  0x040
 #define PTE_D  0x080
+#define PTE_AD (PTE_A | PTE_D) // if the processor does not set A/D automatically
 
 #define PTE_SIZE 8
 
@@ -38,7 +39,7 @@
 // Address in page table or page directory entry
 #define PTE_ADDR(pte)	(((uintptr_t)(pte) & 0xFFFFFFFFFFFFFC00u) << 2)
 
-#define MK_PTE(pa, flags) ((((uintptr_t)(pa) & 0xFFFFFFFFFFFFF000u) >> 2) | flags)
+#define MK_PTE(pa, flags) ((((uintptr_t)(pa) & 0xFFFFFFFFFFFFF000u) >> 2) | (flags) | (((flags) & (PTE_R | PTE_X)) ? PTE_A : 0) | (((flags) & (PTE_W)) ? PTE_D : 0))
 
 #define PTE_IS_LEAF(pte) (((pte) & (PTE_R | PTE_W | PTE_X)) != 0)
 

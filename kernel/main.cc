@@ -50,8 +50,8 @@ void idleloop(void);
 
 #define IO_RTC  0x70
 
-static std::atomic<uintptr_t> bstate;
-static std::atomic<uint64_t> boot_ticket(0);
+static std::atomic<uintptr_t> bstate(-1);
+static std::atomic<uint64_t> boot_ticket(-1);
 
 static void print_stack(u64 hartid)
 {
@@ -107,9 +107,12 @@ cmain(u64 hartid, void *fdt)
   // in the image.  *cpu and such won't work until we inittls.
   percpu_offsets[0] = __percpu_start;
 
+  puts("System boot successfully!\n");
+  cprintf("FDT is at %p.\n", fdt);
   initphysmem(fdt);
   initpg();                // Requires initphysmem
   inithz(fdt);        // CPU Hz, microdelay
+  ncpu -= HARTID_START; // FIXME: for hifive unleashed
   inittls(&cpus[0]);
   //ncpu = 1;
   initnuma();
@@ -176,7 +179,7 @@ cmain(u64 hartid, void *fdt)
   initwd();                // Requires initnmi
   cprintf("cpu %ld boot successfully!\n", hartid);
   print_stack(hartid);
-  cprintf("System initialized successfully!\nFDT is at %p.\n", fdt);
+  cprintf("System initialized successfully!\n");
   idleloop();
 
   panic("Unreachable");

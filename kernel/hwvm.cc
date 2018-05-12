@@ -182,9 +182,9 @@ public:
             throw_bad_alloc();
           memset(next, 0, sizeof *next);
           uintptr_t pte = MK_PTE(v2p(next), create);
-          if (reached != level + 1) {
+          /*if (reached != level + 1)*/ {
             // is not the last level
-            pte &= ~(PTE_R | PTE_W | PTE_X);
+            pte &= ~(PTE_R | PTE_W | PTE_X | PTE_A | PTE_D | PTE_U);
           }
           if (!atomic_compare_exchange_weak(
                 entryp, &entry, pte)) {
@@ -469,7 +469,7 @@ batched_shootdown::perform() const
 
   for (int i = 0; i < ncpu; i++) {
     if (cpus[i].tlb_ptbr == ptbr && cpus[i].tlbflush_done < myreq) {
-      const unsigned long mask = 1UL << i;
+      const unsigned long mask = 1UL << (i + HARTID_START);
       sbi_remote_sfence_vma(&mask, 0, 0);
       kstats::inc(&kstats::tlb_shootdown_targets);
     }
@@ -662,6 +662,7 @@ namespace mmu_per_core_page_table {
   void
   shootdown::perform() const
   {
+    puts("shootdown::perform()\n");
     // XXX Alternatively, we could reach into the per-core page tables
     // directly from invalidate.  Then it would be able to zero them
     // directly and gather PTE_P bits (instead of using a separate

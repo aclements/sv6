@@ -47,6 +47,7 @@ SECTIONS
                 *(.eh_frame_end)
                 *(.gcc_except_table .gcc_except_table.*)
 	}
+	. = ALIGN(8);
 	PROVIDE(edata = .);
 	.bss : {
 		*(.bss .bss.* .gnu.linkonce.b.*)

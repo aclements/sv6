@@ -224,6 +224,7 @@ namespace mmu_per_core_page_table {
     void invalidate(uintptr_t start, uintptr_t len,
                     ForwardIterator tracker_it, shootdown *sd)
     {
+      puts("page_map_cache::invalidate\n");
       assert(start + len <= USERTOP);
 
       // Accumulate shootdown set
@@ -251,6 +252,7 @@ namespace mmu_per_core_page_table {
       // of the page table because of sparse invalidates.  Maybe keep
       // a fixed-size list of regions in the shootdown?
       if (present.any()) {
+        puts("present.any()\n");
         sd->targets |= present;
         sd->cache = this;
         if (start < sd->start)

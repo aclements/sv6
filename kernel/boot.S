@@ -17,8 +17,12 @@
 .section .text, "ax", %progbits
 .globl start
 start:
-  li t1, NPROC
-  bge a0, t1, __die
+  li t0, NCPU
+  addi a0, a0, -HARTID_START # FIXME: for hifive unleashed
+  bgeu a0, t0, __die
+
+  la t0, boot_trap
+  csrw stvec, t0
 
   # setup paging
   la t0, kpml4
@@ -36,6 +40,9 @@ start:
 
 reallocated:
 
+  la t0, boot_trap
+  csrw stvec, t0
+
   # Load VA stack pointer
   la sp, stack + KSTACKSIZE
   slli t0, a0, KSTACKSHIFT
@@ -43,11 +50,23 @@ reallocated:
 
   mv s0, zero # clear frame pointer
 
-  # call into C code.
-  beqz a0, cmain
+  # call into main code.
+  beqz a0, asmmain
 
   # call into C code.
   j mpboot
+
+asmmain:
+  # init .bss
+  la t0, edata
+  la t1, end
+1:
+  beq t0, t1, 2f
+  STORE zero, (t0)
+  addi t0, t0, 8
+  j 1b
+2:
+  j cmain
 
 __die:
   csrrci zero, sstatus, SSTATUS_SIE
@@ -55,22 +74,39 @@ __die:
   wfi
   j 1b
 
-.data
-# Initial stack
-.comm stack, KSTACKSIZE * 8 # FIXME: NPROC
+.balign 8
+boot_trap:
+  csrr s0, sepc
+  csrr s1, 0x143
+  csrr s2, sstatus
+  li a0, 'T'
+  li a7, 1
+  ecall
+  csrr a0, scause
+  addi a0, a0, 'a'
+  ecall
+1:
+  wfi
+  j 1b
 
+.section .data.stack
+# Initial stack
+stack:
+.space KSTACKSIZE * 8 # FIXME: NCPU
+
+.data
 .balign PGSIZE
 .global kpml4
 kpml4:
   .space PX(2, PHY_MEM_BASE) * PTE_SIZE - (. - kpml4)
   # map va PHY_MEM_BASE + (0G~1G) to pa PHY_MEM_BASE + (0G~1G) (temporary)
-  .quad PHY_MEM_BASE / 4 + (PTE_V | PTE_R | PTE_W | PTE_X)
+  .quad PHY_MEM_BASE / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_AD)
   .space PX(2, KBASE) * PTE_SIZE - (. - kpml4)
   # map va KBASE + (0G~4G) to pa 0G~4G
-  .quad 0x00000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G)
-  .quad 0x40000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G)
-  .quad 0x80000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G)
-  .quad 0xC0000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G)
+  .quad 0x00000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G | PTE_AD)
+  .quad 0x40000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G | PTE_AD)
+  .quad 0x80000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G | PTE_AD)
+  .quad 0xC0000000 / 4 + (PTE_V | PTE_R | PTE_W | PTE_X | PTE_G | PTE_AD)
   .space PGSIZE - (. - kpml4)
 
 .data

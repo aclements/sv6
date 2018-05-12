@@ -1227,6 +1227,6 @@ static void parse_mem_map(void *fdt)
   cb.prop = mem_prop;
   cb.done = mem_done;
   cb.extra = &scan;
-
+  cprintf("parse_mem_map...\n");
   fdt_scan((uintptr_t)fdt, &cb);
 }

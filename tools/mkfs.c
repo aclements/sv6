@@ -73,7 +73,7 @@ main(int argc, char *argv[])
     perror(argv[1]);
     exit(1);
   }
-  ftruncate(fsfd, 128 * 1024 * 1024);
+  ftruncate(fsfd, 32 * 1024 * 1024);
   bitblocks = (size+BSIZE*8-1)/(BSIZE*8);
   usedblocks = ninodes / IPB + 3 + bitblocks;
   freeblock = usedblocks;

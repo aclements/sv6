@@ -56,6 +56,7 @@ sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 int
 do_pagefault(struct trapframe *tf)
 {
+  printtrap(tf, true);
   uptr addr = tf->badvaddr;
   uptr err = 0;
   if (!tf_is_kernel(tf))

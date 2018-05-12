@@ -8,7 +8,7 @@ TOOLPREFIX ?=
 # QEMU binary
 QEMU       ?= qemu-system-riscv64
 # Number of CPUs to emulate
-QEMUSMP    ?= 8
+QEMUSMP    ?= 5
 # RAM to simulate (in MB)
 QEMUMEM    ?= 512
 # Default hardware build target.  See param.h for others.
@@ -232,7 +232,6 @@ endif
 # User-provided QEMU options
 QEMUOPTS += $(QEMUEXTRA)
 
-ifeq ($(PLATFORM),xv6)
 KERNBBL = $(O)/bbl.elf
 $(KERNBBL): $(KERN)
 	cd riscv-pk && \
@@ -247,6 +246,19 @@ $(KERNBBL): $(KERN)
 		--with-payload=../../$(KERN) && \
 	make && \
 	cp bbl ../../$@
+
+KERNBIN = $(O)/bbl.bin
+$(KERNBIN): $(KERNBBL)
+	$(OBJCOPY) -S -O binary --change-addresses -0x80000000 $< $@
+
+KERNIMG = $(O)/sd.img
+$(KERNIMG): $(KERNBIN)
+	./mkimg.sh $< $@
+
+ifeq ($(PLATFORM),xv6)
+.PHONY: sdimg
+sdimg: $(KERNIMG)
+
 qemu: $(KERNBBL)
 	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERNBBL)
 gdb: $(KERNBBL)

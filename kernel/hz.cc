@@ -69,7 +69,7 @@ static void hart_done(const struct fdt_scan_node *node, void *extra)
   struct hart_scan *scan = (struct hart_scan *)extra;
 
   if (scan->controller == node && scan->cpu) {
-    if (scan->hart < NPROC) {
+    if (scan->hart < NCPU) {
       ++ncpu;
     }
   }

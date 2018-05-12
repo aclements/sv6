@@ -1,4 +1,5 @@
 #pragma once
+#define HARTID_START 1 // FIXME: for hifive unleashed
 #define NPROC        64  // maximum number of processes
 #define KSTACKSHIFT 15
 #define KSTACKSIZE (1UL << KSTACKSHIFT) // size of per-process kernel stack
@@ -21,7 +22,7 @@
 #define SPINLOCK_DEBUG DEBUG // Debug spin locks
 #define RCU_TYPE_DEBUG DEBUG
 #define LOCKSTAT      DEBUG
-#define ALLOC_MEMSET  DEBUG
+#define ALLOC_MEMSET  0 //DEBUG
 #define BUDDY_DEBUG   DEBUG
 #define REFCACHE_DEBUG DEBUG
 #define RADIX_DEBUG   DEBUG

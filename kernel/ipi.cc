@@ -37,7 +37,7 @@ ipi_call::start(unsigned cpu)
   }
   if (need_ipi)
   {
-    const unsigned long mask = 1UL << cpu;
+    const unsigned long mask = 1UL << (cpu + HARTID_START);
     sbi_send_ipi(&mask);
   }
 }
