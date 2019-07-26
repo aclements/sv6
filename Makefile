@@ -18,7 +18,7 @@ EXCEPTIONS ?= y
 # Shell command to run in VM after booting
 RUN        ?= $(empty)
 # Python binary
-PYTHON     ?= python
+PYTHON     ?= python2
 # Directory containing mtrace-magic.h for HW=mtrace
 MTRACESRC  ?= ../mtrace
 # Mtrace-enabled QEMU binary
@@ -57,9 +57,9 @@ ASFLAGS  =
 else
 CC  ?= $(TOOLPREFIX)gcc
 CXX ?= $(TOOLPREFIX)g++
-CXXFLAGS = -Wno-delete-non-virtual-dtor
-CFLAGS   =
-ASFLAGS  = -Wa,--divide
+CXXFLAGS = -Wno-delete-non-virtual-dtor  -fno-pie -fno-pic
+CFLAGS   = -fno-pie -fno-pic
+ASFLAGS  = -Wa,--divide -fno-pie -fno-pic
 endif
 
 LD = $(TOOLPREFIX)ld
@@ -84,7 +84,7 @@ INCLUDES := -include param.h -iquote libutil/include -I$(MTRACESRC)
 COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 endif
-COMFLAGS += -g -MD -MP -O3 -Wall -Werror -DHW_$(HW) $(INCLUDES)
+COMFLAGS += -g -MD -MP -O3 -Wall -DHW_$(HW) $(INCLUDES)
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++0x -Wno-sign-compare $(CXXFLAGS)
 ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
@@ -205,8 +205,7 @@ QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-nographic \
 	-numa node -numa node \
-	-net user -net nic,model=e1000 \
-	$(if $(QEMUNOREDIR),,-redir tcp:2323::23 -redir tcp:8080::80) \
+	-net user,hostfwd=tcp::2323-:23,hostfwd=tcp::8080-:80 -net nic,model=e1000 \
 	$(if $(QEMUAPPEND),-append "$(QEMUAPPEND)",) \
 
 ## One NUMA node per CPU when mtrace'ing

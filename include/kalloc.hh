@@ -143,7 +143,7 @@ public:
     if (sizeof(T) != PGSIZE)
       panic("%s cannot allocate %zu bytes", __PRETTY_FUNCTION__, sizeof(T));
 
-    if (std::has_trivial_default_constructor<T>::value) {
+    if (std::is_trivially_default_constructible<T>::value) {
       // A trivial default constructor will zero-initialize
       // everything, so we can short-circuit this by allocating a zero
       // page.

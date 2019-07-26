@@ -1,9 +1,9 @@
+#include <atomic>
+#include <iterator>
+
 #include "refcache.hh"
 #include "proc.hh"
 #include "kstream.hh"
-
-#include <atomic>
-#include <iterator>
 
 #if CODEX
 //#define TEST

@@ -50,11 +50,17 @@ void to_stream(class print_stream *s, const vmdesc &vmd)
 
 class page_holder
 {
+  enum {
+    // The number of pages that can be collected before we need to
+    // heap allocate.
+    NLOCAL = 8,
+  };
+
   struct batch
   {
     struct batch *next;
     size_t used;
-    sref<class page_info> pages[];
+    sref<class page_info> pages[NLOCAL];
 
     batch() : next(nullptr), used(0) { }
     ~batch()
@@ -65,9 +71,6 @@ class page_holder
   };
 
   enum {
-    // The number of pages that can be collected before we need to
-    // heap allocate.
-    NLOCAL = 8,
     // The number of pages that can be collected in a heap-allocated
     // page.
     NHEAP = (PGSIZE - sizeof(batch)) / sizeof(sref<class page_info>)
@@ -80,9 +83,10 @@ class page_holder
 
 public:
   page_holder() : cur(&first), curmax(NLOCAL) {
-    static_assert((char*)&((page_holder*)nullptr)->first.pages[NLOCAL] <=
-                  &((page_holder*)nullptr)->first_buf[sizeof(first_buf)],
-                "stack-local batch reservation hack failed");
+    // TODO: fix this hack?
+    // static_assert((char*)&((page_holder*)nullptr)->first.pages[NLOCAL] <=
+    //               &((page_holder*)nullptr)->first_buf[sizeof(first_buf)],
+    //             "stack-local batch reservation hack failed");
   }
 
   ~page_holder()

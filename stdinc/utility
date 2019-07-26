@@ -2,47 +2,48 @@
 
 #pragma once
 
+#include "bits/move.h"
 #include "types.h"              // For size_t
 #include <type_traits>
 
 namespace std {
-  template <class T>
-  T&&
-  forward(typename remove_reference<T>::type& t)
-  {
-    return static_cast<T&&>(t);
-  }
+  // template <class T>
+  // T&&
+  // forward(typename remove_reference<T>::type& t)
+  // {
+  //   return static_cast<T&&>(t);
+  // }
 
-  template <class T>
-  T&&
-  forward(typename remove_reference<T>::type&& t)
-  {
-    return static_cast<T&&>(t);
-  }
+  // template <class T>
+  // T&&
+  // forward(typename remove_reference<T>::type&& t)
+  // {
+  //   return static_cast<T&&>(t);
+  // }
 
-  template<class T>
-  typename remove_reference<T>::type&&
-  move(T&& a)
-  {
-    return static_cast<typename remove_reference<T>::type&&>(a);
-  }
+  // template<class T>
+  // typename remove_reference<T>::type&&
+  // move(T&& a)
+  // {
+  //   return static_cast<typename remove_reference<T>::type&&>(a);
+  // }
 
-  template<class T>
-  void
-  swap(T& a, T& b)
-  {
-    T tmp = move(a);
-    a = move(b);
-    b = move(tmp);
-  }
+  // template<class T>
+  // void
+  // swap(T& a, T& b)
+  // {
+  //   T tmp = move(a);
+  //   a = move(b);
+  //   b = move(tmp);
+  // }
 
-  template<class T, size_t N>
-  void
-  swap(T (&a)[N], T (&b)[N])
-  {
-    for (size_t n = 0; n < N; n++)
-      swap(a[n], b[n]);
-  }
+  // template<class T, size_t N>
+  // void
+  // swap(T (&a)[N], T (&b)[N])
+  // {
+  //   for (size_t n = 0; n < N; n++)
+  //     swap(a[n], b[n]);
+  // }
 
   template<class A, class B>
   struct pair {
