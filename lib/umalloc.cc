@@ -128,12 +128,8 @@ namespace {
   private:
     block *head;
 
-    // Blarg.  If I delete these, GCC fails on any thread-local
-    // variables with "X is thread-local and so cannot be dynamically
-    // initialized".  So hide them the old-fashioned way.
-    block_list(const block_list&) = default;
-    block_list(block_list&&) = default;
-
+    block_list(const block_list&) = delete;
+    block_list(block_list&&) = delete;
     block_list &operator=(const block_list &) = delete;
     block_list &operator=(block_list &&) = delete;
 
@@ -310,7 +306,10 @@ namespace {
 
     T* default_allocate()
     {
-      // TODO: why is this assertion failing?
+      // // This assertion fails because `radix_array::leaf_node` has a private
+      // // destructor. It is unclear *why* that is a problem, but for now leave
+      // // the assertion commented out.
+      //
       // static_assert(std::is_trivially_default_constructible<T>::value,
       //               "T does not have a trivial default constructor");
       return allocate(1);
