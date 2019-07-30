@@ -60,7 +60,7 @@ class page_holder
   {
     struct batch *next;
     size_t used;
-    sref<class page_info> pages[NLOCAL];
+    sref<class page_info> pages[0];
 
     batch() : next(nullptr), used(0) { }
     ~batch()
@@ -84,8 +84,8 @@ class page_holder
 public:
   page_holder() : cur(&first), curmax(NLOCAL) {
     // TODO: fix this hack?
-    // static_assert((char*)&((page_holder*)nullptr)->first.pages[NLOCAL] <=
-    //               &((page_holder*)nullptr)->first_buf[sizeof(first_buf)],
+    // static_assert((void*)&(((page_holder*)nullptr)->first.pages[NLOCAL]) <=
+    //               (void*)&((page_holder*)nullptr)->first_buf[sizeof(first_buf)],
     //             "stack-local batch reservation hack failed");
   }
 
