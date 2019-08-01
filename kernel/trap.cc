@@ -38,6 +38,9 @@ static void trap(struct trapframe *tf);
 u64
 sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 {
+  extern u64 text;
+  writemsr(MSR_FS_BASE, (u64)&text);
+
   if(myproc()->killed) {
     mtstart(trap, myproc());
     exit(-1);
@@ -51,6 +54,9 @@ sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
     mtstart(trap, myproc());
     exit(-1);
   }
+
+  writefs(UDSEG);
+  writemsr(MSR_FS_BASE, myproc()->user_fs_);
 
   return r;
 }
@@ -99,6 +105,9 @@ namespace {
 extern "C" void
 trap_c(struct trapframe *tf)
 {
+  extern u64 text;
+  writemsr(MSR_FS_BASE, (u64)&text);
+
   if (tf->trapno == T_NMI) {
     // An NMI can come in after popcli() drops ncli to zero and intena
     // is 1, but before popcli() checks intena and calls sti.  If the
@@ -146,6 +155,8 @@ trap_c(struct trapframe *tf)
     *nmi_swallow += handled - 1;
 
     mycpu()->intena = intena_save;
+    writefs(UDSEG);
+    writemsr(MSR_FS_BASE, myproc()->user_fs_);
     return;
   }
 
@@ -166,6 +177,9 @@ trap_c(struct trapframe *tf)
   if (myproc()->mtrace_stacks.curr >= 0)
     mtresume(myproc());
 #endif
+
+  writefs(UDSEG);
+  writemsr(MSR_FS_BASE, myproc()->user_fs_);
 }
 
 static void

@@ -71,6 +71,7 @@ sysentry:
         movw    $KDSEG, %cx
         movw    %cx, %ds
         movw    %cx, %es
+        movw    %cx, %fs
 
         movq    %rax, %rsp
 
@@ -129,6 +130,7 @@ trapcommon:
         movw $KDSEG, %ax
         movw %ax, %ds
         movw %ax, %es
+        movw %ax, %fs
 
         cmpw  $KCSEG, TF_CS(%rsp)
         jz 1f

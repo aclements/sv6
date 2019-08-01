@@ -395,8 +395,8 @@ switchvm(struct proc *p)
     *cur_page_map_cache = nullptr;
   }
 
-  writefs(UDSEG);
-  writemsr(MSR_FS_BASE, p->user_fs_);
+  // writefs(UDSEG);
+  // writemsr(MSR_FS_BASE, p->user_fs_);
 }
 
 // Set up CPU's kernel segment descriptors.

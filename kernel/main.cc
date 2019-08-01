@@ -82,6 +82,10 @@ mpboot(void)
   for (size_t i = 0; i < __percpuinit_array_end - __percpuinit_array_start; i++)
       (*__percpuinit_array_start[i])(bcpuid);
 
+  extern u64 text;
+  writefs(KDSEG);
+  writemsr(MSR_FS_BASE, (u64)&text);
+
   initlapic();
   initfpu();
   initmsr();
@@ -174,6 +178,10 @@ cmain(u64 mbmagic, u64 mbaddr)
   // Make cpus[0] work.  CPU 0's percpu data is pre-allocated directly
   // in the image.  *cpu and such won't work until we inittls.
   percpu_offsets[0] = __percpu_start;
+
+  extern u64 text;
+  writefs(KDSEG);
+  writemsr(MSR_FS_BASE, (u64)&text);
 
   inituart();
   initphysmem(mbaddr);
