@@ -31,6 +31,7 @@ cpuid::cpuid() : basic_{}, extended_{}
   l = get_leaf(leafid::features);
   features_.mwait = l.c & (1<<3);
   features_.pdcm = l.c & (1<<15);
+  features_.pcid = l.c & (1<<17);
   features_.x2apic = l.c & (1<<21);
 
   features_.apic = l.d & (1<<9);

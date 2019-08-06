@@ -167,6 +167,7 @@ public:
     // 1.ECX
     bool mwait : 1;
     bool pdcm : 1;              // Perfmon and debug
+    bool pcid : 1;
     bool x2apic : 1;
 
     // 1.EDX
