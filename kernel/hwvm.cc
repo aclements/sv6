@@ -331,8 +331,8 @@ initpg(void)
     kvmallocpos = KVMALLOC;
   }
 
-  // Enable global pages.  This has to happen on every core.
-  lcr4(rcr4() | CR4_PGE);
+  // Enable global pages and PCIDs.  This has to happen on every core.
+  lcr4(rcr4() | CR4_PGE | CR4_PCIDE);
 }
 
 // Clean up mappings that were only required during early boot.
@@ -351,7 +351,7 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
   struct mypgmap
   {
     pme_t e[PGSIZE / sizeof(pme_t)];
-  } *pml4 = (struct mypgmap*)p2v(rcr3());
+  } *pml4 = (struct mypgmap*)p2v(rcr3() & ~0xfff);
   for (size_t i = 0; i < n; ++i) {
     uintptr_t va = src + i;
     void *obj = pml4;
@@ -635,7 +635,32 @@ namespace mmu_per_core_page_table {
     auto &mypml4 = *pml4;
     if (!mypml4)
       mypml4 = kpml4.kclone();
-    mypml4->switch_to();
+
+    bool flush_tlb = true;
+    int pcid = mycpu()->pcid_history_head;
+
+    static_assert(NCPU * PCID_HISTORY_SIZE <= 4096,
+                  "Per cpu pcids don't work with this many CPUS!");
+    auto& pcid_history = mycpu()->pcid_history;
+    for(int i = 0; i < PCID_HISTORY_SIZE; i++) {
+      if(pcid_history[i] == mypml4) {
+        flush_tlb = false;
+        pcid = i;
+        break;
+      }
+    }
+
+    if(pcid == mycpu()->pcid_history_head) {
+      mycpu()->pcid_history_head = (pcid + 1) % PCID_HISTORY_SIZE;
+    }
+    pcid_history[pcid] = mypml4;
+
+    u64 cr3 = v2p(mypml4)
+      | ((mycpu()->id * PCID_HISTORY_SIZE + pcid) * 2 + 1)
+      | (flush_tlb ? 0 : ((u64)1<<63));
+
+    lcr3(cr3);
+    mycpu()->tlb_cr3 = cr3;
   }
 
   u64

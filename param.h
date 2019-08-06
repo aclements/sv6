@@ -15,6 +15,7 @@
 #define CACHELINE    64  // cache line size
 #define CPUKSTACKS   (NPROC + NCPU*2)
 #define VICTIMAGE 1000000 // cycles a proc executes before an eligible victim
+#define PCID_HISTORY_SIZE 8 // number of past pgmap's to remember on each CPU
 #define VERBOSE       0  // print kernel diagnostics
 #define SPINLOCK_DEBUG DEBUG // Debug spin locks
 #define RCU_TYPE_DEBUG DEBUG

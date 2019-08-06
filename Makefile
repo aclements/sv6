@@ -201,7 +201,7 @@ ifneq ($(RUN),)
 override QEMUAPPEND += \$$ $(RUN)
 endif
 
-QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) \
+QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-nographic \
 	-numa node -numa node \

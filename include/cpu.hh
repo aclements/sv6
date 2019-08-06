@@ -44,6 +44,9 @@ struct cpu {
   void *percpu_base;           // Per-CPU memory region base
   uint64_t no_sched_count;     // sched disable count; high bit means
                                // yield requested
+
+  struct pgmap* pcid_history[PCID_HISTORY_SIZE] __mpalign__; // ring buffer of the last 8 pgmaps
+  int pcid_history_head;        // head pointer for ring buffer
 } __mpalign__;
 
 DECLARE_PERCPU(struct cpu, cpus);
