@@ -114,6 +114,11 @@
 // Disable the hardware stream and adjacent cache line prefetcher
 #define DISABLE_PREFETCH_STREAM 1
 #define DISABLE_PREFETCH_ADJ 1
+#elif defined(HW_bhw2)
+#define DEBUG         0
+#define NCPU          40  // maximum number of CPUs
+#define NSOCKET       2
+#define PERFSIZE      (128<<20ull)
 
 //
 // Linux user-space targets (no kernel, so most options aren't set)

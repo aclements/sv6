@@ -35,7 +35,7 @@ enum { duration = 5 };
 // XXX(Austin) Do this right.  Put these in a proper PMC library.
 #if defined(HW_tom)
 #define PERF_amd
-#elif defined(HW_josmp) || defined(HW_ben)
+#elif defined(HW_josmp) || defined(HW_ben) || defined(HW_bhw2)
 #define PERF_intel
 #endif
 
