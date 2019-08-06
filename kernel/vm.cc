@@ -179,14 +179,13 @@ vmap::copy()
 }
 
 uptr
-vmap::insert(const vmdesc &desc, uptr start, uptr len, bool dotlb)
+vmap::insert(const vmdesc &desc, uptr start, uptr len)
 {
   kstats::inc(&kstats::mmap_count);
   kstats::timer timer(&kstats::mmap_cycles);
 
   if (SDEBUG)
-    sdebug.println("vm: insert(", desc, ",", shex(start), ",", shex(len),
-                   ",", dotlb, ")");
+    sdebug.println("vm: insert(", desc, ",", shex(start), ",", shex(len), ")");
 
   assert(start % PGSIZE == 0);
   assert(len % PGSIZE == 0);

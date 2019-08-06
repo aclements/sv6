@@ -133,7 +133,7 @@ struct vmap : public referenced {
 
   // Map desc from virtual addresses start to start+len.  Returns
   // MAP_FAILED ((uptr)-1) if inserting the region fails.
-  uptr insert(const vmdesc &desc, uptr start, uptr len, bool dotlb = true);
+  uptr insert(const vmdesc &desc, uptr start, uptr len);
 
   // Unmap from virtual addresses start to start+len.
   int remove(uptr start, uptr len);

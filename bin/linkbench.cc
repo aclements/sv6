@@ -49,7 +49,7 @@ static volatile bool stop __mpalign__;
 static volatile bool warmup;
 static __padout__ __attribute__((unused));
 
-static histogram_log2<uint64_t, 1<<20> tsc_hist[256];
+// static histogram_log2<uint64_t, 1<<20> tsc_hist[256];
 
 void
 mystat()

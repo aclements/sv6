@@ -79,8 +79,8 @@ void
 vprintfmt(void (*putch)(int, void*), void *putdat,
           const char *fmt, va_list ap)
 {
-  register const char *p;
-  register int ch;
+  const char *p;
+  int ch;
   unsigned long long num;
   int base, lflag, width, precision, altflag;
   char padc;

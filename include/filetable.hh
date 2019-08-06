@@ -253,7 +253,7 @@ private:
 
   fdinfo lock_fdinfo(std::atomic<fdinfo> *infop)
   {
-    fdinfo info, newinfo;
+    fdinfo info;
     while (true) {
       info = infop->load(std::memory_order_relaxed);
     retry:

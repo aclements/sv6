@@ -4,6 +4,7 @@
 #define __padout__  \
   char __XCONCAT(__padout, __COUNTER__)[0] __attribute__((aligned(CACHELINE)))
 #define __mpalign__ __attribute__((aligned(CACHELINE)))
+#define __page_align__ __attribute__((aligned(PGSIZE)))
 #define __noret__   __attribute__((noreturn))
 #define barrier() __asm volatile("" ::: "memory")
 

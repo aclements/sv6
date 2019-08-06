@@ -23,6 +23,18 @@ operator new(std::size_t nbytes)
   return x+1;
 }
 
+void*
+operator new(std::size_t nbytes, std::align_val_t al)
+{
+  size_t alignment = (size_t)al;
+  if(alignment < sizeof(u64))
+    alignment = sizeof(u64);
+
+  char* x = (char*)kmalloc(nbytes + alignment, "cpprt aligned new");
+  *(u64*)x = nbytes;
+  return x + alignment;
+}
+
 void
 operator delete(void* p)
 {
@@ -35,6 +47,9 @@ operator delete(void* p)
 void*
 operator new[](std::size_t nbytes)
 {
+  // XXX This allocation is only aligned to 8 bytes, but could be backing a
+  // struct with larger allocation requirements. Anything containing a u128 or
+  // long double will probably crash as a result.
   u64* x = (u64*) kmalloc(nbytes + sizeof(u64), "array");
   *x = nbytes;
   return x+1;

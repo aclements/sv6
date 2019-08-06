@@ -8,20 +8,6 @@
 #include <memory>
 
 template<class T>
-struct vptr64 {
-  typedef u128 __inttype;
-  typedef T __ptrtype;
-  __inttype _a;
-
-  T ptr() const { return (T) iptr(); }
-  u64 iptr() const { return _a & 0xffffffffffffffffULL; }
-  u64 v() const { return _a >> 64; }
-
-  vptr64(T p, u64 v) : _a((((u128)v)<<64) | (u64) p) {}
-  vptr64(u128 a) : _a(a) {}
-};
-
-template<class T>
 struct vptr48 {
   typedef u64 __inttype;
   typedef T __ptrtype;
