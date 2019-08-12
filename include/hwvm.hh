@@ -7,6 +7,11 @@
 
 struct pgmap;
 
+struct pgmap_pair {
+  pgmap* user;
+  pgmap* kernel;
+};
+
 // A TLB shootdown gatherer that doesn't track anything, but as a
 // result can be batched with other TLB shootdowns.
 class batched_shootdown
@@ -200,7 +205,7 @@ namespace mmu_per_core_page_table {
 
   class page_map_cache
   {
-    percpu<struct pgmap*> pml4;
+    percpu<pgmap_pair> pml4s;
     friend class shootdown;
 
     // Clear and TLB flush a region of this core's page table.
@@ -209,8 +214,10 @@ namespace mmu_per_core_page_table {
   public:
     page_map_cache()
     {
-      for (size_t i = 0; i < NCPU; ++i)
-        pml4[i] = nullptr;
+      for (size_t i = 0; i < NCPU; ++i) {
+        pml4s[i].user = nullptr;
+        pml4s[i].kernel = nullptr;
+      }
     }
     page_map_cache(const page_map_cache&) = delete;
     page_map_cache(page_map_cache&&) = delete;

@@ -621,7 +621,8 @@ namespace mmu_per_core_page_table {
   page_map_cache::~page_map_cache()
   {
     for (size_t i = 0; i < ncpu; ++i) {
-      delete pml4[i];
+      delete pml4s[i].user;
+      delete pml4s[i].kernel;
     }
   }
 
@@ -629,18 +630,25 @@ namespace mmu_per_core_page_table {
   page_map_cache::insert(uintptr_t va, page_tracker *t, pme_t pte)
   {
     scoped_cli cli;
-    auto mypml4 = *pml4;
-    assert(mypml4);
-    mypml4->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
+    pgmap_pair& mypml4s = *pml4s;
+    assert(mypml4s.user);
+    assert(mypml4s.kernel);
+    mypml4s.user->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
+    mypml4s.kernel->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
     t->tracker_cores.set(myid());
   }
 
   void
   page_map_cache::switch_to() const
   {
-    auto &mypml4 = *pml4;
-    if (!mypml4)
-      mypml4 = kpml4.kclone();
+    auto &mypml4s = *pml4s;
+    if (!mypml4s.user) {
+      // TODO: This shouldn't be a full kclone().
+      mypml4s.user = kpml4.kclone();
+    }
+    if (!mypml4s.kernel) {
+      mypml4s.kernel = kpml4.kclone();
+    }
 
     bool flush_tlb = true;
     int pcid = mycpu()->pcid_history_head;
@@ -649,7 +657,7 @@ namespace mmu_per_core_page_table {
                   "Per cpu pcids don't work with this many CPUS!");
     auto& pcid_history = mycpu()->pcid_history;
     for(int i = 0; i < PCID_HISTORY_SIZE; i++) {
-      if(pcid_history[i] == mypml4) {
+      if(pcid_history[i] == mypml4s.user) {
         flush_tlb = false;
         pcid = i;
         break;
@@ -659,9 +667,9 @@ namespace mmu_per_core_page_table {
     if(pcid == mycpu()->pcid_history_head) {
       mycpu()->pcid_history_head = (pcid + 1) % PCID_HISTORY_SIZE;
     }
-    pcid_history[pcid] = mypml4;
+    pcid_history[pcid] = mypml4s.user;
 
-    u64 cr3 = v2p(mypml4)
+    u64 cr3 = v2p(mypml4s.user)
       | ((mycpu()->id * PCID_HISTORY_SIZE + pcid) * 2 + 1)
       | (flush_tlb ? 0 : ((u64)1<<63));
 
@@ -675,10 +683,10 @@ namespace mmu_per_core_page_table {
     u64 count = 0;
 
     for (int i = 0; i < ncpu; i++) {
-      pgmap* pm = pml4[i];
-      if (!pm)
+      pgmap_pair& pm = pml4s[i];
+      if (!pm.kernel)
         continue;
-      count += pm->internal_pages();
+      count += pm.kernel->internal_pages();
     }
 
     return count;
@@ -693,16 +701,22 @@ namespace mmu_per_core_page_table {
     // path.)
     bool current =
       (reinterpret_cast<const page_map_cache*>(*cur_page_map_cache) == this);
-    pgmap *mypml4 = *pml4;
+    pgmap_pair& mypml4s = *pml4s;
     // If we're clearing this CPU's page map cache, then we must have
     // inserted something into it previously.  (Note that this may
     // not hold if we start tracking shootdowns conservatively.)
-    assert(mypml4);
-    for (auto it = mypml4->find(start); it.index() < end; it += it.span()) {
+    assert(mypml4s.user);
+    assert(mypml4s.kernel);
+    for (auto it = mypml4s.user->find(start); it.index() < end; it += it.span()) {
       if (it.is_set()) {
         it->store(0, memory_order_relaxed);
         if (current)
           invlpg((void*)it.index());
+      }
+    }
+    for (auto it = mypml4s.kernel->find(start); it.index() < end; it += it.span()) {
+      if (it.is_set()) {
+        it->store(0, memory_order_relaxed);
       }
     }
   }
