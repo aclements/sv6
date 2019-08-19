@@ -60,8 +60,10 @@ typedef enum procstate {
 
 // Per-process state
 struct proc {
-  sref<vmap> vmap;             // va -> vma
   char *kstack;                // Bottom of kernel stack for this process
+  __page_pad__;
+
+  sref<vmap> vmap;             // va -> vma
   vmalloc_ptr<char[]> kstack_vm; // vmalloc'd kstack, if using vmalloc
   volatile int pid;            // Process ID
   struct proc *parent;         // Parent process
@@ -138,7 +140,7 @@ private:
   proc(const proc& x);
   
   procstate_t state_;       // Process state  
-};
+} __page_align__;
 
 class kill_exception : public std::runtime_error {
 public:

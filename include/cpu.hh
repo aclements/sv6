@@ -36,7 +36,9 @@ struct cpu {
   hwid_t hwid __mpalign__;     // Local APIC ID, accessed by other CPUs
   __padout__;
 
-  // Cpu-local storage variables; see below and in spercpu.hh
+  __page_pad__;
+
+  // Cpu-local storage variables; see below and in spercpu.hh (%gs points here)
   struct cpu *cpu;
   struct proc *proc;           // The currently-running process.
   struct cpu_mem *mem;         // The per-core memory metadata
@@ -45,9 +47,13 @@ struct cpu {
   uint64_t no_sched_count;     // sched disable count; high bit means
                                // yield requested
 
-  struct pgmap* pcid_history[PCID_HISTORY_SIZE] __mpalign__; // ring buffer of the last 8 pgmaps
+  u64 scratch;                 // scratch space to use during page table swap
+
+  __page_pad__;
+
+  struct pgmap* pcid_history[PCID_HISTORY_SIZE]; // ring buffer of the last 8 pgmaps
   int pcid_history_head;        // head pointer for ring buffer
-} __mpalign__;
+} __page_align__;
 
 DECLARE_PERCPU(struct cpu, cpus);
 

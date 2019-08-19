@@ -129,8 +129,8 @@ public:
     memmove(&pair.kernel->e[k], &e[k], 8*(512-k));
 
     k = PX(L_PML4, KGLOBAL);
-    memset(&pair.user->e[0], 0, 8*k);
-    memmove(&pair.user->e[k], &e[k], 8*(512-k));
+    memset(&pair.user->e[0], 0, PGSIZE);
+    pair.user->uexpose((void*)KCODE, L_2M);
 
     return pair;
   }
@@ -148,6 +148,15 @@ public:
   u64 internal_pages() const
   {
     return internal_pages(L_PML4, PX(L_PML4, KGLOBAL));
+  }
+
+  // Map a page of the direct map. When applied to the user page table
+  // (even without the U-bit set), this page of memory will be "quasi
+  // user visible" because of Meltdown style attacks.
+  void uexpose(void* page, int level = L_4K)
+  {
+    auto it = find((u64)page, level);
+    *it.create(0) = v2p(page) | PTE_P | PTE_W | PTE_NX;
   }
 
   // An iterator that references the page structure entry on a fixed
@@ -664,6 +673,7 @@ namespace mmu_per_core_page_table {
     auto &mypml4s = *pml4s;
     if (!mypml4s.kernel) {
       mypml4s = kpml4.kclone_pair();
+      mypml4s.user->uexpose((void*)mycpu(), pgmap::L_4K);
     }
 
     bool flush_tlb = true;

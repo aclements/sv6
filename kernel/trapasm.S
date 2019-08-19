@@ -41,17 +41,17 @@ sysentry:
         movq    %rax, %gs:24 // save %rax so we can use it
         movq    %gs:8, %rax  // myproc()
 
-        movq    %ss:PROC_KSTACK_OFFSET(%rax), %rax
+        movq    PROC_KSTACK_OFFSET(%rax), %rax
         addq    $(KSTACKSIZE-TRAPFRAME_SIZE), %rax
 
         // save all registers we're not allowed to clobber
         // skip padding3, ds
-        movq    %r15, %ss:0x10(%rax)
-        movq    %r14, %ss:0x18(%rax)
-        movq    %r13, %ss:0x20(%rax)
-        movq    %r12, %ss:0x28(%rax)
-        movq    %rbp, %ss:0x30(%rax)
-        movq    %rbx, %ss:0x38(%rax)
+        movq    %r15, 0x10(%rax)
+        movq    %r14, 0x18(%rax)
+        movq    %r13, 0x20(%rax)
+        movq    %r12, 0x28(%rax)
+        movq    %rbp, 0x30(%rax)
+        movq    %rbx, 0x38(%rax)
         // skip r11 (0x40)
         // skip r10 (0x48)
         // skip r9 (0x50)
@@ -63,15 +63,10 @@ sysentry:
         // skip rdi (0x80)
         // skip trapno (0x88)
         // skip err, padding2 (0x90)
-        movq    %rcx, %ss:0x98(%rax)  // rip saved by syscall
+        movq    %rcx, 0x98(%rax)  // rip saved by syscall
         // skip cs, padding (0xa0)
-        movq    %r11, %ss:0xa8(%rax)  // eflags saved by syscall
-        movq    %rsp, %ss:0xb0(%rax)
-
-        movw    $KDSEG, %cx
-        movw    %cx, %ds
-        movw    %cx, %es
-        movw    %cx, %fs
+        movq    %r11, 0xa8(%rax)  // eflags saved by syscall
+        movq    %rsp, 0xb0(%rax)
 
         movq    %rax, %rsp
 
@@ -92,18 +87,15 @@ sysentry:
         movq    %rsp, %r11
         swapgs
 
-        movw    $UDSEG, %cx
-        movw    %cx, %ds
-        movw    %cx, %es
-        movq    %ss:0x10(%r11), %r15
-        movq    %ss:0x18(%r11), %r14
-        movq    %ss:0x20(%r11), %r13
-        movq    %ss:0x28(%r11), %r12
-        movq    %ss:0x30(%r11), %rbp
-        movq    %ss:0x38(%r11), %rbx
-        movq    %ss:0x98(%r11), %rcx    // rip to be restored by sysret
-        movq    %ss:0xb0(%r11), %rsp
-        movq    %ss:0xa8(%r11), %r11    // eflags to be restored by sysret
+        movq    0x10(%r11), %r15
+        movq    0x18(%r11), %r14
+        movq    0x20(%r11), %r13
+        movq    0x28(%r11), %r12
+        movq    0x30(%r11), %rbp
+        movq    0x38(%r11), %rbx
+        movq    0x98(%r11), %rcx    // rip to be restored by sysret
+        movq    0xb0(%r11), %rsp
+        movq    0xa8(%r11), %r11    // eflags to be restored by sysret
         sysretq
 
 trapcommon:
