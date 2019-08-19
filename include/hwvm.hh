@@ -267,7 +267,7 @@ namespace mmu_per_core_page_table {
       }
     }
 
-    void switch_to() const;
+    void switch_to(bool kernel) const;
     void switch_from() const {}
 
     u64 internal_pages() const;

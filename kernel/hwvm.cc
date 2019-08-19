@@ -112,6 +112,29 @@ public:
     return pml4;
   }
 
+  // Allocate and return a new pgmap the clones the user visible
+  // kernel part of this pgmap.
+  pgmap_pair kclone_pair() const
+  {
+    pgmap *pml4 = (pgmap*)kalloc("PML4-pair", PGSIZE * 2);
+    if (!pml4)
+      throw_bad_alloc();
+
+    pgmap_pair pair;
+    pair.kernel = &pml4[0];
+    pair.user = &pml4[1];
+
+    size_t k = PX(L_PML4, KGLOBAL);
+    memset(&pair.kernel->e[0], 0, 8*k);
+    memmove(&pair.kernel->e[k], &e[k], 8*(512-k));
+
+    k = PX(L_PML4, KGLOBAL);
+    memset(&pair.user->e[0], 0, 8*k);
+    memmove(&pair.user->e[k], &e[k], 8*(512-k));
+
+    return pair;
+  }
+
   // Make this page table active on this CPU.
   void switch_to()
   {
@@ -394,15 +417,12 @@ switchvm(struct proc *p)
   // XXX(Austin) This puts the TLB tracking logic in pgmap, which is
   // probably the wrong place.
   if (p->vmap) {
-    p->vmap->cache.switch_to();
+    p->vmap->cache.switch_to(true);
     *cur_page_map_cache = &p->vmap->cache;
   } else {
     kpml4.switch_to();
     *cur_page_map_cache = nullptr;
   }
-
-  // writefs(UDSEG);
-  // writemsr(MSR_FS_BASE, p->user_fs_);
 }
 
 // Set up CPU's kernel segment descriptors.
@@ -639,15 +659,11 @@ namespace mmu_per_core_page_table {
   }
 
   void
-  page_map_cache::switch_to() const
+  page_map_cache::switch_to(bool kernel) const
   {
     auto &mypml4s = *pml4s;
-    if (!mypml4s.user) {
-      // TODO: This shouldn't be a full kclone().
-      mypml4s.user = kpml4.kclone();
-    }
     if (!mypml4s.kernel) {
-      mypml4s.kernel = kpml4.kclone();
+      mypml4s = kpml4.kclone_pair();
     }
 
     bool flush_tlb = true;
@@ -669,9 +685,10 @@ namespace mmu_per_core_page_table {
     }
     pcid_history[pcid] = mypml4s.user;
 
-    u64 cr3 = v2p(mypml4s.user)
-      | ((mycpu()->id * PCID_HISTORY_SIZE + pcid) * 2 + 1)
-      | (flush_tlb ? 0 : ((u64)1<<63));
+    u64 cr3 = v2p(kernel ? mypml4s.kernel : mypml4s.user)
+      | ((mycpu()->id * PCID_HISTORY_SIZE + pcid) * 2)
+      | (flush_tlb ? 0 : ((u64)1<<63))
+      | (kernel ? 0 : 1);
 
     lcr3(cr3);
     mycpu()->tlb_cr3 = cr3;
