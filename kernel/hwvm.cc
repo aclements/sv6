@@ -673,7 +673,7 @@ namespace mmu_per_core_page_table {
     auto &mypml4s = *pml4s;
     if (!mypml4s.kernel) {
       mypml4s = kpml4.kclone_pair();
-      mypml4s.user->uexpose((void*)mycpu(), pgmap::L_4K);
+      mypml4s.user->uexpose((void*)mycpu()->cpu, pgmap::L_4K);
     }
 
     bool flush_tlb = true;

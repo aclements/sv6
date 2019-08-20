@@ -419,8 +419,7 @@ clts()
 // hardware and by trapasm.S, and passed to trap().
 // Also used by sysentry (but sparsely populated).
 struct trapframe {
-  uint16_t padding3[7];
-  uint16_t ds;
+  uint16_t padding3[8];
 
   // amd64 ABI callee saved registers
   uint64_t r15;

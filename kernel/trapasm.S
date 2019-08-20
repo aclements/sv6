@@ -39,6 +39,11 @@
 sysentry:
         swapgs
         movq    %rax, %gs:24 // save %rax so we can use it
+
+	    // movq    %cr3, %rax
+	    // andq    $(~0x1001), %rax
+	    // movq    %rax, %cr3  // swap page table
+
         movq    %gs:8, %rax  // myproc()
 
         movq    PROC_KSTACK_OFFSET(%rax), %rax
@@ -85,8 +90,6 @@ sysentry:
         // return using SYSRET
         add     $(8*3), %rsp  // Discard syscall#, fake activation record
         movq    %rsp, %r11
-        swapgs
-
         movq    0x10(%r11), %r15
         movq    0x18(%r11), %r14
         movq    0x20(%r11), %r13
@@ -94,8 +97,14 @@ sysentry:
         movq    0x30(%r11), %rbp
         movq    0x38(%r11), %rbx
         movq    0x98(%r11), %rcx    // rip to be restored by sysret
+
+   	    // movq    %cr3, %rsp
+	    // andq    $(~0x1001), %rsp
+	    // movq    %rsp, %cr3  // swap page table back
+
         movq    0xb0(%r11), %rsp
         movq    0xa8(%r11), %r11    // eflags to be restored by sysret
+        swapgs
         sysretq
 
 trapcommon:
@@ -114,37 +123,28 @@ trapcommon:
         pushq %r13
         pushq %r14
         pushq %r15
-        movw  %ds, %ax
-        pushw %ax
-        subq  $0xe, %rsp
-        
-        # Set up data and per-cpu segments.
-        movw $KDSEG, %ax
-        movw %ax, %ds
-        movw %ax, %es
-        movw %ax, %fs
+        subq  $0x10, %rsp
 
         cmpw  $KCSEG, TF_CS(%rsp)
         jz 1f
         swapgs
+1:
 
-1:      movq %rsp, %rdi  // first argument to trap
+        movq %rsp, %rdi  // first argument to trap
         call trap_c
         // Fall through to trapret
-        
+
 .globl trapret
 .align 8
 trapret:
         cli
+
         cmpw $KCSEG, TF_CS(%rsp)
         jz 1f
         swapgs
+1:
 
-1:      addq $0xe, %rsp  // padding
-        popw %ax
-        movw %ax, %ds
-        movw %ax, %es
-        
+	    addq $0x10, %rsp
         popq %r15
         popq %r14
         popq %r13
@@ -162,7 +162,7 @@ trapret:
         popq %rdi
         addq $0x10, %rsp  // trapno, err
         iretq
-        
+
 .data
 .align 8
 .globl trapentry

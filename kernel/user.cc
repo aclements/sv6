@@ -36,8 +36,7 @@ inituser(void)
     panic("userinit: copyout");
   memset(p->tf, 0, sizeof(*p->tf));
   p->tf->cs = UCSEG | 0x3;
-  p->tf->ds = UDSEG | 0x3;
-  p->tf->ss = p->tf->ds;
+  p->tf->ss = UDSEG | 0x3;
   p->tf->rflags = FL_IF;
   p->tf->rsp = PGSIZE;
   p->tf->rip = INIT_START;  // beginning of initcode.S

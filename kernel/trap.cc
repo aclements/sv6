@@ -473,6 +473,11 @@ initseg(struct cpu *c)
   dtr.base = (u64)c->gdt;
   lgdt((void *)&dtr.limit);
 
+  __asm volatile("movl $0, %%eax\n"
+                 "movw %%ax, %%es\n"
+                 "movw %%ax, %%ss\n"
+                 "movw %%ax, %%ds" : : : "eax");
+
   // When executing a syscall instruction the CPU sets the SS selector
   // to (star >> 32) + 8 and the CS selector to (star >> 32).
   // When executing a sysret instruction the CPU sets the SS selector
