@@ -442,7 +442,7 @@ panic_stream::end_print()
 
 console_stream console, swarn;
 panic_stream spanic;
-console_stream uerr(false);
+console_stream uerr(true);
 
 void
 initconsole(void)

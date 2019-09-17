@@ -48,6 +48,7 @@ struct cpu {
                                // yield requested
 
   u64 scratch;                 // scratch space to use during page table swap
+  void* qstack;
 
   __page_pad__;
 

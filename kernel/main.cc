@@ -170,6 +170,18 @@ bootothers(void)
   }
 }
 
+static void
+initqstack()
+{
+  for (int i = 0; i < ncpu; ++i) {
+    void* qstack = kalloc("qstack", KSTACKSIZE);
+    cpus[i].qstack = (void*)qstack;
+    cpus[i].ts.rsp[0] = (u64)qstack + KSTACKSIZE;
+
+    cprintf("[%d]: qstack = %p..%p\n", i, qstack, qstack + KSTACKSIZE);
+  }
+}
+
 void
 cmain(u64 mbmagic, u64 mbaddr)
 {
@@ -249,6 +261,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);
 
+  initqstack();
   inituser();      // first user process
   initdblflt();    // Requires inittrap
   initnmi();

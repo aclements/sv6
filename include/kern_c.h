@@ -12,6 +12,7 @@ void            kbdintr(void);
 // swtch.S
 struct context;
 void            swtch(struct context**, struct context*);
+void            switch_to_kstack();
 
 // trap.c
 extern struct segdesc bootgdt[NSEGS];

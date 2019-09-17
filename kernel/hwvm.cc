@@ -130,7 +130,7 @@ public:
 
     k = PX(L_PML4, KGLOBAL);
     memset(&pair.user->e[0], 0, PGSIZE);
-    pair.user->uexpose((void*)KCODE, L_2M);
+    pair.user->uexpose((void*)KCODE, L_2M, true);
 
     return pair;
   }
@@ -153,10 +153,12 @@ public:
   // Map a page of the direct map. When applied to the user page table
   // (even without the U-bit set), this page of memory will be "quasi
   // user visible" because of Meltdown style attacks.
-  void uexpose(void* page, int level = L_4K)
+  void uexpose(void* page, int level = L_4K, bool execute = false)
   {
     auto it = find((u64)page, level);
-    *it.create(0) = v2p(page) | PTE_P | PTE_W | PTE_NX;
+    *it.create(0) = v2p(page) | PTE_P | PTE_W
+      | (execute ? 0 : PTE_NX)
+      | (level == L_4K ? 0 : PTE_PS);
   }
 
   // An iterator that references the page structure entry on a fixed
@@ -416,7 +418,7 @@ switchvm(struct proc *p)
   mycpu()->gdt[TSSSEG>>3] = (struct segdesc)
     SEGDESC(base, (sizeof(mycpu()->ts)-1), SEG_P|SEG_TSS64A);
   mycpu()->gdt[(TSSSEG>>3)+1] = (struct segdesc) SEGDESCHI(base);
-  mycpu()->ts.rsp[0] = (u64) myproc()->kstack + KSTACKSIZE;
+  // mycpu()->ts.rsp[0] = (u64) myproc()->kstack + KSTACKSIZE;
   mycpu()->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
   ltr(TSSSEG);
 
@@ -674,6 +676,11 @@ namespace mmu_per_core_page_table {
     if (!mypml4s.kernel) {
       mypml4s = kpml4.kclone_pair();
       mypml4s.user->uexpose((void*)mycpu()->cpu, pgmap::L_4K);
+      for(int i = 0; i < KSTACKSIZE; i += PGSIZE) {
+        mypml4s.user->uexpose((void*)(mycpu()->ts.rsp[0] + i - KSTACKSIZE), pgmap::L_4K); // entry stack
+        mypml4s.user->uexpose((void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE), pgmap::L_4K); // nmi stack
+        mypml4s.user->uexpose((void*)(mycpu()->ts.ist[2] + i - KSTACKSIZE), pgmap::L_4K); // double fault stack
+      }
     }
 
     bool flush_tlb = true;
@@ -737,13 +744,14 @@ namespace mmu_per_core_page_table {
     for (auto it = mypml4s.user->find(start); it.index() < end; it += it.span()) {
       if (it.is_set()) {
         it->store(0, memory_order_relaxed);
-        if (current)
-          invlpg((void*)it.index());
+        // TODO: does there need to be a remote invlpg here?
       }
     }
     for (auto it = mypml4s.kernel->find(start); it.index() < end; it += it.span()) {
       if (it.is_set()) {
         it->store(0, memory_order_relaxed);
+        if (current)
+          invlpg((void*)it.index());
       }
     }
   }

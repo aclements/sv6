@@ -160,8 +160,13 @@ trap_c(struct trapframe *tf)
     return;
   }
 
-  if (tf->trapno == T_DBLFLT)
+  if (tf->trapno == T_DBLFLT) {
     kerneltrap(tf);
+  }
+
+  // if (tf->cs != KCSEG) {
+  switch_to_kstack();
+  // }
 
 #if MTRACE
   if (myproc()->mtrace_stacks.curr >= 0)
@@ -443,6 +448,7 @@ initnmi(void)
 {
   void *nmistackbase = kalloc("kstack", KSTACKSIZE);
   mycpu()->ts.ist[1] = (u64) nmistackbase + KSTACKSIZE;
+  cprintf("[%d]: nmi stack = %p..%p\n", myid(), nmistackbase, nmistackbase + KSTACKSIZE);
 
   if (mycpu()->id == 0)
     idt[T_NMI].ist = 1;
@@ -453,7 +459,7 @@ initdblflt(void)
 {
   void *dfaultstackbase = kalloc("kstack", KSTACKSIZE);
   mycpu()->ts.ist[2] = (uintptr_t)dfaultstackbase + KSTACKSIZE;
-
+  cprintf("[%d]: dblflt stack = %p..%p\n", myid(), dfaultstackbase, dfaultstackbase + KSTACKSIZE);
   if (mycpu()->id == 0)
     idt[T_DBLFLT].ist = 2;
 }

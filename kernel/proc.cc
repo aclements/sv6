@@ -376,7 +376,7 @@ doclone(clone_flags flags)
 {
   struct proc *np;
 
-  //cprintf("%d: fork\n", myproc()->pid);
+  // cprintf("%d: fork\n", myproc()->pid);
 
   // Allocate process.
   if((np = proc::alloc()) == 0)

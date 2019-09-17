@@ -234,6 +234,7 @@ sref<mnode>     create(sref<mnode>, const char *, short, short, short, bool);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
+void            switch_to_kstack();
 
 // trap.c
 extern struct segdesc bootgdt[NSEGS];

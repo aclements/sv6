@@ -40,9 +40,9 @@ sysentry:
         swapgs
         movq    %rax, %gs:24 // save %rax so we can use it
 
-	    // movq    %cr3, %rax
-	    // andq    $(~0x1001), %rax
-	    // movq    %rax, %cr3  // swap page table
+	    movq    %cr3, %rax
+	    andq    $(~0x1001), %rax
+	    movq    %rax, %cr3  // swap page table
 
         movq    %gs:8, %rax  // myproc()
 
@@ -98,9 +98,9 @@ sysentry:
         movq    0x38(%r11), %rbx
         movq    0x98(%r11), %rcx    // rip to be restored by sysret
 
-   	    // movq    %cr3, %rsp
-	    // andq    $(~0x1001), %rsp
-	    // movq    %rsp, %cr3  // swap page table back
+   	    movq    %cr3, %rsp
+	    orq    $(0x1001), %rsp
+	    movq    %rsp, %cr3  // swap page table back
 
         movq    0xb0(%r11), %rsp
         movq    0xa8(%r11), %r11    // eflags to be restored by sysret
@@ -127,8 +127,11 @@ trapcommon:
 
         cmpw  $KCSEG, TF_CS(%rsp)
         jz 1f
+	    movq    %cr3, %rax
+	    andq    $(~0x1001), %rax
+	    movq    %rax, %cr3  // swap page table
         swapgs
-1:
+1:      lfence
 
         movq %rsp, %rdi  // first argument to trap
         call trap_c
@@ -138,12 +141,6 @@ trapcommon:
 .align 8
 trapret:
         cli
-
-        cmpw $KCSEG, TF_CS(%rsp)
-        jz 1f
-        swapgs
-1:
-
 	    addq $0x10, %rsp
         popq %r15
         popq %r14
@@ -160,7 +157,42 @@ trapret:
         popq %rdx
         popq %rsi
         popq %rdi
-        addq $0x10, %rsp  // trapno, err
+    	addq $0x10, %rsp  // trapno, err
+
+		cmpw $KCSEG, 8(%rsp)
+		jz 1f
+
+		// At this point there are 40 bytes on the stack. We are returning to
+		// userspace, so these items need to be moved to the qstack (if we aren't
+		// already on the qstack). For now, unconditionally copy them there.
+
+		pushq %rbx
+		pushq %rax
+		movq %gs:GS_QSTACK_OFFSET, %rax
+		addq $(KSTACKSIZE - 56), %rax
+		movq 0(%rsp), %rbx
+		movq %rbx, 0(%rax)
+		movq 8(%rsp), %rbx
+		movq %rbx, 8(%rax)
+		movq 16(%rsp), %rbx
+		movq %rbx, 16(%rax)
+		movq 24(%rsp), %rbx
+		movq %rbx, 24(%rax)
+		movq 32(%rsp), %rbx
+		movq %rbx, 32(%rax)
+		movq 40(%rsp), %rbx
+		movq %rbx, 40(%rax)
+		movq 48(%rsp), %rbx
+		movq %rbx, 48(%rax)
+		movq %rax, %rsp
+		popq %rax
+	   	movq %cr3, %rbx
+	    orq $(0x1001), %rbx
+		movq %rbx, %cr3  // swap page table back
+		popq %rbx
+	    swapgs
+1:		lfence
+
         iretq
 
 .data
