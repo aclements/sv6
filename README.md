@@ -11,7 +11,7 @@ Building and running sv6 in QEMU
 
 TL;DR: `make && make qemu`
 
-You'll need GCC version 4.7 or later and GNU make.
+You'll need GCC version 7.1 or later and GNU make.
 
 There are several variables at the top of the top-level `Makefile` you
 may want to override for your build environment.  It is recommended
