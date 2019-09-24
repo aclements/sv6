@@ -131,6 +131,8 @@ $(O)/kernel/initcode: $(O)/lib/sysstubs.o
 
 $(O)/kernel/bootother: TTEXT = 0x7000
 
+$(O)/kernel/swtch.o: $(O)/include/asmdefines.h
+
 $(O)/kernel/%: kernel/%.S $(O)/sysroot
 	@echo "  CC     $@"
 	$(Q)mkdir -p $(@D)
