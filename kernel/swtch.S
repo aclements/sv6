@@ -34,28 +34,42 @@ threadstub:
         movq %r13, %rsi
         jmp threadhelper
 
+// Switch to executing on the current proc's kstack.
+//
+// Preconditions:
+//  	1. Kernel GS in use
+//      2. User page tables
 .globl switch_to_kstack
 switch_to_kstack:
-		// %rdx = myproc()->qstack+(KSTACKSIZE-PGSIZE)
-		movq %gs:GS_PROC_OFFSET, %rdx
-		movq PROC_QSTACK_OFFSET(%rdx), %rdx
-		addq $(KSTACKSIZE), %rdx
+		// Install kernel page tables
+		movq    %cr3, %rax
+	    andq    $(~0x1001), %rax
+	    movq    %rax, %cr3
+
+		// Load pointers to the top of the kstack and qstack.
+		movq %gs:GS_PROC_OFFSET, %rax
+		movq PROC_KSTACK_OFFSET(%rax), %rdi
+		movq PROC_QSTACK_OFFSET(%rax), %rsi
+		addq $(KSTACKSIZE), %rdi
+		addq $(KSTACKSIZE), %rsi
+
+		// Compute how much has been pushed onto the stack.
+		movq %rsi, %rdx
 		subq %rsp, %rdx
+
+		// Jump to return if we are on the double-fault stack or NMI stack.
 		cmpq $(KSTACKSIZE), %rdx
 		ja 1f
 
-		movq %rsp, %rsi
-		movabsq $(KBASE-QSTACKBASE), %rdi
-		addq %rdi, %rsi
-
-		movq %gs:GS_PROC_OFFSET, %rdi  // myproc()
-		movq PROC_KSTACK_OFFSET(%rdi), %rdi
-		addq $(KSTACKSIZE), %rdi
+		// Point both pointers to current position on the stack.
 		subq %rdx, %rdi
+		subq %rdx, %rsi
 
-		subq $8, %rdx
-		addq $8, %rsi
-		addq $8, %rdi
+		// Page table swap means that the qstack virtual address range no longer
+		// points to the stack that was previously in use. Adjust the pointer to
+		// be into the direct map region associated with its physical memory.
+		movabsq $(KBASE-QSTACKBASE), %rax
+		addq %rax, %rsi
 
 		call memcpy  // memcpy(dest=rdi, src=rsi, size=rdx);
 		movq %rax, %rsp
