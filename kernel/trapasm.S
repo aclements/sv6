@@ -1,5 +1,6 @@
 #include "mmu.h"
 #include "asmdefines.h"
+#include "memlayout.h"
 
 #define NOEC pushq $0
 #define EC
@@ -125,13 +126,38 @@ trapcommon:
         pushq %r15
         subq  $0x10, %rsp
 
+		// If this trap came from userspace, then switch page tables.
         cmpw  $KCSEG, TF_CS(%rsp)
         jz 1f
 	    movq    %cr3, %rax
 	    andq    $(~0x1001), %rax
 	    movq    %rax, %cr3  // swap page table
         swapgs
+
+		// If we are executing on the qstack and came from usermode then we'll need to copy the
+		// contents onto the kstack. If we came from kernel mode, then the qstack is actually
+		// aliased to the kstack and there is no need to copy.
+		movq %gs:GS_PROC_OFFSET, %rdx
+		movq PROC_QSTACK_OFFSET(%rdx), %rdx
+		addq $(KSTACKSIZE), %rdx
+		subq %rsp, %rdx
+		cmpq $(KSTACKSIZE), %rdx
+		ja 1f
+
+		movq %rsp, %rsi
+		movabsq $(KBASE-QSTACKBASE), %rdi
+		addq %rdi, %rsi
+
+		movq %gs:GS_PROC_OFFSET, %rdi  // myproc()
+		movq PROC_KSTACK_OFFSET(%rdi), %rdi
+		addq $(KSTACKSIZE), %rdi
+		subq %rdx, %rdi
+
+		call memcpy  // memcpy(dest=rdi, src=rsi, size=rdx);
+		movq %rax, %rsp
+
 1:      lfence
+
 
         movq %rsp, %rdi  // first argument to trap
         call trap_c
@@ -168,8 +194,10 @@ trapret:
 
 		pushq %rbx
 		pushq %rax
-		movq %gs:GS_QSTACK_OFFSET, %rax
-		addq $(KSTACKSIZE - 56), %rax
+		movq %gs:GS_PROC_OFFSET, %rax
+		movq PROC_QSTACK_OFFSET(%rax), %rax
+		movabsq $(KBASE-QSTACKBASE + KSTACKSIZE - 56), %rbx
+		addq %rbx, %rax
 		movq 0(%rsp), %rbx
 		movq %rbx, 0(%rax)
 		movq 8(%rsp), %rbx

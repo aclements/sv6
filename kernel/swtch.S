@@ -1,5 +1,5 @@
-
 #include "asmdefines.h"
+#include "memlayout.h"
 
 # Context switch
 #
@@ -36,18 +36,26 @@ threadstub:
 
 .globl switch_to_kstack
 switch_to_kstack:
-		movq %gs:GS_QSTACK_OFFSET, %rdx
+		// %rdx = myproc()->qstack+(KSTACKSIZE-PGSIZE)
+		movq %gs:GS_PROC_OFFSET, %rdx
+		movq PROC_QSTACK_OFFSET(%rdx), %rdx
 		addq $(KSTACKSIZE), %rdx
 		subq %rsp, %rdx
 		cmpq $(KSTACKSIZE), %rdx
 		ja 1f
+
+		movq %rsp, %rsi
+		movabsq $(KBASE-QSTACKBASE), %rdi
+		addq %rdi, %rsi
 
 		movq %gs:GS_PROC_OFFSET, %rdi  // myproc()
 		movq PROC_KSTACK_OFFSET(%rdi), %rdi
 		addq $(KSTACKSIZE), %rdi
 		subq %rdx, %rdi
 
-		movq %rsp, %rsi
+		subq $8, %rdx
+		addq $8, %rsi
+		addq $8, %rdi
 
 		call memcpy  // memcpy(dest=rdi, src=rsi, size=rdx);
 		movq %rax, %rsp

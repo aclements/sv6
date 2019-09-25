@@ -248,7 +248,9 @@ vmap::remove(uptr start, uptr len)
   mmu::shootdown shootdown;
   page_holder pages;
 
-  {
+  if (start >= USERTOP) {
+    cache.clear_all(start, start + len);
+  } else {
     auto begin = vpfs_.find(start / PGSIZE);
     auto end = vpfs_.find((start + len) / PGSIZE);
     auto lock = vpfs_.acquire(begin, end);

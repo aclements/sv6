@@ -16,6 +16,8 @@ asmdefines(void)
   DEFINE(TF_TRAPNO, __offsetof(struct trapframe, trapno));
   DEFINE(TF_CS, __offsetof(struct trapframe, cs));
   DEFINE(PROC_UACCESS, __offsetof(struct proc, uaccess_));
+  DEFINE(PROC_QSTACK_OFFSET, __offsetof(struct proc, qstack));
+
   DEFINE(TRAPFRAME_SIZE, sizeof(trapframe));
 
   DEFINE(GS_CPU_OFFSET, 0);
@@ -23,5 +25,5 @@ asmdefines(void)
   DEFINE(GS_MEM_OFFSET, __offsetof(struct cpu, mem) - __offsetof(struct cpu, cpu));
   DEFINE(GS_SYSCALLNO_OFFSET, __offsetof(struct cpu, syscallno) - __offsetof(struct cpu, cpu));
   DEFINE(GS_SCRATCH_OFFSET, __offsetof(struct cpu, scratch) - __offsetof(struct cpu, cpu));
-  DEFINE(GS_QSTACK_OFFSET, __offsetof(struct cpu, qstack) - __offsetof(struct cpu, cpu));
+  // DEFINE(GS_QSTACK_OFFSET, __offsetof(struct cpu, qstack) - __offsetof(struct cpu, cpu));
 }

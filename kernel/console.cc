@@ -171,6 +171,7 @@ printtrap(struct trapframe *tf, bool lock)
 {
   const char *name = "(no name)";
   void *kstack = nullptr;
+  void *qstack = nullptr;
   int pid = 0;
 
   lock_guard<spinlock> l;
@@ -182,6 +183,7 @@ printtrap(struct trapframe *tf, bool lock)
       name = myproc()->name;
     pid = myproc()->pid;
     kstack = myproc()->kstack;
+    qstack = myproc()->qstack;
   }
 
   __cprintf("trap %lu err 0x%x cpu %u cs %u ss %u\n"
@@ -196,7 +198,7 @@ printtrap(struct trapframe *tf, bool lock)
             "  r11 %016lx r12 %016lx r13 %016lx\n"
             "  r14 %016lx r15 %016lx rflags %016lx\n"
             // Process state
-            "  proc: name %s pid %u kstack %p\n",
+            "  proc: name %s pid %u kstack %p qstack %p\n",
             tf->trapno, tf->err, mycpu()->id, tf->cs, tf->ss,
             tf->rip, tf->rsp, tf->rbp,
             rcr2(), rcr3(), rcr4(),
@@ -205,7 +207,7 @@ printtrap(struct trapframe *tf, bool lock)
             tf->rax, tf->rbx, tf->r10,
             tf->r11, tf->r12, tf->r13,
             tf->r14, tf->r15, tf->rflags,
-            name, pid, kstack);
+            name, pid, kstack, qstack);
   // Trap decoding
   if (tf->trapno == T_PGFLT) {
     __cprintf("  page fault: %s %s %016lx from %s mode\n",

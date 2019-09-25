@@ -203,7 +203,7 @@ endif
 
 QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
-	-nographic \
+	-nographic -device sga \
 	-numa node -numa node \
 	-net user,hostfwd=tcp::2323-:23,hostfwd=tcp::8080-:80 -net nic,model=e1000 \
 	$(if $(QEMUAPPEND),-append "$(QEMUAPPEND)",) \
@@ -229,7 +229,7 @@ endif
 QEMUOPTS += $(QEMUEXTRA)
 
 qemu: $(KERN)
-	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) # -d int,cpu_reset
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -no-reboot #-d int,cpu_reset #
 gdb: $(KERN)
 	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -s -S
 

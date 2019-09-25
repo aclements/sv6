@@ -61,6 +61,7 @@ typedef enum procstate {
 // Per-process state
 struct proc {
   char *kstack;                // Bottom of kernel stack for this process
+  char *qstack;                // Bottom of quasi user-visible stack
   __page_pad__;
 
   sref<vmap> vmap;             // va -> vma

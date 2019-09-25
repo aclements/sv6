@@ -239,9 +239,12 @@ proc::alloc(void)
   if (!xnspid->insert(p->pid, p))
     panic("allocproc: ns_insert");
 
-  // Allocate kernel stack.
+  // Allocate kernel stacks.
   try {
-#if KSTACK_DEBUG
+    if(!(p->qstack = (char*) kalloc("qstack", KSTACKSIZE) - KBASE + QSTACKBASE))
+      throw_bad_alloc();
+
+#if KSTACK_DEBUG && false // TODO: fix kstack debugging
     // vmalloc the stack to surround it with guard pages so we can
     // detect stack over/underflows.
     p->kstack_vm = vmalloc<char[]>(KSTACKSIZE);
@@ -258,7 +261,7 @@ proc::alloc(void)
   }
 
   sp = p->kstack + KSTACKSIZE;
-  
+
   // Leave room for trap frame.
   sp -= sizeof *p->tf;
   p->tf = (struct trapframe*)sp;

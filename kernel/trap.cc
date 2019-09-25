@@ -165,7 +165,7 @@ trap_c(struct trapframe *tf)
   }
 
   // if (tf->cs != KCSEG) {
-  switch_to_kstack();
+  // switch_to_kstack();
   // }
 
 #if MTRACE

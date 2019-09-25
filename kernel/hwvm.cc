@@ -418,7 +418,6 @@ switchvm(struct proc *p)
   mycpu()->gdt[TSSSEG>>3] = (struct segdesc)
     SEGDESC(base, (sizeof(mycpu()->ts)-1), SEG_P|SEG_TSS64A);
   mycpu()->gdt[(TSSSEG>>3)+1] = (struct segdesc) SEGDESCHI(base);
-  // mycpu()->ts.rsp[0] = (u64) myproc()->kstack + KSTACKSIZE;
   mycpu()->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
   ltr(TSSSEG);
 
@@ -428,11 +427,13 @@ switchvm(struct proc *p)
   // XXX(Austin) This puts the TLB tracking logic in pgmap, which is
   // probably the wrong place.
   if (p->vmap) {
-    p->vmap->cache.switch_to(true);
+    p->vmap->cache.switch_to(true, p);
     *cur_page_map_cache = &p->vmap->cache;
+    mycpu()->ts.rsp[0] = (u64) p->qstack + KSTACKSIZE;
   } else {
     kpml4.switch_to();
     *cur_page_map_cache = nullptr;
+    mycpu()->ts.rsp[0] = (u64) p->kstack + KSTACKSIZE;
   }
 }
 
@@ -670,17 +671,26 @@ namespace mmu_per_core_page_table {
   }
 
   void
-  page_map_cache::switch_to(bool kernel) const
+  page_map_cache::switch_to(bool kernel, proc* p) const
   {
     auto &mypml4s = *pml4s;
     if (!mypml4s.kernel) {
       mypml4s = kpml4.kclone_pair();
       mypml4s.user->uexpose((void*)mycpu()->cpu, pgmap::L_4K);
-      for(int i = 0; i < KSTACKSIZE; i += PGSIZE) {
-        mypml4s.user->uexpose((void*)(mycpu()->ts.rsp[0] + i - KSTACKSIZE), pgmap::L_4K); // entry stack
+
+
+      for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
         mypml4s.user->uexpose((void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE), pgmap::L_4K); // nmi stack
         mypml4s.user->uexpose((void*)(mycpu()->ts.ist[2] + i - KSTACKSIZE), pgmap::L_4K); // double fault stack
       }
+    }
+
+    // TODO: Avoid doing this on every `switch_to` call.
+    for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
+      *(mypml4s.user->find((u64)p->qstack+i, pgmap::L_4K).create(0)) =
+        v2p(p->qstack - QSTACKBASE + KBASE + i) | PTE_P | PTE_W | PTE_NX;
+      *(mypml4s.kernel->find((u64)p->qstack+i, pgmap::L_4K).create(0)) =
+        v2p(p->kstack + i) | PTE_P | PTE_W | PTE_NX;
     }
 
     bool flush_tlb = true;
@@ -754,6 +764,21 @@ namespace mmu_per_core_page_table {
           invlpg((void*)it.index());
       }
     }
+  }
+
+  void
+  page_map_cache::clear_all(uintptr_t start, uintptr_t end)
+  {
+    bitset<NCPU> targets;
+    for(int i = 0; i < NCPU; i++)
+      targets.set(i);
+
+    run_on_cpus(
+      targets,
+      [this, start, end]() {
+        if (pml4s->kernel)
+          clear(start, end);
+      });
   }
 
   void

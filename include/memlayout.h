@@ -8,15 +8,19 @@
 #define KVMALLOC    0xFFFFF00000000000ull
 #define KVMALLOCEND 0xFFFFF10000000000ull  // 1 TB
 
+// Range of virtual address space for qstacks
+#define QSTACKBASE  0xFFFFFE0000000000ull
+#define QSTACKEND   0xFFFFFE5000000000ull  // 320GB
+
 // Physical memory is direct-mapped from KBASE to KBASEEND in initpg.
-#define KBASE      0xFFFFFF0000000000ull
-#define KBASEEND   0xFFFFFF5000000000ull  // 320GB
+#define KBASE       0xFFFFFF0000000000ull
+#define KBASEEND    0xFFFFFF5000000000ull  // 320GB
 
 // The kernel is linked to run from virtual address KCODE+2MB.  boot.S
 // sets up a direct mapping at KCODE to KCODE+1GB.  This is necessary
 // in addition to KBASE because we compile with -mcmodel=kernel, which
 // assumes the kernel text and symbols are linked in the top 2GB of
 // memory.
-#define KCODE      0xFFFFFFFFC0000000ull
+#define KCODE       0xFFFFFFFFC0000000ull
 
-#define USERTOP    0x0000800000000000ull
+#define USERTOP     0x0000800000000000ull

@@ -267,10 +267,13 @@ namespace mmu_per_core_page_table {
       }
     }
 
-    void switch_to(bool kernel) const;
+    void switch_to(bool kernel, proc* p) const;
     void switch_from() const {}
 
     u64 internal_pages() const;
+
+    // Flush and clear a range of the TLB on all cores.
+    void clear_all(uintptr_t start, uintptr_t end);
   };
 }
 
