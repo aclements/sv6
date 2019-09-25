@@ -41,6 +41,7 @@
 
 #define CR4_PGE         0x00000080      // Page global enable
 #define CR4_PCE         0x100           // RDPMC at CPL > 0
+#define CR4_FSGSBASE    1 << 16         // Enable [rd|wr][fs|gs]base
 #define CR4_PCIDE       1 << 17         // Process Context IDs enable
 
 // FS/GS base registers

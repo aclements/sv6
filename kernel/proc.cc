@@ -121,7 +121,7 @@ yield(void)
 
 // A fork child's very first scheduling by scheduler()
 // will swtch here.  "Return" to user space.
-void
+u64
 forkret(void)
 {
   post_swtch();
@@ -139,9 +139,9 @@ forkret(void)
     myproc()->cwd_m = namei(myproc()->cwd_m, "/");
 
   writefs(UDSEG);
-  writemsr(MSR_FS_BASE, myproc()->user_fs_);
 
   // Return to "caller", actually trapret (see allocproc).
+  return myproc()->user_fs_;
 }
 
 // Exit the current process.  Does not return.

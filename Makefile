@@ -201,7 +201,7 @@ ifneq ($(RUN),)
 override QEMUAPPEND += \$$ $(RUN)
 endif
 
-QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid \
+QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid,+fsgsbase \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-nographic -device sga \
 	-numa node -numa node \

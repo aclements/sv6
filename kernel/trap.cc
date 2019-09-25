@@ -105,9 +105,6 @@ namespace {
 extern "C" void
 trap_c(struct trapframe *tf)
 {
-  extern u64 text;
-  writemsr(MSR_FS_BASE, (u64)&text);
-
   if (tf->trapno == T_NMI) {
     // An NMI can come in after popcli() drops ncli to zero and intena
     // is 1, but before popcli() checks intena and calls sti.  If the
@@ -156,7 +153,6 @@ trap_c(struct trapframe *tf)
 
     mycpu()->intena = intena_save;
     writefs(UDSEG);
-    writemsr(MSR_FS_BASE, myproc()->user_fs_);
     return;
   }
 
@@ -184,7 +180,6 @@ trap_c(struct trapframe *tf)
 #endif
 
   writefs(UDSEG);
-  writemsr(MSR_FS_BASE, myproc()->user_fs_);
 }
 
 static void

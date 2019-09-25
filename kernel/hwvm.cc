@@ -371,8 +371,13 @@ initpg(void)
     while(1);
   }
 
+  if (!cpuid::features().fsgsbase) {
+    cprintf("wrfsbase instruction unsupported?!\n");
+    while(1);
+  }
+
   // Enable global pages and PCIDs.  This has to happen on every core.
-  lcr4(rcr4() | CR4_PGE | CR4_PCIDE);
+  lcr4(rcr4() | CR4_PGE | CR4_PCIDE | CR4_FSGSBASE);
 }
 
 // Clean up mappings that were only required during early boot.

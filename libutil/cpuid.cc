@@ -37,6 +37,9 @@ cpuid::cpuid() : basic_{}, extended_{}
   features_.apic = l.d & (1<<9);
   features_.ds = l.d & (1<<21);
 
+  l = get_leaf(leafid::ext_features);
+  features_.fsgsbase = l.b & (1<<0);
+
   l = get_leaf(leafid::extended_features);
   features_.page1GB = l.d & (1<<26);
 }

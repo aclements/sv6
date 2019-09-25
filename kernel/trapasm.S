@@ -131,20 +131,26 @@ trapcommon:
         jz 1f
 
 		swapgs
+		lfence
 
 		call switch_to_kstack
 
 1:      lfence
 
-
         movq %rsp, %rdi  // first argument to trap
-        call trap_c
-        // Fall through to trapret
+		rdfsbase %rax
+		pushq %rax
+		movq $text, %rax
+		wrfsbase %rax
+    	call trap_c
+		popq %rax
+    	// Fall through to trapret
 
 .globl trapret
 .align 8
 trapret:
-        cli
+    	cli
+		wrfsbase %rax
 	    addq $0x10, %rsp
         popq %r15
         popq %r14

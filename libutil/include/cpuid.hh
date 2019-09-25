@@ -174,6 +174,9 @@ public:
     bool apic : 1;              // "APIC on chip"
     bool ds : 1;                // Debug store
 
+    // 7.EBX
+    bool fsgsbase : 1;
+
     // 80000001.EDX
     bool page1GB : 1;
   };
