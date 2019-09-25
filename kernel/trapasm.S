@@ -39,14 +39,13 @@
 .align 8
 sysentry:
         swapgs
-        movq    %rax, %gs:24 // save %rax so we can use it
+        movq    %rax, %gs:GS_SYSCALLNO_OFFSET // save %rax so we can use it
 
 	    movq    %cr3, %rax
 	    andq    $(~0x1001), %rax
 	    movq    %rax, %cr3  // swap page table
 
-        movq    %gs:8, %rax  // myproc()
-
+        movq    %gs:GS_PROC_OFFSET, %rax  // myproc()
         movq    PROC_KSTACK_OFFSET(%rax), %rax
         addq    $(KSTACKSIZE-TRAPFRAME_SIZE), %rax
 
@@ -82,7 +81,7 @@ sysentry:
         mov     %rsp, %rbp
 
         movq    %r10, %rcx  // saved by usys.S
-        pushq   %gs:24      // syscall# saved from %rax
+        pushq   %gs:GS_SYSCALLNO_OFFSET // syscall# saved from %rax
 
         sti
         call    sysentry_c
