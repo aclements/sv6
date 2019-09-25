@@ -39,14 +39,14 @@
 .align 8
 sysentry:
         swapgs
-        movq    %rax, %gs:GS_SYSCALLNO_OFFSET // save %rax so we can use it
+        movq    %rax, %gs:GS_SYSCALLNO // save %rax so we can use it
 
 	    movq    %cr3, %rax
 	    andq    $(~0x1001), %rax
 	    movq    %rax, %cr3  // swap page table
 
-        movq    %gs:GS_PROC_OFFSET, %rax  // myproc()
-        movq    PROC_KSTACK_OFFSET(%rax), %rax
+        movq    %gs:GS_PROC, %rax  // myproc()
+        movq    PROC_KSTACK(%rax), %rax
         addq    $(KSTACKSIZE-TRAPFRAME_SIZE), %rax
 
         // save all registers we're not allowed to clobber
@@ -81,7 +81,7 @@ sysentry:
         mov     %rsp, %rbp
 
         movq    %r10, %rcx  // saved by usys.S
-        pushq   %gs:GS_SYSCALLNO_OFFSET // syscall# saved from %rax
+        pushq   %gs:GS_SYSCALLNO // syscall# saved from %rax
 
         sti
         call    sysentry_c
@@ -177,8 +177,8 @@ trapret:
 
 		pushq %rbx
 		pushq %rax
-		movq %gs:GS_PROC_OFFSET, %rax
-		movq PROC_QSTACK_OFFSET(%rax), %rax
+		movq %gs:GS_PROC, %rax
+		movq PROC_QSTACK(%rax), %rax
 		movabsq $(KBASE-QSTACKBASE + KSTACKSIZE - 56), %rbx
 		addq %rbx, %rax
 		movq 0(%rsp), %rbx

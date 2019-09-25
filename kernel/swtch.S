@@ -47,9 +47,9 @@ switch_to_kstack:
 	    movq    %rax, %cr3
 
 		// Load pointers to the top of the kstack and qstack.
-		movq %gs:GS_PROC_OFFSET, %rax
-		movq PROC_KSTACK_OFFSET(%rax), %rdi
-		movq PROC_QSTACK_OFFSET(%rax), %rsi
+		movq %gs:GS_PROC, %rax
+		movq PROC_KSTACK(%rax), %rdi
+		movq PROC_QSTACK(%rax), %rsi
 		addq $(KSTACKSIZE), %rdi
 		addq $(KSTACKSIZE), %rsi
 

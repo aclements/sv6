@@ -12,7 +12,7 @@ ENTRY(__uaccess_int64)
         push    %rbp            // For stack traces
         mov     %rsp, %rbp
 
-        mov     %gs:GS_PROC_OFFSET, %r11
+        mov     %gs:GS_PROC, %r11
         movl    $1, PROC_UACCESS(%r11)
         mov     (%rdi), %r10
         mov     %r10, (%rsi)
@@ -26,7 +26,7 @@ ENTRY(__uaccess_str)
         push    %rbp            // For stack traces
         mov     %rsp, %rbp
 
-        mov     %gs:GS_PROC_OFFSET, %r11
+        mov     %gs:GS_PROC, %r11
         movl    $1, PROC_UACCESS(%r11)
 
         // %rcx is loop instruction counter
@@ -53,7 +53,7 @@ ENTRY(__uaccess_strend)
         push    %rbp            // For stack traces
         mov     %rsp, %rbp
 
-        mov     %gs:GS_PROC_OFFSET, %r11
+        mov     %gs:GS_PROC, %r11
         movl    $1, PROC_UACCESS(%r11)
 
         // %rcx limits scas
@@ -79,7 +79,7 @@ ENTRY(__uaccess_mem)
         push    %rbp            // For stack traces
         mov     %rsp, %rbp
 
-        mov     %gs:GS_PROC_OFFSET, %r11
+        mov     %gs:GS_PROC, %r11
         movl    $1, PROC_UACCESS(%r11)
 
         // %rcx is rep counter
