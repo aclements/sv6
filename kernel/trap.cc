@@ -443,7 +443,6 @@ initnmi(void)
 {
   void *nmistackbase = kalloc("kstack", KSTACKSIZE);
   mycpu()->ts.ist[1] = (u64) nmistackbase + KSTACKSIZE;
-  cprintf("[%d]: nmi stack = %p..%p\n", myid(), nmistackbase, nmistackbase + KSTACKSIZE);
 
   if (mycpu()->id == 0)
     idt[T_NMI].ist = 1;
@@ -454,7 +453,6 @@ initdblflt(void)
 {
   void *dfaultstackbase = kalloc("kstack", KSTACKSIZE);
   mycpu()->ts.ist[2] = (uintptr_t)dfaultstackbase + KSTACKSIZE;
-  cprintf("[%d]: dblflt stack = %p..%p\n", myid(), dfaultstackbase, dfaultstackbase + KSTACKSIZE);
   if (mycpu()->id == 0)
     idt[T_DBLFLT].ist = 2;
 }
