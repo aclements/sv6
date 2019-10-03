@@ -138,8 +138,6 @@ forkret(void)
   if (myproc()->cwd_m == nullptr)
     myproc()->cwd_m = namei(myproc()->cwd_m, "/");
 
-  writefs(UDSEG);
-
   // Return to "caller", actually trapret (see allocproc).
   return myproc()->user_fs_;
 }

@@ -83,9 +83,16 @@ sysentry:
         movq    %r10, %rcx  // saved by usys.S
         pushq   %gs:GS_SYSCALLNO // syscall# saved from %rax
 
+        movq $text, %rax
+        wrfsbase %rax
+
         sti
         call    sysentry_c
         cli
+
+        movq    %gs:GS_PROC, %r15
+        movq    PROC_USER_FS(%r15), %r15
+        wrfsbase %r15
 
         // return using SYSRET
         add     $(8*3), %rsp  // Discard syscall#, fake activation record

@@ -83,7 +83,7 @@ mpboot(void)
       (*__percpuinit_array_start[i])(bcpuid);
 
   extern u64 text;
-  writefs(KDSEG);
+  writefs(UDSEG);
   writemsr(MSR_FS_BASE, (u64)&text);
 
   initlapic();
@@ -180,7 +180,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   percpu_offsets[0] = __percpu_start;
 
   extern u64 text;
-  writefs(KDSEG);
+  writefs(UDSEG);
   writemsr(MSR_FS_BASE, (u64)&text);
 
   inituart();

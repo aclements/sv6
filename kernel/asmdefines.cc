@@ -12,13 +12,15 @@
 void
 asmdefines(void)
 {
+  DEFINE(TRAPFRAME_SIZE, sizeof(trapframe));
+
   DEFINE(TF_TRAPNO, __offsetof(struct trapframe, trapno));
   DEFINE(TF_CS, __offsetof(struct trapframe, cs));
+
   DEFINE(PROC_KSTACK, __offsetof(struct proc, kstack));
   DEFINE(PROC_QSTACK, __offsetof(struct proc, qstack));
   DEFINE(PROC_UACCESS, __offsetof(struct proc, uaccess_));
-
-  DEFINE(TRAPFRAME_SIZE, sizeof(trapframe));
+  DEFINE(PROC_USER_FS, __offsetof(struct proc, user_fs_));
 
   DEFINE(GS_CPU, 0);
   DEFINE(GS_PROC, __offsetof(struct cpu, proc) - __offsetof(struct cpu, cpu));
