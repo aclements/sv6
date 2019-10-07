@@ -342,7 +342,7 @@ initpg(void)
       level = pgmap::L_1G;
 
       // Redo KCODE mapping with a 1GB page
-      *kpml4.find(KCODE, level).create(0) = PTE_W | PTE_P | PTE_PS | PTE_G;
+      *kpml4.find(KCODE, level).create(0) = PTE_W | PTE_P | PTE_PS;
       lcr3(rcr3());
     }
 
@@ -350,7 +350,7 @@ initpg(void)
     for (auto it = kpml4.find(KBASE, level); it.index() < KBASEEND;
          it += it.span()) {
       paddr pa = it.index() - KBASE;
-      *it.create(0) = pa | PTE_W | PTE_P | PTE_PS | PTE_NX | PTE_G;
+      *it.create(0) = pa | PTE_W | PTE_P | PTE_PS | PTE_NX;
     }
     assert(!kpml4.find(KBASEEND, level).is_set());
 
@@ -481,7 +481,7 @@ vmalloc_raw(size_t bytes, size_t guard, const char *name)
     void *page = kalloc(name);
     if (!page)
       throw_bad_alloc();
-    *it.create(0) = v2p(page) | PTE_P | PTE_W | PTE_G;
+    *it.create(0) = v2p(page) | PTE_P | PTE_W;
   }
   mtlabel(mtrace_label_heap, (void*)base, bytes, name, strlen(name));
 
