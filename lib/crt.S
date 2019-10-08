@@ -1,5 +1,5 @@
 .code64
-.align 8
+.balign 8
 .globl _start
 _start:
         pop %rdi                // argc
