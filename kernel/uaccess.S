@@ -1,7 +1,7 @@
 #include "mmu.h"
 #include "asmdefines.h"
 
-#define ENTRY(name) .globl name ; .align 8; name :
+#define ENTRY(name) .globl name ; .balign 8; name :
 
 // We aren't allowed to touch rbx,rsp,rbp,r12-r15
         
@@ -93,14 +93,14 @@ ENTRY(__uaccess_mem)
         jmp     __uaccess_end
         
 .globl __uaccess_end
-.align 8
+.balign 8
 __uaccess_end:
         movl $0, PROC_UACCESS(%r11)
         pop     %rbp
         ret
 
 .globl zpage
-.align 8
+.balign 8
 zpage:
         mov     $4096/0x40, %rcx
         mov     $0, %rax
@@ -118,7 +118,7 @@ zpage:
         ret
 
 .globl zpage_nc
-.align 8
+.balign 8
 zpage_nc:
         mov     $4096/0x40, %rcx
         mov     $0, %rax

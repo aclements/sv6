@@ -7,7 +7,7 @@
 
 #define _TRAP(x, code) \
         .globl trap ## x; \
-        .align 8; \
+        .balign 8; \
         trap ## x: \
                 code; \
                 pushq $x; \
@@ -36,7 +36,7 @@
  */
 .code64
 .globl sysentry
-.align 8
+.balign 8
 sysentry:
         swapgs
         movq    %rax, %gs:GS_SYSCALLNO // save %rax so we can use it
@@ -153,7 +153,7 @@ trapcommon:
     	// Fall through to trapret
 
 .globl trapret
-.align 8
+.balign 8
 trapret:
     	cli
 		wrfsbase %rax
@@ -214,7 +214,7 @@ trapret:
         iretq
 
 .data
-.align 8
+.balign 8
 .globl trapentry
 trapentry:
 

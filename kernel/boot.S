@@ -23,7 +23,7 @@
 
 # MultiBoot header.
 # http://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Header-layout
-.align 4
+.balign 4
 .text
 .globl multiboot_header
 multiboot_header:
@@ -145,7 +145,7 @@ tramp64:
 # to cover all the available physical memory.
 # This would be easier if we could use the PS bit to create GB-sized entries
 # and skip the pdt table, but not all chips support it, and QEMU doesn't.
-.align 4096
+.balign 4096
 .global kpml4
 kpml4:
 	.quad PADDR(pdpt0) + (1<<0) + (1<<1)  // present, read/write
@@ -155,27 +155,27 @@ kpml4:
 	.quad PADDR(pdptbase) + (1<<0) + (1<<1)  // present, read/write
 	.quad PADDR(pdptcode) + (1<<0) + (1<<1)  // present, read/write
 
-.align 4096
+.balign 4096
 pdpt0:
 	.quad PADDR(pdtcode) + (1<<0) + (1<<1)  // present, read/write
 	.space 4096 - 8
        
-.align 4096
+.balign 4096
 pdptbase:
 	.quad PADDR(pdtbase) + (1<<0) + (1<<1)  // present, read/write
 	.space 4096 - 8
 
-.align 4096
+.balign 4096
 pdptcode:
 	.space 4096 - 8
 	.quad PADDR(pdtcode) + (1<<0) + (1<<1)  // present, read/write
        
-.align 4096
+.balign 4096
 pdtbase:
 	// Filled in below.
 	.space 4096
 
-.align 4096
+.balign 4096
 pdtcode:
 	// Filled in below.
 	.space 4096

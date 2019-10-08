@@ -60,13 +60,13 @@ protcseg:
 	movl start-4, %ecx
 	jmp *%ecx
 
-.align 4
+.balign 4
 gdt:
 	.quad 0 # null seg
 	SEG_ASM(0xa, 0x0, 0xffffffff) # code seg
 	SEG_ASM(0x2, 0x0, 0xffffffff) # data seg
 
-.align 16
+.balign 16
 gdtdesc:
 	.word	0x17 # sizeof(gdt) - 1
 gdtaddr:
