@@ -248,22 +248,26 @@ vmap::remove(uptr start, uptr len)
   mmu::shootdown shootdown;
   page_holder pages;
 
-  if (start >= USERTOP) {
-    cache.clear_all(start, start + len);
-  } else {
-    auto begin = vpfs_.find(start / PGSIZE);
-    auto end = vpfs_.find((start + len) / PGSIZE);
-    auto lock = vpfs_.acquire(begin, end);
-    for (auto it = begin; it < end; it += it.span())
-      if (it.is_set())
-        pages.add(std::move(it->page));
-    cache.invalidate(start, len, begin, &shootdown);
-    // XXX If this is a large unset, we could actively re-fold already
-    // expanded regions.
-    vpfs_.unset(begin, end);
-    shootdown.perform();
-  }
+  auto begin = vpfs_.find(start / PGSIZE);
+  auto end = vpfs_.find((start + len) / PGSIZE);
+  auto lock = vpfs_.acquire(begin, end);
+  for (auto it = begin; it < end; it += it.span())
+    if (it.is_set())
+      pages.add(std::move(it->page));
+  cache.invalidate(start, len, begin, &shootdown);
+  // XXX If this is a large unset, we could actively re-fold already
+  // expanded regions.
+  vpfs_.unset(begin, end);
+  shootdown.perform();
 
+  return 0;
+}
+
+int
+vmap::qremove(uptr start, uptr len)
+{
+  assert(start > USERTOP);
+  cache.qclear_all(start, start + len);
   return 0;
 }
 

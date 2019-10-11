@@ -145,6 +145,7 @@ bootothers(void)
     if(i == myid())  // We've started already.
       continue;
     struct cpu *c = &cpus[i];
+    c->has_secrets = true;
 
     warmreset(v2p(code));
 

@@ -434,12 +434,13 @@ switchvm(struct proc *p)
   if (p->vmap) {
     p->vmap->cache.switch_to(true, p);
     *cur_page_map_cache = &p->vmap->cache;
-    mycpu()->ts.rsp[0] = (u64) p->qstack + KSTACKSIZE;
   } else {
     kpml4.switch_to();
     *cur_page_map_cache = nullptr;
-    mycpu()->ts.rsp[0] = (u64) p->kstack + KSTACKSIZE;
+    mycpu()->has_secrets = true;
   }
+
+  mycpu()->ts.rsp[0] = (u64) p->kstack + KSTACKSIZE;
 }
 
 // Set up CPU's kernel segment descriptors.
@@ -453,6 +454,7 @@ inittls(struct cpu *c)
   writemsr(MSR_GS_KERNBASE, (u64)&c->cpu);
   c->cpu = c;
   c->proc = nullptr;
+  c->has_secrets = true;
 }
 
 // Allocate 'bytes' bytes in the KVMALLOC area, surrounded by at least
@@ -681,8 +683,8 @@ namespace mmu_per_core_page_table {
     auto &mypml4s = *pml4s;
     if (!mypml4s.kernel) {
       mypml4s = kpml4.kclone_pair();
-      mypml4s.user->uexpose((void*)mycpu()->cpu, pgmap::L_4K);
-
+      mypml4s.user->uexpose((void*)mycpu(), pgmap::L_4K);
+      mypml4s.user->uexpose((void*)&mycpu()->cpu, pgmap::L_4K);
 
       for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
         mypml4s.user->uexpose((void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE), pgmap::L_4K); // nmi stack
@@ -690,13 +692,13 @@ namespace mmu_per_core_page_table {
       }
     }
 
-    // TODO: Avoid doing this on every `switch_to` call.
+    // TODO(behrensj): Avoid doing this on every `switch_to` call.
     for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
-      *(mypml4s.user->find((u64)p->qstack+i, pgmap::L_4K).create(0)) =
-        v2p(p->qstack - QSTACKBASE + KBASE + i) | PTE_P | PTE_W | PTE_NX;
-      *(mypml4s.kernel->find((u64)p->qstack+i, pgmap::L_4K).create(0)) =
-        v2p(p->kstack + i) | PTE_P | PTE_W | PTE_NX;
+      *(mypml4s.user->find((u64)p->kstack+i, pgmap::L_4K).create(0)) =
+        v2p(p->qstack+i) | PTE_P | PTE_W | PTE_NX;
     }
+
+    mypml4s.user->uexpose(myproc(), pgmap::L_4K);
 
     bool flush_tlb = true;
     int pcid = mycpu()->pcid_history_head;
@@ -724,6 +726,7 @@ namespace mmu_per_core_page_table {
 
     lcr3(cr3);
     mycpu()->tlb_cr3 = cr3;
+    mycpu()->has_secrets = kernel;
   }
 
   u64
@@ -759,7 +762,7 @@ namespace mmu_per_core_page_table {
     for (auto it = mypml4s.user->find(start); it.index() < end; it += it.span()) {
       if (it.is_set()) {
         it->store(0, memory_order_relaxed);
-        // TODO: does there need to be a remote invlpg here?
+        // TODO(behrensj): does there need to be a remote invlpg here?
       }
     }
     for (auto it = mypml4s.kernel->find(start); it.index() < end; it += it.span()) {
@@ -772,7 +775,7 @@ namespace mmu_per_core_page_table {
   }
 
   void
-  page_map_cache::clear_all(uintptr_t start, uintptr_t end)
+  page_map_cache::qclear_all(uintptr_t start, uintptr_t end)
   {
     bitset<NCPU> targets;
     for(int i = 0; i < NCPU; i++)
@@ -781,8 +784,16 @@ namespace mmu_per_core_page_table {
     run_on_cpus(
       targets,
       [this, start, end]() {
-        if (pml4s->kernel)
-          clear(start, end);
+        pgmap_pair& mypml4s = *pml4s;
+        if (mypml4s.user) {
+          for (auto it = mypml4s.user->find(start); it.index() < end; it += it.span()) {
+            if (it.is_set()) {
+              it->store(0, memory_order_relaxed);
+              // TODO(behrensj): does there need to be a remote invlpg here?
+            }
+          }
+
+        }
       });
   }
 

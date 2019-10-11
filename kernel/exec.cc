@@ -191,7 +191,7 @@ exec(const char *path, const char * const *argv)
   switchvm(myproc());
 
   // Unmap our proc's qstack from the old address space.
-  oldvmap->remove((uptr)myproc()->qstack, KSTACKSIZE);
+  oldvmap->qremove((uptr)myproc()->kstack, KSTACKSIZE);
 
   // Now it's safe to clean up the old address space
   cleanup_work* w = new cleanup_work(std::move(oldvmap));

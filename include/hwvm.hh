@@ -272,8 +272,9 @@ namespace mmu_per_core_page_table {
 
     u64 internal_pages() const;
 
-    // Flush and clear a range of the TLB on all cores.
-    void clear_all(uintptr_t start, uintptr_t end);
+    // Flush and clear a range of the TLB on all cores, but only for the user
+    // page table.
+    void qclear_all(uintptr_t start, uintptr_t end);
   };
 }
 

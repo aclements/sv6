@@ -33,7 +33,7 @@ struct kstack_tag kstack_tag[NCPU];
 enum { sched_debug = 0 };
 
 proc::proc(int npid) :
-  kstack(0), pid(npid), parent(0), tf(0), context(0), killed(0),
+  kstack(0), qstack(0), killed(0), tf(0), pid(npid), parent(0), context(0), 
   tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
   cpu_pin(0), oncv(0), cv_wakeup(0),
   futex_lock("proc::futex_lock", LOCKSTAT_PROC),
@@ -239,7 +239,7 @@ proc::alloc(void)
 
   // Allocate kernel stacks.
   try {
-    if(!(p->qstack = (char*) kalloc("qstack", KSTACKSIZE) - KBASE + QSTACKBASE))
+    if(!(p->qstack = (char*) kalloc("qstack", KSTACKSIZE)))
       throw_bad_alloc();
 
 #if KSTACK_DEBUG && false // TODO: fix kstack debugging

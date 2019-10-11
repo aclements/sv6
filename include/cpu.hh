@@ -49,6 +49,8 @@ struct cpu {
 
   u64 scratch;                 // scratch space to use during page table swap
 
+  u8 has_secrets;              // whether kernel page tables are mapped
+
   __page_pad__;
 
   struct pgmap* pcid_history[PCID_HISTORY_SIZE]; // ring buffer of the last 8 pgmaps

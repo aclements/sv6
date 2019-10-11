@@ -8,10 +8,6 @@
 #define KVMALLOC    0xFFFFF00000000000ull
 #define KVMALLOCEND 0xFFFFF10000000000ull  // 1 TB
 
-// Range of virtual address space for qstacks
-#define QSTACKBASE  0xFFFFFE0000000000ull
-#define QSTACKEND   0xFFFFFE5000000000ull  // 320GB
-
 // Physical memory is direct-mapped from KBASE to KBASEEND in initpg.
 #define KBASE       0xFFFFFF0000000000ull
 #define KBASEEND    0xFFFFFF5000000000ull  // 320GB

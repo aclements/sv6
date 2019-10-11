@@ -60,8 +60,11 @@ typedef enum procstate {
 
 // Per-process state
 struct proc {
+  // First page of proc is quasi-user visible
   char *kstack;                // Bottom of kernel stack for this process
   char *qstack;                // Bottom of quasi user-visible stack
+  int killed;                  // If non-zero, have been killed
+  struct trapframe *tf;        // Trap frame for current syscall
   __page_pad__;
 
   sref<vmap> vmap;             // va -> vma
@@ -69,9 +72,7 @@ struct proc {
   volatile int pid;            // Process ID
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status
-  struct trapframe *tf;        // Trap frame for current syscall
   struct context *context;     // swtch() here to run process
-  int killed;                  // If non-zero, have been killed
   sref<filetable> ftable;      // File descriptor table
   sref<inode> cwd;             // Current directory
   sref<mnode> cwd_m;           // Current directory

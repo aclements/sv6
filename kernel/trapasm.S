@@ -41,9 +41,6 @@ sysentry:
         swapgs
         movq    %rax, %gs:GS_SYSCALLNO // save %rax so we can use it
 
-	    movq    %cr3, %rax
-	    andq    $(~0x1001), %rax
-	    movq    %rax, %cr3  // swap page table
 
         movq    %gs:GS_PROC, %rax  // myproc()
         movq    PROC_KSTACK(%rax), %rax
@@ -86,7 +83,7 @@ sysentry:
         movq $text, %rax
         wrfsbase %rax
 
-        sti
+        // sti
         call    sysentry_c
         cli
 
@@ -104,13 +101,16 @@ sysentry:
         movq    0x30(%r11), %rbp
         movq    0x38(%r11), %rbx
         movq    0x98(%r11), %rcx    // rip to be restored by sysret
-
-   	    movq    %cr3, %rsp
-	    orq    $(0x1001), %rsp
-	    movq    %rsp, %cr3  // swap page table back
-
         movq    0xb0(%r11), %rsp
         movq    0xa8(%r11), %r11    // eflags to be restored by sysret
+
+        movq    %rax, %gs:GS_SCRATCH
+   	    movq    %cr3, %rax
+	    orq    	$(0x1001), %rax
+	    movq    %rax, %cr3  // swap page table back
+		movb 	$0, %gs:GS_HAS_SECRETS
+        movq    %gs:GS_SCRATCH, %rax
+
         swapgs
         sysretq
 
@@ -135,13 +135,10 @@ trapcommon:
 		// If this trap came from kernel space then don't switch stacks or page tables.
         cmpw  $KCSEG, TF_CS(%rsp)
         jz 1f
-
 		swapgs
-		lfence
+1:      lfence
 
 		call switch_to_kstack
-
-1:      lfence
 
         movq %rsp, %rdi  // first argument to trap
 		rdfsbase %rax
@@ -186,8 +183,7 @@ trapret:
 		pushq %rax
 		movq %gs:GS_PROC, %rax
 		movq PROC_QSTACK(%rax), %rax
-		movabsq $(KBASE-QSTACKBASE + KSTACKSIZE - 56), %rbx
-		addq %rbx, %rax
+		addq $(KSTACKSIZE-56), %rax
 		movq 0(%rsp), %rbx
 		movq %rbx, 0(%rax)
 		movq 8(%rsp), %rbx
@@ -202,11 +198,11 @@ trapret:
 		movq %rbx, 40(%rax)
 		movq 48(%rsp), %rbx
 		movq %rbx, 48(%rax)
-		movq %rax, %rsp
-		popq %rax
 	   	movq %cr3, %rbx
 	    orq $(0x1001), %rbx
 		movq %rbx, %cr3  // swap page table back
+		movb $0, %gs:GS_HAS_SECRETS
+		popq %rax
 		popq %rbx
 	    swapgs
 1:		lfence

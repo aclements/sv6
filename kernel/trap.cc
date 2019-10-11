@@ -38,6 +38,9 @@ static void trap(struct trapframe *tf);
 u64
 sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 {
+  switch_to_kstack();
+  sti();
+
   if(myproc()->killed) {
     mtstart(trap, myproc());
     exit(-1);

@@ -41,10 +41,14 @@ threadstub:
 //      2. User page tables
 .globl switch_to_kstack
 switch_to_kstack:
+		cmpb $0, %gs:GS_HAS_SECRETS
+		jne 1f
+
 		// Install kernel page tables
-		movq    %cr3, %rax
-	    andq    $(~0x1001), %rax
-	    movq    %rax, %cr3
+		movq %cr3, %rax
+	    andq $(~0x1001), %rax
+	    movq %rax, %cr3
+		movb $1, %gs:GS_HAS_SECRETS
 
 		// Load pointers to the top of the kstack and qstack.
 		movq %gs:GS_PROC, %rax
@@ -54,10 +58,11 @@ switch_to_kstack:
 		addq $(KSTACKSIZE), %rsi
 
 		// Compute how much has been pushed onto the stack.
-		movq %rsi, %rdx
+		movq %rdi, %rdx
 		subq %rsp, %rdx
 
 		// Jump to return if we are on the double-fault stack or NMI stack.
+		// TODO: Shouldn't we still copy the stack for a NMI? Perhaps we need to copy the *entire* stack.
 		cmpq $(KSTACKSIZE), %rdx
 		ja 1f
 
@@ -65,13 +70,7 @@ switch_to_kstack:
 		subq %rdx, %rdi
 		subq %rdx, %rsi
 
-		// Page table swap means that the qstack virtual address range no longer
-		// points to the stack that was previously in use. Adjust the pointer to
-		// be into the direct map region associated with its physical memory.
-		movabsq $(KBASE-QSTACKBASE), %rax
-		addq %rax, %rsi
-
 		call memcpy  // memcpy(dest=rdi, src=rsi, size=rdx);
-		movq %rax, %rsp
+
 1:		ret
 
