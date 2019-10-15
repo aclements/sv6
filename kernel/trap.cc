@@ -19,7 +19,7 @@
 
 extern "C" void __uaccess_end(void);
 
-struct intdesc idt[256] __attribute__((aligned(16)));
+struct intdesc idt[256] __attribute__((aligned(4096)));
 
 static char fpu_initial_state[FXSAVE_BYTES];
 

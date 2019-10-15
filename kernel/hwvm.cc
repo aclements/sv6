@@ -18,6 +18,8 @@
 
 using namespace std;
 
+extern struct intdesc idt[256];
+
 // Ensure tlbflush_req lives on a cache line by itself since we hit
 // this from all cores in batched_shootdown mode.
 static atomic<u64> tlbflush_req __mpalign__;
@@ -685,6 +687,7 @@ namespace mmu_per_core_page_table {
       mypml4s = kpml4.kclone_pair();
       mypml4s.user->uexpose((void*)mycpu(), pgmap::L_4K);
       mypml4s.user->uexpose((void*)&mycpu()->cpu, pgmap::L_4K);
+      mypml4s.user->uexpose((void*)idt, pgmap::L_4K);
 
       for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
         mypml4s.user->uexpose((void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE), pgmap::L_4K); // nmi stack
