@@ -64,6 +64,7 @@ UPROGS_BIN= \
 	mail-deliver \
 	disktest \
 	dd \
+	getpid \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \

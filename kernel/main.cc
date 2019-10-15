@@ -18,7 +18,7 @@ void inituart(void);
 void inituartcons(void);
 void initcga(void);
 void initconsole(void);
-void initpg(void);
+void initpg(struct cpu *c);
 void cleanuppg(void);
 void inittls(struct cpu *);
 void initnmi(void);
@@ -73,7 +73,7 @@ mpboot(void)
 {
   initseg(&cpus[bcpuid]);
   inittls(&cpus[bcpuid]);       // Requires initseg
-  initpg();
+  initpg(&cpus[bcpuid]);
 
   // Call per-CPU static initializers.  This is the per-CPU equivalent
   // of the init_array calls in cmain.
@@ -186,8 +186,8 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   inituart();
   initphysmem(mbaddr);
-  initpg();                // Requires initphysmem
-  inithz();        // CPU Hz, microdelay
+  initpg(&cpus[0]);        // Requires initphysmem
+  inithz();                // CPU Hz, microdelay
   initseg(&cpus[0]);
   inittls(&cpus[0]);       // Requires initseg
 

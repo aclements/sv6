@@ -60,7 +60,7 @@ sys_kill(int pid)
   return proc::kill(pid);
 }
 
-//SYSCALL
+//SYSCALL {"nosec": true}
 int
 sys_getpid(void)
 {

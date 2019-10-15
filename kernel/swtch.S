@@ -47,6 +47,7 @@ switch_to_kstack:
 		// Install kernel page tables
 		movq %cr3, %rax
 	    andq $(~0x1001), %rax
+	    andq %gs:GS_CR3_MASK, %rax
 	    movq %rax, %cr3
 		movb $1, %gs:GS_HAS_SECRETS
 

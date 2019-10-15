@@ -97,8 +97,9 @@ userptr_str::load_alloc(std::size_t limit, std::size_t *len_out) const
   return res;
 }
 
-extern u64 (*syscalls[])(u64, u64, u64, u64, u64, u64);
+extern u64 (*const syscalls[])(u64, u64, u64, u64, u64, u64);
 extern const char* syscall_names[];
+extern const bool syscall_needs_secrets[];
 extern const int nsyscalls;
 
 u64
@@ -109,6 +110,10 @@ syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
     try {
 #endif
       if(num < nsyscalls && syscalls[num]) {
+        if(syscall_needs_secrets[num]) {
+          ensure_secrets();
+        }
+
         u64 r;
         mtstart(syscalls[num], myproc());
         mtrec();
@@ -120,12 +125,14 @@ syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
         mtign();
         return r;
       } else {
+        ensure_secrets();
         cprintf("%d %s: unknown sys call %ld\n",
                 myproc()->pid, myproc()->name, num);
         return -1;
       }
 #if EXCEPTIONS
     } catch (std::bad_alloc& e) {
+      ensure_secrets();
       cprintf("%d: syscall retry\n", myproc()->pid);
       gc_wakeup();
       yield();

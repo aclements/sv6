@@ -329,7 +329,7 @@ static atomic<uintptr_t> kvmallocpos;
 // KBASEEND.  This augments the KCODE mapping created by the
 // bootloader.  Perform per-core control register set up.
 void
-initpg(void)
+initpg(struct cpu *c)
 {
   static bool kpml4_initialized;
 
@@ -368,9 +368,14 @@ initpg(void)
   }
 
 
-  if (!cpuid::features().pcid) {
-    cprintf("PCIDs unsupported?!\n");
-    while(1);
+  if (cpuid::features().pcid) {
+    c->cr3_mask = 0xffffffff'ffffffff;
+    lcr4(rcr4() | CR4_PCIDE);
+  } else {
+    c->cr3_mask = 0x7fffffff'fffff000;
+    if (c->id == 0) {
+      cprintf("WARN: PCIDs unsupported\n");
+    }
   }
 
   if (!cpuid::features().fsgsbase) {
@@ -378,8 +383,8 @@ initpg(void)
     while(1);
   }
 
-  // Enable global pages and PCIDs.  This has to happen on every core.
-  lcr4(rcr4() | CR4_PGE | CR4_PCIDE | CR4_FSGSBASE);
+  // Enable global pages and fs/gs instructions. This has to happen on every core.
+  lcr4(rcr4() | CR4_PGE | CR4_FSGSBASE);
 }
 
 // Clean up mappings that were only required during early boot.
@@ -723,9 +728,10 @@ namespace mmu_per_core_page_table {
     pcid_history[pcid] = mypml4s.user;
 
     u64 cr3 = v2p(kernel ? mypml4s.kernel : mypml4s.user)
-      | ((mycpu()->id * PCID_HISTORY_SIZE + pcid) * 2)
-      | (flush_tlb ? 0 : ((u64)1<<63))
-      | (kernel ? 0 : 1);
+     | ((mycpu()->id * PCID_HISTORY_SIZE + pcid) * 2)
+     | (flush_tlb ? 0 : ((u64)1<<63))
+     | (kernel ? 0 : 1);
+    cr3 &= mycpu()->cr3_mask;
 
     lcr3(cr3);
     mycpu()->tlb_cr3 = cr3;

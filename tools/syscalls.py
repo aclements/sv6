@@ -36,7 +36,8 @@ def main():
                                          ", ".join(syscall.kargs))
         print
 
-        print "u64 (*syscalls[])(u64, u64, u64, u64, u64, u64) = {"
+        print "extern u64 (*const syscalls[])(u64, u64, u64, u64, u64, u64);"
+        print "u64 (*const syscalls[])(u64, u64, u64, u64, u64, u64) = {"
         bynum = dict((s.num, s) for s in syscalls)
         for num in range(max(bynum.keys()) + 1):
             if num not in bynum:
@@ -52,6 +53,16 @@ def main():
                 print '  nullptr,'
             else:
                 print '  "%s",' % bynum[num].kname
+        print '};'
+        print
+
+        print 'extern const bool syscall_needs_secrets[];'
+        print 'const bool syscall_needs_secrets[] = {'
+        for syscall in syscalls:
+            if syscall.flags.get("nosec"):
+                print ' false,'
+            else:
+                print ' true,'
         print '};'
         print
 

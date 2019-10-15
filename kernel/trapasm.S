@@ -83,7 +83,7 @@ sysentry:
         movq $text, %rax
         wrfsbase %rax
 
-        // sti
+        sti
         call    sysentry_c
         cli
 
@@ -105,10 +105,11 @@ sysentry:
         movq    0xa8(%r11), %r11    // eflags to be restored by sysret
 
         movq    %rax, %gs:GS_SCRATCH
+   	    movb 	$0, %gs:GS_HAS_SECRETS
    	    movq    %cr3, %rax
 	    orq    	$(0x1001), %rax
+   	    andq    %gs:GS_CR3_MASK, %rax
 	    movq    %rax, %cr3  // swap page table back
-		movb 	$0, %gs:GS_HAS_SECRETS
         movq    %gs:GS_SCRATCH, %rax
 
         swapgs
@@ -198,10 +199,11 @@ trapret:
 		movq %rbx, 40(%rax)
 		movq 48(%rsp), %rbx
 		movq %rbx, 48(%rax)
+		movb $0, %gs:GS_HAS_SECRETS
 	   	movq %cr3, %rbx
 	    orq $(0x1001), %rbx
+        andq %gs:GS_CR3_MASK, %rbx
 		movq %rbx, %cr3  // swap page table back
-		movb $0, %gs:GS_HAS_SECRETS
 		popq %rax
 		popq %rbx
 	    swapgs
