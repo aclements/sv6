@@ -201,10 +201,16 @@ ifneq ($(RUN),)
 override QEMUAPPEND += \$$ $(RUN)
 endif
 
+ifeq ($(QEMUSMP),1)
+QEMUNUMA := node
+else
+QEMUNUMA := node node
+endif
+
 QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid,+fsgsbase \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-nographic -device sga \
-	-numa node -numa node \
+	$(foreach x,$(QEMUNUMA),-numa $(x)) \
 	-net user,hostfwd=tcp::2323-:23,hostfwd=tcp::8080-:80 -net nic,model=e1000 \
 	$(if $(QEMUAPPEND),-append "$(QEMUAPPEND)",) \
 
