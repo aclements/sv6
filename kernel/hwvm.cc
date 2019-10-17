@@ -787,7 +787,7 @@ namespace mmu_per_core_page_table {
   page_map_cache::qclear_all(uintptr_t start, uintptr_t end)
   {
     bitset<NCPU> targets;
-    for(int i = 0; i < NCPU; i++)
+    for(int i = 0; i < ncpu; i++)
       targets.set(i);
 
     run_on_cpus(
