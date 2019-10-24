@@ -132,7 +132,6 @@ public:
 
     k = PX(L_PML4, KGLOBAL);
     memset(&pair.user->e[0], 0, PGSIZE);
-    pair.user->uexpose((void*)KTEXT, L_2M, true);
 
     return pair;
   }
@@ -698,6 +697,7 @@ namespace mmu_per_core_page_table {
         mypml4s.user->uexpose((void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE), pgmap::L_4K); // nmi stack
         mypml4s.user->uexpose((void*)(mycpu()->ts.ist[2] + i - KSTACKSIZE), pgmap::L_4K); // double fault stack
       }
+      *(mypml4s.user->find(KTEXT, pgmap::L_2M).create(0)) = v2p(qtext) | PTE_PS | PTE_P | PTE_W;
     }
 
     // TODO(behrensj): Avoid doing this on every `switch_to` call.

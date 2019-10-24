@@ -20,6 +20,7 @@ OBJS = \
         futex.o \
         idle.o \
 	ioapic.o \
+	hotpatch.o \
 	hwvm.o \
 	hz.o \
 	kalloc.o \

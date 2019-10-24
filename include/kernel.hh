@@ -119,6 +119,9 @@ int             futexkey(const u64* useraddr, vmap* vmap, futexkey_t* key);
 long            futexwait(futexkey_t key, u64 val, u64 timer);
 long            futexwake(futexkey_t key, u64 nwake);
 
+// hotpatch.cc
+extern void*    qtext;
+
 // hz.c
 void            microdelay(u64);
 void            inithz(void);

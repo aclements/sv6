@@ -62,6 +62,7 @@ void inithpet(void);
 void initrtc(void);
 void initmfs(void);
 void idleloop(void);
+void inithotpatch(void);
 
 #define IO_RTC  0x70
 
@@ -246,6 +247,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initdisk();      // disk
   initinode();     // inode cache
   initmfs();
+  inithotpatch();
 
   if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);

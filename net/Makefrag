@@ -21,7 +21,7 @@ LWIP_CFLAGS = -Wno-attributes \
 	    -Wno-char-subscripts \
 	    -Wno-unused-but-set-variable \
 	    -Wno-format \
-	    -mcmodel=large -O2
+	    -mcmodel=kernel -O2
 
 LWIP_INCLUDES := \
 	-Ilwip/src/include \
@@ -62,8 +62,8 @@ LWIP_SRCFILES += \
 	net/if.c
 LWIP_OBJFILES := $(patsubst %.c, $(O)/%.o, $(LWIP_SRCFILES))
 
-$(O)/net/%.o: CXXFLAGS+=-mcmodel=large -DXV6_KERNEL
-$(O)/lwip/src/%.o: CFLAGS+=-mcmodel=large $(LWIP_CFLAGS) $(LWIP_INCLUDES)
+$(O)/net/%.o: CXXFLAGS+=-mcmodel=kernel -DXV6_KERNEL
+$(O)/lwip/src/%.o: CFLAGS+=-mcmodel=kernel $(LWIP_CFLAGS) $(LWIP_INCLUDES)
 
 $(O)/liblwip.a: $(LWIP_OBJFILES)
 	@echo "  AR     $@"
