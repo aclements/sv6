@@ -13,4 +13,7 @@
 .section .init_rodata, "a", @progbits
 include_bin(kernel/initcode,initcode)
 include_bin(kernel/bootother,bootother)
+
+#if MEMIDE
 include_bin(fs.img,fs_img)
+#endif
