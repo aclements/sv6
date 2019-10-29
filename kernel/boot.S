@@ -145,6 +145,7 @@ tramp64:
 # to cover all the available physical memory.
 # This would be easier if we could use the PS bit to create GB-sized entries
 # and skip the pdt table, but not all chips support it, and QEMU doesn't.
+.section .data
 .balign 4096
 .global kpml4
 kpml4:
@@ -184,6 +185,7 @@ pdtcode:
 cmdline:
 	.space 256
         
+.section .text
 .code32        
 savecmdline:
         pushl %eax
