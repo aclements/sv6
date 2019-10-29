@@ -132,7 +132,7 @@ public:
 
     k = PX(L_PML4, KGLOBAL);
     memset(&pair.user->e[0], 0, PGSIZE);
-    pair.user->uexpose((void*)(KCODE + 0x200000), L_2M, true);
+    pair.user->uexpose((void*)KTEXT, L_2M, true);
 
     return pair;
   }
@@ -342,11 +342,11 @@ initpg(struct cpu *c)
     // Can we use 1GB mappings?
     if (cpuid::features().page1GB) {
       level = pgmap::L_1G;
-
-      // Redo KCODE mapping with a 1GB page
-      *kpml4.find(KCODE, level).create(0) = PTE_W | PTE_P | PTE_PS;
-      lcr3(rcr3());
     }
+
+    // Make the text and rodata segments read only
+    *kpml4.find(KTEXT, pgmap::L_2M).create(0) = v2p((void*)KTEXT) | PTE_P | PTE_PS;
+    lcr3(rcr3());
 
     // Create direct map region
     for (auto it = kpml4.find(KBASE, level); it.index() < KBASEEND;
