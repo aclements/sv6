@@ -132,7 +132,7 @@ public:
 
     k = PX(L_PML4, KGLOBAL);
     memset(&pair.user->e[0], 0, PGSIZE);
-    pair.user->uexpose((void*)KCODE, L_2M, true);
+    pair.user->uexpose((void*)(KCODE + 0x200000), L_2M, true);
 
     return pair;
   }

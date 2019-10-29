@@ -4,9 +4,9 @@ ENTRY(xxx)
 
 SECTIONS
 {
-    . = 0xFFFFFFFFC0100000;
+    . = 0xFFFFFFFFC0200000;
     PROVIDE(text = .);
-    .text : AT(0x100000) {
+    .text : AT(0x200000) {
         *(.text .stub .text.* .gnu.linkonce.t.*)
     }
     .rodata : {
@@ -30,9 +30,11 @@ SECTIONS
     /* Binary blobs from kernel/incbin.S */
     .init_rodata : {
         *(.init_rodata)
+
+        /* Pad section to end of hugepage */
+        . = ALIGN(0x200000);
     }
 
-    . = ALIGN(0x1000);
     .data : {
         *(.data .data.* .gnu.linkonce.d.*)
         *(.got) *(.igot)
