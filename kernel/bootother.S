@@ -60,6 +60,7 @@ protcseg:
 	movl start-4, %ecx
 	jmp *%ecx
 
+.section .text
 .balign 4
 gdt:
 	.quad 0 # null seg
