@@ -120,6 +120,7 @@
 #define NCPU          40  // maximum number of CPUs
 #define NSOCKET       2
 #define PERFSIZE      (128<<20ull)
+#define UART_BAUD     115200
 
 //
 // Linux user-space targets (no kernel, so most options aren't set)

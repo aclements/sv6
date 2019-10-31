@@ -1006,6 +1006,10 @@ initkalloc(void)
     // Divide the node into at least subnodes buddy allocators
 #if KALLOC_BUDDY_PER_CPU
     size_t subnodes = node.cpus.size();
+    // Even if we have fewer CPUs than NUMA nodes, we still need to set up at
+    // least one buddy allocator per node.
+    if (subnodes == 0)
+      subnodes = 1;
 #else
     size_t subnodes = 1;
 #endif

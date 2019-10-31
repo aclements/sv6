@@ -155,7 +155,7 @@ public:
   acpi_deleter(acpi_deleter &&o) = delete;
 };
 
-static bool have_tables, have_acpi;
+static bool have_tables, have_acpi, have_too_many_cpus;
 static acpi_table<ACPI_TABLE_MADT> madt;
 static acpi_table<ACPI_TABLE_SRAT> srat;
 static acpi_table<ACPI_TABLE_DMAR, ACPI_DMAR_HEADER> dmar;
@@ -249,7 +249,8 @@ initcpumap(void)
     ++count;
   }
 
-  if (count > NCPU)
+  have_too_many_cpus = (count > NCPU);
+  if (have_too_many_cpus)
     console.println("acpi: Only ", NCPU, " of ", count,
                     " CPUs supported; please increase NCPU");
   if (!found_bsp)
@@ -325,8 +326,13 @@ initnuma(void)
         found = true;
       }
     }
-    if (!found)
-      panic("SRAT refers to unknown CPU APICID %d", apicid);
+    if (!found) {
+      if (have_too_many_cpus)
+        console.println("SRAT refers to unknown CPU APICID", apicid, ", but we"
+                        " couldn't track all our CPUs, so this is expected");
+      else
+        panic("SRAT refers to unknown CPU APICID %d", apicid);
+    }
   }
 
   // Print NUMA node map

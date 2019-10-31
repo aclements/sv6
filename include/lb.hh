@@ -4,6 +4,12 @@
 #include "rnd.hh"
 #include "percpu.hh"
 
+#if NCPU_PER_SOCKET < 1
+// we need at least one CPU per socket for the assumptions made by the load
+// balancer code here to work.
+#error Cannot set NSOCKET larger than NCPU
+#endif
+
 template<int N>
 struct random_permutation {
  public:
