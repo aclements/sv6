@@ -16,6 +16,7 @@
 #include "hwvm.hh"
 #include "refcache.hh"
 #include "cpuid.hh"
+#include "linearhash.hh"
 
 extern "C" void __uaccess_end(void);
 
@@ -33,13 +34,18 @@ static struct irq_info
   bool in_use;
 } irq_info[256 - T_IRQ0];
 
+// Instruction pointers that cause transparent world barriers.
+linearhash<u64, u64> wm_rips(1024);
+
+// Addresses that trigger transparent world barriers.
+linearhash<u64, u64> wm_addrs(1024);
+
 static void trap(struct trapframe *tf);
 
 u64
 sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 {
   if(myproc()->killed) {
-    ensure_secrets();
     mtstart(trap, myproc());
     exit(-1);
   }
@@ -49,7 +55,6 @@ sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
   u64 r = syscall(a0, a1, a2, a3, a4, a5, num);
 
   if(myproc()->killed) {
-    ensure_secrets();
     mtstart(trap, myproc());
     exit(-1);
   }
@@ -61,7 +66,16 @@ int
 do_pagefault(struct trapframe *tf)
 {
   uptr addr = rcr2();
-  if (myproc()->uaccess_) {
+  if (((tf->cs&3) == 0 || myproc() == 0) &&
+      !mycpu()->has_secrets && addr >= KGLOBAL) {
+    // Page fault was probably caused by trying to access secret
+    // data. Map it in now and record where this happened.
+    switch_to_kstack();
+
+    wm_addrs.increment(addr);
+    wm_rips.increment(tf->rip);
+    return 0;
+  } else if (myproc()->uaccess_) {
     if (addr >= USERTOP)
       panic("do_pagefault: %lx", addr);
 
@@ -102,6 +116,8 @@ extern "C" void
 trap_c(struct trapframe *tf)
 {
   if (tf->trapno == T_NMI) {
+    ensure_secrets();
+
     // An NMI can come in after popcli() drops ncli to zero and intena
     // is 1, but before popcli() checks intena and calls sti.  If the
     // NMI handler acquires any lock, acquire() will call pushcli(),
@@ -152,6 +168,7 @@ trap_c(struct trapframe *tf)
   }
 
   if (tf->trapno == T_DBLFLT) {
+    ensure_secrets();
     kerneltrap(tf);
   }
 

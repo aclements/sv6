@@ -139,8 +139,6 @@ trapcommon:
 		swapgs
 1:      lfence
 
-		call switch_to_kstack
-
         movq %rsp, %rdi  // first argument to trap
 		rdfsbase %rax
 		pushq %rax

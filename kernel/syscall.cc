@@ -110,9 +110,9 @@ syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
     try {
 #endif
       if(num < nsyscalls && syscalls[num]) {
-        if(syscall_needs_secrets[num]) {
-          ensure_secrets();
-        }
+        // if(syscall_needs_secrets[num]) {
+        //   ensure_secrets();
+        // }
 
         u64 r;
         mtstart(syscalls[num], myproc());
@@ -125,14 +125,12 @@ syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
         mtign();
         return r;
       } else {
-        ensure_secrets();
         cprintf("%d %s: unknown sys call %ld\n",
                 myproc()->pid, myproc()->name, num);
         return -1;
       }
 #if EXCEPTIONS
     } catch (std::bad_alloc& e) {
-      ensure_secrets();
       cprintf("%d: syscall retry\n", myproc()->pid);
       gc_wakeup();
       yield();

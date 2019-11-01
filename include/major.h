@@ -9,3 +9,4 @@
 #define MAJ_KSTATS   9
 #define MAJ_KMEMSTATS 10
 #define MAJ_MFSSTATS 11
+#define MAJ_QSTATS 12

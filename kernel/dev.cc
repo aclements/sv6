@@ -4,6 +4,8 @@
 #include "file.hh"
 #include "major.h"
 #include "kstats.hh"
+#include "kstream.hh"
+#include "linearhash.hh"
 
 extern const char *kconfig;
 
@@ -35,9 +37,26 @@ kstatsread(mdev*, char *dst, u32 off, u32 n)
   return n;
 }
 
+static int
+qstatsread(mdev*, char *dst, u32 off, u32 n)
+{
+  window_stream s(dst, off, n);
+
+  extern linearhash<u64, u64> wm_rips;
+
+  for(auto i = wm_rips.begin(); i != wm_rips.end(); i++) {
+    u64 key, value;
+    if(i.get(&key, &value)) {
+      s.println(shex(key), ": ", value);
+    }
+  }
+  return s.get_used();
+}
+
 void
 initdev(void)
 {
   devsw[MAJ_KCONFIG].pread = kconfigread;
   devsw[MAJ_KSTATS].pread = kstatsread;
+  devsw[MAJ_QSTATS].pread = qstatsread;
 }

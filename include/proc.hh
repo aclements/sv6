@@ -65,11 +65,15 @@ struct proc {
   char *qstack;                // Bottom of quasi user-visible stack
   int killed;                  // If non-zero, have been killed
   struct trapframe *tf;        // Trap frame for current syscall
+
+  int uaccess_;
+  u64 user_fs_;
+  volatile int pid;            // Process ID
+
   __page_pad__;
 
   sref<vmap> vmap;             // va -> vma
   vmalloc_ptr<char[]> kstack_vm; // vmalloc'd kstack, if using vmalloc
-  volatile int pid;            // Process ID
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status
   struct context *context;     // swtch() here to run process
@@ -97,12 +101,10 @@ struct proc {
   ilink<proc> cv_waiters;      // Linked list of processes waiting for oncv
   ilink<proc> cv_sleep;        // Linked list of processes sleeping on a cv
   struct spinlock futex_lock;
-  u64 user_fs_;
   u64 unmap_tlbreq_;
   int data_cpuid;              // Where vmap and kstack is likely to be cached
   int run_cpuid_;
   int in_exec_;
-  int uaccess_;
   bool yield_;                 // yield cpu up when returning to user space
 
   userptr_str upath;
