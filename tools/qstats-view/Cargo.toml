@@ -1,0 +1,15 @@
+[package]
+name = "qstats-view"
+version = "0.1.0"
+authors = ["Jonathan Behrens <fintelia@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = "2.33.0"
+addr2line = "0.10.0"
+curl = "0.4.25"
+toml = "0.5.5"
+serde_derive = "1.0.102"
+serde = "1.0.102"
