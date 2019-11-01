@@ -17,7 +17,8 @@ extern u64 __x86_indirect_thunk_r13;
 extern u64 __x86_indirect_thunk_r14;
 extern u64 __x86_indirect_thunk_r15;
 
-void replace_qtext(void* target, const char* value) {
+void replace_qtext(void* target, const char* value)
+{
   for(char* p = (char*)target - KTEXT + (u64)qtext; *value; p++, value++)
     *p = *value;
 }
