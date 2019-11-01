@@ -177,9 +177,11 @@ resp_get(int s, const char *url)
   if (r < 0)
     goto error;
 
-  r = content_length(s, stat.st_size);
-  if (r < 0)
-    goto error;
+  if (stat.st_size != 0) {
+    r = content_length(s, stat.st_size);
+    if (r < 0)
+      goto error;
+  }
 
   r = content_type(s);
   if (r < 0)
