@@ -44,10 +44,11 @@ qstatsread(mdev*, char *dst, u32 off, u32 n)
 
   extern linearhash<u64, u64> wm_rips;
 
+  s.println("[rips]");
   for(auto i = wm_rips.begin(); i != wm_rips.end(); i++) {
     u64 key, value;
     if(i.get(&key, &value)) {
-      s.println(shex(key), ": ", value);
+      s.println(shex(key), " = ", value);
     }
   }
   return s.get_used();
