@@ -41,6 +41,7 @@ cpuid::cpuid() : basic_{}, extended_{}
   features_.fsgsbase = l.b & (1<<0);
 
   l = get_leaf(leafid::ext_features);
+  features_.md_clear = l.d & (1<<10);
   features_.spec_ctrl = l.d & (1<<26);
 
   l = get_leaf(leafid::extended_features);

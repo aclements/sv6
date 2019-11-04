@@ -382,7 +382,9 @@ initpg(struct cpu *c)
     cprintf("wrfsbase instruction unsupported?!\n");
     while(1);
   }
-
+  if (!cpuid::features().spec_ctrl) {
+    cprintf("WARN: md-clear not advertised, attempting anyway\n");
+  }
   if (!cpuid::features().spec_ctrl) {
     cprintf("WARN: spec-ctrl feature unavailable?!\n");
   }

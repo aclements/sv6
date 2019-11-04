@@ -178,6 +178,7 @@ public:
     bool fsgsbase : 1;
 
     // 7.EDX
+    bool md_clear : 1;
     bool spec_ctrl : 1;
 
     // 80000001.EDX
