@@ -446,6 +446,13 @@ switchvm(struct proc *p)
   // probably the wrong place.
   if (p->vmap) {
     p->vmap->cache.switch_to(true, p);
+
+    if (*cur_page_map_cache != &p->vmap->cache) {
+      if (cpuid::features().spec_ctrl) {
+        indirect_branch_prediction_barrier();
+      }
+    }
+
     *cur_page_map_cache = &p->vmap->cache;
   } else {
     kpml4.switch_to();
@@ -456,10 +463,6 @@ switchvm(struct proc *p)
   mycpu()->ts.rsp[0] = (u64) p->kstack + KSTACKSIZE;
 
   mds_clear_cpu_buffers();
-
-  if (cpuid::features().spec_ctrl) {
-    indirect_branch_prediction_barrier();
-  }
 }
 
 // Set up CPU's kernel segment descriptors.
