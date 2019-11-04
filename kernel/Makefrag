@@ -28,6 +28,7 @@ OBJS = \
 	kbd.o \
 	main.o \
 	memide.o \
+	nospec-branch.o \
 	ide.o \
 	mp.o \
 	net.o \

@@ -1,4 +1,5 @@
 #include "mmu.h"
+#include "types.h"
 #include "lib.h"
 
 struct ipcmsg;

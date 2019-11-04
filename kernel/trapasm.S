@@ -87,6 +87,8 @@ sysentry:
         call    sysentry_c
         cli
 
+        call mds_clear_cpu_buffers
+
         movq    %gs:GS_PROC, %r15
         movq    PROC_USER_FS(%r15), %r15
         wrfsbase %r15
@@ -173,6 +175,8 @@ trapret:
 
 		cmpw $KCSEG, 8(%rsp)
 		jz 1f
+
+        call mds_clear_cpu_buffers
 
 		// At this point there are 40 bytes on the stack. We are returning to
 		// userspace, so these items need to be moved to the qstack (if we aren't
