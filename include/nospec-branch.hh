@@ -2,6 +2,20 @@
 
 #include "kernel.hh"
 
+#define MSR_IA32_PRED_CMD        0x00000049 /* Prediction Command */
+#define PRED_CMD_IBPB            0x1        /* Indirect Branch Prediction Barrier */
+
+static inline void indirect_branch_prediction_barrier(void)
+{
+	u64 val = PRED_CMD_IBPB;
+
+	asm volatile("wrmsr"
+		: : "c" (MSR_IA32_PRED_CMD),
+		    "a" ((u32)val),
+		    "d" ((u32)(val >> 32))
+		: "memory");
+}
+
 /**
  * mds_clear_cpu_buffers - Mitigation for MDS vulnerability
  *

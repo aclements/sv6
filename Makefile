@@ -207,7 +207,7 @@ else
 QEMUNUMA := node node
 endif
 
-QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid,+fsgsbase \
+QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid,+fsgsbase,+spec-ctrl \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-nographic -device sga \
 	$(foreach x,$(QEMUNUMA),-numa $(x)) \

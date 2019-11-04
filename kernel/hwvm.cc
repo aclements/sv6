@@ -383,6 +383,10 @@ initpg(struct cpu *c)
     while(1);
   }
 
+  if (!cpuid::features().spec_ctrl) {
+    cprintf("WARN: spec-ctrl feature unavailable?!\n");
+  }
+
   // Enable global pages and fs/gs instructions. This has to happen on every core.
   lcr4(rcr4() | CR4_PGE | CR4_FSGSBASE);
 }
@@ -450,6 +454,10 @@ switchvm(struct proc *p)
   mycpu()->ts.rsp[0] = (u64) p->kstack + KSTACKSIZE;
 
   mds_clear_cpu_buffers();
+
+  if (cpuid::features().spec_ctrl) {
+    indirect_branch_prediction_barrier();
+  }
 }
 
 // Set up CPU's kernel segment descriptors.

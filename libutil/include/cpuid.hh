@@ -177,6 +177,9 @@ public:
     // 7.EBX
     bool fsgsbase : 1;
 
+    // 7.EDX
+    bool spec_ctrl : 1;
+
     // 80000001.EDX
     bool page1GB : 1;
   };
