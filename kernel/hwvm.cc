@@ -15,6 +15,7 @@
 #include "kstats.hh"
 #include "cpuid.hh"
 #include "vmalloc.hh"
+#include "nospec-branch.hh"
 
 using namespace std;
 
@@ -447,6 +448,8 @@ switchvm(struct proc *p)
   }
 
   mycpu()->ts.rsp[0] = (u64) p->kstack + KSTACKSIZE;
+
+  mds_clear_cpu_buffers();
 }
 
 // Set up CPU's kernel segment descriptors.
