@@ -19,6 +19,11 @@
 #define TRAP(x) _TRAP(x, NOEC)
 #define TRAPCODE(x) _TRAP(x, EC)
 
+.section .rodata
+mds_clear_cpu_buffers_ds:
+.long KDSEG
+.text
+
 /* Calling convention:
  *
  * Syscall #:  %rax
@@ -87,8 +92,6 @@ sysentry:
         call    sysentry_c
         cli
 
-        call mds_clear_cpu_buffers
-
         movq    %gs:GS_PROC, %r15
         movq    PROC_USER_FS(%r15), %r15
         wrfsbase %r15
@@ -106,6 +109,10 @@ sysentry:
         movq    0xb0(%r11), %rsp
         movq    0xa8(%r11), %r11    // eflags to be restored by sysret
 
+        // If we never mapped in secrets, just swapgs and return
+        cmpb $0, %gs:GS_HAS_SECRETS
+        jz 1f
+
         movq    %rax, %gs:GS_SCRATCH
    	    movb 	$0, %gs:GS_HAS_SECRETS
    	    movq    %cr3, %rax
@@ -114,6 +121,9 @@ sysentry:
 	    movq    %rax, %cr3  // swap page table back
         movq    %gs:GS_SCRATCH, %rax
 
+        verw (mds_clear_cpu_buffers_ds)
+
+1:      lfence
         swapgs
         sysretq
 
@@ -173,15 +183,17 @@ trapret:
         popq %rdi
     	addq $0x10, %rsp  // trapno, err
 
+		// If we are returning to kernel space, skip to the end of of trapret
 		cmpw $KCSEG, 8(%rsp)
 		jz 1f
 
-        call mds_clear_cpu_buffers
+		// If we never mapped in secrets, just swapgs and return
+		cmpb $0, %gs:GS_HAS_SECRETS
+		jz 2f
 
-		// At this point there are 40 bytes on the stack. We are returning to
-		// userspace, so these items need to be moved to the qstack (if we aren't
-		// already on the qstack). For now, unconditionally copy them there.
-
+		// At this point there are 40 bytes on the stack and we are returning to
+		// userspace with secrets currently mapped. We need to apply mitigations
+		// and move those items to the qstack.
 		pushq %rbx
 		pushq %rax
 		movq %gs:GS_PROC, %rax
@@ -208,7 +220,10 @@ trapret:
 		movq %rbx, %cr3  // swap page table back
 		popq %rax
 		popq %rbx
-	    swapgs
+
+		verw (mds_clear_cpu_buffers_ds)
+
+2:		swapgs
 1:		lfence
 
         iretq

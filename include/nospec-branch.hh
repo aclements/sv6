@@ -18,6 +18,3 @@ static inline void indirect_branch_prediction_barrier(void)
 		: "memory");
 }
 
-extern "C" void mds_clear_cpu_buffers();
-
-
