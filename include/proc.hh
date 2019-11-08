@@ -49,13 +49,13 @@ struct mtrace_stacks {
 };
 #endif
 
-typedef enum procstate { 
+typedef enum procstate {
   EMBRYO,
   SLEEPING,
   RUNNABLE,
   RUNNING,
-  ZOMBIE 
-} procstate_t;;
+  ZOMBIE
+} procstate_t;
 
 #define PROC_MAGIC 0xfeedfacedeadd00dULL
 
@@ -129,7 +129,7 @@ struct proc {
   static int   kill(int pid);
   int          kill();
   bool         cansteal(bool nonexec) {
-    return (get_state() == RUNNABLE && !cpu_pin && 
+    return (get_state() == RUNNABLE && !cpu_pin &&
           (in_exec_ || nonexec) &&
           curcycles != 0 && curcycles > VICTIMAGE);
   };
@@ -146,8 +146,8 @@ private:
   proc(int npid);
   proc& operator=(const proc&);
   proc(const proc& x);
-  
-  procstate_t state_;       // Process state  
+
+  procstate_t state_;       // Process state
 } __page_align__;
 
 class kill_exception : public std::runtime_error {
