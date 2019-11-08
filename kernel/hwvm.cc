@@ -700,7 +700,8 @@ namespace mmu_per_core_page_table {
   void
   page_map_cache::switch_to(bool kernel, proc* p) const
   {
-    auto &mypml4s = *pml4s;
+    cpuid_t id = myid();
+    auto &mypml4s = pml4s[id];
     if (!mypml4s.kernel) {
       mypml4s = kpml4.kclone_pair();
       mypml4s.user->uexpose((void*)mycpu(), pgmap::L_4K);
@@ -712,15 +713,17 @@ namespace mmu_per_core_page_table {
         mypml4s.user->uexpose((void*)(mycpu()->ts.ist[2] + i - KSTACKSIZE), pgmap::L_4K); // double fault stack
       }
       *(mypml4s.user->find(KTEXT, pgmap::L_2M).create(0)) = v2p(qtext) | PTE_PS | PTE_P | PTE_W;
+      assert(!p->vmap_cpu_mask[myid()]);
     }
 
-    // TODO(behrensj): Avoid doing this on every `switch_to` call.
-    for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
-      *(mypml4s.user->find((u64)p->kstack+i, pgmap::L_4K).create(0)) =
-        v2p(p->qstack+i) | PTE_P | PTE_W | PTE_NX;
+    if (!p->vmap_cpu_mask[id]) {
+      for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
+        *(mypml4s.user->find((u64)p->kstack+i, pgmap::L_4K).create(0)) =
+          v2p(p->qstack+i) | PTE_P | PTE_W | PTE_NX;
+      }
+      mypml4s.user->uexpose(myproc(), pgmap::L_4K);
+      p->vmap_cpu_mask.set(id);
     }
-
-    mypml4s.user->uexpose(myproc(), pgmap::L_4K);
 
     bool flush_tlb = true;
     int pcid = mycpu()->pcid_history_head;
@@ -798,14 +801,10 @@ namespace mmu_per_core_page_table {
   }
 
   void
-  page_map_cache::qclear_all(uintptr_t start, uintptr_t end)
+  page_map_cache::qclear(uintptr_t start, uintptr_t end, bitset<NCPU> cores)
   {
-    bitset<NCPU> targets;
-    for(int i = 0; i < ncpu; i++)
-      targets.set(i);
-
     run_on_cpus(
-      targets,
+      cores,
       [this, start, end]() {
         pgmap_pair& mypml4s = *pml4s;
         if (mypml4s.user) {

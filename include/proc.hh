@@ -9,6 +9,7 @@
 #include "ilist.hh"
 #include <stdexcept>
 #include "vmalloc.hh"
+#include "bitset.hh"
 
 struct pgmap;
 struct gc_handle;
@@ -73,6 +74,9 @@ struct proc {
   __page_pad__;
 
   sref<vmap> vmap;             // va -> vma
+  bitset<NCPU> vmap_cpu_mask;  // cores that user vmap->cache contains mappings
+                               // associated with this proc
+
   vmalloc_ptr<char[]> kstack_vm; // vmalloc'd kstack, if using vmalloc
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status

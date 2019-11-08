@@ -139,8 +139,9 @@ struct vmap : public referenced {
   int remove(uptr start, uptr len);
 
   // Unmap from virtual addresses start to start+len, but only for user page
-  // table. Address must be greater than USERTOP
-  int qremove(uptr start, uptr len);
+  // table. Address must be greater than USERTOP and is only done on the masked
+  // cores.
+  int qremove(uptr start, uptr len, bitset<NCPU> cores);
 
   // Populate vmdesc's.
   int willneed(uptr start, uptr len);

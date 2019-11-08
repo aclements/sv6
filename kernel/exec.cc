@@ -190,9 +190,6 @@ exec(const char *path, const char * const *argv)
   // Switch to the new address space
   switchvm(myproc());
 
-  // Unmap our proc's qstack from the old address space.
-  oldvmap->qremove((uptr)myproc()->kstack, KSTACKSIZE);
-
   // Now it's safe to clean up the old address space
   cleanup_work* w = new cleanup_work(std::move(oldvmap));
   assert(dwork_push(w, myproc()->data_cpuid) >= 0);
@@ -288,6 +285,7 @@ load_image(proc *p, const char *path, const char * const *argv,
   if (oldvmap_out)
     *oldvmap_out = std::move(p->vmap);
 
+  p->vmap_cpu_mask.reset();
   p->vmap = vmp;
   p->tf->rip = elf->entry;
   p->tf->rsp = sp;

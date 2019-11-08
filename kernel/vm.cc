@@ -264,10 +264,10 @@ vmap::remove(uptr start, uptr len)
 }
 
 int
-vmap::qremove(uptr start, uptr len)
+vmap::qremove(uptr start, uptr len, bitset<NCPU> cores)
 {
   assert(start > USERTOP);
-  cache.qclear_all(start, start + len);
+  cache.qclear(start, start + len, cores);
   return 0;
 }
 

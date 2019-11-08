@@ -33,13 +33,11 @@ struct kstack_tag kstack_tag[NCPU];
 enum { sched_debug = 0 };
 
 proc::proc(int npid) :
-  kstack(0), qstack(0), killed(0), tf(0), pid(npid), parent(0), context(0), 
-  tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
+  kstack(0), qstack(0), killed(0), tf(0), uaccess_(0), user_fs_(0), pid(npid),
+  parent(0), context(0),   tsc(0), curcycles(0), cpuid(0), fpu_state(nullptr),
   cpu_pin(0), oncv(0), cv_wakeup(0),
-  futex_lock("proc::futex_lock", LOCKSTAT_PROC),
-  user_fs_(0), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0), 
-  uaccess_(0), yield_(false),
-  upath(nullptr), uargv(nullptr),
+  futex_lock("proc::futex_lock", LOCKSTAT_PROC), unmap_tlbreq_(0),
+  data_cpuid(-1), in_exec_(0), yield_(false), upath(nullptr), uargv(nullptr),
   exception_inuse(0), magic(PROC_MAGIC), unmapped_hint(0), state_(EMBRYO)
 {
   snprintf(lockname, sizeof(lockname), "cv:proc:%d", pid);
@@ -179,6 +177,10 @@ exit(int status)
     // Switch to kernel page table, since we may be just about to
     // destroy the current page table.
     switchvm(myproc());
+
+    // Remove user visible state associated with this proc from vmap.
+    vmap->qremove((uptr)myproc(), PGSIZE, myproc()->vmap_cpu_mask);
+    vmap->qremove((uptr)myproc()->kstack, KSTACKSIZE, myproc()->vmap_cpu_mask);
   }
 
   // Lock the parent first, since otherwise we might deadlock.
