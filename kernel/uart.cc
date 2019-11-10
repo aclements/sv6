@@ -46,6 +46,12 @@
 # define COM_LINE_BREAK_CTL         0x40
 # define COM_LINE_DLAB              0x80
 #define COM_MODEM_CTL              4
+# define COM_MODEM_DTR              0x01
+# define COM_MODEM_RTS              0x02
+# define COM_MODEM_AUX_OUT_1        0x04
+# define COM_MODEM_AUX_OUT_2        0x08
+# define COM_MODEM_LOOPBACK         0x10
+# define COM_MODEM_AUTOFLOW         0x20
 #define COM_LINE_STATUS            5
 # define COM_LINE_DATA_READY        0x01
 # define COM_LINE_OVERRUN_ERR       0x02
@@ -129,8 +135,8 @@ inituart(void)
     // 8 bits, one stop bit, no parity
     outb(com+COM_LINE_CTL, COM_LINE_LEN_8); // Lock divisor, 8 data bits.
     outb(com+COM_INT_EN, COM_INT_RECEIVE); // Enable receive interrupts.
-    // Data terminal ready
-    outb(com+COM_MODEM_CTL, 0x0);
+    // Data terminal ready, request to send, enable interrupts (aux 2)
+    outb(com+COM_MODEM_CTL, COM_MODEM_DTR | COM_MODEM_RTS | COM_MODEM_AUX_OUT_2);
     
     // If status is 0xFF, no serial port.
     if(inb(com+COM_LINE_STATUS) != 0xFF)
