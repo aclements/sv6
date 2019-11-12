@@ -9,12 +9,12 @@ $(O)/bin/%.o: CXXFLAGS:=$(CXXFLAGS) -DXV6_USER
 endif
 
 UPROGS_BIN= \
-        bench \
+	bench \
 	cat \
 	clear \
-        du \
+	du \
 	echo \
-        exechack \
+	exechack \
 	init \
 	forkexectree \
 	forkexecbench \
@@ -35,7 +35,7 @@ UPROGS_BIN= \
 	lockstat \
 	cp \
 	perf \
-        xtime \
+	xtime \
 	asharing \
 	rm \
 	avar \
@@ -45,19 +45,19 @@ UPROGS_BIN= \
 	vmimbalbench \
 	appendtest \
 	linkbench \
-        tlstest \
+	tlstest \
 	crwpbench \
 	benchhdr \
 	monkstats \
 	countbench \
-        mv \
+	mv \
 	local_server \
 	local_client \
 	mailbench \
 	mailfilter\
 	base64 \
 	tee \
-        ln \
+	ln \
 	forktest \
 	fdbench \
 	mail-enqueue \
