@@ -11,6 +11,7 @@ endif
 UPROGS_BIN= \
         bench \
 	cat \
+	clear \
         du \
 	echo \
         exechack \
