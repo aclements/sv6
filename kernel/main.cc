@@ -186,6 +186,12 @@ cmain(u64 mbmagic, u64 mbaddr)
   writemsr(MSR_FS_BASE, (u64)&text);
 
   inituart();
+
+  // Initialize cmdline first to read parameters that might affect initialization
+  initcmdline();
+  extern struct cmdline_params cmdline_params;
+  cprintf("has pcid support? %s\n", cmdline_params.has_pcid_support ? "yes" : "no");
+
   initphysmem(mbaddr);
   initpg(&cpus[0]);        // Requires initphysmem
   inithz();                // CPU Hz, microdelay
@@ -225,7 +231,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   inithpet();              // Requires initacpitables
   initfpu();               // Requires nothing
   initmsr();               // Requires nothing
-  initcmdline();
   initkalloc();            // Requires initpageinfo
   initz();
   initproc();      // process table

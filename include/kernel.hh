@@ -78,6 +78,13 @@ void            bwrite(buf*);
 // cga.c
 void            cgaputc(int c);
 
+// cmdline.cc
+struct cmdline_params
+{
+  bool has_pcid_support;
+};
+extern struct cmdline_params cmdline_params;
+
 // console.c
 void            cprintf(const char*, ...) __attribute__((format(printf, 1, 2)));
 void            __cprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));

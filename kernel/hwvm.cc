@@ -367,8 +367,8 @@ initpg(struct cpu *c)
     kvmallocpos = KVMALLOC;
   }
 
-
-  if (cpuid::features().pcid) {
+  extern struct cmdline_params cmdline_params;
+  if (cpuid::features().pcid || cmdline_params.has_pcid_support) {
     c->cr3_mask = 0xffffffff'ffffffff;
     lcr4(rcr4() | CR4_PCIDE);
   } else {
