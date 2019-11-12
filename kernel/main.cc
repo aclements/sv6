@@ -189,8 +189,6 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   // Initialize cmdline first to read parameters that might affect initialization
   initcmdline();
-  extern struct cmdline_params cmdline_params;
-  cprintf("has pcid support? %s\n", cmdline_params.has_pcid_support ? "yes" : "no");
 
   initphysmem(mbaddr);
   initpg(&cpus[0]);        // Requires initphysmem

@@ -7,6 +7,7 @@
 #include "fs.h"
 #include "file.hh"
 #include "major.h"
+#include "cmdline.hh"
 
 extern char cmdline[];
 
@@ -29,13 +30,7 @@ cmdlineread(mdev*, char *dst, u32 off, u32 n)
 void
 parsecmdline(void)
 {
-  /*
-  std::string str(cmdline);
-  cmdline_params.has_pcid_support =
-    (str.find("has-pcid-support")
-     != std::string::npos);
-  */
-  cmdline_params.has_pcid_support = (strstr(cmdline, "has-pcid-support") != NULL);
+  cmdline_params.disable_pcid = (strstr(cmdline, "disable_pcid") != NULL);
 }
 
 void
