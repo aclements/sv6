@@ -65,6 +65,12 @@ parsecmdline(void)
     cprintf("cmdline: pcid disabled\n");
   } else
     cmdline_params.disable_pcid = false;
+
+  if(getvalue("keep_retpolines", value) && strcmp(value, "yes") == 0) {
+    cmdline_params.keep_retpolines = true;
+    cprintf("cmdline: retpolines not removed\n");
+  } else
+    cmdline_params.keep_retpolines = false;
 }
 
 void
