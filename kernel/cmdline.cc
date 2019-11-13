@@ -58,26 +58,29 @@ parsecmdline(void)
 {
   char value[CMDLINE_VALUE];
 
-  if(getvalue("disable_pcid", value) && strcmp(value, "yes") == 0) {
+  if(getvalue("disable_pcid", value) && strcmp(value, "yes") == 0)
     cmdline_params.disable_pcid = true;
-    cprintf("cmdline: pcid disabled\n");
-  } else
+  else
     cmdline_params.disable_pcid = false;
 
-  if(getvalue("keep_retpolines", value) && strcmp(value, "yes") == 0) {
+  if(getvalue("keep_retpolines", value) && strcmp(value, "yes") == 0)
     cmdline_params.keep_retpolines = true;
-    cprintf("cmdline: retpolines not removed\n");
-  } else
+  else
     cmdline_params.keep_retpolines = false;
 }
 
 void
 initcmdline(void)
 {
-  if (VERBOSE)
+  if(CMDLINE_DEBUG)
     cprintf("cmdline: %s\n", cmdline);
 
   parsecmdline();
+
+  if(CMDLINE_DEBUG){
+    cprintf("cmdline: disable pcid? %s\n", cmdline_params.disable_pcid ? "yes" : "no");
+    cprintf("cmdline: keep retpolines? %s\n", cmdline_params.keep_retpolines ? "yes" : "no");
+  }
 
   devsw[MAJ_CMDLINE].pread = cmdlineread;
 }
