@@ -26,11 +26,45 @@ cmdlineread(mdev*, char *dst, u32 off, u32 n)
   return cc;
 }
 
+// Returns true if param is found in cmdline, false otherwise.
+// If found, writes the value of the first occurence to dst.
+// Expects cmdline to be a space-delimeted list of <param>=<value> pairs.
+static bool
+getvalue(const char* param, char* dst)
+{
+  char parameq[CMDLINE_PARAM+1];
+  char *p, *end;
+  int i;
+
+  // find '<param>=' in cmdline
+  strcpy(parameq, param);
+  end = parameq + strlen(parameq);
+  *end++ = '=';
+  *end = 0;
+  p = strstr(cmdline, parameq);
+  if(p == NULL)
+    return false;
+
+  // copy <value> to dst
+  p += strlen(parameq);  // jump to after '='
+  i = 0;
+  while(*p != 0 && *p != ' ')
+    dst[i++] = *p++;
+  dst[i] = 0;
+  return true;
+}
+
 // parse cmdline to populate global cmdline_params struct
-void
+static void
 parsecmdline(void)
 {
-  cmdline_params.disable_pcid = (strstr(cmdline, "disable_pcid") != NULL);
+  char value[CMDLINE_VALUE];
+
+  if(getvalue("disable_pcid", value) && strcmp(value, "yes") == 0) {
+    cmdline_params.disable_pcid = true;
+    cprintf("cmdline: pcid disabled\n");
+  } else
+    cmdline_params.disable_pcid = false;
 }
 
 void
@@ -38,9 +72,6 @@ initcmdline(void)
 {
   if (VERBOSE)
     cprintf("cmdline: %s\n", cmdline);
-
-  cprintf("\n\n");
-  cprintf("cmdline: %s\n", cmdline);
 
   parsecmdline();
 
