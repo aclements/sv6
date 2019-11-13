@@ -58,15 +58,10 @@ parsecmdline(void)
 {
   char value[CMDLINE_VALUE];
 
-  if(getvalue("disable_pcid", value) && strcmp(value, "yes") == 0)
-    cmdline_params.disable_pcid = true;
-  else
-    cmdline_params.disable_pcid = false;
-
-  if(getvalue("keep_retpolines", value) && strcmp(value, "yes") == 0)
-    cmdline_params.keep_retpolines = true;
-  else
-    cmdline_params.keep_retpolines = false;
+  cmdline_params.disable_pcid = (getvalue("disable_pcid", value)
+                                 && strcmp(value, "yes") == 0);
+  cmdline_params.keep_retpolines = (getvalue("keep_retpolines", value)
+                                    && strcmp(value, "yes") == 0);
 }
 
 void
