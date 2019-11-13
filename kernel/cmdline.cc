@@ -34,7 +34,6 @@ getvalue(const char* param, char* dst)
 {
   char parameq[CMDLINE_PARAM+1];
   char *p, *end;
-  int i;
 
   // find '<param>=' in cmdline
   strcpy(parameq, param);
@@ -47,10 +46,9 @@ getvalue(const char* param, char* dst)
 
   // copy <value> to dst
   p += strlen(parameq);  // jump to after '='
-  i = 0;
   while(*p != 0 && *p != ' ')
-    dst[i++] = *p++;
-  dst[i] = 0;
+    *dst++ = *p++;
+  *dst = 0;
   return true;
 }
 
