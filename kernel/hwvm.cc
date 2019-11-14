@@ -16,6 +16,7 @@
 #include "cpuid.hh"
 #include "vmalloc.hh"
 #include "nospec-branch.hh"
+#include "cmdline.hh"
 
 using namespace std;
 
@@ -367,13 +368,12 @@ initpg(struct cpu *c)
     kvmallocpos = KVMALLOC;
   }
 
-
-  if (cpuid::features().pcid) {
+  if (cpuid::features().pcid && !cmdline_params.disable_pcid) {
     c->cr3_mask = 0xffffffff'ffffffff;
     lcr4(rcr4() | CR4_PCIDE);
   } else {
     c->cr3_mask = 0x7fffffff'fffff000;
-    if (c->id == 0) {
+    if (c->id == 0 && !cmdline_params.disable_pcid) {
       cprintf("WARN: PCIDs unsupported\n");
     }
   }

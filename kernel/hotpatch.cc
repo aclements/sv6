@@ -1,6 +1,7 @@
 #include <string.h>
 #include "types.h"
 #include "kernel.hh"
+#include "cmdline.hh"
 
 #define REPLACE(symbol, replacement) \
   extern u64 symbol; \
@@ -43,5 +44,6 @@ void inithotpatch()
 {
     qtext = kalloc("qtext", 0x200000);
     memmove(qtext, (void*)KTEXT, 0x200000);
-    remove_retpolines();
+    if(!cmdline_params.keep_retpolines)
+      remove_retpolines();
 }
