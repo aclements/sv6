@@ -32,11 +32,12 @@ cmdlineread(mdev*, char *dst, u32 off, u32 n)
 static bool
 getvalue(const char* param, char* dst)
 {
-  char parameq[CMDLINE_PARAM+1];
+  char parameq[CMDLINE_PARAM+2];  // add two for '=' and null char
   char *p, *end;
+  size_t len;
 
   // find '<param>=' in cmdline
-  strcpy(parameq, param);
+  strncpy(parameq, param, CMDLINE_PARAM);
   end = parameq + strlen(parameq);
   *end++ = '=';
   *end = 0;
@@ -46,9 +47,11 @@ getvalue(const char* param, char* dst)
 
   // copy <value> to dst
   p += strlen(parameq);  // jump to after '='
-  while(*p != 0 && *p != ' ')
-    *dst++ = *p++;
-  *dst = 0;
+  len = 0;
+  while(*(p+len) != 0 && *(p+len) != ' ' && len < CMDLINE_VALUE)
+    len++;
+  strncpy(dst, p, len);
+  *(dst+len) = 0;
   return true;
 }
 
@@ -56,7 +59,7 @@ getvalue(const char* param, char* dst)
 static void
 parsecmdline(void)
 {
-  char value[CMDLINE_VALUE];
+  char value[CMDLINE_VALUE+1];  // add one for null char
 
   cmdline_params.disable_pcid = (getvalue("disable_pcid", value)
                                  && strcmp(value, "yes") == 0);
