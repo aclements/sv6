@@ -32,21 +32,28 @@ cmdlineread(mdev*, char *dst, u32 off, u32 n)
 static bool
 getvalue(const char* param, char* dst)
 {
-  char parameq[CMDLINE_PARAM+2];  // add two for '=' and null char
+  char paramstr[CMDLINE_PARAM+3];  // add three for space, '=', and null char
   char *p, *end;
   size_t len;
 
   // find '<param>=' in cmdline
-  strncpy(parameq, param, CMDLINE_PARAM);
-  end = parameq + strlen(parameq);
+  paramstr[0] = ' ';  // check for space before param in case one param is the suffix of another
+  strncpy(paramstr+1, param, CMDLINE_PARAM);
+  end = paramstr + strlen(paramstr);
   *end++ = '=';
   *end = 0;
-  p = strstr(cmdline, parameq);
-  if(p == NULL)
-    return false;
+  p = strstr(cmdline, paramstr);
+  if(p == NULL){  // param might be at beginning of cmdline, in which case there is no space
+    if(strncmp(cmdline, paramstr+1, strlen(paramstr)-1) == 0)
+      p = cmdline;
+    else
+      return false;
+  }else{
+    p++;  // jump past space
+  }
 
   // copy <value> to dst
-  p += strlen(parameq);  // jump to after '='
+  p += strlen(paramstr)-1;  // jump to after '='
   len = 0;
   while(*(p+len) != 0 && *(p+len) != ' ' && len < CMDLINE_VALUE)
     len++;
