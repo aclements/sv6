@@ -70,10 +70,10 @@ struct proc {
   int uaccess_;
   u64 user_fs_;
   volatile int pid;            // Process ID
+  sref<vmap> vmap;             // va -> vma
 
   __page_pad__;
 
-  sref<vmap> vmap;             // va -> vma
   vmalloc_ptr<char[]> kstack_vm; // vmalloc'd kstack, if using vmalloc
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status

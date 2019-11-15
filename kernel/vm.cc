@@ -120,7 +120,11 @@ public:
 sref<vmap>
 vmap::alloc(void)
 {
-  return sref<vmap>::transfer(new (std::nothrow) vmap());
+  static_assert(sizeof(vmap) <= PGSIZE);
+  vmap* page = (vmap*)zalloc("vmap::alloc");
+  sref<vmap> v = sref<vmap>::transfer(new (page) vmap());
+  v->insert(vmdesc(page, page), (uptr)page, PGSIZE);
+  return v;
 }
 
 vmap::vmap() : 
@@ -396,9 +400,6 @@ vmap::pagefault(uptr va, u32 err)
 {
   access_type type = (err & FEC_WR) ? access_type::WRITE : access_type::READ;
   mmu::shootdown shootdown;
-
-  if (va >= USERTOP)
-    return -1;
 
   kstats::inc(&kstats::page_fault_count);
   kstats::timer timer(&kstats::page_fault_cycles);

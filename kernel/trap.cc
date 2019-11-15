@@ -17,6 +17,7 @@
 #include "refcache.hh"
 #include "cpuid.hh"
 #include "linearhash.hh"
+#include "vm.hh"
 
 extern "C" void __uaccess_end(void);
 
@@ -69,11 +70,16 @@ do_pagefault(struct trapframe *tf)
   if (((tf->cs&3) == 0 || myproc() == 0) &&
       !mycpu()->has_secrets && addr >= KGLOBAL) {
     // Page fault was probably caused by trying to access secret
-    // data. Map it in now and record where this happened.
+    // data so map all secrets in now.
     switch_to_kstack();
 
-    wm_addrs.increment(addr);
-    wm_rips.increment(tf->rip);
+    if (pagefault(myproc()->vmap.get(), addr, tf->err) < 0) {
+      // We tried to lazily load the mapping, but it wasn't marked as quasi
+      // user-visible. Record the event and continue.
+      wm_addrs.increment(addr);
+      wm_rips.increment(tf->rip);
+    }
+
     return 0;
   } else if (myproc()->uaccess_) {
     if (addr >= USERTOP)
@@ -90,7 +96,7 @@ do_pagefault(struct trapframe *tf)
     return 0;
   } else if (tf->err & FEC_U) {
       sti();
-      if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
+      if(addr < USERTOP && pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
         return 0;
       }
       uerr.println("pagefault from user for ", shex(addr),
