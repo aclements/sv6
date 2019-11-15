@@ -150,7 +150,12 @@ static struct e1000_model
     "82572EI (copper)", 0x107d,
     &e1000::reset_phy_82571_82572, &eerd_large,
     MODEL_FLAG_PCIE,
-  },
+  }, {
+    // bhw2
+    "82574L", 0x10d3,
+    &e1000::reset_phy_82573, &eerd_large,
+    MODEL_FLAG_PCIE,
+  }
 };
 
 u32
