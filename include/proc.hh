@@ -74,9 +74,6 @@ struct proc {
   __page_pad__;
 
   sref<vmap> vmap;             // va -> vma
-  bitset<NCPU> vmap_cpu_mask;  // cores that user vmap->cache contains mappings
-                               // associated with this proc
-
   vmalloc_ptr<char[]> kstack_vm; // vmalloc'd kstack, if using vmalloc
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status
@@ -123,6 +120,7 @@ struct proc {
   sigaction sig[NSIG];
 
   static proc* alloc();
+  void         init_vmap();
   void         set_state(procstate_t s);
   procstate_t  get_state(void) const { return state_; }
   int          set_cpu_pin(int cpu);

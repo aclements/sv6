@@ -179,8 +179,8 @@ exit(int status)
     switchvm(myproc());
 
     // Remove user visible state associated with this proc from vmap.
-    vmap->qremove((uptr)myproc(), PGSIZE, myproc()->vmap_cpu_mask);
-    vmap->qremove((uptr)myproc()->kstack, KSTACKSIZE, myproc()->vmap_cpu_mask);
+    vmap->remove((uptr)myproc(), PGSIZE);
+    vmap->remove((uptr)myproc()->kstack, KSTACKSIZE);
   }
 
   // Lock the parent first, since otherwise we might deadlock.
@@ -282,6 +282,12 @@ proc::alloc(void)
   p->context->rip = (uptr)forkret;
 
   return p;
+}
+
+void proc::init_vmap()
+{
+  vmap->insert(vmdesc(this, this), (uptr)this, PGSIZE);
+  vmap->insert(vmdesc(qstack, kstack), (uptr)kstack, KSTACKSIZE);
 }
 
 void
@@ -397,6 +403,7 @@ doclone(clone_flags flags)
     // Copy process state from p.
     np->vmap = myproc()->vmap->copy();
   }
+  np->init_vmap();
 
   np->parent = myproc();
   *np->tf = *myproc()->tf;
@@ -543,6 +550,8 @@ threadalloc(void (*fn)(void *), void *arg)
   p->vmap = vmap::alloc();
   if (p->vmap == nullptr)
     return 0;
+
+  p->init_vmap();
 
   // XXX can threadstub be deleted?
   p->context->rip = (u64)threadstub;

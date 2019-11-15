@@ -101,6 +101,9 @@ public:
 
   void add(sref<class page_info> &&page)
   {
+    if(!page->will_kfree())
+      return;
+
     if (cur->used == curmax) {
       cur->next = new (kalloc("page_holder::batch")) batch();
       cur = cur->next;
@@ -142,8 +145,8 @@ vmap::copy()
     auto out = nm->vpfs_.begin();
     auto lock = vpfs_.acquire(vpfs_.begin(), vpfs_.end());
     for (auto it = vpfs_.begin(), end = vpfs_.end(); it != end; ) {
-      // Skip unset spans
-      if (!it.is_set()) {
+      // Skip unset spans and qvisible spans
+      if (!it.is_set() || (it->flags & vmdesc::FLAG_QVISIBLE)) {
         // We can use the base span because we know we just reached this
         // span.
         out += it.base_span();
@@ -264,14 +267,6 @@ vmap::remove(uptr start, uptr len)
 }
 
 int
-vmap::qremove(uptr start, uptr len, bitset<NCPU> cores)
-{
-  assert(start > USERTOP);
-  cache.qclear(start, start + len, cores);
-  return 0;
-}
-
-int
 vmap::willneed(uptr start, uptr len)
 {
   auto begin = vpfs_.find(start / PGSIZE);
@@ -297,10 +292,12 @@ vmap::willneed(uptr start, uptr len)
     if (!page)
       continue;
 
+    u64 flags = (it->flags & vmdesc::FLAG_QVISIBLE) ? PTE_NX : PTE_U;
+
     if (it->flags & vmdesc::FLAG_COW || !writable)
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U);
+      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | flags);
     else
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | flags | PTE_W);
   }
 
   shootdown.perform();
@@ -451,15 +448,17 @@ vmap::pagefault(uptr va, u32 err)
     if (!page)
       return -1;
 
+    u64 flags = (it->flags & vmdesc::FLAG_QVISIBLE) ? PTE_NX : PTE_U;
+
     // If this is a read COW fault, we can reuse the COW page, but
     // don't mark it writable!
     if (desc.flags & vmdesc::FLAG_COW)
-      cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
+      cache.insert(va, &*it, page->pa() | PTE_P | flags);
     else {
       if (desc.flags & vmdesc::FLAG_WRITE)
-        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+        cache.insert(va, &*it, page->pa() | PTE_P | flags | PTE_W);
       else
-        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
+        cache.insert(va, &*it, page->pa() | PTE_P | flags);
     }
 
     shootdown.perform();
@@ -684,10 +683,16 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
       assert(!(desc.flags & vmdesc::FLAG_COW));
       if (allocated)
         *allocated = true;
-      char *p = zalloc("(vmap::pagelookup)");
-      if (!p)
-        throw_bad_alloc();
-      page = sref<page_info>::transfer(new(page_info::of(p)) page_info());
+      if (desc.flags & vmdesc::FLAG_QVISIBLE) {
+        paddr pa = v2p((void*)(it.index() * PGSIZE + it->start));
+        auto p = new(page_info::of(pa)) page_info_nokfree();
+        page = sref<page_info>::transfer(p);
+      } else {
+        char *p = zalloc("(vmap::pagelookup)");
+        if (!p)
+          throw_bad_alloc();
+        page = sref<page_info>::transfer(new(page_info::of(p)) page_info());
+      }
     } else {
       u64 page_idx = (it.index() * PGSIZE - desc.start) / PGSIZE;
       page = desc.inode->as_file()->get_page(page_idx).get_page_info();

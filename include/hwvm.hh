@@ -231,8 +231,6 @@ namespace mmu_per_core_page_table {
     void invalidate(uintptr_t start, uintptr_t len,
                     ForwardIterator tracker_it, shootdown *sd)
     {
-      assert(start + len <= USERTOP);
-
       // Accumulate shootdown set
       bitset<NCPU> present;
       auto end = tracker_it + (len + PGSIZE - 1)/PGSIZE;
@@ -271,10 +269,6 @@ namespace mmu_per_core_page_table {
     void switch_from() const {}
 
     u64 internal_pages() const;
-
-    // Flush and clear a range of the TLB on all cores, but only for the user
-    // page table.
-    void qclear(uintptr_t start, uintptr_t end, bitset<NCPU> cores);
   };
 }
 

@@ -285,8 +285,8 @@ load_image(proc *p, const char *path, const char * const *argv,
   if (oldvmap_out)
     *oldvmap_out = std::move(p->vmap);
 
-  p->vmap_cpu_mask.reset();
   p->vmap = vmp;
+  p->init_vmap();
   p->tf->rip = elf->entry;
   p->tf->rsp = sp;
   // Additional arguments.  We can't pass these in ABI argument

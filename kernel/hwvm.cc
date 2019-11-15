@@ -86,6 +86,17 @@ private:
     return count;
   }
 
+  // Map a page of the direct map. When applied to the user page table
+  // (even without the U-bit set), this page of memory will be "quasi
+  // user visible" because of Meltdown style attacks.
+  void uexpose(void* page, int level = L_4K, bool execute = false)
+  {
+    auto it = find((u64)page, level);
+    *it.create(0) = v2p(page) | PTE_P | PTE_W
+      | (execute ? 0 : PTE_NX)
+      | (level == L_4K ? 0 : PTE_PS);
+  }
+
 public:
   ~pgmap()
   {
@@ -116,8 +127,8 @@ public:
     return pml4;
   }
 
-  // Allocate and return a new pgmap the clones the user visible
-  // kernel part of this pgmap.
+  // Allocate and return a new pgmap the clones the kernel part of this pgmap,
+  // and populates the quasi user-visible part.
   pgmap_pair kclone_pair() const
   {
     pgmap *pml4 = (pgmap*)kalloc("PML4-pair", PGSIZE * 2);
@@ -134,6 +145,15 @@ public:
 
     k = PX(L_PML4, KGLOBAL);
     memset(&pair.user->e[0], 0, PGSIZE);
+    pair.user->uexpose((void*)mycpu(), pgmap::L_4K);
+    pair.user->uexpose((void*)&mycpu()->cpu, pgmap::L_4K);
+    pair.user->uexpose((void*)idt, pgmap::L_4K);
+
+    for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
+      pair.user->uexpose((void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE), pgmap::L_4K); // nmi stack
+      pair.user->uexpose((void*)(mycpu()->ts.ist[2] + i - KSTACKSIZE), pgmap::L_4K); // double fault stack
+    }
+    *(pair.user->find(KTEXT, pgmap::L_2M).create(0)) = v2p(qtext) | PTE_PS | PTE_P | PTE_W;
 
     return pair;
   }
@@ -151,17 +171,6 @@ public:
   u64 internal_pages() const
   {
     return internal_pages(L_PML4, PX(L_PML4, KGLOBAL));
-  }
-
-  // Map a page of the direct map. When applied to the user page table
-  // (even without the U-bit set), this page of memory will be "quasi
-  // user visible" because of Meltdown style attacks.
-  void uexpose(void* page, int level = L_4K, bool execute = false)
-  {
-    auto it = find((u64)page, level);
-    *it.create(0) = v2p(page) | PTE_P | PTE_W
-      | (execute ? 0 : PTE_NX)
-      | (level == L_4K ? 0 : PTE_PS);
   }
 
   // An iterator that references the page structure entry on a fixed
@@ -692,8 +701,10 @@ namespace mmu_per_core_page_table {
     pgmap_pair& mypml4s = *pml4s;
     assert(mypml4s.user);
     assert(mypml4s.kernel);
-    mypml4s.user->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
-    mypml4s.kernel->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
+    mypml4s.user->find(va).create(PTE_U & pte)->store(pte, memory_order_relaxed);
+    if (va < USERTOP) {
+      mypml4s.kernel->find(va).create(PTE_U & pte)->store(pte, memory_order_relaxed);
+    }
     t->tracker_cores.set(myid());
   }
 
@@ -704,26 +715,10 @@ namespace mmu_per_core_page_table {
     auto &mypml4s = pml4s[id];
     if (!mypml4s.kernel) {
       mypml4s = kpml4.kclone_pair();
-      mypml4s.user->uexpose((void*)mycpu(), pgmap::L_4K);
-      mypml4s.user->uexpose((void*)&mycpu()->cpu, pgmap::L_4K);
-      mypml4s.user->uexpose((void*)idt, pgmap::L_4K);
-
-      for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
-        mypml4s.user->uexpose((void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE), pgmap::L_4K); // nmi stack
-        mypml4s.user->uexpose((void*)(mycpu()->ts.ist[2] + i - KSTACKSIZE), pgmap::L_4K); // double fault stack
-      }
-      *(mypml4s.user->find(KTEXT, pgmap::L_2M).create(0)) = v2p(qtext) | PTE_PS | PTE_P | PTE_W;
-      assert(!p->vmap_cpu_mask[myid()]);
     }
 
-    if (!p->vmap_cpu_mask[id]) {
-      for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
-        *(mypml4s.user->find((u64)p->kstack+i, pgmap::L_4K).create(0)) =
-          v2p(p->qstack+i) | PTE_P | PTE_W | PTE_NX;
-      }
-      mypml4s.user->uexpose(myproc(), pgmap::L_4K);
-      p->vmap_cpu_mask.set(id);
-    }
+    p->vmap->willneed((uptr)p, PGSIZE);
+    p->vmap->willneed((uptr)p->kstack, KSTACKSIZE);
 
     bool flush_tlb = true;
     int pcid = mycpu()->pcid_history_head;
@@ -791,6 +786,12 @@ namespace mmu_per_core_page_table {
         // TODO(behrensj): does there need to be a remote invlpg here?
       }
     }
+
+    // Kernel page table doesn't use qvisible mappings.
+    end = min(end, (uintptr_t)USERTOP);
+    if (start >= end)
+      return;
+
     for (auto it = mypml4s.kernel->find(start); it.index() < end; it += it.span()) {
       if (it.is_set()) {
         it->store(0, memory_order_relaxed);
@@ -798,25 +799,6 @@ namespace mmu_per_core_page_table {
           invlpg((void*)it.index());
       }
     }
-  }
-
-  void
-  page_map_cache::qclear(uintptr_t start, uintptr_t end, bitset<NCPU> cores)
-  {
-    run_on_cpus(
-      cores,
-      [this, start, end]() {
-        pgmap_pair& mypml4s = *pml4s;
-        if (mypml4s.user) {
-          for (auto it = mypml4s.user->find(start); it.index() < end; it += it.span()) {
-            if (it.is_set()) {
-              it->store(0, memory_order_relaxed);
-              // TODO(behrensj): does there need to be a remote invlpg here?
-            }
-          }
-
-        }
-      });
   }
 
   void
