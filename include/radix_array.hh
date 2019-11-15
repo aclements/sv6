@@ -184,12 +184,11 @@ private:
     UPPER_FANOUT = NodeBytes / sizeof(node_ptr),
     /** Number of slots in a leaf node. */
     LEAF_FANOUT  = NodeBytes / round_up_to_pow2_const(sizeof(T)),
+    /** Number of bits to index into an upper node */
+    UPPER_BITS = log2_exact(UPPER_FANOUT),
+    /** Number of bits to index into a leaf node */
+    LEAF_BITS = log2_exact(LEAF_FANOUT),
   };
-
-  // Work around a bug in GCC 4.6 (fixed in 4.7) where log2 can't be
-  // used in an enum.
-  static constexpr std::size_t UPPER_BITS = log2_exact(UPPER_FANOUT);
-  static constexpr std::size_t LEAF_BITS = log2_exact(LEAF_FANOUT);
 
   static_assert(UPPER_BITS != ~0, "NodeBytes must be a power of 2");
   static_assert(LEAF_BITS != ~0, "LEAF_FANOUT not a power of 2?!");
