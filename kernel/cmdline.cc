@@ -68,10 +68,27 @@ parsecmdline(void)
 {
   char value[CMDLINE_VALUE+1];  // add one for null char
 
-  cmdline_params.disable_pcid = (getvalue("disable_pcid", value)
-                                 && strcmp(value, "yes") == 0);
-  cmdline_params.keep_retpolines = (getvalue("keep_retpolines", value)
-                                    && strcmp(value, "yes") == 0);
+  if(!getvalue("disable_pcid", value))
+    strcpy(value, "no");
+  if(strcmp(value, "yes") == 0)
+    cmdline_params.disable_pcid = true;
+  else if(strcmp(value, "no") == 0)
+    cmdline_params.disable_pcid = false;
+  else{
+    cprintf("cmdline: unrecognized value \"%s\" for param \"disable_pcid\"\n", value);
+    panic("cmdline");  // hack to halt execution, requires inituartcons to actually print message
+  }
+
+  if(!getvalue("keep_retpolines", value))
+    strcpy(value, "no");
+  if(strcmp(value, "yes") == 0)
+    cmdline_params.keep_retpolines = true;
+  else if(strcmp(value, "no") == 0)
+    cmdline_params.keep_retpolines = false;
+  else{
+    cprintf("ERROR: cmdline: unrecognized value \"%s\" for param \"keep_retpolines\"\n", value);
+    panic("cmdline");
+  }
 }
 
 void
