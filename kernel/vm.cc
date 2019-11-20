@@ -101,9 +101,6 @@ public:
 
   void add(sref<class page_info> &&page)
   {
-    if(!page->will_kfree())
-      return;
-
     if (cur->used == curmax) {
       cur->next = new (kalloc("page_holder::batch")) batch();
       cur = cur->next;
@@ -123,7 +120,7 @@ vmap::alloc(void)
   static_assert(sizeof(vmap) <= PGSIZE);
   vmap* page = (vmap*)zalloc("vmap::alloc");
   sref<vmap> v = sref<vmap>::transfer(new (page) vmap());
-  v->insert(vmdesc(page, page), (uptr)page, PGSIZE);
+  v->qinsert(page);
   return v;
 }
 
@@ -149,8 +146,8 @@ vmap::copy()
     auto out = nm->vpfs_.begin();
     auto lock = vpfs_.acquire(vpfs_.begin(), vpfs_.end());
     for (auto it = vpfs_.begin(), end = vpfs_.end(); it != end; ) {
-      // Skip unset spans and qvisible spans
-      if (!it.is_set() || (it->flags & vmdesc::FLAG_QVISIBLE)) {
+      // Skip unset spans
+      if (!it.is_set()) {
         // We can use the base span because we know we just reached this
         // span.
         out += it.base_span();
@@ -243,6 +240,21 @@ again:
   return start;
 }
 
+void
+vmap::qinsert(void* qptr, void* kptr, size_t len)
+{
+  assert((uintptr_t)qptr % PGSIZE == 0);
+  assert((uintptr_t)kptr % PGSIZE == 0);
+  assert(len % PGSIZE == 0);
+
+  mmu::shootdown shootdown;
+  cache.invalidate((uintptr_t)qptr, len, nullptr, &shootdown);
+  for(size_t offset = 0; offset < len; offset += PGSIZE) {
+    cache.insert((uintptr_t)qptr+offset, nullptr, (v2p(kptr)+offset) | PTE_P | /*PTE_NX |*/ PTE_W);
+  }
+  shootdown.perform();
+}
+
 int
 vmap::remove(uptr start, uptr len)
 {
@@ -255,16 +267,21 @@ vmap::remove(uptr start, uptr len)
   mmu::shootdown shootdown;
   page_holder pages;
 
-  auto begin = vpfs_.find(start / PGSIZE);
-  auto end = vpfs_.find((start + len) / PGSIZE);
-  auto lock = vpfs_.acquire(begin, end);
-  for (auto it = begin; it < end; it += it.span())
-    if (it.is_set())
-      pages.add(std::move(it->page));
-  cache.invalidate(start, len, begin, &shootdown);
-  // XXX If this is a large unset, we could actively re-fold already
-  // expanded regions.
-  vpfs_.unset(begin, end);
+  if (start + len <= USERTOP) {
+    auto begin = vpfs_.find(start / PGSIZE);
+    auto end = vpfs_.find((start + len) / PGSIZE);
+    auto lock = vpfs_.acquire(begin, end);
+    for (auto it = begin; it < end; it += it.span())
+      if (it.is_set())
+        pages.add(std::move(it->page));
+    cache.invalidate(start, len, begin, &shootdown);
+    // XXX If this is a large unset, we could actively re-fold already
+    // expanded regions.
+    vpfs_.unset(begin, end);
+  } else {
+    assert(start >= KGLOBAL);
+    cache.invalidate(start, len, nullptr, &shootdown);
+  }
   shootdown.perform();
 
   return 0;
@@ -296,12 +313,10 @@ vmap::willneed(uptr start, uptr len)
     if (!page)
       continue;
 
-    u64 flags = (it->flags & vmdesc::FLAG_QVISIBLE) ? PTE_NX : PTE_U;
-
     if (it->flags & vmdesc::FLAG_COW || !writable)
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | flags);
+      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U);
     else
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | flags | PTE_W);
+      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
   }
 
   shootdown.perform();
@@ -449,17 +464,15 @@ vmap::pagefault(uptr va, u32 err)
     if (!page)
       return -1;
 
-    u64 flags = (it->flags & vmdesc::FLAG_QVISIBLE) ? PTE_NX : PTE_U;
-
     // If this is a read COW fault, we can reuse the COW page, but
     // don't mark it writable!
     if (desc.flags & vmdesc::FLAG_COW)
-      cache.insert(va, &*it, page->pa() | PTE_P | flags);
+      cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
     else {
       if (desc.flags & vmdesc::FLAG_WRITE)
-        cache.insert(va, &*it, page->pa() | PTE_P | flags | PTE_W);
+        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
       else
-        cache.insert(va, &*it, page->pa() | PTE_P | flags);
+        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
     }
 
     shootdown.perform();
@@ -684,16 +697,10 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
       assert(!(desc.flags & vmdesc::FLAG_COW));
       if (allocated)
         *allocated = true;
-      if (desc.flags & vmdesc::FLAG_QVISIBLE) {
-        paddr pa = v2p((void*)(it.index() * PGSIZE + it->start));
-        auto p = new(page_info::of(pa)) page_info_nokfree();
-        page = sref<page_info>::transfer(p);
-      } else {
-        char *p = zalloc("(vmap::pagelookup)");
-        if (!p)
-          throw_bad_alloc();
-        page = sref<page_info>::transfer(new(page_info::of(p)) page_info());
-      }
+      char *p = zalloc("(vmap::pagelookup)");
+      if (!p)
+        throw_bad_alloc();
+      page = sref<page_info>::transfer(new(page_info::of(p)) page_info());
     } else {
       u64 page_idx = (it.index() * PGSIZE - desc.start) / PGSIZE;
       page = desc.inode->as_file()->get_page(page_idx).get_page_info();

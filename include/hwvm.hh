@@ -105,7 +105,7 @@ namespace mmu_shared_page_table {
   // virtual-to-physical page mappings.
   class page_map_cache : shootdown::cache_tracker
   {
-    struct pgmap * const pml4;
+    pgmap_pair pml4s;
 
     void __insert(uintptr_t va, pme_t pte);
     void __invalidate(uintptr_t start, uintptr_t len, shootdown *sd);
@@ -147,8 +147,10 @@ namespace mmu_shared_page_table {
       __invalidate(start, len, sd);
     }
 
+    void qinsert(uintptr_t va, pme_t pte);
+
     // Switch to this page_map_cache on this CPU.
-    void switch_to() const;
+    void switch_to(bool kernel, proc* p) const;
 
     // Switch out of this page_map_cache on this CPU.
     void switch_from() const { track_switch_from(); }

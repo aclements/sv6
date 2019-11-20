@@ -104,29 +104,4 @@ public:
   {
     return p2v(pa());
   }
-
-  virtual bool will_kfree()
-  {
-    return true;
-  }
 };
-
-// Subclass of page_info that doesn't kfree pages when their refcount hits zero.
-//
-// This is useful for quasi-user visible pages which are tracked in the vmap,
-// but reference pages on the kernel heap tracked differently.
-class page_info_nokfree : public page_info
-{
-protected:
-  void onzero() override {}
-
-public:
-  page_info_nokfree() {}
-
-  bool will_kfree() override
-  {
-    return false;
-  }
-};
-
-static_assert(sizeof(page_info) == sizeof(page_info_nokfree));

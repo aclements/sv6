@@ -286,8 +286,8 @@ proc::alloc(void)
 
 void proc::init_vmap()
 {
-  vmap->insert(vmdesc(this, this), (uptr)this, PGSIZE);
-  vmap->insert(vmdesc(qstack, kstack), (uptr)kstack, KSTACKSIZE);
+  vmap->qinsert(this);
+  vmap->qinsert(kstack, qstack, KSTACKSIZE);
 }
 
 void

@@ -70,15 +70,10 @@ do_pagefault(struct trapframe *tf)
   if (((tf->cs&3) == 0 || myproc() == 0) &&
       !mycpu()->has_secrets && addr >= KGLOBAL) {
     // Page fault was probably caused by trying to access secret
-    // data so map all secrets in now.
+    // data so map all secrets in now and record where this happened.
     switch_to_kstack();
-
-    if (pagefault(myproc()->vmap.get(), addr, tf->err) < 0) {
-      // We tried to lazily load the mapping, but it wasn't marked as quasi
-      // user-visible. Record the event and continue.
-      wm_addrs.increment(addr);
-      wm_rips.increment(tf->rip);
-    }
+    wm_addrs.increment(addr);
+    wm_rips.increment(tf->rip);
 
     return 0;
   } else if (myproc()->uaccess_) {

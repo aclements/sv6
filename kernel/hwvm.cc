@@ -114,18 +114,6 @@ public:
     kfree(p);
   }
 
-  // Allocate and return a new pgmap the clones the kernel part of
-  // this pgmap.
-  pgmap *kclone() const
-  {
-    pgmap *pml4 = (pgmap*)kalloc("PML4");
-    if (!pml4)
-      throw_bad_alloc();
-    size_t k = PX(L_PML4, KGLOBAL);
-    memset(&pml4->e[0], 0, 8*k);
-    memmove(&pml4->e[k], &e[k], 8*(512-k));
-    return pml4;
-  }
 
   // Allocate and return a new pgmap the clones the kernel part of this pgmap,
   // and populates the quasi user-visible part.
@@ -441,6 +429,11 @@ void
 switchvm(struct proc *p)
 {
   scoped_cli cli;
+
+  // If we try to switch to a different proc's page tables while executing on a
+  // qstack then things will go horribly wrong in hard to debug ways.
+  ensure_secrets();
+
   u64 base = (u64) &mycpu()->ts;
   mycpu()->gdt[TSSSEG>>3] = (struct segdesc)
     SEGDESC(base, (sizeof(mycpu()->ts)-1), SEG_P|SEG_TSS64A);
@@ -638,9 +631,9 @@ core_tracking_shootdown::perform() const
 }
 
 namespace mmu_shared_page_table {
-  page_map_cache::page_map_cache() : pml4(kpml4.kclone())
+  page_map_cache::page_map_cache() : pml4s(kpml4.kclone_pair())
   {
-    if (!pml4) {
+    if (!pml4s.kernel || !pml4s.user) {
       swarn.println("setupkvm out of memory\n");
       throw_bad_alloc();
     }
@@ -648,13 +641,16 @@ namespace mmu_shared_page_table {
 
   page_map_cache::~page_map_cache()
   {
-    delete pml4;
+    kfree(pml4s.kernel, PGSIZE * 2);
   }
 
   void
   page_map_cache::__insert(uintptr_t va, pme_t pte)
   {
-    pml4->find(va).create(PTE_U)->store(pte, memory_order_relaxed);
+    pml4s.user->find(va).create(PTE_U & pte)->store(pte, memory_order_relaxed);
+    if (va < USERTOP) {
+      pml4s.kernel->find(va).create(PTE_U & pte)->store(pte, memory_order_relaxed);
+    }
   }
 
   void
@@ -662,26 +658,44 @@ namespace mmu_shared_page_table {
     uintptr_t start, uintptr_t len, shootdown *sd)
   {
     sd->set_cache_tracker(this);
-    for (auto it = pml4->find(start); it.index() < start + len;
+    for (auto it = pml4s.user->find(start); it.index() < start + len;
          it += it.span()) {
       if (it.is_set()) {
         it->store(0, memory_order_relaxed);
         sd->add_range(it.index(), it.index() + it.span());
       }
     }
+    if (start < USERTOP) {
+      for (auto it = pml4s.kernel->find(start); it.index() < start + len;
+           it += it.span()) {
+        if (it.is_set()) {
+          it->store(0, memory_order_relaxed);
+          sd->add_range(it.index(), it.index() + it.span());
+        }
+      }
+    }
   }
 
   void
-  page_map_cache::switch_to() const
+  page_map_cache::switch_to(bool kernel, proc* p) const
   {
     track_switch_to();
-    pml4->switch_to();
+    bool flush_tlb = true;
+    u64 cr3 = v2p(kernel ? pml4s.kernel : pml4s.user)
+//      | ((mycpu()->id * PCID_HISTORY_SIZE + pcid) * 2)
+      | 2
+      | (flush_tlb ? 0 : ((u64)1<<63))
+      | (kernel ? 0 : 1);
+    cr3 &= mycpu()->cr3_mask;
+    lcr3(cr3);
+    mycpu()->tlb_cr3 = cr3;
+    mycpu()->has_secrets = kernel;
   }
 
   u64
   page_map_cache::internal_pages() const
   {
-    return pml4->internal_pages();
+    return pml4s.kernel->internal_pages();
   }
 }
 
