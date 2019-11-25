@@ -25,10 +25,6 @@ struct cpu {
   struct context *scheduler;   // swtch() here to enter scheduler
 
   int timer_printpc;
-  __mpalign__
-  atomic<u64> tlbflush_done;   // last tlb flush req done on this cpu
-  atomic<u64> tlb_cr3;         // current value of cr3 on this cpu
-  __padout__;
   struct proc *prev;           // The previously-running process
   atomic<struct proc*> fpu_owner; // The proc with the current FPU state
   struct numa_node *node;
@@ -50,11 +46,7 @@ struct cpu {
   u64 scratch;                 // scratch space to use during page table swap
   u64 cr3_mask;                // masks out PCID bits if they aren't supported
   u8 has_secrets;              // whether kernel page tables are mapped
-
   __page_pad__;
-
-  struct pgmap* pcid_history[PCID_HISTORY_SIZE]; // ring buffer of the last 8 pgmaps
-  int pcid_history_head;        // head pointer for ring buffer
 } __page_align__;
 
 DECLARE_PERCPU(struct cpu, cpus);

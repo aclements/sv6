@@ -20,11 +20,6 @@
 
 using namespace std;
 
-// Ensure tlbflush_req lives on a cache line by itself since we hit
-// this from all cores in batched_shootdown mode.
-static atomic<u64> tlbflush_req __mpalign__;
-static __padout__ __attribute__((used));
-
 // See: https://elixir.bootlin.com/linux/v5.3.12/source/arch/x86/include/asm/tlbflush.h#L151
 const u8 NUM_TLB_CONTEXTS = 6;
 struct tlb_context {
@@ -586,45 +581,6 @@ vmalloc_free(void *ptr)
   // XXX Should release unused page table pages.  This requires a
   // global TLB shootdown, so we should only do it in large-ish
   // batches.
-}
-
-void
-batched_shootdown::perform() const
-{
-  if (!need_shootdown)
-    return;
-
-  u64 myreq = ++tlbflush_req;
-  u64 cr3 = rcr3();
-
-  // the caller may not hold any spinlock, because other CPUs might
-  // be spinning waiting for that spinlock, with interrupts disabled,
-  // so we will deadlock waiting for their TLB flush..
-  assert(mycpu()->ncli == 0);
-
-  kstats::inc(&kstats::tlb_shootdown_count);
-  kstats::timer timer(&kstats::tlb_shootdown_cycles);
-
-  for (int i = 0; i < ncpu; i++) {
-    if (cpus[i].tlb_cr3 == cr3 && cpus[i].tlbflush_done < myreq) {
-      lapic->send_tlbflush(&cpus[i]);
-      kstats::inc(&kstats::tlb_shootdown_targets);
-    }
-  }
-
-  for (int i = 0; i < ncpu; i++)
-    while (cpus[i].tlb_cr3 == cr3 && cpus[i].tlbflush_done < myreq)
-      /* spin */ ;
-}
-
-void
-batched_shootdown::on_ipi()
-{
-  pushcli();
-  u64 nreq = tlbflush_req.load();
-  lcr3(rcr3());
-  mycpu()->tlbflush_done = nreq;
-  popcli();
 }
 
 void

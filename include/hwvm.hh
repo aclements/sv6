@@ -12,37 +12,6 @@ struct pgmap_pair {
   pgmap* kernel;
 };
 
-// A TLB shootdown gatherer that doesn't track anything, but as a
-// result can be batched with other TLB shootdowns.
-class batched_shootdown
-{
-  bool need_shootdown;
-
-public:
-  constexpr batched_shootdown() : need_shootdown(false) { }
-
-  // Do not track anything in the page_map_cache.  Actually
-  // this should probably hold things like tlbflush_req and
-  // per-CPU tlbflush_done.
-  class cache_tracker {
-  public:
-    void track_switch_to() const {}
-    void track_switch_from() const {}
-  };
-
-  // Indicate that some page needs to be shot down.
-  void add_range(uintptr_t start, uintptr_t end)
-  {
-    need_shootdown = true;
-  }
-
-  // Fully flush all cores' TLBs.
-  void perform() const;
-
-  // Handle receipt of a TLB flush IPI.
-  static void on_ipi();
-};
-
 class core_tracking_shootdown
 {
 public:
