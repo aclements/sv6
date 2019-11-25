@@ -22,6 +22,8 @@ static console_stream sdebug(SDEBUG);
 
 enum { vm_debug = 0 };
 
+extern struct intdesc idt[256];
+
 /*
  * vmdesc
  */
@@ -120,7 +122,26 @@ vmap::alloc(void)
   static_assert(sizeof(vmap) <= PGSIZE);
   vmap* page = (vmap*)zalloc("vmap::alloc");
   sref<vmap> v = sref<vmap>::transfer(new (page) vmap());
+
   v->qinsert(page);
+  v->qinsert((void*)mycpu());
+  v->qinsert((void*)&mycpu()->cpu);
+  v->qinsert((void*)idt);
+
+  for(int c = 0; c < ncpu; c++) {
+    void* nmi_stack = (void*)(cpus[c].ts.ist[1] - KSTACKSIZE);
+    void* dblflt_stack = (void*)(cpus[c].ts.ist[2] - KSTACKSIZE);
+
+    // TODO(behrensj): This isn't safe! There needs to be separate NMI stacks
+    // per address space per core although it should be fine if they were much
+    // smaller than KSTACKSIZE because NMIs switch stacks almost immediately.
+    v->qinsert(nmi_stack, nmi_stack, KSTACKSIZE); // nmi stack
+
+    // Any double fault results in a kernel panic, so it is harmless to just
+    // share double fault stacks globally.
+    v->qinsert(dblflt_stack, dblflt_stack, KSTACKSIZE);
+  }
+
   return v;
 }
 

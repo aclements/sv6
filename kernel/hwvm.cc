@@ -20,18 +20,36 @@
 
 using namespace std;
 
-extern struct intdesc idt[256];
-
 // Ensure tlbflush_req lives on a cache line by itself since we hit
 // this from all cores in batched_shootdown mode.
 static atomic<u64> tlbflush_req __mpalign__;
 static __padout__ __attribute__((used));
+
+// See: https://elixir.bootlin.com/linux/v5.3.12/source/arch/x86/include/asm/tlbflush.h#L151
+const u8 NUM_TLB_CONTEXTS = 6;
+struct tlb_context {
+  u64 asid;
+  u64 tlb_gen;
+};
+struct tlb_state {
+  tlb_context contexts[NUM_TLB_CONTEXTS];
+
+  // The index of the next context that will be used.
+  u8 next_context;
+};
+percpu<tlb_state> tlb_states;
+
+atomic<u64> next_asid = 1;
 
 DEFINE_PERCPU(const MMU_SCHEME::page_map_cache*, cur_page_map_cache);
 
 static const char *levelnames[] = {
   "PT", "PD", "PDP", "PML4"
 };
+
+static bool pcids_enabled() {
+  return (mycpu()->cr3_mask & 0xfff) != 0;
+}
 
 // One level in an x86-64 page table, typically the top level.  Many
 // of the methods of pgmap assume they are being invoked on a
@@ -86,13 +104,6 @@ private:
     return count;
   }
 
-  // Map a page of the direct map. Must only be called on a user page table.
-  void qexpose(vmap* vmap, void* page)
-  {
-    auto it = find((u64)page);
-    *it.create(0, vmap, this) = v2p(page) | PTE_P | PTE_W | PTE_NX;
-  }
-
 public:
   ~pgmap()
   {
@@ -128,30 +139,13 @@ public:
 
     k = PX(L_PML4, KGLOBAL);
     memset(&pair.user->e[0], 0, PGSIZE);
-    pair.user->qexpose(vmap, (void*)mycpu());
-    pair.user->qexpose(vmap, (void*)&mycpu()->cpu);
-    pair.user->qexpose(vmap, (void*)idt);
 
-    pair.user->qexpose(vmap, (void*)pair.kernel);
-    pair.user->qexpose(vmap, (void*)pair.user);
-
-    for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
-      pair.user->qexpose(vmap, (void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE)); // nmi stack
-      pair.user->qexpose(vmap, (void*)(mycpu()->ts.ist[2] + i - KSTACKSIZE)); // double fault stack
-    }
+    // Ideally this should be done by vmap::alloc, but we don't currently have a
+    // way to create hugepage mappings anywhere so plumbing through the logic
+    // seems like more effort than it is worth.
     *(pair.user->find(KTEXT, pgmap::L_2M).create(0, vmap, pair.user)) = v2p(qtext) | PTE_PS | PTE_P | PTE_W;
 
     return pair;
-  }
-
-  // Make this page table active on this CPU.
-  void switch_to()
-  {
-    auto nreq = tlbflush_req.load();
-    u64 cr3 = v2p(this);
-    lcr3(cr3);
-    mycpu()->tlbflush_done = nreq;
-    mycpu()->tlb_cr3 = cr3;
   }
 
   u64 internal_pages() const
@@ -314,7 +308,7 @@ public:
             }
 
             if (!used_qalloc) {
-              user_pgmap->qexpose(vmap, next);
+              *user_pgmap->find((u64)next).create(0, vmap, user_pgmap) = v2p(next) | PTE_P | PTE_W | PTE_NX;
             }
             cur = next;
           }
@@ -505,10 +499,8 @@ switchvm(struct proc *p)
   if (*cur_page_map_cache)
     (*cur_page_map_cache)->switch_from();
 
-  // XXX(Austin) This puts the TLB tracking logic in pgmap, which is
-  // probably the wrong place.
   if (p->vmap) {
-    p->vmap->cache.switch_to(true, p);
+    p->vmap->cache.switch_to();
 
     if (*cur_page_map_cache != &p->vmap->cache) {
       if (cpuid::features().spec_ctrl) {
@@ -518,9 +510,9 @@ switchvm(struct proc *p)
 
     *cur_page_map_cache = &p->vmap->cache;
   } else {
-    kpml4.switch_to();
+    // Switch directly to the base kernel page table, using PCID=0.
+    lcr3(v2p(&kpml4));
     *cur_page_map_cache = nullptr;
-    mycpu()->has_secrets = true;
   }
 
   mycpu()->ts.rsp[0] = (u64) p->kstack + KSTACKSIZE;
@@ -636,48 +628,46 @@ batched_shootdown::on_ipi()
 }
 
 void
-core_tracking_shootdown::cache_tracker::track_switch_to() const
+core_tracking_shootdown::on_ipi()
 {
-  active_cores.atomic_set(myid());
-  // Ensure that reads from the cache cannot move up before the tracker
-  // update, and that the tracker update does not move down after the
-  // cache reads.
-  std::atomic_thread_fence(std::memory_order_acq_rel);
-}
-
-void
-core_tracking_shootdown::cache_tracker::track_switch_from() const
-{
-  active_cores.atomic_reset(myid());
-  // No need for a fence; worst case, we just get an extra shootdown.
-}
-
-void
-core_tracking_shootdown::clear_tlb() const
-{
-  if (end_ > start_ && end_ - start_ > 4 * PGSIZE) {
-    lcr3(rcr3());
+  if (pcids_enabled()) {
+    u64 pcid = rcr3() & 0xfff;
+    invpcid(pcid, 0, INVPCID_ONE_PCID);
+    invpcid(pcid ^ 0x1, 0, INVPCID_ONE_PCID);
   } else {
-    for (uintptr_t va = start_; va < end_; va += PGSIZE)
-      invlpg((void*) va);
+    lcr3(rcr3());
   }
 }
 
 void
 core_tracking_shootdown::perform() const
 {
-  if (!t_ || start_ >= end_)
+  if (start_ >= end_)
     return;
 
   // Ensure that cache invalidations happen before reading the tracker;
   // see also cache_tracker::track_switch_to().
   std::atomic_thread_fence(std::memory_order_acq_rel);
 
-  bitset<NCPU> targets = t_->active_cores;
+  bitset<NCPU> targets = cache_->active_cores_;
   {
     scoped_cli cli;
     if (targets[myid()]) {
-      clear_tlb();
+      if (pcids_enabled()) {
+        u64 pcid = rcr3() & 0xfff;
+        if (end_ > start_ && end_ - start_ > 4 * PGSIZE) {
+          invpcid(pcid, 0, INVPCID_ONE_PCID);
+          invpcid(pcid ^ 0x1, 0, INVPCID_ONE_PCID);
+        } else {
+          for (uintptr_t va = start_; va < end_; va += PGSIZE) {
+            invpcid(pcid, va, INVPCID_ONE_ADDR);
+            invpcid(pcid ^ 0x1, va, INVPCID_ONE_ADDR);
+          }
+        }
+      } else {
+        // If we aren't using PCIDs, just do a full TLB flush.
+        lcr3(rcr3());
+      }
       targets.reset(myid());
     }
   }
@@ -688,11 +678,14 @@ core_tracking_shootdown::perform() const
   kstats::inc(&kstats::tlb_shootdown_count);
   kstats::inc(&kstats::tlb_shootdown_targets, targets.count());
   kstats::timer timer(&kstats::tlb_shootdown_cycles);
-  run_on_cpus(targets, [this]() { clear_tlb(); });
+  for (auto i = targets.begin(); i != targets.end(); ++i) {
+    lapic->send_tlbflush(&cpus[*i]);
+  }
 }
 
 namespace mmu_shared_page_table {
-  page_map_cache::page_map_cache(vmap* parent) : pml4s(kpml4.kclone_pair(parent)), parent_(parent)
+  page_map_cache::page_map_cache(vmap* parent) :
+    pml4s(kpml4.kclone_pair(parent)), parent_(parent), asid_(next_asid++)
   {
     if (!pml4s.kernel || !pml4s.user) {
       swarn.println("setupkvm out of memory\n");
@@ -718,7 +711,7 @@ namespace mmu_shared_page_table {
   page_map_cache::__invalidate(
     uintptr_t start, uintptr_t len, shootdown *sd)
   {
-    sd->set_cache_tracker(this);
+    sd->set_cache(this);
     for (auto it = pml4s.user->find(start); it.index() < start + len;
          it += it.span()) {
       if (it.is_set()) {
@@ -738,19 +731,51 @@ namespace mmu_shared_page_table {
   }
 
   void
-  page_map_cache::switch_to(bool kernel, proc* p) const
+  page_map_cache::switch_to() const
   {
-    track_switch_to();
-    bool flush_tlb = true;
-    u64 cr3 = v2p(kernel ? pml4s.kernel : pml4s.user)
-//      | ((mycpu()->id * PCID_HISTORY_SIZE + pcid) * 2)
-      | 2
-      | (flush_tlb ? 0 : ((u64)1<<63))
-      | (kernel ? 0 : 1);
+    active_cores_.atomic_set(myid());
+    // Ensure that reads from the cache cannot move up before the tracker
+    // update, and that the tracker update does not move down after the
+    // cache reads.
+    std::atomic_thread_fence(std::memory_order_acq_rel);
+
+    bool flush_tlb = false;
+    u64 new_tlb_gen = tlb_generation_;
+
+    // Find next context to use
+    int new_context = -1;
+    for (int i = 0; i < NUM_TLB_CONTEXTS; i++) {
+      if (tlb_states->contexts[i].asid == asid_) {
+        flush_tlb = new_tlb_gen > tlb_states->contexts[i].tlb_gen;
+        new_context = i;
+        break;
+      }
+    }
+    if(new_context == -1) {
+      new_context = tlb_states->next_context;
+      tlb_states->next_context = (new_context + 1) % NUM_TLB_CONTEXTS;
+      flush_tlb = true;
+    }
+
+    tlb_states->contexts[new_context].asid = asid_;
+    tlb_states->contexts[new_context].tlb_gen = new_tlb_gen;
+
+    u64 cr3 = v2p(pml4s.kernel)
+      | ((new_context + 1) * 2)
+      | (flush_tlb ? 0 : ((u64)1<<63));
     cr3 &= mycpu()->cr3_mask;
     lcr3(cr3);
-    mycpu()->tlb_cr3 = cr3;
-    mycpu()->has_secrets = kernel;
+
+    if (pcids_enabled()) {
+      invpcid((cr3 & 0xfff) ^ 0x1, 0, INVPCID_ONE_PCID);
+    }
+  }
+
+  void
+  page_map_cache::switch_from() const
+  {
+    active_cores_.atomic_reset(myid());
+    // No need for a fence; worst case, we just get an extra shootdown.
   }
 
   u64
