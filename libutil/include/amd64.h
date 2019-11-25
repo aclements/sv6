@@ -319,6 +319,14 @@ invlpg(void *a)
   __asm volatile("invlpg (%0)" : : "r" (a) : "memory");
 }
 
+static inline void invpcid(unsigned long pcid, unsigned long addr,
+			     unsigned long type)
+{
+	struct { uint64_t d[2]; } desc = { { pcid, addr } };
+	__asm volatile (".byte 0x66, 0x0f, 0x38, 0x82, 0x01"
+		      : : "m" (desc), "a" (type), "c" (&desc) : "memory");
+}
+
 static inline int
 popcnt64(uint64_t v)
 {

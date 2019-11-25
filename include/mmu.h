@@ -33,6 +33,11 @@
 // Address in page table or page directory entry
 #define PTE_ADDR(pte)	((uintptr_t)(pte) & 0x7FFFFFFFFFFFF000u)
 
+#define INVPCID_ONE_ADDR        0
+#define INVPCID_ONE_PCID        1
+#define INVPCID_ALL             2
+#define INVPCID_ALL_NONGLOBAL   3
+
 #ifndef __ASSEMBLER__
 struct segdesc {
   uint16_t limit0;
