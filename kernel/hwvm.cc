@@ -717,7 +717,7 @@ namespace mmu_shared_page_table {
     tlb_states->contexts[new_context].tlb_gen = new_tlb_gen;
 
     u64 cr3 = v2p(pml4s.kernel)
-      | ((new_context + 1) * 2)
+      | (new_context * 2)
       | (flush_tlb ? 0 : ((u64)1<<63));
     cr3 &= mycpu()->cr3_mask;
     lcr3(cr3);
