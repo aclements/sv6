@@ -283,10 +283,29 @@ setup-linux:
 	ssh amsterdam.csail.mit.edu \
 	sed -i .bak "'s/^default /#&/;/^# *default localboot/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg
 
+$(O)/boot.fat: $(O)/kernel.elf
+	dd if=/dev/zero of=$@ bs=1024 count=65536
+	mkfs.fat -F 32 $@
+	mmd -i $@ ::boot
+	mmd -i $@ ::boot/syslinux
+	mcopy -i $@ /usr/lib/syslinux/bios/*.c32 ::boot/syslinux/
+	mcopy -i $@ $(O)/kernel.elf ::boot/sv6
+	mcopy -i $@ ./syslinux.cfg ::
+	syslinux --directory boot/syslinux -i $@
+$(O)/boot.iso: $(O)/boot.fat
+	dd if=$< of=$@ conv=sparse obs=512 seek=2048
+	truncate -s "+1048576" $@
+	parted -s --align optimal $@ mklabel msdos mkpart primary 1MiB '100%' set 1 boot on
+	dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/bios/mbr.bin of=$@
+$(O)/boot.vhdx: $(O)/boot.iso
+	qemu-img convert -f raw -O vhdx $< $@
+$(O)/boot.vdi: $(O)/boot.iso
+	qemu-img convert -f raw -O vdi $< $@
+
 bench:
 	/bin/echo -ne "xv6\\nbench\\nexit\\n" | nc $(HW).csail.mit.edu 23
 
-clean: 
+clean:
 	rm -fr $(O)
 
 all:	$(ALL)
