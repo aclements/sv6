@@ -1,5 +1,4 @@
 #include "cpuid.hh"
-
 #include <string.h>
 
 cpuid cpuid::instance_;
@@ -39,6 +38,7 @@ cpuid::cpuid() : basic_{}, extended_{}
 
   l = get_leaf(leafid::ext_features);
   features_.fsgsbase = l.b & (1<<0);
+  features_.intel_pt = l.b & (1<<25);
 
   l = get_leaf(leafid::ext_features);
   features_.md_clear = l.d & (1<<10);

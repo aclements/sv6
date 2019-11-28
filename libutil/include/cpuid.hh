@@ -176,6 +176,7 @@ public:
 
     // 7.EBX
     bool fsgsbase : 1;
+    bool intel_pt : 1;
 
     // 7.EDX
     bool md_clear : 1;
