@@ -96,6 +96,8 @@
 // Only for CPUID 06_2c (CPUID_FEATURES eax&~0xf == 0x206c0)
 #define MSR_INTEL_MISC_FEATURE_CONTROL_DISABLE_DATA_REUSE     0x40
 
+#define MSR_INTEL_DEBUGCTL       0x1d9
+
 // Common event-select bits
 #define PERF_SEL_USR        (1ULL << 16)
 #define PERF_SEL_OS         (1ULL << 17)
