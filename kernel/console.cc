@@ -59,6 +59,7 @@ consputc(int c)
   }
 
   cgaputc(c);
+  vgaputc(c);
 }
 
 // Print to the console.

@@ -78,6 +78,9 @@ void            bwrite(buf*);
 // cga.c
 void            cgaputc(int c);
 
+// vga.c
+void            vgaputc(int c);
+
 // console.c
 void            cprintf(const char*, ...) __attribute__((format(printf, 1, 2)));
 void            __cprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));

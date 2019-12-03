@@ -81,6 +81,7 @@ OBJS = \
 	eager_refcache.o \
 	disk.o \
 	multiboot.o \
+	vga.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 

@@ -28,7 +28,7 @@
 .globl multiboot_header
 multiboot_header:
     #define magic 0x1badb002
-    #define flags (1<<16 | 1<<0)
+    #define flags (1<<16 | 1<<2 | 1<<0)
     .long magic
     .long flags
     .long (- magic - flags)        # checksum
@@ -37,6 +37,10 @@ multiboot_header:
     .long PADDR(edata)             # load end address
     .long PADDR(end)               # bss end address
     .long PADDR(start)             # entry address
+	.long 0                        # graphics mode
+	.long 1920                     # x-resolution
+	.long 1080                     # y-resolution
+	.long 32                       # bit depth
 
 .balign 8
 .text
