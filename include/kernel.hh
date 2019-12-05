@@ -121,6 +121,7 @@ long            futexwake(futexkey_t key, u64 nwake);
 
 // hotpatch.cc
 extern void*    qtext;
+void            remove_fsgsbase(void);
 
 // hz.c
 void            microdelay(u64);

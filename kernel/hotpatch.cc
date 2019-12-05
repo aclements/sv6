@@ -20,6 +20,15 @@ void replace_qtext(void* target, const char* value)
     *p = *value;
 }
 
+// Replace the 5 bytes at target with a call instruction to func
+//
+// TODO: handle replacements of instructions that aren't 5 bytes.
+void replace_unsupported_instruction(void* target, void* func)
+{
+    *(u8*)target = 0xe8;
+    *(u32*)(target+1) = (u32)((char*)func - (char*)target - 5);
+}
+
 void remove_retpolines()
 {
     REPLACE(__x86_indirect_thunk_rax, "\xff\xe0");
@@ -38,6 +47,17 @@ void remove_retpolines()
     REPLACE(__x86_indirect_thunk_r13, "\x41\xff\xe5");
     REPLACE(__x86_indirect_thunk_r14, "\x41\xff\xe6");
     REPLACE(__x86_indirect_thunk_r15, "\x41\xff\xe7");
+}
+
+void remove_fsgsbase() {
+    extern u64 emulate_wrfsbase, emulate_rdfsbase;
+    extern u64 rfs1, wfs1, wfs2, wfs3, wfs4;
+
+    replace_unsupported_instruction(&rfs1, &emulate_rdfsbase);
+    replace_unsupported_instruction(&wfs1, &emulate_wrfsbase);
+    replace_unsupported_instruction(&wfs2, &emulate_wrfsbase);
+    replace_unsupported_instruction(&wfs3, &emulate_wrfsbase);
+    replace_unsupported_instruction(&wfs4, &emulate_wrfsbase);
 }
 
 void inithotpatch()

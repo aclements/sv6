@@ -354,6 +354,11 @@ initpg(struct cpu *c)
       level = pgmap::L_1G;
     }
 
+    // Patch out unsupported instructions if necessary.
+    if (!cpuid::features().fsgsbase) {
+      remove_fsgsbase();
+    }
+
     // Make the text and rodata segments read only
     *kpml4.find(KTEXT, pgmap::L_2M).create(0) = v2p((void*)KTEXT) | PTE_P | PTE_PS;
     lcr3(rcr3());
@@ -388,9 +393,11 @@ initpg(struct cpu *c)
   }
 
   if (!cpuid::features().fsgsbase) {
-    cprintf("wrfsbase instruction unsupported?!\n");
-    while(1);
+    cprintf("WARN: wrfsbase instructions unsupported\n");
+  } else {
+    lcr4(rcr4() | CR4_FSGSBASE);
   }
+
   if (!cpuid::features().spec_ctrl) {
     cprintf("WARN: md-clear not advertised, attempting anyway\n");
   }
@@ -398,8 +405,11 @@ initpg(struct cpu *c)
     cprintf("WARN: spec-ctrl feature unavailable?!\n");
   }
 
-  // Enable global pages and fs/gs instructions. This has to happen on every core.
-  lcr4(rcr4() | CR4_PGE | CR4_FSGSBASE);
+  // Enable global pages. This has to happen on every core.
+  lcr4(rcr4() | CR4_PGE);
+
+  // Prevent kernel mode from writing to read-only pages.
+  lcr0(rcr0() | CR0_WP);
 }
 
 // Clean up mappings that were only required during early boot.
