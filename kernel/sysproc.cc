@@ -250,7 +250,6 @@ sys_setfs(u64 base)
 {
   proc *p = myproc();
   p->user_fs_ = base;
-  switchvm(p);
   return 0;
 }
 

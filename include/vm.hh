@@ -48,10 +48,6 @@ struct vmdesc : public mmu::page_tracker
 
     // Set if the page should be shared across fork().
     FLAG_SHARED = 1<<5,
-
-    // Set if the page should be quasi user-visible. Requires
-    // FLAG_ANON, conflicts with FLAG_COW and FLAG_SHARED.
-    FLAG_QVISIBLE = 1<<6,
   };
 
   // Flags
@@ -85,11 +81,6 @@ struct vmdesc : public mmu::page_tracker
   // virtual address start (which may be negative).
   vmdesc(const sref<mnode> &ip, intptr_t start)
     : flags(FLAG_MAPPED | FLAG_WRITE), inode(ip), start(start) { }
-
-  // Construct a qvisible region in which virtual address q maps to v2p(k).
-  vmdesc(void* qaddr, void* kaddr)
-    : flags(FLAG_MAPPED | FLAG_QVISIBLE | FLAG_ANON | FLAG_WRITE),
-      start((intptr_t)qaddr - (intptr_t)kaddr) {}
 
   // A memory descriptor for writable anonymous memory.
   static struct vmdesc anon_desc;
@@ -143,6 +134,13 @@ struct vmap : public referenced {
   // Map desc from virtual addresses start to start+len.  Returns
   // MAP_FAILED ((uptr)-1) if inserting the region fails.
   uptr insert(const vmdesc &desc, uptr start, uptr len);
+
+  // Insert a qvisible range that maps qptr to kptr with length len. Qvisible
+  // mappings can be invalidated with remove().
+  void qinsert(void* qptr, void* kptr, size_t len);
+
+  // Insert a qvisible page that maps qptr to itself.
+  void qinsert(void* qptr) { qinsert(qptr, qptr, PGSIZE); }
 
   // Unmap from virtual addresses start to start+len.
   int remove(uptr start, uptr len);
@@ -200,7 +198,7 @@ private:
   friend void switchvm(struct proc *);
 
   // Virtual page frames
-  typedef radix_array<vmdesc, 0x10000000000000, PGSIZE,
+  typedef radix_array<vmdesc, USERTOP / PGSIZE, PGSIZE,
                       kalloc_allocator<vmdesc>, scoped_no_sched> vpf_array;
   vpf_array vpfs_;
 
