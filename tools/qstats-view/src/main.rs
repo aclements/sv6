@@ -73,7 +73,7 @@ fn main() {
     rips.reverse();
 
     for (addr, count) in rips.iter() {
-        let addr = u64::from_str_radix(&addr[2..], 16).unwrap();
+        let addr = u64::from_str_radix(&addr[2..18], 16).unwrap();
 
         if let Ok(mut frames) = context.find_frames(addr) {
             if let Ok(Some(Frame {
@@ -99,6 +99,10 @@ fn main() {
                     location.line.unwrap_or(0),
                 )
             }
+             println!("      {:x}", addr);
         }
     }
+
+    println!();
+    println!("total = {}", rips.iter().map(|r| r.1).sum::<u64>());
 }
