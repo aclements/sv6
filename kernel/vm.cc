@@ -24,6 +24,11 @@ enum { vm_debug = 0 };
 
 extern struct intdesc idt[256];
 
+enum {
+  QALLOC_BATCH_SIZE = 17,
+  QFREE_BATCH_SIZE = 17,
+};
+
 /*
  * vmdesc
  */
@@ -123,6 +128,8 @@ vmap::alloc(void)
   vmap* page = (vmap*)zalloc("vmap::alloc");
   sref<vmap> v = sref<vmap>::transfer(new (page) vmap());
 
+  v->cache.init();
+
   v->qinsert(page);
   v->qinsert((void*)mycpu());
   v->qinsert((void*)&mycpu()->cpu);
@@ -152,6 +159,8 @@ vmap::vmap() :
 
 vmap::~vmap()
 {
+  for (auto p : qpage_pool_)
+    kfree(p);
 }
 
 sref<vmap>
@@ -804,33 +813,39 @@ safe_read_vm(void *dst, uintptr_t src, size_t n)
 }
 
 void*
-vmap::qalloc(const char* name)
+vmap::qalloc(const char* name, bool cached_only)
 {
-  void* page = try_qalloc(name);
-  if (page)
-    return page;
+  void* new_pages[QALLOC_BATCH_SIZE];
 
-  ensure_secrets();
-  page = zalloc("qalloc");
-  qinsert(page);
-  return page;
-}
+  {
+    scoped_acquire l(&qpage_pool_lock_);
+    if (!qpage_pool_.empty()) {
+      void* page = qpage_pool_.back();
+      qpage_pool_.pop_back();
+      return page;
+    } else if (cached_only) {
+      return nullptr;
+    }
 
-void*
-vmap::try_qalloc(const char* name)
-{
-  scoped_acquire l(&qpage_pool_lock_);
-  if (qpage_pool_.empty())
-    return nullptr;
+    new_pages[0] = zalloc("qalloc");
+    for (auto i = 1; i < QALLOC_BATCH_SIZE; i++) {
+      new_pages[i] = zalloc("qalloc");
+      qpage_pool_.push_back(new_pages[i]);
+    }
+  }
 
-  void* page = qpage_pool_.back();
-  qpage_pool_.pop_back();
-  return page;
+  for (auto p : new_pages) {
+    qinsert(p);
+  }
+
+  return new_pages[0];
 }
 
 void
 vmap::qfree(void* page)
 {
+  void* unneeded_pages[QFREE_BATCH_SIZE];
+
   {
     scoped_acquire l(&qpage_pool_lock_);
 
@@ -839,10 +854,19 @@ vmap::qfree(void* page)
       qpage_pool_.push_back(page);
       return;
     }
+
+    unneeded_pages[0] = page;
+    for (auto i = 1; i < QFREE_BATCH_SIZE; i++) {
+      unneeded_pages[i] = qpage_pool_.back();
+      qpage_pool_.pop_back();
+    }
   }
 
-  ensure_secrets();
-  remove((uintptr_t)page, PGSIZE);
+  mmu::shootdown shootdown;
+  for (auto p : unneeded_pages) {
+    cache.invalidate((uintptr_t)p, PGSIZE, nullptr, &shootdown);
+  }
+  shootdown.perform();
   kfree(page);
 }
 

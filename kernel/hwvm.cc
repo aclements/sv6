@@ -118,7 +118,7 @@ public:
 
   // Allocate and return a new pgmap the clones the kernel part of this pgmap,
   // and populates the quasi user-visible part.
-  pgmap_pair kclone_pair(vmap* vmap) const
+  pgmap_pair kclone_pair() const
   {
     pgmap *pml4 = (pgmap*)kalloc("PML4-pair", PGSIZE * 2);
     if (!pml4)
@@ -134,11 +134,6 @@ public:
 
     k = PX(L_PML4, KGLOBAL);
     memset(&pair.user->e[0], 0, PGSIZE);
-
-    // Ideally this should be done by vmap::alloc, but we don't currently have a
-    // way to create hugepage mappings anywhere so plumbing through the logic
-    // seems like more effort than it is worth.
-    *(pair.user->find(KTEXT, pgmap::L_2M).create(0, vmap, pair.user)) = v2p(qtext) | PTE_PS | PTE_P | PTE_W;
 
     return pair;
   }
@@ -282,7 +277,7 @@ public:
             cur = (pgmap*) p2v(PTE_ADDR(entry));
           } else {
             bool used_qalloc = true;
-            pgmap *next = (pgmap*) vmap->try_qalloc(levelnames[reached - 1]);
+            pgmap *next = (pgmap*) vmap->qalloc(levelnames[reached - 1], true);
             if (!next) {
               used_qalloc = false;
               next = (pgmap*) zalloc(levelnames[reached - 1]);
@@ -641,17 +636,29 @@ core_tracking_shootdown::perform() const
 
 namespace mmu_shared_page_table {
   page_map_cache::page_map_cache(vmap* parent) :
-    pml4s(kpml4.kclone_pair(parent)), parent_(parent), asid_(next_asid++)
+    pml4s(kpml4.kclone_pair()), parent_(parent), asid_(next_asid++)
   {
     if (!pml4s.kernel || !pml4s.user) {
-      swarn.println("setupkvm out of memory\n");
+      swarn.println("page_map_cache() out of memory\n");
       throw_bad_alloc();
     }
   }
-
   page_map_cache::~page_map_cache()
   {
     kfree(pml4s.kernel, PGSIZE * 2);
+  }
+
+  void page_map_cache::init()
+  {
+    // Ideally this should be done by vmap::alloc, but we don't currently have a
+    // way to create hugepage mappings anywhere so plumbing through the logic
+    // seems like more effort than it is worth.
+    *(pml4s.user->find(KTEXT, pgmap::L_2M).create(0, parent_, pml4s.user))
+      = v2p(qtext) | PTE_PS | PTE_P | PTE_W;
+
+    // pml4s is private, so vmap::alloc needs us to do this.
+    parent_->qinsert((void*)pml4s.user);
+    parent_->qinsert((void*)pml4s.kernel);
   }
 
   void

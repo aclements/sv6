@@ -74,6 +74,8 @@ namespace mmu_shared_page_table {
     page_map_cache(vmap* parent);
     ~page_map_cache();
 
+    void init();
+
     page_map_cache(const page_map_cache&) = delete;
     page_map_cache(page_map_cache&&) = delete;
     page_map_cache &operator=(const page_map_cache&) = delete;
