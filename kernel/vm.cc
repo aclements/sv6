@@ -124,8 +124,8 @@ vmap::alloc(void)
   return v;
 }
 
-vmap::vmap() : 
-  brk_(0), brklock_("brk_lock", LOCKSTAT_VM)
+vmap::vmap() :
+  brk_(0), cache(this), vpfs_(this), brklock_("brk_lock", LOCKSTAT_VM)
 {
 }
 
@@ -780,4 +780,55 @@ safe_read_vm(void *dst, uintptr_t src, size_t n)
   if (!myproc() || !myproc()->vmap)
     return 0;
   return myproc()->vmap->safe_read(dst, src, n);
+}
+
+void*
+vmap::qalloc(const char* name)
+{
+  void* page = try_qalloc(name);
+  if (page)
+    return page;
+
+  ensure_secrets();
+  page = zalloc("qalloc");
+  qinsert(page);
+  return page;
+}
+
+void*
+vmap::try_qalloc(const char* name)
+{
+  scoped_acquire l(&qpage_pool_lock_);
+  if (qpage_pool_.empty())
+    return nullptr;
+
+  void* page = qpage_pool_.back();
+  qpage_pool_.pop_back();
+  return page;
+}
+
+void
+vmap::qfree(void* page)
+{
+  {
+    scoped_acquire l(&qpage_pool_lock_);
+
+    if (qpage_pool_.size() < qpage_pool_.capacity()) {
+      memset(page, 0, PGSIZE);
+      qpage_pool_.push_back(page);
+      return;
+    }
+  }
+
+  ensure_secrets();
+  remove((uintptr_t)page, PGSIZE);
+  kfree(page);
+}
+
+void* qalloc(vmap* vmap, const char* name) {
+  return vmap->qalloc(name);
+}
+
+void qfree(vmap* vmap, void* page) {
+  vmap->qfree(page);
 }

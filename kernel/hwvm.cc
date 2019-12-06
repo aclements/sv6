@@ -86,15 +86,11 @@ private:
     return count;
   }
 
-  // Map a page of the direct map. When applied to the user page table
-  // (even without the U-bit set), this page of memory will be "quasi
-  // user visible" because of Meltdown style attacks.
-  void uexpose(void* page, int level = L_4K, bool execute = false)
+  // Map a page of the direct map. Must only be called on a user page table.
+  void qexpose(vmap* vmap, void* page)
   {
-    auto it = find((u64)page, level);
-    *it.create(0) = v2p(page) | PTE_P | PTE_W
-      | (execute ? 0 : PTE_NX)
-      | (level == L_4K ? 0 : PTE_PS);
+    auto it = find((u64)page);
+    *it.create(0, vmap, this) = v2p(page) | PTE_P | PTE_W | PTE_NX;
   }
 
 public:
@@ -114,10 +110,9 @@ public:
     kfree(p);
   }
 
-
   // Allocate and return a new pgmap the clones the kernel part of this pgmap,
   // and populates the quasi user-visible part.
-  pgmap_pair kclone_pair() const
+  pgmap_pair kclone_pair(vmap* vmap) const
   {
     pgmap *pml4 = (pgmap*)kalloc("PML4-pair", PGSIZE * 2);
     if (!pml4)
@@ -133,15 +128,18 @@ public:
 
     k = PX(L_PML4, KGLOBAL);
     memset(&pair.user->e[0], 0, PGSIZE);
-    pair.user->uexpose((void*)mycpu(), pgmap::L_4K);
-    pair.user->uexpose((void*)&mycpu()->cpu, pgmap::L_4K);
-    pair.user->uexpose((void*)idt, pgmap::L_4K);
+    pair.user->qexpose(vmap, (void*)mycpu());
+    pair.user->qexpose(vmap, (void*)&mycpu()->cpu);
+    pair.user->qexpose(vmap, (void*)idt);
+
+    pair.user->qexpose(vmap, (void*)pair.kernel);
+    pair.user->qexpose(vmap, (void*)pair.user);
 
     for(u64 i = 0; i < KSTACKSIZE; i += PGSIZE) {
-      pair.user->uexpose((void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE), pgmap::L_4K); // nmi stack
-      pair.user->uexpose((void*)(mycpu()->ts.ist[2] + i - KSTACKSIZE), pgmap::L_4K); // double fault stack
+      pair.user->qexpose(vmap, (void*)(mycpu()->ts.ist[1] + i - KSTACKSIZE)); // nmi stack
+      pair.user->qexpose(vmap, (void*)(mycpu()->ts.ist[2] + i - KSTACKSIZE)); // double fault stack
     }
-    *(pair.user->find(KTEXT, pgmap::L_2M).create(0)) = v2p(qtext) | PTE_PS | PTE_P | PTE_W;
+    *(pair.user->find(KTEXT, pgmap::L_2M).create(0, vmap, pair.user)) = v2p(qtext) | PTE_PS | PTE_P | PTE_W;
 
     return pair;
   }
@@ -191,37 +189,19 @@ public:
       resolve();
     }
 
-    // Walk the page table structure to find @c va at @c level and set
-    // @c cur.  If @c create is zero and the path to @c va does not
-    // exist, sets @c cur to nullptr.  Otherwise, the path will be
-    // created with the flags @c create.
-    void resolve(pme_t create = 0)
+    // Walk the page table structure to find @c va at @c level and set @c cur.
+    // If the path to @c va does not exist, sets @c cur to nullptr.
+    void resolve()
     {
       cur = pml4;
       for (reached = L_PML4; reached > level; reached--) {
         atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
         pme_t entry = entryp->load(memory_order_relaxed);
-      retry:
         if (entry & PTE_P) {
           cur = (pgmap*) p2v(PTE_ADDR(entry));
-        } else if (!create) {
-          cur = nullptr;
-          break;
         } else {
-          // XXX(Austin) Could use zalloc except during really early
-          // boot (really, zalloc shouldn't crash during early boot).
-          pgmap *next = (pgmap*) kalloc(levelnames[reached - 1]);
-          if (!next)
-            throw_bad_alloc();
-          memset(next, 0, sizeof *next);
-          if (!atomic_compare_exchange_weak(
-                entryp, &entry, v2p(next) | create)) {
-            // The above call updated entry with the current value in
-            // entryp, so retry after the entry load.
-            kfree(next);
-            goto retry;
-          }
-          cur = next;
+          cur = nullptr;
+          return;
         }
       }
     }
@@ -267,8 +247,79 @@ public:
     // set if is_set() was already true).
     iterator &create(pme_t flags)
     {
-      if (!cur)
-        resolve(flags | PTE_P | PTE_W);
+      if (!cur) {
+        cur = pml4;
+        for (reached = L_PML4; reached > level; reached--) {
+          atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
+          pme_t entry = entryp->load(memory_order_relaxed);
+        retry:
+          if (entry & PTE_P) {
+            cur = (pgmap*) p2v(PTE_ADDR(entry));
+          } else {
+            // XXX(Austin) Could use zalloc except during really early
+            // boot (really, zalloc shouldn't crash during early boot).
+            pgmap *next = (pgmap*) kalloc(levelnames[reached - 1]);
+              if (!next)
+                throw_bad_alloc();
+              memset(next, 0, sizeof *next);
+
+            if (!atomic_compare_exchange_weak(
+                  entryp, &entry, v2p(next) | flags | PTE_P | PTE_W)) {
+              // The above call updated entry with the current value in
+              // entryp, so retry after the entry load.
+              kfree(next);
+              goto retry;
+            }
+            cur = next;
+          }
+        }
+      }
+      return *this;
+    }
+
+    // Create this entry if it doesn't already exist.  Any created
+    // directory entries will have flags <tt>flags|PTE_P|PTE_W</tt>.
+    // After this, exists() will be true (though is_set() will only be
+    // set if is_set() was already true).
+    iterator &create(pme_t flags, vmap* vmap, pgmap* user_pgmap)
+    {
+      if (!cur) {
+        cur = pml4;
+        for (reached = L_PML4; reached > level; reached--) {
+          atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
+          pme_t entry = entryp->load(memory_order_relaxed);
+        retry:
+          if (entry & PTE_P) {
+            cur = (pgmap*) p2v(PTE_ADDR(entry));
+          } else {
+            bool used_qalloc = true;
+            pgmap *next = (pgmap*) vmap->try_qalloc(levelnames[reached - 1]);
+            if (!next) {
+              used_qalloc = false;
+              next = (pgmap*) zalloc(levelnames[reached - 1]);
+            }
+            if (!next) {
+              throw_bad_alloc();
+            }
+
+            if (!atomic_compare_exchange_weak(
+                  entryp, &entry, v2p(next) | flags | PTE_P | PTE_W)) {
+              // The above call updated entry with the current value in
+              // entryp, so retry after the entry load.
+              if (used_qalloc)
+                vmap->qfree(next);
+              else
+                zfree(next);
+              goto retry;
+            }
+
+            if (!used_qalloc) {
+              user_pgmap->qexpose(vmap, next);
+            }
+            cur = next;
+          }
+        }
+      }
       return *this;
     }
 
@@ -641,7 +692,7 @@ core_tracking_shootdown::perform() const
 }
 
 namespace mmu_shared_page_table {
-  page_map_cache::page_map_cache() : pml4s(kpml4.kclone_pair())
+  page_map_cache::page_map_cache(vmap* parent) : pml4s(kpml4.kclone_pair(parent)), parent_(parent)
   {
     if (!pml4s.kernel || !pml4s.user) {
       swarn.println("setupkvm out of memory\n");
@@ -657,9 +708,9 @@ namespace mmu_shared_page_table {
   void
   page_map_cache::__insert(uintptr_t va, pme_t pte)
   {
-    pml4s.user->find(va).create(PTE_U & pte)->store(pte, memory_order_relaxed);
+    pml4s.user->find(va).create(PTE_U & pte, parent_, pml4s.user)->store(pte, memory_order_relaxed);
     if (va < USERTOP) {
-      pml4s.kernel->find(va).create(PTE_U & pte)->store(pte, memory_order_relaxed);
+      pml4s.kernel->find(va).create(PTE_U & pte, parent_, pml4s.user)->store(pte, memory_order_relaxed);
     }
   }
 
@@ -706,140 +757,5 @@ namespace mmu_shared_page_table {
   page_map_cache::internal_pages() const
   {
     return pml4s.kernel->internal_pages();
-  }
-}
-
-namespace mmu_per_core_page_table {
-  page_map_cache::~page_map_cache()
-  {
-    for (size_t i = 0; i < ncpu; ++i) {
-      delete pml4s[i].user;
-      delete pml4s[i].kernel;
-    }
-  }
-
-  void
-  page_map_cache::insert(uintptr_t va, page_tracker *t, pme_t pte)
-  {
-    scoped_cli cli;
-    pgmap_pair& mypml4s = *pml4s;
-    assert(mypml4s.user);
-    assert(mypml4s.kernel);
-    mypml4s.user->find(va).create(PTE_U & pte)->store(pte, memory_order_relaxed);
-    if (va < USERTOP) {
-      mypml4s.kernel->find(va).create(PTE_U & pte)->store(pte, memory_order_relaxed);
-    }
-    t->tracker_cores.set(myid());
-  }
-
-  void
-  page_map_cache::switch_to(bool kernel, proc* p) const
-  {
-    cpuid_t id = myid();
-    auto &mypml4s = pml4s[id];
-    if (!mypml4s.kernel) {
-      mypml4s = kpml4.kclone_pair();
-    }
-
-    p->vmap->willneed((uptr)p, PGSIZE);
-    p->vmap->willneed((uptr)p->kstack, KSTACKSIZE);
-
-    bool flush_tlb = true;
-    int pcid = mycpu()->pcid_history_head;
-
-    static_assert(NCPU * PCID_HISTORY_SIZE <= 4096,
-                  "Per cpu pcids don't work with this many CPUS!");
-    auto& pcid_history = mycpu()->pcid_history;
-    for(int i = 0; i < PCID_HISTORY_SIZE; i++) {
-      if(pcid_history[i] == mypml4s.user) {
-        flush_tlb = false;
-        pcid = i;
-        break;
-      }
-    }
-
-    if(pcid == mycpu()->pcid_history_head) {
-      mycpu()->pcid_history_head = (pcid + 1) % PCID_HISTORY_SIZE;
-    }
-    pcid_history[pcid] = mypml4s.user;
-
-    u64 cr3 = v2p(kernel ? mypml4s.kernel : mypml4s.user)
-     | ((mycpu()->id * PCID_HISTORY_SIZE + pcid) * 2)
-     | (flush_tlb ? 0 : ((u64)1<<63))
-     | (kernel ? 0 : 1);
-    cr3 &= mycpu()->cr3_mask;
-
-    lcr3(cr3);
-    mycpu()->tlb_cr3 = cr3;
-    mycpu()->has_secrets = kernel;
-  }
-
-  u64
-  page_map_cache::internal_pages() const
-  {
-    u64 count = 0;
-
-    for (int i = 0; i < ncpu; i++) {
-      pgmap_pair& pm = pml4s[i];
-      if (!pm.kernel)
-        continue;
-      count += pm.kernel->internal_pages();
-    }
-
-    return count;
-  }
-
-  void
-  page_map_cache::clear(uintptr_t start, uintptr_t end)
-  {
-    // Are we the current page_map_cache on this core?  (Depending on
-    // MMU_SCHEME, *cur_page_map_cache may not be this type of
-    // page_map_cache, but if it isn't, we'll never take this code
-    // path.)
-    bool current =
-      (reinterpret_cast<const page_map_cache*>(*cur_page_map_cache) == this);
-    pgmap_pair& mypml4s = *pml4s;
-    // If we're clearing this CPU's page map cache, then we must have
-    // inserted something into it previously.  (Note that this may
-    // not hold if we start tracking shootdowns conservatively.)
-    assert(mypml4s.user);
-    assert(mypml4s.kernel);
-    for (auto it = mypml4s.user->find(start); it.index() < end; it += it.span()) {
-      if (it.is_set()) {
-        it->store(0, memory_order_relaxed);
-        // TODO(behrensj): does there need to be a remote invlpg here?
-      }
-    }
-
-    // Kernel page table doesn't use qvisible mappings.
-    end = min(end, (uintptr_t)USERTOP);
-    if (start >= end)
-      return;
-
-    for (auto it = mypml4s.kernel->find(start); it.index() < end; it += it.span()) {
-      if (it.is_set()) {
-        it->store(0, memory_order_relaxed);
-        if (current)
-          invlpg((void*)it.index());
-      }
-    }
-  }
-
-  void
-  shootdown::perform() const
-  {
-    // XXX Alternatively, we could reach into the per-core page tables
-    // directly from invalidate.  Then it would be able to zero them
-    // directly and gather PTE_P bits (instead of using a separate
-    // tracker), but it would probably require more communication.
-    if (targets.none())
-      return;
-    assert(start < end && end <= USERTOP);
-    kstats::inc(&kstats::tlb_shootdown_count);
-    kstats::inc(&kstats::tlb_shootdown_targets, targets.count());
-    kstats::timer timer(&kstats::tlb_shootdown_cycles);
-    run_on_cpus(targets, [this]() {
-        cache->clear(start, end);
-      });
   }
 }

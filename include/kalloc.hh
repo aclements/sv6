@@ -149,3 +149,69 @@ public:
     return p;
   }
 };
+
+// Standard allocator that uses a vmap's qalloc functions to allocate memory.
+template<class T>
+class qalloc_allocator : public allocator_base<T>
+{
+public:
+  template <class U> struct rebind { typedef qalloc_allocator<U> other; };
+
+  qalloc_allocator(vmap* vmap) : vmap_(vmap) {}
+  qalloc_allocator(const qalloc_allocator&) = default;
+  template<class U> qalloc_allocator(const qalloc_allocator<U>& o) noexcept : vmap_(o.vmap_) { }
+
+  T*
+  allocate(std::size_t n, const void *hint = 0)
+  {
+    if (n * sizeof(T) != PGSIZE)
+      panic("%s cannot allocate %zu bytes", __PRETTY_FUNCTION__, n * sizeof(T));
+    return (T*)qalloc(vmap_, typeid(T).name());
+  }
+
+  void
+  deallocate(T* p, std::size_t n)
+  {
+    if (n * sizeof(T) != PGSIZE)
+      panic("%s cannot deallocate %zu bytes", __PRETTY_FUNCTION__,
+            n * sizeof(T));
+    qfree(vmap_, p);
+  }
+
+  std::size_t
+  max_size() const noexcept
+  {
+    return PGSIZE;
+  }
+
+  // ZAllocator methods
+
+  T*
+  default_allocate()
+  {
+    if (sizeof(T) != PGSIZE)
+      panic("%s cannot allocate %zu bytes", __PRETTY_FUNCTION__, sizeof(T));
+
+    if (std::is_trivially_default_constructible<T>::value) {
+      // A trivial default constructor will zero-initialize
+      // everything, so we can short-circuit this by allocating a zero
+      // page.
+      return (T*)qalloc(vmap_, typeid(T).name());
+    }
+
+    // Fall back to usual allocation and default construction
+    T *p = allocate(1);
+    try {
+      // Unqualified lookup doesn't find declarations in dependent
+      // bases.  Hence "this->".
+      this->construct(p);
+    } catch (...) {
+      deallocate(p, 1);
+      throw;
+    }
+    return p;
+  }
+
+private:
+  vmap* vmap_;
+};

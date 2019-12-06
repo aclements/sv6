@@ -250,6 +250,12 @@ public:
   constexpr radix_array() noexcept : root_(0) { }
 
   /**
+   * Construct an empty radix array with a dedicated allocator.
+   */
+  template<class U> radix_array(U alloc_arg) noexcept :
+    upper_node_alloc_(alloc_arg), leaf_node_alloc_(alloc_arg), root_(0) { }
+
+  /**
    * Destruct all set elements and free backing memory.
    */
   ~radix_array()

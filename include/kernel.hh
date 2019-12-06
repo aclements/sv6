@@ -254,6 +254,8 @@ void            uartintr(void);
 void            switchvm(struct proc*);
 int             pagefault(struct vmap*, uptr, u32);
 void*           pagelookup(struct vmap*, uptr);
+void*           qalloc(vmap* vmap, const char* name);
+void            qfree(vmap* vmap, void* page);
 // Slowly but carefully read @c n bytes from virtual address @c src
 // into @c dst, without any page faults.  Return the number of bytes
 // successfully read.  These are meant for debugging purposes.

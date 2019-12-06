@@ -9,6 +9,7 @@
 #include "kalloc.hh"
 #include "page_info.hh"
 #include "mfs.hh"
+#include "vector.hh"
 
 struct padded_length;
 
@@ -184,6 +185,12 @@ struct vmap : public referenced {
   // Set write permission bit in vmdesc
   int set_write_permission(uptr start, uptr len, bool is_readonly, bool is_cow);
 
+  void* qalloc(const char *name);
+  // Version of qalloc that only uses cached pages. If the current qalloc pool
+  // is empty, this function returns NULL.
+  void* try_qalloc(const char *name);
+  void qfree(void* page);
+
   uptr brk_;                    // Top of heap
 
 private:
@@ -199,10 +206,14 @@ private:
 
   // Virtual page frames
   typedef radix_array<vmdesc, USERTOP / PGSIZE, PGSIZE,
-                      kalloc_allocator<vmdesc>, scoped_no_sched> vpf_array;
+                      qalloc_allocator<vmdesc>, scoped_no_sched> vpf_array;
   vpf_array vpfs_;
 
   struct spinlock brklock_;
+
+  // Cache of free quasi user-visible pages for processes in this address space.
+  static_vector<void*, 32> qpage_pool_;
+  struct spinlock qpage_pool_lock_;
 
   enum class access_type
   {
