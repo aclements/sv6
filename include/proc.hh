@@ -71,6 +71,7 @@ struct proc {
   u64 user_fs_;
   volatile int pid;            // Process ID
   sref<vmap> vmap;             // va -> vma
+  uptr unmapped_hint;
 
   __page_pad__;
 
@@ -116,7 +117,6 @@ struct proc {
   std::atomic<int> exception_inuse;
   u8 exception_buf[256];
   u64 magic;
-  uptr unmapped_hint;
   sigaction sig[NSIG];
 
   static proc* alloc();
