@@ -26,7 +26,7 @@ void replace_qtext(void* target, const char* value)
 void replace_unsupported_instruction(void* target, void* func)
 {
     *(u8*)target = 0xe8;
-    *(u32*)(target+1) = (u32)((char*)func - (char*)target - 5);
+    *(u32*)((char*)target+1) = (u32)((char*)func - (char*)target - 5);
 }
 
 void remove_retpolines()
