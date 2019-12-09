@@ -59,6 +59,7 @@ void initacpi(void);
 void initwd(void);
 void initdev(void);
 void inithpet(void);
+void inittsc(void);
 void initrtc(void);
 void initmfs(void);
 void idleloop(void);
@@ -226,6 +227,7 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   inittrap();
   inithpet();              // Requires initacpitables
+  inittsc();
   initfpu();               // Requires nothing
   initmsr();               // Requires nothing
   initkalloc();            // Requires initpageinfo

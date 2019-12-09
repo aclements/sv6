@@ -26,6 +26,10 @@ u64
 nsectime(void)
 {
   static bool used_ticks;
+  if (mycpu()->tsc_period) {
+    return rdtsc() * mycpu()->tsc_period;
+  }
+
   if (the_hpet) {
     assert(!used_ticks);
     return the_hpet->read_nsec();
@@ -158,5 +162,24 @@ condvar::wake_all(int yield, proc *callerproc)
       scoped_acquire p_l(&p->lock);   
       wake_one(p);
     }
+  }
+}
+
+void
+inittsc(void)
+{
+  if (the_hpet) {
+    u64 hpet_start = the_hpet->read_nsec();
+    u64 tsc_start = rdtsc();
+
+    u64 hpet_end;
+    do {
+      nop_pause();
+      hpet_end = the_hpet->read_nsec();
+    } while(hpet_end < hpet_start + 50000);
+    u64 tsc_end = rdtsc();
+    mycpu()->tsc_period = (tsc_end - tsc_start) / (hpet_end - hpet_start);
+  } else {
+    mycpu()->tsc_period = 0;
   }
 }

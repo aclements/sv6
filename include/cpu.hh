@@ -28,6 +28,7 @@ struct cpu {
   struct proc *prev;           // The previously-running process
   atomic<struct proc*> fpu_owner; // The proc with the current FPU state
   struct numa_node *node;
+  u64 tsc_period;
 
   hwid_t hwid __mpalign__;     // Local APIC ID, accessed by other CPUs
   __padout__;
