@@ -44,47 +44,47 @@ mds_clear_cpu_buffers_ds:
 .balign 8
 sysentry:
         swapgs
-        movq    %rax, %gs:GS_SYSCALLNO // save %rax so we can use it
 
-        movq    %gs:GS_PROC, %rax  // myproc()
-        movq    PROC_KSTACK(%rax), %rax
-        addq    $(KSTACKSIZE-TRAPFRAME_SIZE), %rax
+        // save %rsp and set it to point to the kstack
+        movq    %rsp, %gs:GS_SCRATCH
+        movq    %gs:GS_PROC, %rsp  // myproc()
+        movq    PROC_KSTACK(%rsp), %rsp
+        addq    $(KSTACKSIZE-TRAPFRAME_SIZE), %rsp
 
         // save all registers we're not allowed to clobber
-        // skip padding3, ds
-        movq    %r15, 0x10(%rax)
-        movq    %r14, 0x18(%rax)
-        movq    %r13, 0x20(%rax)
-        movq    %r12, 0x28(%rax)
-        movq    %rbp, 0x30(%rax)
-        movq    %rbx, 0x38(%rax)
-        // skip r11 (0x40)
-        // skip r10 (0x48)
-        // skip r9 (0x50)
-        // skip r8 (0x58)
-        // skip rax (0x60)
-        // skip rcx (0x68)
-        // skip rdx (0x70)
-        // skip rsi (0x78)
-        // skip rdi (0x80)
-        // skip trapno (0x88)
-        // skip err, padding2 (0x90)
-        movq    %rcx, 0x98(%rax)  // rip saved by syscall
-        // skip cs, padding (0xa0)
-        movq    %r11, 0xa8(%rax)  // eflags saved by syscall
-        movq    %rsp, 0xb0(%rax)
+        movq    %r15, 0x10(%rsp)
+        movq    $0, %r15
+        movq    %r14, 0x18(%rsp)
+        movq    $0, %r14
+        movq    %r13, 0x20(%rsp)
+        movq    $0, %r13
+        movq    %r12, 0x28(%rsp)
+        movq    $0, %r12
+        movq    %rbp, 0x30(%rsp)
+        movq    $0, %rbp
+        movq    %rbx, 0x38(%rsp)
+        movq    $0, %rbx
+        movq    %rcx, 0x98(%rsp)  // rip saved by syscall
+        movq    $0, %rcx
+        movq    %r11, 0xa8(%rsp)  // eflags saved by syscall
+        movq    $0, %r11
+        movq    %r10, %rcx
+        movq    $0, %r10
 
-        movq    %rax, %rsp
+        // move saved %rsp to trapframe
+        movq    %gs:GS_SCRATCH, %r15
+        movq    $0, %gs:GS_SCRATCH
+        movq    %r15, 0xb0(%rsp) // rsp saved earlier
+        movq    $0, %r15
 
         // Push a fake activation record so we can stack unwind
-        pushq   0x98(%rax)  // Return RIP
-        pushq   %rbp        // User RBP
+        pushq   0x98(%rsp)  // Return RIP
+        pushq   0x30(%rsp)  // User RBP
         mov     %rsp, %rbp
 
-        movq    %r10, %rcx  // saved by usys.S
-        pushq   %gs:GS_SYSCALLNO // syscall# saved from %rax
+        pushq   %rax // syscall#
 
-    movq $text, %rax
+        movq $text, %rax
 .globl wfs1
 wfs1:   wrfsbase %rax
 
