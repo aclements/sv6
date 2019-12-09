@@ -24,8 +24,8 @@ asmdefines(void)
 
   DEFINE(GS_CPU, 0);
   DEFINE(GS_PROC, __offsetof(struct cpu, proc) - __offsetof(struct cpu, cpu));
+  DEFINE(GS_PERCPU_BASE, __offsetof(struct cpu, percpu_base) - __offsetof(struct cpu, cpu));
   DEFINE(GS_MEM, __offsetof(struct cpu, mem) - __offsetof(struct cpu, cpu));
-  DEFINE(GS_SYSCALLNO, __offsetof(struct cpu, syscallno) - __offsetof(struct cpu, cpu));
   DEFINE(GS_SCRATCH, __offsetof(struct cpu, scratch) - __offsetof(struct cpu, cpu));
   DEFINE(GS_CR3_MASK, __offsetof(struct cpu, cr3_mask) - __offsetof(struct cpu, cpu));
 }

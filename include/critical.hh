@@ -37,14 +37,14 @@ class scoped_critical
     // address and then modify the variable.  If we instead had known
     // %gs offsets for general per-CPU variables, we wouldn't need
     // special support for this one.
-    __asm volatile("addq %0, %%gs:(8*5)" :: "r" (delta) : "cc");
+    __asm volatile("addq %0, %%gs:32" :: "r" (delta) : "cc");
   }
 
   static inline uint64_t
   get_no_sched_count()
   {
     uint64_t val;
-    __asm volatile("movq %%gs:(8*5), %0" : "=r" (val));
+    __asm volatile("movq %%gs:32, %0" : "=r" (val));
     return val;
   }
 
