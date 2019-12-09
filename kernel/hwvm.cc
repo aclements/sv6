@@ -519,7 +519,6 @@ inittls(struct cpu *c)
   writemsr(MSR_GS_KERNBASE, (u64)&c->cpu);
   c->cpu = c;
   c->proc = nullptr;
-  c->has_secrets = true;
 }
 
 // Allocate 'bytes' bytes in the KVMALLOC area, surrounded by at least

@@ -28,5 +28,4 @@ asmdefines(void)
   DEFINE(GS_SYSCALLNO, __offsetof(struct cpu, syscallno) - __offsetof(struct cpu, cpu));
   DEFINE(GS_SCRATCH, __offsetof(struct cpu, scratch) - __offsetof(struct cpu, cpu));
   DEFINE(GS_CR3_MASK, __offsetof(struct cpu, cr3_mask) - __offsetof(struct cpu, cpu));
-  DEFINE(GS_HAS_SECRETS, __offsetof(struct cpu, has_secrets) - __offsetof(struct cpu, cpu));
 }

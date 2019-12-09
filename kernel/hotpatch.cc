@@ -9,6 +9,8 @@
 
 void* qtext;
 
+u8 secrets_mapped __attribute__((section (".sflag"))) = 1;
+
 void replace_qtext(void* target, const char* value)
 {
   // Since we can't detect whether a symbol exists, we instead have kernel.ld
@@ -66,4 +68,6 @@ void inithotpatch()
     memmove(qtext, (void*)KTEXT, 0x200000);
     if(!cmdline_params.keep_retpolines)
       remove_retpolines();
+
+    *(&secrets_mapped - KTEXT + (u64)qtext) = 0;
 }

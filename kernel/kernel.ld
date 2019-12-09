@@ -10,7 +10,7 @@ SECTIONS
         *(.text .stub .text.* .gnu.linkonce.t.*)
     }
     .rodata : {
-        *(.rodata .rodata.* .gnu.linkonce.r.*)
+        *(.rodata .rodata.* .gnu.linkonce.r.* .sflag)
     }
     . = ALIGN(0x1000);
     .init_array : {

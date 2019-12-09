@@ -113,13 +113,12 @@ wfs2:   wrfsbase %rax
         movq    0xa8(%r11), %r11    // eflags to be restored by sysret
 
         // If we never mapped in secrets, just swapgs and return
-        cmpb $0, %gs:GS_HAS_SECRETS
+        cmpb $0, (secrets_mapped)
         jz 1f
 
         movq    %rax, %gs:GS_SCRATCH
-        movb     $0, %gs:GS_HAS_SECRETS
         movq    %cr3, %rax
-        orq        $(0x1001), %rax
+        orq     $(0x1001), %rax
         andq    %gs:GS_CR3_MASK, %rax
         movq    %rax, %cr3  // swap page table back
         movq    %gs:GS_SCRATCH, %rax
@@ -209,7 +208,7 @@ wfs4:   wrfsbase %rax
         jz 1f
 
         // If we never mapped in secrets, just swapgs and return
-        cmpb $0, %gs:GS_HAS_SECRETS
+        cmpb $0, (secrets_mapped)
         jz 2f
 
         // At this point there are 40 bytes on the stack and we are returning to
@@ -234,7 +233,6 @@ wfs4:   wrfsbase %rax
         movq %rbx, 40(%rax)
         movq 48(%rsp), %rbx
         movq %rbx, 48(%rax)
-        movb $0, %gs:GS_HAS_SECRETS
         movq %cr3, %rbx
         orq $(0x1001), %rbx
         andq %gs:GS_CR3_MASK, %rbx

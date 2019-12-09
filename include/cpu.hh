@@ -45,7 +45,6 @@ struct cpu {
 
   u64 scratch;                 // scratch space to use during page table swap
   u64 cr3_mask;                // masks out PCID bits if they aren't supported
-  u8 has_secrets;              // whether kernel page tables are mapped
   __page_pad__;
 } __page_align__;
 

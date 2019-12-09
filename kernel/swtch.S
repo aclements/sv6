@@ -41,7 +41,7 @@ threadstub:
 //      2. User page tables
 .globl switch_to_kstack
 switch_to_kstack:
-		cmpb $0, %gs:GS_HAS_SECRETS
+		cmpb $0, (secrets_mapped)
 		jne 1f
 
 		// Install kernel page tables
@@ -49,7 +49,6 @@ switch_to_kstack:
 	    andq $(~0x1001), %rax
 	    andq %gs:GS_CR3_MASK, %rax
 	    movq %rax, %cr3
-		movb $1, %gs:GS_HAS_SECRETS
 
 		// Load pointers to the top of the kstack and qstack.
 		movq %gs:GS_PROC, %rax

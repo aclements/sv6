@@ -68,7 +68,7 @@ do_pagefault(struct trapframe *tf)
 {
   uptr addr = rcr2();
   if (((tf->cs&3) == 0 || myproc() == 0) &&
-      !mycpu()->has_secrets && addr >= KGLOBAL) {
+      !secrets_mapped && addr >= KGLOBAL) {
     // Page fault was probably caused by trying to access secret
     // data so map all secrets in now and record where this happened.
     switch_to_kstack();
