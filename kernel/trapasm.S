@@ -132,20 +132,35 @@ wfs2:   wrfsbase %rax
 
 trapcommon:
         pushq %rdi
+        movq  $0, %rdi
         pushq %rsi
+        movq  $0, %rsi
         pushq %rdx
+        movq  $0, %rdx
         pushq %rcx
+        movq  $0, %rcx
         pushq %rax
+        movq  $0, %rax
         pushq %r8
+        movq  $0, %r8
         pushq %r9
+        movq  $0, %r9
         pushq %r10
+        movq  $0, %r10
         pushq %r11
+        movq  $0, %r11
         pushq %rbx
+        movq  $0, %rbx
         pushq %rbp
+        movq  $0, %rbp
         pushq %r12
+        movq  $0, %r12
         pushq %r13
+        movq  $0, %r13
         pushq %r14
+        movq  $0, %r14
         pushq %r15
+        movq  $0, %r15
         subq  $0x10, %rsp
 
         // If this trap came from kernel space then don't switch stacks or page tables.
