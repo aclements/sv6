@@ -377,11 +377,6 @@ initpg(struct cpu *c)
       level = pgmap::L_1G;
     }
 
-    // Patch out unsupported instructions if necessary.
-    if (!cpuid::features().fsgsbase) {
-      remove_fsgsbase();
-    }
-
     // Make the text and rodata segments read only
     *kpml4.find(KTEXT, pgmap::L_2M).create(0) = v2p((void*)KTEXT) | PTE_P | PTE_PS;
     lcr3(rcr3());

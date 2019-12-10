@@ -225,7 +225,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   for (size_t i = 0; i < __init_array_end - __init_array_start; i++)
       (*__init_array_start[i])(0, nullptr, nullptr);
 
-  inittrap();
+  inithotpatch();
+  inittrap();              // Requires inithotpatch
   inithpet();              // Requires initacpitables
   inittsc();
   initfpu();               // Requires nothing
@@ -251,7 +252,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   initdisk();      // disk
   initinode();     // inode cache
   initmfs();
-  inithotpatch();
 
   if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);

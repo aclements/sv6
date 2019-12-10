@@ -44,9 +44,20 @@ mds_clear_cpu_buffers_ds:
 .balign 8
 sysentry:
         swapgs
-
-        // save %rsp and set it to point to the kstack
         movq    %rsp, %gs:GS_SCRATCH
+
+// hotpatch.cc will remove this if lazy_barrier is enabled.
+.globl sysentry_switch_pt
+sysentry_switch_pt:
+        lfence
+		movq %cr3, %rsp
+	    andq $(~0x1001), %rsp
+	    andq %gs:GS_CR3_MASK, %rsp
+	    movq %rsp, %cr3
+.globl sysentry_switch_pt_end
+sysentry_switch_pt_end:
+
+        // %rsp and set it to point to the kstack
         movq    %gs:GS_PROC, %rsp  // myproc()
         movq    PROC_KSTACK(%rsp), %rsp
         addq    $(KSTACKSIZE-TRAPFRAME_SIZE), %rsp
@@ -167,6 +178,13 @@ trapcommon:
         jz 1f
         swapgs
 1:      lfence
+
+// This will be removed if lazy_barrier is enabled
+.globl trapcommon_switch_pt
+trapcommon_switch_pt:
+        call switch_to_kstack
+.globl trapcommon_switch_pt_end
+trapcommon_switch_pt_end:
 
         movq %rsp, %rdi  // first argument to trap
 .globl rfs1

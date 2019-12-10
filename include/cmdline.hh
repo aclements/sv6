@@ -18,6 +18,7 @@ struct cmdline_params
 {
   bool disable_pcid;
   bool keep_retpolines;
+  bool lazy_barrier;
 };
 
 extern struct cmdline_params cmdline_params;

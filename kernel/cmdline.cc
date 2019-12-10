@@ -89,6 +89,17 @@ parsecmdline(void)
     cprintf("ERROR: cmdline: unrecognized value \"%s\" for param \"keep_retpolines\"\n", value);
     panic("cmdline");
   }
+
+  if(!getvalue("lazy_barrier", value))
+    strcpy(value, "yes");
+  if(strcmp(value, "yes") == 0)
+    cmdline_params.lazy_barrier = true;
+  else if(strcmp(value, "no") == 0)
+    cmdline_params.lazy_barrier = false;
+  else{
+    cprintf("cmdline: unrecognized value \"%s\" for param \"lazy_barrier\"\n", value);
+    panic("cmdline");  // hack to halt execution, requires inituartcons to actually print message
+  }
 }
 
 void
