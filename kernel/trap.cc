@@ -36,10 +36,10 @@ static struct irq_info
 } irq_info[256 - T_IRQ0];
 
 // Instruction pointers that cause transparent world barriers.
-linearhash<u64, u64> wm_rips(1024);
+linearhash<u64, u64> wm_rips(10240);
 
 // Addresses that trigger transparent world barriers.
-linearhash<u64, u64> wm_addrs(1024);
+linearhash<u64, u64> wm_addrs(10240);
 
 static void trap(struct trapframe *tf);
 
