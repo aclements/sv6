@@ -66,6 +66,7 @@ UPROGS_BIN= \
 	disktest \
 	dd \
 	getpid \
+	anon \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
