@@ -20,6 +20,20 @@
 
 using namespace std;
 
+// This creates two PDTs that map the first 1GB of physical memory. During the
+// early boot process, the first will be used to map the text segment, and the
+// second part of the direct map. The rest of page table initialization will
+// happen in initpg.
+struct boot_pt {
+    constexpr boot_pt() : pte() {
+        for (auto i = 0; i != 512; ++i)
+          pte[i] = (512*4096*i) | (PTE_P | PTE_W | PTE_PS);
+    }
+    pme_t pte[512] __attribute__ ((aligned (4096)));
+};
+boot_pt pdtcode = boot_pt();
+boot_pt pdtbase = boot_pt();
+
 // See: https://elixir.bootlin.com/linux/v5.3.12/source/arch/x86/include/asm/tlbflush.h#L151
 const u8 NUM_TLB_CONTEXTS = 6;
 struct tlb_context {

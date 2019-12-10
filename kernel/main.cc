@@ -48,7 +48,7 @@ void initlockstat(void);
 void initidle(void);
 void initcpprt(void);
 void initfutex(void);
-void initcmdline(void);
+void initcmdline(paddr mbaddr);
 void initrefcache(void);
 void initacpitables(void);
 void initnuma(void);
@@ -188,7 +188,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   inituart();
 
   // Initialize cmdline first to read parameters that might affect initialization
-  initcmdline();
+  initcmdline(mbaddr);
 
   initphysmem(mbaddr);
   initpg(&cpus[0]);        // Requires initphysmem

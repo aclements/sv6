@@ -9,7 +9,7 @@
 #include "major.h"
 #include "cmdline.hh"
 
-extern char cmdline[];
+char cmdline[512];
 
 struct cmdline_params cmdline_params;
 
@@ -103,8 +103,16 @@ parsecmdline(void)
 }
 
 void
-initcmdline(void)
+initcmdline(paddr mbaddr)
 {
+  if ((*(u32*)mbaddr & (1 << 2)) == 0) {
+    if(CMDLINE_DEBUG)
+      cprintf("cmdline: no cmdline provided\n");
+    return;
+  }
+
+  safestrcpy(cmdline, (char*)(uintptr_t)(((u32*)mbaddr)[4]), sizeof(cmdline));
+
   if(CMDLINE_DEBUG)
     cprintf("cmdline: %s\n", cmdline);
 
