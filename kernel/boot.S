@@ -187,8 +187,11 @@ pdpt0:
     .space 4096 - 8
 .balign 4096
 pdptbase:
-    .quad PADDR(pdtbase) + (1<<0) + (1<<1)  // present, read/write
-    .space 4096 - 8
+    .quad PADDR(pdtbase) + (1<<0) + (1<<1)         // present, read/write
+    .quad PADDR(pdtbase+0x1000) + (1<<0) + (1<<1)  // present, read/write
+    .quad PADDR(pdtbase+0x2000) + (1<<0) + (1<<1)  // present, read/write
+    .quad PADDR(pdtbase+0x3000) + (1<<0) + (1<<1)  // present, read/write
+    .space 4096 - 32
 .balign 4096
 pdptcode:
     .space 4096 - 8
