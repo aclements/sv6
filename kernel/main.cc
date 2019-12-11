@@ -12,6 +12,7 @@
 #include "codex.hh"
 #include "mfs.hh"
 
+void initmultiboot(u64 mbmagic, u64 mbaddr);
 void initpic(void);
 void initextpic(void);
 void inituart(void);
@@ -28,7 +29,7 @@ void inittrap(void);
 void initfpu(void);
 void initmsr(void);
 void initseg(struct cpu *);
-void initphysmem(paddr mbaddr);
+void initphysmem(void);
 void initpercpu(void);
 void initpageinfo(void);
 void initkalloc(void);
@@ -48,7 +49,7 @@ void initlockstat(void);
 void initidle(void);
 void initcpprt(void);
 void initfutex(void);
-void initcmdline(paddr mbaddr);
+void initcmdline(void);
 void initrefcache(void);
 void initacpitables(void);
 void initnuma(void);
@@ -185,12 +186,13 @@ cmain(u64 mbmagic, u64 mbaddr)
   writefs(UDSEG);
   writemsr(MSR_FS_BASE, (u64)&text);
 
+  initmultiboot(mbmagic, mbaddr);
   inituart();
 
   // Initialize cmdline first to read parameters that might affect initialization
-  initcmdline(mbaddr);
+  initcmdline();
 
-  initphysmem(mbaddr);
+  initphysmem();
   initpg(&cpus[0]);        // Requires initphysmem
   inithz();                // CPU Hz, microdelay
   initseg(&cpus[0]);

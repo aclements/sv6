@@ -585,43 +585,33 @@ static phys_map mem;
 
 // Parse a multiboot memory map.
 static void
-parse_mb_map(struct Mbdata *mb)
+parse_mb_map()
 {
-  if(!(mb->flags & (1<<6)))
+  if(!(multiboot.flags & (1<<6)))
     panic("multiboot header has no memory map");
 
   // Print the map
-  uint8_t *p = (uint8_t*) p2v(mb->mmap_addr);
-  uint8_t *ep = p + mb->mmap_length;
-  // XXX QEMU's pc-bios/optionrom/multiboot.S has a bug that makes
-  // mmap_length one entry short.
-  while (p < ep) {
-    struct Mbmem *mbmem = (Mbmem *)p;
-    p += 4 + mbmem->size;
-    console.println("e820: ", shex(mbmem->base).width(18).pad(), "-",
-                    shex(mbmem->base + mbmem->length - 1).width(18).pad(), " ",
-                    mbmem->type == 1 ? "usable" : "reserved");
+  for (int i = 0; i < multiboot.mmap_entries; i++) {
+    console.println("e820: ", shex(multiboot.mmap[i].base).width(18).pad(), "-",
+                    shex(multiboot.mmap[i].base + multiboot.mmap[i].length - 1).width(18).pad(), " ",
+                    multiboot.mmap[i].type == 1 ? "usable" : "reserved");
   }
 
   // The E820 map can be out of order and it can have overlapping
   // regions, so we have to clean it up.
 
   // Add and merge usable regions
-  p = (uint8_t*) p2v(mb->mmap_addr);
-  while (p < ep) {
-    struct Mbmem *mbmem = (Mbmem *)p;
-    p += 4 + mbmem->size;
-    if (mbmem->type == 1)
-      mem.add(mbmem->base, mbmem->base + mbmem->length);
+  for (int i = 0; i < multiboot.mmap_entries; i++) {
+    if (multiboot.mmap[i].type == 1) {
+      mem.add(multiboot.mmap[i].base, multiboot.mmap[i].base + multiboot.mmap[i].length);
+    }
   }
 
   // Remove unusable regions
-  p = (uint8_t*) p2v(mb->mmap_addr);
-  while (p < ep) {
-    struct Mbmem *mbmem = (Mbmem *)p;
-    p += 4 + mbmem->size;
-    if (mbmem->type != 1)
-      mem.remove(mbmem->base, mbmem->base + mbmem->length);
+  for (int i = 0; i < multiboot.mmap_entries; i++) {
+    if (multiboot.mmap[i].type != 1) {
+      mem.remove(multiboot.mmap[i].base, multiboot.mmap[i].base + multiboot.mmap[i].length);
+    }
   }
 }
 
@@ -964,12 +954,12 @@ initpageinfo(void)
 
 // Initialize physical memory map
 void
-initphysmem(paddr mbaddr)
+initphysmem()
 {
   // First address after kernel loaded from ELF file
   extern char end[];
 
-  parse_mb_map((Mbdata*) p2v(mbaddr));
+  parse_mb_map();
 
   // Consider first 1MB of memory unusable
   mem.remove(0, 0x100000);

@@ -38,6 +38,32 @@ multiboot_header:
     .long PADDR(end)               # bss end address
     .long PADDR(start)             # entry address
 
+.balign 8
+.text
+.globl multiboot2_header
+multiboot2_header:
+    #define magic2         0xE85250D6
+    #define architecture  0
+    #define header_length (mb2_end - multiboot2_header)
+    .long magic2
+    .long 0
+    .long header_length
+    .long (- magic2 - architecture - header_length) // checksum
+
+    .word 2                        // type = address
+    .word 1                        // flags = optional
+    .long 24                       // size
+    .long PADDR(multiboot_header)  // header address
+    .long PADDR(multiboot_header)  // load address
+    .long PADDR(edata)             // load end address
+    .long PADDR(end)               // bss end address
+
+    .word 3                        // type = entry
+    .word 1                        // flags = optional
+    .long 12                       // size
+    .long PADDR(start)             // entry address
+mb2_end:
+
 // Entry point jumped to by boot loader.  Running in 32-bit mode.
 // http://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Machine-state
 //

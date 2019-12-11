@@ -8,8 +8,7 @@
 #include "file.hh"
 #include "major.h"
 #include "cmdline.hh"
-
-char cmdline[512];
+#include "multiboot.hh"
 
 struct cmdline_params cmdline_params;
 
@@ -18,11 +17,11 @@ cmdlineread(mdev*, char *dst, u32 off, u32 n)
 {
   u32 cc;
 
-  if (off >= strlen(cmdline))
+  if (off >= strlen(multiboot.cmdline))
     return 0;
 
-  cc = MIN(n, strlen(cmdline)-off);
-  memcpy(dst, &cmdline[off], cc);
+  cc = MIN(n, strlen(multiboot.cmdline)-off);
+  memcpy(dst, &multiboot.cmdline[off], cc);
   return cc;
 }
 
@@ -42,10 +41,10 @@ getvalue(const char* param, char* dst)
   end = paramstr + strlen(paramstr);
   *end++ = '=';
   *end = 0;
-  p = strstr(cmdline, paramstr);
+  p = strstr(multiboot.cmdline, paramstr);
   if(p == NULL){  // param might be at beginning of cmdline, in which case there is no space
-    if(strncmp(cmdline, paramstr+1, strlen(paramstr)-1) == 0)
-      p = cmdline;
+    if(strncmp(multiboot.cmdline, paramstr+1, strlen(paramstr)-1) == 0)
+      p = multiboot.cmdline;
     else
       return false;
   }else{
@@ -103,18 +102,10 @@ parsecmdline(void)
 }
 
 void
-initcmdline(paddr mbaddr)
+initcmdline()
 {
-  if ((*(u32*)mbaddr & (1 << 2)) == 0) {
-    if(CMDLINE_DEBUG)
-      cprintf("cmdline: no cmdline provided\n");
-    return;
-  }
-
-  safestrcpy(cmdline, (char*)(uintptr_t)(((u32*)mbaddr)[4]), sizeof(cmdline));
-
   if(CMDLINE_DEBUG)
-    cprintf("cmdline: %s\n", cmdline);
+    cprintf("cmdline: %s\n", multiboot.cmdline);
 
   parsecmdline();
 

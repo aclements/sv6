@@ -80,6 +80,7 @@ OBJS = \
 	heapprof.o \
 	eager_refcache.o \
 	disk.o \
+	multiboot.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
