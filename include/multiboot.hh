@@ -87,7 +87,7 @@ struct multiboot_saved
   u64 efi_mmap_descriptor_size = 0;
   u64 efi_mmap_descriptor_version = 0;
   u64 efi_mmap_descriptor_count = 0;
-  u64 efi_mmap_descriptor_ptr = 0;
+  u8 efi_mmap[0x2000];
 
   // Only ever provided by multiboot2. Available if bit 31 in flags is set.
   u64 efi_system_table = 0;

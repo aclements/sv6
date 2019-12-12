@@ -189,17 +189,14 @@ cmain(u64 mbmagic, u64 mbaddr)
 
   initmultiboot(mbmagic, mbaddr);
   inituart();
-
-  // Initialize cmdline first to read parameters that might affect initialization
-  initcmdline();
-
-  initphysmem();
+  initvga();               // Requires initmultiboot
+  initcmdline();           // Requires initmultiboot
+  initphysmem();           // Requires initmultiboot
   initpg(&cpus[0]);        // Requires initphysmem
   inithz();                // CPU Hz, microdelay
   initseg(&cpus[0]);
   inittls(&cpus[0]);       // Requires initseg
 
-  initvga();               // Requires initpg
   initacpitables();        // Requires initpg, inittls
   initlapic();             // Requires initpg
   initnuma();              // Requires initacpitables, initlapic

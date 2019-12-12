@@ -22,6 +22,7 @@
 #include "file.hh"
 #include "major.h"
 #include "heapprof.hh"
+#include "uefi.hh"
 
 #include <algorithm>
 #include <iterator>
@@ -960,6 +961,17 @@ initphysmem()
   extern char end[];
 
   parse_mb_map();
+
+  if (multiboot.flags & MULTIBOOT2_FLAG_EFI_MMAP) {
+    for (int i = 0; i < multiboot.efi_mmap_descriptor_count; i++) {
+      auto d = (efi_memory_descriptor*)&multiboot.efi_mmap[multiboot.efi_mmap_descriptor_size*i];
+      if (d->type == 0 || d->type == 5 || d->type == 6 || d->type >= 8) {
+        mem.remove(d->paddr, d->paddr + PGSIZE * d->npages);
+        cprintf("uefi-mmap reservation: %lx-%lx (type=%d)\n",
+                d->paddr, d->paddr + PGSIZE * d->npages-1, d->type);
+      }
+    }
+  }
 
   // Consider first 1MB of memory unusable
   mem.remove(0, 0x100000);

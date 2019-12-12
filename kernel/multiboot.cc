@@ -232,7 +232,7 @@ void initmultiboot(u64 mbmagic, u64 mbaddr) {
         multiboot.efi_mmap_descriptor_size = tag->descriptor_size;
         multiboot.efi_mmap_descriptor_version = tag->descriptor_version;
         multiboot.efi_mmap_descriptor_count = (tag->size - 16) / tag->descriptor_size;
-        multiboot.efi_mmap_descriptor_ptr = v2p((char*)tag + 16);
+        memcpy(multiboot.efi_mmap, (char*)tag + 16, tag->size - 16);
         multiboot.flags |= MULTIBOOT2_FLAG_EFI_MMAP;
       }
 
