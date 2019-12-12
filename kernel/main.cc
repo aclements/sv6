@@ -18,7 +18,7 @@ void initextpic(void);
 void inituart(void);
 void inituartcons(void);
 void initcga(void);
-void initvga(paddr);
+void initvga(void);
 void initconsole(void);
 void initpg(struct cpu *c);
 void cleanuppg(void);
@@ -199,7 +199,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initseg(&cpus[0]);
   inittls(&cpus[0]);       // Requires initseg
 
-  initvga(mbaddr);         // Requires initpg
+  initvga();               // Requires initpg
   initacpitables();        // Requires initpg, inittls
   initlapic();             // Requires initpg
   initnuma();              // Requires initacpitables, initlapic

@@ -1,5 +1,6 @@
 #include "kernel.hh"
 #include "string.h"
+#include "multiboot.hh"
 
 // From http://czyborra.com/unifont
 static const char* unifont[] = {
@@ -133,45 +134,6 @@ static const char* unifont[] = {
   "0000000000000000000073D04A104BD04A1073DE000000000000000000000000",
 };
 
-struct vesa_mode_info {
-  uint16_t mode_attr;
-  uint8_t win_attr[2];
-  uint16_t win_grain;
-  uint16_t win_size;
-  uint16_t win_seg[2];
-  uint32_t win_scheme;
-  uint16_t logical_scan;
-
-  uint16_t h_res;
-  uint16_t v_res;
-  uint8_t char_width;
-  uint8_t char_height;
-  uint8_t memory_planes;
-  uint8_t bpp;
-  uint8_t banks;
-  uint8_t memory_layout;
-  uint8_t bank_size;
-  uint8_t image_pages;
-  uint8_t page_function;
-
-  uint8_t rmask;
-  uint8_t rpos;
-  uint8_t gmask;
-  uint8_t gpos;
-  uint8_t bmask;
-  uint8_t bpos;
-  uint8_t resv_mask;
-  uint8_t resv_pos;
-  uint8_t dcm_info;
-
-  uint32_t lfb_ptr;		/* Linear frame buffer address */
-  uint32_t offscreen_ptr;	/* Offscreen memory address */
-  uint16_t offscreen_size;
-
-  uint8_t reserved[206];
-} __attribute__ ((packed));
-vesa_mode_info mode_info;
-
 const u16 BORDER = 4;
 
 u32* front_buffer = nullptr;
@@ -181,12 +143,11 @@ u16 screen_height;
 u16 cursor_x = BORDER;
 u16 cursor_y = BORDER;
 
-void initvga(paddr mbaddr) {
-  if (*(u32*)mbaddr & (1 << 11)) {
-    mode_info = *(vesa_mode_info*)*(u32*)(mbaddr+76);
-    front_buffer = (u32*)p2v(mode_info.lfb_ptr);
-    screen_width = mode_info.h_res;
-    screen_height = mode_info.v_res;
+void initvga() {
+  if (multiboot.flags & MULTIBOOT_FLAG_FRAMEBUFFER) {
+    front_buffer = multiboot.framebuffer;
+    screen_width = multiboot.framebuffer_width;
+    screen_height = multiboot.framebuffer_height;
   }
 }
 

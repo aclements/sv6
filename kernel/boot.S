@@ -38,8 +38,8 @@ multiboot_header:
     .long PADDR(end)               # bss end address
     .long PADDR(start)             # entry address
 	.long 0                        # graphics mode
-	.long 1920                     # x-resolution
-	.long 1080                     # y-resolution
+	.long 640                      # x-resolution
+	.long 480                      # y-resolution
 	.long 32                       # bit depth
 
 .balign 8
@@ -57,8 +57,8 @@ multiboot2_header:
     .word 2                        // type = address
     .word 1                        // flags = optional
     .long 24                       // size
-    .long PADDR(multiboot_header)  // header address
-    .long PADDR(multiboot_header)  // load address
+    .long PADDR(multiboot2_header) // header address
+    .long PADDR(multiboot2_header) // load address
     .long PADDR(edata)             // load end address
     .long PADDR(end)               // bss end address
 
@@ -66,6 +66,20 @@ multiboot2_header:
     .word 1                        // flags = optional
     .long 12                       // size
     .long PADDR(start)             // entry address
+    .long 0                        // padding
+
+    .word 5                        // type = framebuffer
+    .word 1                        // flags = optional
+    .long 20                       // size
+    .long 640                      // width
+    .long 480                      // height
+    .long 32                       // depth
+    .long 0                        // padding
+
+    .word 0                        // type = end
+    .word 0                        // flags
+    .long 8                        // size
+
 mb2_end:
 
 // Entry point jumped to by boot loader.  Running in 32-bit mode.
