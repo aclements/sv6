@@ -274,12 +274,9 @@ vmap::qinsert(void* qptr, void* kptr, size_t len)
   assert((uintptr_t)kptr % PGSIZE == 0);
   assert(len % PGSIZE == 0);
 
-  mmu::shootdown shootdown;
-  cache.invalidate((uintptr_t)qptr, len, nullptr, &shootdown);
   for(size_t offset = 0; offset < len; offset += PGSIZE) {
     cache.insert((uintptr_t)qptr+offset, nullptr, (v2p(kptr)+offset) | PTE_P | /*PTE_NX |*/ PTE_W);
   }
-  shootdown.perform();
 }
 
 int
@@ -862,7 +859,9 @@ vmap::qfree(void* page)
     cache.invalidate((uintptr_t)p, PGSIZE, nullptr, &shootdown);
   }
   shootdown.perform();
-  kfree(page);
+  for (auto p : unneeded_pages) {
+    kfree(p);
+  }
 }
 
 void* qalloc(vmap* vmap, const char* name) {
