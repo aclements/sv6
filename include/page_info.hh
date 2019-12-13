@@ -55,10 +55,12 @@ extern page_info_map_entry *page_info_map_end;
 class page_info : public PAGE_REFCOUNT referenced, public alloc_debug_info
 {
 protected:
-  void onzero()
+  void onzero() override
   {
     kfree(va());
   }
+
+  friend class page_info_ref;
 
 public:
   page_info() { }
@@ -103,5 +105,107 @@ public:
   void *va() const
   {
     return p2v(pa());
+  }
+};
+
+// Wrapper around sref<page_info> which avoids constructing the underlying
+// page_info unless/until there are be multiple references to it.
+class page_info_ref
+{
+  union {
+    mutable sref<page_info> s;
+    mutable u64 p;
+  };
+
+  static_assert(sizeof(s) == sizeof(p));
+
+  constexpr static u64 UNIQUE_BIT = 1;
+  constexpr static u64 PTR_MASK = ~UNIQUE_BIT;
+
+  bool is_unique() const {
+    return (p & UNIQUE_BIT) != 0;
+  }
+  bool is_null() const {
+    return p == 0;
+  }
+  page_info* ptr() const {
+    assert(is_unique());
+    return (page_info*)(p & PTR_MASK);
+  }
+
+  void destroy() {
+    if (is_null()) {
+      return;
+    } else if (is_unique()) {
+      kfree(va());
+    } else {
+      s.~sref<page_info>();
+    }
+  }
+  void make_shared() const {
+    if (is_unique()) {
+      page_info* pi = new(ptr()) page_info();
+      new(&s) sref(std::move(sref<page_info>::transfer(pi)));
+      assert(!is_unique());
+    }
+  }
+
+public:
+  page_info_ref() : p(0) {}
+  explicit page_info_ref(page_info* ptr) : p((u64)ptr | UNIQUE_BIT) {
+    assert(((u64)ptr & UNIQUE_BIT) == 0);
+  }
+  page_info_ref(const sref<page_info>& o) : s(o) {
+    if (!o) p = 0;
+    assert(!is_unique());
+  }
+  page_info_ref(const page_info_ref& o) : p(0) {
+    if (o.is_null())
+      return;
+
+    if (o.is_unique()) {
+      o.make_shared();
+      assert(!o.is_unique());
+    }
+
+    new(&s)sref<page_info>(o.s);
+  }
+  page_info_ref(page_info_ref&& o) {
+    p = o.p;
+    o.p = 0;
+  }
+  page_info_ref& operator=(const page_info_ref& o) {
+    destroy();
+
+    if (o.is_null())
+      return *this;
+    else if (o.is_unique()) {
+      o.make_shared();
+      assert(!o.is_unique());
+    }
+
+    new(&s)sref<page_info>(o.s);
+    return *this;
+  }
+  page_info_ref& operator=(page_info_ref&& o) {
+    destroy();
+    p = o.p;
+    o.p = 0;
+    return *this;
+  }
+  ~page_info_ref() {
+    destroy();
+  }
+
+  paddr pa() const {
+    assert(p != 0);
+    return is_unique() ? ptr()->pa() : s->pa();
+  }
+  void* va() const {
+    assert(p != 0);
+    return is_unique() ? ptr()->va() : s->va();
+  }
+  explicit operator bool() const noexcept {
+    return !is_null();
   }
 };

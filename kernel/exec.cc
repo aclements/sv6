@@ -69,7 +69,7 @@ dosegment(sref<mnode> ip, vmap* vmp, u64 off, u64 *load_addr)
     // There's some file data that we can't directly map because
     // another segment may begin on the same page as this segment
     // ends.
-    if (vmp->insert(vmdesc::anon_desc, mapped_end, backed_end - mapped_end) < 0)
+    if (vmp->insert(vmdesc::anon_desc(), mapped_end, backed_end - mapped_end) < 0)
       return -1;
     size_t seg_pos = mapped_end >= ph.vaddr ? mapped_end - ph.vaddr : 0;
     char buf[512];
@@ -91,7 +91,7 @@ dosegment(sref<mnode> ip, vmap* vmp, u64 off, u64 *load_addr)
     // separately both to avoid mapping non-zero data that follows
     // this segment in the file and so we don't try to fault beyond
     // the end of the file.
-    if (vmp->insert(vmdesc::anon_desc, backed_end, va_end - backed_end) < 0)
+    if (vmp->insert(vmdesc::anon_desc(), backed_end, va_end - backed_end) < 0)
       return -1;
   }
 
@@ -114,7 +114,7 @@ dostack(vmap* vmp, const char* const * argv, const char* path)
   //   u64 argc
 
   // Allocate a stack at the top of the (user) address space
-  if (vmp->insert(vmdesc::anon_desc, USERTOP - (USTACKPAGES*PGSIZE),
+  if (vmp->insert(vmdesc::anon_desc(), USERTOP - (USTACKPAGES*PGSIZE),
                   USTACKPAGES * PGSIZE) < 0)
     return -1;
 

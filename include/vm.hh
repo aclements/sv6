@@ -56,7 +56,7 @@ struct vmdesc : public mmu::page_tracker
 
   // The physical page mapped in this frame, or null if no page has
   // been allocated for this frame.
-  sref<class page_info> page;
+  page_info_ref page;
 
   // XXX We could pack the following fields into a union if there's
   // anything we can overlap with them for anonymous memory.  However,
@@ -83,9 +83,6 @@ struct vmdesc : public mmu::page_tracker
   vmdesc(const sref<mnode> &ip, intptr_t start)
     : flags(FLAG_MAPPED | FLAG_WRITE), inode(ip), start(start) { }
 
-  // A memory descriptor for writable anonymous memory.
-  static struct vmdesc anon_desc;
-
   // Radix_array element methods
 
   bit_spinlock get_lock()
@@ -105,21 +102,25 @@ struct vmdesc : public mmu::page_tracker
   // any core).
   vmdesc dup() const
   {
-    return vmdesc(flags & ~FLAG_LOCK, page, inode, start);
+    return vmdesc(flags & ~FLAG_LOCK, page_info_ref(page), inode, start);
   }
 
   // We need new/delete so the radix_array can allocate external nodes
   // when performing node compression.
   NEW_DELETE_OPS(vmdesc)
 
+  static vmdesc anon_desc() {
+    return vmdesc(FLAG_MAPPED | FLAG_ANON | FLAG_WRITE);
+  }
+
 private:
   vmdesc(u64 flags)
     : flags(flags), page(), inode(), start() { }
 
   // Create a new vmdesc with an empty page tracker.
-  vmdesc(u64 flags, const sref<class page_info> &page,
+  vmdesc(u64 flags, page_info_ref &&page,
          const sref<mnode> &inode, intptr_t start)
-    : flags(flags), page(page), inode(inode), start(start) { }
+    : flags(flags), page(std::move(page)), inode(inode), start(start) { }
 };
 
 void to_stream(class print_stream *s, const vmdesc &vmd);
@@ -134,7 +135,7 @@ struct vmap : public referenced {
 
   // Map desc from virtual addresses start to start+len.  Returns
   // MAP_FAILED ((uptr)-1) if inserting the region fails.
-  uptr insert(const vmdesc &desc, uptr start, uptr len);
+  uptr insert(vmdesc&& desc, uptr start, uptr len);
 
   // Insert a qvisible range that maps qptr to kptr with length len. Qvisible
   // mappings can be invalidated with remove().
@@ -221,6 +222,6 @@ private:
   // responsible for ensuring that there is a mapping at @c it and for
   // locking vpfs_ at @c it.  This throws bad_alloc if a page must be
   // allocated and cannot be.
-  page_info *ensure_page(const vpf_array::iterator &it, access_type type,
-                         bool *allocated = nullptr);
+  paddr ensure_page(const vpf_array::iterator &it, access_type type,
+                    bool *allocated = nullptr);
 };

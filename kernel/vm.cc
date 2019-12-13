@@ -33,8 +33,6 @@ enum {
  * vmdesc
  */
 
-vmdesc vmdesc::anon_desc(vmdesc::FLAG_MAPPED | vmdesc::FLAG_ANON | vmdesc::FLAG_WRITE);
-
 void to_stream(class print_stream *s, const vmdesc &vmd)
 {
   s->print("vmdesc{", sflags(vmd.flags, {
@@ -46,7 +44,7 @@ void to_stream(class print_stream *s, const vmdesc &vmd)
         {"SHARED", vmdesc::FLAG_SHARED},
       }), " ");
   if (vmd.page)
-    s->print((void*)vmd.page->pa(), "}");
+    s->print((void*)vmd.page.pa(), "}");
   else
     s->print("null}");
 }
@@ -67,26 +65,26 @@ class page_holder
   {
     struct batch *next;
     size_t used;
-    sref<class page_info> pages[0];
+    page_info_ref pages[0];
 
     batch() : next(nullptr), used(0) { }
     ~batch()
     {
       for (size_t i = 0; i < used; ++i)
-        pages[i].~sref<page_info>();
+        pages[i].~page_info_ref();
     }
   };
 
   enum {
     // The number of pages that can be collected in a heap-allocated
     // page.
-    NHEAP = (PGSIZE - sizeof(batch)) / sizeof(sref<class page_info>)
+    NHEAP = (PGSIZE - sizeof(batch)) / sizeof(page_info_ref)
   };
 
   batch *cur;
   size_t curmax;
   batch first;
-  char first_buf[NLOCAL * sizeof(sref<class page_info>)];
+  char first_buf[NLOCAL * sizeof(page_info_ref)];
 
 public:
   page_holder() : cur(&first), curmax(NLOCAL) {
@@ -106,14 +104,14 @@ public:
     }
   }
 
-  void add(sref<class page_info> &&page)
+  void add(page_info_ref &&page)
   {
     if (cur->used == curmax) {
       cur->next = new (kalloc("page_holder::batch")) batch();
       cur = cur->next;
       curmax = NHEAP;
     }
-    new (&cur->pages[cur->used++]) sref<class page_info>(std::move(page));
+    new (&cur->pages[cur->used++]) page_info_ref(std::move(page));
   }
 };
 
@@ -213,7 +211,7 @@ vmap::copy()
 }
 
 uptr
-vmap::insert(const vmdesc &desc, uptr start, uptr len)
+vmap::insert(vmdesc&& desc, uptr start, uptr len)
 {
   kstats::inc(&kstats::mmap_count);
   kstats::timer timer(&kstats::mmap_cycles);
@@ -257,9 +255,8 @@ again:
     // XXX If this is a large fill, we could actively re-fold already
     // expanded regions.
     if (!fixed) {
-      vmdesc d2(desc);
-      d2.start += start;
-      vpfs_.fill(begin, end, d2, true);
+      desc.start += start;
+      vpfs_.fill(begin, end, desc, true);
     } else {
       vpfs_.fill(begin, end, desc);
     }
@@ -333,20 +330,18 @@ vmap::willneed(uptr start, uptr len)
 
     bool writable = (it->flags & vmdesc::FLAG_WRITE);
     if (writable && (it->flags & vmdesc::FLAG_COW)) {
-      sref<page_info> old_page = it->page;
-      pages.add(std::move(old_page));
+      pages.add(page_info_ref(it->page));
       cache.invalidate(it.index() * PGSIZE, PGSIZE, it, &shootdown);
     }
 
-    page_info *page = ensure_page(it, writable ? access_type::WRITE
-                                               : access_type::READ);
-    if (!page)
+    paddr pa = ensure_page(it, writable ? access_type::WRITE : access_type::READ);
+    if (!pa)
       continue;
 
     if (it->flags & vmdesc::FLAG_COW || !writable)
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U);
+      cache.insert(it.index() * PGSIZE, &*it, pa | PTE_P | PTE_U);
     else
-      cache.insert(it.index() * PGSIZE, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+      cache.insert(it.index() * PGSIZE, &*it, pa | PTE_P | PTE_U | PTE_W);
   }
 
   shootdown.perform();
@@ -452,7 +447,7 @@ vmap::pagefault(uptr va, u32 err)
   kstats::timer timer_fill(&kstats::page_fault_fill_cycles);
 
   // If we replace a page, hold a reference until after the shootdown.
-  sref<class page_info> old_page;
+  page_info_ref old_page;
 
   // When we clear from va to va+PGSIZE, make sure that's just this
   // page.
@@ -477,13 +472,13 @@ vmap::pagefault(uptr va, u32 err)
     // physical page until we've cleared the PTE and done TLB shoot
     // down.
     if (type == access_type::WRITE && (desc.flags & vmdesc::FLAG_COW)) {
-      old_page = desc.page;
+      old_page = page_info_ref(desc.page);
       cache.invalidate(va, PGSIZE, it, &shootdown);
     }
 
     // Ensure we have a backing page and copy COW pages
     bool allocated;
-    page_info *page = ensure_page(it, type, &allocated);
+    paddr pa = ensure_page(it, type, &allocated);
     if (allocated) {
       kstats::inc(&kstats::page_fault_alloc_count);
       timer_fill.abort();
@@ -491,18 +486,18 @@ vmap::pagefault(uptr va, u32 err)
       kstats::inc(&kstats::page_fault_fill_count);
       timer_alloc.abort();
     }
-    if (!page)
+    if (!pa)
       return -1;
 
     // If this is a read COW fault, we can reuse the COW page, but
     // don't mark it writable!
     if (desc.flags & vmdesc::FLAG_COW)
-      cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
+      cache.insert(va, &*it, pa | PTE_P | PTE_U);
     else {
       if (desc.flags & vmdesc::FLAG_WRITE)
-        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U | PTE_W);
+        cache.insert(va, &*it, pa | PTE_P | PTE_U | PTE_W);
       else
-        cache.insert(va, &*it, page->pa() | PTE_P | PTE_U);
+        cache.insert(va, &*it, pa | PTE_P | PTE_U);
     }
 
     shootdown.perform();
@@ -550,11 +545,11 @@ vmap::pagelookup(uptr va)
   if (!it.is_set())
     return nullptr;
 
-  page_info* pi = ensure_page(it, access_type::READ);
-  if (!pi)
+  paddr pa = ensure_page(it, access_type::READ);
+  if (!pa)
     return nullptr;
 
-  char* kptr = (char*)pi->va();
+  char* kptr = (char*)p2v(pa);
   return &kptr[va & (PGSIZE-1)];
 }
 
@@ -592,10 +587,10 @@ vmap::copyout(uptr va, const void *p, u64 len)
     if (!it.is_set())
       return -1;
     uptr va0 = (uptr)PGROUNDDOWN(va);
-    page_info* pi = ensure_page(it, access_type::READ);
-    if (!pi)
+    paddr pa = ensure_page(it, access_type::READ);
+    if (!pa)
       return -1;
-    char *p0 = (char*)pi->va();
+    char *p0 = (char*)p2v(pa);
     uptr n = PGSIZE - (va - va0);
     if(n > len)
       n = len;
@@ -683,7 +678,7 @@ vmap::sbrk(ssize_t n, uptr *addr)
       }
     }
 
-    vpfs_.fill(begin, end, vmdesc::anon_desc);
+    vpfs_.fill(begin, end, vmdesc::anon_desc());
   }
 
   brk_ += n;
@@ -708,7 +703,7 @@ vmap::unmapped_area(size_t npages)
   return 0;
 }
 
-page_info *
+paddr
 vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
                   bool *allocated)
 {
@@ -719,9 +714,9 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
   bool need_copy = (type == access_type::WRITE &&
                     (desc.flags & vmdesc::FLAG_COW));
   if (desc.page && !need_copy)
-    return desc.page.get();
+    return desc.page.pa();
 
-  sref<page_info> page = desc.page;
+  page_info_ref page(desc.page);
   if (!page) {
     if (desc.flags & vmdesc::FLAG_ANON) {
       assert(!(desc.flags & vmdesc::FLAG_COW));
@@ -730,12 +725,12 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
       char *p = zalloc("(vmap::pagelookup)");
       if (!p)
         throw_bad_alloc();
-      page = sref<page_info>::transfer(new(page_info::of(p)) page_info());
+      page = page_info_ref(page_info::of(p));
     } else {
       u64 page_idx = (it.index() * PGSIZE - desc.start) / PGSIZE;
       page = desc.inode->as_file()->get_page(page_idx).get_page_info();
       if (!page)
-        return nullptr;
+        return 0;
     }
   }
 
@@ -748,28 +743,29 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
       throw_bad_alloc();
 
     if (SDEBUG)
-      sdebug.println("vm: COW copy to ", (void*)p, " from ", page->va(),
-                     ' ', page.get());
-    memmove(p, page->va(), PGSIZE);
-    page = sref<page_info>::transfer(new(page_info::of(p)) page_info());
+      sdebug.println("vm: COW copy to ", (void*)p, " from ", page.va());
+    memmove(p, page.va(), PGSIZE);
+    page = page_info_ref(page_info::of(p));
   }
+
+  paddr pa = page.pa();
 
   // Install the page in the canonical page table
   if (it.base_span() == 1) {
     // Safe to update in place
-    desc.page = page;
+    desc.page = std::move(page);
     if (need_copy)
       desc.flags &= ~vmdesc::FLAG_COW;
   } else {
-    vmdesc n(desc);
-    n.page = page;
+    vmdesc n(std::move(desc.dup()));
+    n.page = std::move(page);
     if (need_copy)
       n.flags &= ~vmdesc::FLAG_COW;
     // XXX(austin) Fill could do a move in this case, which would
     // save extraneous reference counting
     vpfs_.fill(it, std::move(n));
   }
-  return page.get();
+  return pa;
 }
 
 void
@@ -791,10 +787,9 @@ vmap::safe_read(void *dst, uintptr_t src, size_t n)
     auto it = vpfs_.find((src + i) / PGSIZE);
     if (!it.is_set())
       return i;
-    auto page_info = it->page.get();
-    if (!page_info)
+    if (!it->page)
       return i;
-    void *page = page_info->va();
+    void *page = it->page.va();
     ((char*)dst)[i] = ((char*)page)[(src + i) % PGSIZE];
   }
   return n;

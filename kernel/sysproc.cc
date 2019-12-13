@@ -150,7 +150,7 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
 
   vmdesc desc;
   if (!m) {
-    desc = vmdesc::anon_desc;
+    desc = vmdesc::anon_desc();
   } else {
     desc = vmdesc(m, start - offset);
   }
@@ -160,7 +160,7 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
     desc.flags |= vmdesc::FLAG_SHARED;
   if (m && (flags & MAP_PRIVATE))
     desc.flags |= vmdesc::FLAG_COW;
-  uptr r = myproc()->vmap->insert(desc, start, end - start);
+  uptr r = myproc()->vmap->insert(std::move(desc), start, end - start);
   return (void*)r;
 }
 
