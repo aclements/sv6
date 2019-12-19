@@ -8,6 +8,8 @@
 #include "cpu.hh"
 #include "hpet.hh"
 
+#define TSC_PERIOD_SCALE 0x10000
+
 static u64 ticks __mpalign__;
 
 ilist<proc,&proc::cv_sleep> sleepers  __mpalign__;   // XXX one per core?
@@ -27,7 +29,7 @@ nsectime(void)
 {
   static bool used_ticks;
   if (mycpu()->tsc_period) {
-    return rdtsc() * mycpu()->tsc_period;
+    return rdtsc() * TSC_PERIOD_SCALE / mycpu()->tsc_period;
   }
 
   if (the_hpet) {
@@ -159,7 +161,7 @@ condvar::wake_all(int yield, proc *callerproc)
     if (p == callerproc) {
       wake_one(p);
     } else {
-      scoped_acquire p_l(&p->lock);   
+      scoped_acquire p_l(&p->lock);
       wake_one(p);
     }
   }
@@ -178,7 +180,8 @@ inittsc(void)
       hpet_end = the_hpet->read_nsec();
     } while(hpet_end < hpet_start + 50000);
     u64 tsc_end = rdtsc();
-    mycpu()->tsc_period = (tsc_end - tsc_start) / (hpet_end - hpet_start);
+    mycpu()->tsc_period = (tsc_end - tsc_start) * TSC_PERIOD_SCALE
+      / (hpet_end - hpet_start);
   } else {
     mycpu()->tsc_period = 0;
   }
