@@ -133,6 +133,9 @@ vmap::alloc(void)
   v->qinsert((void*)&mycpu()->cpu);
   v->qinsert((void*)idt);
 
+  extern char qdata_start, qdata_end;
+  v->qinsert(&qdata_start, &qdata_start, &qdata_end - &qdata_start);
+
   for(int c = 0; c < ncpu; c++) {
     void* nmi_stack = (void*)(cpus[c].ts.ist[1] - KSTACKSIZE);
     void* dblflt_stack = (void*)(cpus[c].ts.ist[2] - KSTACKSIZE);

@@ -271,9 +271,10 @@ struct slab {
 
 struct slab slabmem[slab_type_max];
 
-page_info_map_entry page_info_map[256];
-size_t page_info_map_add, page_info_map_shift;
-page_info_map_entry *page_info_map_end;
+page_info_map_entry page_info_map[256] __attribute__((section (".qdata")));
+size_t page_info_map_add __attribute__((section (".qdata"))),
+  page_info_map_shift __attribute__((section (".qdata")));
+page_info_map_entry *page_info_map_end __attribute__((section (".qdata")));
 
 struct cpu_mem
 {
@@ -293,7 +294,7 @@ static_vector<numa_node, MAX_NUMA_NODES> numa_nodes;
 
 void *percpu_offsets[NCPU];
 
-static int kinited __mpalign__;
+static int kinited __mpalign__ __attribute__((section (".qdata")));
 
 struct memory {
   balancer<memory, mempool> b_;

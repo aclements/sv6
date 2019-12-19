@@ -43,6 +43,11 @@ SECTIONS
         *(.eh_frame)
         *(.eh_frame_end)
         *(.gcc_except_table .gcc_except_table.*)
+        . = ALIGN(0x1000);
+        PROVIDE(qdata_start = .);
+        *(.qdata)
+        . = ALIGN(0x1000);
+        PROVIDE(qdata_end = .);
     }
     PROVIDE(edata = .);
     .bss : {
