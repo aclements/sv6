@@ -276,7 +276,7 @@ size_t page_info_map_add __attribute__((section (".qdata"))),
   page_info_map_shift __attribute__((section (".qdata")));
 page_info_map_entry *page_info_map_end __attribute__((section (".qdata")));
 
-struct cpu_mem
+struct alignas(PGSIZE) cpu_mem
 {
   steal_order steal;
   int mempool;   // XXX cache align?
@@ -284,7 +284,12 @@ struct cpu_mem
   // Hot page cache of recently freed pages
   void *hot_pages[KALLOC_HOT_PAGES];
   size_t nhot;
+
+  __page_pad__;
 };
+
+static_assert(alignof(cpu_mem) == PGSIZE);
+static_assert(sizeof(cpu_mem) == PGSIZE);
 
 // Prefer mycpu()->mem for local access to this.  This is NOINIT since
 // we set up the cpu_mems during CPU 0 boot.
@@ -826,7 +831,7 @@ initpercpu(void)
         // binary.
         base = __percpu_start;
       } else {
-        pos = node_mem.alloc(pos, percpusize, CACHELINE);
+        pos = node_mem.alloc(pos, percpusize, PGSIZE);
         base = p2v(pos);
         memset(base, 0, percpusize);
         // Reserve this physical memory

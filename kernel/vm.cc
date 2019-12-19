@@ -148,6 +148,8 @@ vmap::alloc(void)
     // Any double fault results in a kernel panic, so it is harmless to just
     // share double fault stacks globally.
     v->qinsert(dblflt_stack, dblflt_stack, KSTACKSIZE);
+
+    v->qinsert(cpus[c].mem);
   }
 
   return v;
