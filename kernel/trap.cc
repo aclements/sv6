@@ -173,10 +173,6 @@ trap_c(struct trapframe *tf)
     kerneltrap(tf);
   }
 
-  // if (tf->cs != KCSEG) {
-  // switch_to_kstack();
-  // }
-
 #if MTRACE
   if (myproc()->mtrace_stacks.curr >= 0)
     mtpause(myproc());
