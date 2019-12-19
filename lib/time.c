@@ -72,3 +72,13 @@ ctime(const time_t *timep)
 {
   return asctime(localtime(timep));
 }
+
+int clock_gettime(clockid_t clk_id, struct timespec *tp) {
+  if (clk_id != CLOCK_REALTIME)
+    return -1;
+
+  uint64_t nsec = time_nsec();
+  tp->tv_sec = nsec / 1000000000;
+  tp->tv_nsec = nsec % 1000000000;
+  return 0;
+}
