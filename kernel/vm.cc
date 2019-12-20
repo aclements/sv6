@@ -17,6 +17,9 @@
 #include <algorithm>
 #include "kstats.hh"
 
+extern char __qdata_start[], __qdata_end[];
+extern char __qpercpu_start[], __qpercpu_end[];
+
 enum { SDEBUG = false };
 static console_stream sdebug(SDEBUG);
 
@@ -129,12 +132,8 @@ vmap::alloc(void)
   v->cache.init();
 
   v->qinsert(page);
-  v->qinsert((void*)mycpu());
-  v->qinsert((void*)&mycpu()->cpu);
-  v->qinsert((void*)idt);
-
-  extern char qdata_start, qdata_end;
-  v->qinsert(&qdata_start, &qdata_start, &qdata_end - &qdata_start);
+  v->qinsert(__qdata_start, __qdata_start, __qdata_end - __qdata_start);
+  v->qinsert(__qpercpu_start, __qpercpu_start, __qpercpu_end - __qpercpu_start);
 
   for(int c = 0; c < ncpu; c++) {
     void* nmi_stack = (void*)(cpus[c].ts.ist[1] - KSTACKSIZE);
@@ -148,8 +147,6 @@ vmap::alloc(void)
     // Any double fault results in a kernel panic, so it is harmless to just
     // share double fault stacks globally.
     v->qinsert(dblflt_stack, dblflt_stack, KSTACKSIZE);
-
-    v->qinsert(cpus[c].mem);
   }
 
   return v;

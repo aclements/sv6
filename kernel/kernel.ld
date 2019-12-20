@@ -44,10 +44,10 @@ SECTIONS
         *(.eh_frame_end)
         *(.gcc_except_table .gcc_except_table.*)
         . = ALIGN(0x1000);
-        PROVIDE(qdata_start = .);
+        PROVIDE(__qdata_start = .);
         *(.qdata)
         . = ALIGN(0x1000);
-        PROVIDE(qdata_end = .);
+        PROVIDE(__qdata_end = .);
     }
     PROVIDE(edata = .);
     .bss : {
@@ -57,6 +57,10 @@ SECTIONS
     . = ALIGN(0x1000);
     .percpu : {
         PROVIDE(__percpu_start = .);
+        PROVIDE(__qpercpu_start = .);
+        *(.qpercpu)
+        . = ALIGN(0x1000);
+        PROVIDE(__qpercpu_end = .);
         *(.percpu)
         PROVIDE(__percpu_end = .);
     }

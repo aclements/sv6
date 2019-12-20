@@ -9,7 +9,7 @@
 
 extern const char *kconfig;
 
-DEFINE_PERCPU(struct kstats, mykstats, NO_CRITICAL);
+DEFINE_QPERCPU(struct kstats, mykstats, NO_CRITICAL);
 
 static int
 kconfigread(mdev*, char *dst, u32 off, u32 n)
