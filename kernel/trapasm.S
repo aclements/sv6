@@ -187,6 +187,7 @@ trapcommon_switch_pt:
 trapcommon_switch_pt_end:
 
         movq %rsp, %rdi  // first argument to trap
+        movq (secrets_mapped), %rsi  // second argument to trap
 .globl rfs1
 rfs1:   rdfsbase %rax
         pushq %rax

@@ -41,7 +41,7 @@ linearhash<u64, u64> wm_rips(10240);
 // Addresses that trigger transparent world barriers.
 linearhash<u64, u64> wm_addrs(10240);
 
-static void trap(struct trapframe *tf);
+static void trap(struct trapframe *tf, bool had_secrets);
 
 u64
 sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
@@ -64,11 +64,11 @@ sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 }
 
 int
-do_pagefault(struct trapframe *tf)
+do_pagefault(struct trapframe *tf, bool had_secrets)
 {
   uptr addr = rcr2();
   if (((tf->cs&3) == 0 || myproc() == 0) &&
-      !secrets_mapped && addr >= KGLOBAL) {
+      !had_secrets && addr >= KGLOBAL) {
     // Page fault was probably caused by trying to access secret
     // data so map all secrets in now and record where this happened.
     switch_to_kstack();
@@ -114,10 +114,19 @@ namespace {
 
 // C/C++ entry point for traps; called by assembly trap stub
 extern "C" void
-trap_c(struct trapframe *tf)
+trap_c(struct trapframe *tf, bool had_secrets)
 {
   if (tf->trapno == T_NMI) {
     ensure_secrets();
+
+    // Manually copy the stack
+    proc* p = myproc();
+    if (!had_secrets && p) {
+      assert(tf->rsp >= (u64)p->kstack);
+      assert(tf->rsp < (u64)p->kstack + KSTACKSIZE);
+      memcpy((char*)tf->rsp, (char*)tf->rsp - (u64)p->kstack + (u64)p->qstack,
+             (u64)p->kstack + KSTACKSIZE - tf->rsp);
+    }
 
     // An NMI can come in after popcli() drops ncli to zero and intena
     // is 1, but before popcli() checks intena and calls sti.  If the
@@ -180,7 +189,7 @@ trap_c(struct trapframe *tf)
   // XXX mt_ascope ascope("trap:%d", tf->trapno);
 #endif
 
-  trap(tf);
+  trap(tf, had_secrets);
 
 #if MTRACE
   mtstop(myproc());
@@ -190,7 +199,7 @@ trap_c(struct trapframe *tf)
 }
 
 static void
-trap(struct trapframe *tf)
+trap(struct trapframe *tf, bool had_secrets)
 {
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
@@ -310,7 +319,7 @@ trap(struct trapframe *tf)
     }
 
     if (tf->trapno == T_PGFLT) {
-      if (do_pagefault(tf) == 0)
+      if (do_pagefault(tf, had_secrets) == 0)
         return;
 
       // XXX distinguish between SIGSEGV and SIGBUS?
