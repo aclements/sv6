@@ -55,7 +55,6 @@ OBJS = \
 	trapasm.o \
 	xapic.o \
 	x2apic.o \
-        zalloc.o \
 	incbin.o \
 	sysvectors.o \
 	pstream.o \

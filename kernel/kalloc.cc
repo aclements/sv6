@@ -38,6 +38,8 @@ static console_stream verbose(false);
 
 #define MAX_BUDDIES (NCPU + 16)
 
+#define KALLOC_ZERO_PAGES 64
+
 struct locked_buddy
 {
   spinlock lock;
@@ -284,6 +286,8 @@ struct alignas(PGSIZE) cpu_mem
   // Hot page cache of recently freed pages
   void *hot_pages[KALLOC_HOT_PAGES];
   size_t nhot;
+  void *zero_pages[KALLOC_ZERO_PAGES];
+  size_t nzero;
 
   __page_pad__;
 };
@@ -1086,6 +1090,7 @@ initkalloc(void)
       // there's only one subnode).
       cpu->mem->steal.add(node_low, node_low + node_buddies);
       cpu->mem->nhot = 0;
+      cpu->mem->nzero = 0;
       cpu->mem->mempool = node_low;
       ++cpu_index;
     }
@@ -1216,4 +1221,37 @@ void
 ksfree(int slab, void *v)
 {
   kfree(v, 1 << slabmem[slab].order);
+}
+
+extern "C" void zpage(void*);
+
+// Allocate a zeroed page.  This page can be freed with kfree or, if
+// it is known to be zeroed when it is freed, zfree.
+char* zalloc(const char* name) {
+  scoped_cli cli;
+  auto mem = mycpu()->mem;
+  if (mem->nzero == 0) {
+    while (mem->nzero < KALLOC_ZERO_PAGES / 2) {
+      void *page = kalloc("zalloc", PGSIZE);
+      if (!page) {
+        break;
+      } else {
+        zpage(page);
+        mem->zero_pages[mem->nzero++] = page;
+      }
+    }
+  }
+
+  return mem->nzero ? (char*)mem->zero_pages[--mem->nzero] : NULL;
+}
+
+// Free a page that is known to be zero
+void zfree(void* page) {
+  scoped_cli cli;
+  auto mem = mycpu()->mem;
+  if (mem->nzero < KALLOC_ZERO_PAGES) {
+    mem->zero_pages[mem->nzero++] = page;
+  } else {
+    kfree(page);
+  }
 }

@@ -34,7 +34,6 @@ void initphysmem(void);
 void initpercpu(void);
 void initpageinfo(void);
 void initkalloc(void);
-void initz(void);
 void initrcu(void);
 void initproc(void);
 void initinode(void);
@@ -233,7 +232,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   initfpu();               // Requires nothing
   initmsr();               // Requires nothing
   initkalloc();            // Requires initpageinfo
-  initz();
   initproc();      // process table
   initsched();     // scheduler run queues
   initidle();
