@@ -821,3 +821,10 @@ acpi_power_off(void)
   AcpiDisableAllGpes();
   AcpiEnterSleepState(ACPI_STATE_S5, 0);
 }
+
+void
+acpi_reboot(void)
+{
+  int  i = AcpiReset();
+  cprintf("AcpiReset returned %d\n", i);
+}

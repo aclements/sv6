@@ -28,6 +28,7 @@ UPROGS_BIN= \
 	sh \
 	nsh \
 	halt \
+	reboot \
 	time \
 	sleep \
 	dirbench \

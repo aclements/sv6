@@ -236,6 +236,15 @@ sys_halt(void)
   panic("halt returned");
 }
 
+//SYSCALL {"noret":true}
+void
+sys_reboot(void)
+{
+  acpi_reboot();
+  halt();
+  panic("halt returned");
+}
+
 //SYSCALL
 long
 sys_cpuhz(void)
