@@ -173,6 +173,16 @@ trapcommon:
         movq  $0, %r15
         subq  $0x10, %rsp
 
+#ifdef DEBUG
+        // If single-step mode was enabled, re-enable it for us too (for gdb'ing qemu)
+        testq $0x100, TF_RFLAGS(%rsp)
+        jz 2f
+        pushf
+        orq   $0x100, (%rsp)
+        popf
+2:
+#endif
+
         // If this trap came from kernel space then don't switch stacks or page tables.
         cmpw  $KCSEG, TF_CS(%rsp)
         jz 1f
