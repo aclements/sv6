@@ -157,6 +157,20 @@ puts(const char *s)
 
 }
 
+static void
+printbinctx(u64 rip)
+{
+  __cprintf("memory dump around [rip]=%016lx:\n", rip);
+  u64 base = ((rip - 240) & ~15);
+  for (u64 i = base; i < base + 512; i += 16) {
+    __cprintf("[%016lx] =>", i);
+    for (u64 j = i; j < i + 16; j++) {
+      __cprintf(" %02x", *(u8*)j);
+    }
+    __cprintf("\n");
+  }
+}
+
 void
 printtrace(u64 rbp)
 {
@@ -232,6 +246,7 @@ kerneltrap(struct trapframe *tf)
   __cprintf("kernel ");
   printtrap(tf, false);
   printtrace(tf->rbp);
+  printbinctx(tf->rip);
 
   panicked = 1;
   halt();
