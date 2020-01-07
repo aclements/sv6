@@ -517,6 +517,11 @@ struct ilist
 
   ilist &operator=(ilist &&o) noexcept
   {
+    if(o.empty()) {
+      clear();
+      return *this;
+    }
+
     // Fix up first and last elements to point to this list.  It's
     // important to do this on o.head *before* we copy it to head: if
     // the other list is empty, o.head will point to itself so our
