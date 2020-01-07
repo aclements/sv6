@@ -24,7 +24,7 @@ main(int argc, char *argv[])
       printf("munmap failed");
   }
   clock_gettime(CLOCK_REALTIME, &end);
-  unsigned long long delta = (end.tv_sec - start.tv_sec) * 1000000000UL + (unsigned long long)end.tv_nsec - (unsigned long long)start.tv_nsec;
+  unsigned long delta = (end.tv_sec - start.tv_sec) * 1000000000UL + (unsigned long)end.tv_nsec - (unsigned long)start.tv_nsec;
   printf("%lu ns/iter\n", delta / ITERATIONS);
   return 0;
 }

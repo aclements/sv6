@@ -199,7 +199,7 @@ futexwait(futexkey_t key, u64 val, u64 timer)
   assert(fa->key_ == key);
   mtwriteavar("futex:%p.%p", key, fa);
 
-  acquire(&myproc()->futex_lock);  
+  acquire(&myproc()->futex_lock);
   auto cleanup = scoped_cleanup([&fa](){
     release(&myproc()->futex_lock);
     fa->dec();

@@ -155,6 +155,8 @@ void            kmalignfree(void *, int align, u64 size);
 void            verifyfree(char *ptr, u64 nbytes);
 void            kminit(void);
 void            kmemprint(print_stream *s);
+char*           zalloc(const char* name);
+void            zfree(void* p);
 
 // kbd.c
 void            kbdintr(void);
@@ -269,10 +271,6 @@ void            qfree(vmap* vmap, void* page);
 // safe_read_hw above USERTOP).
 size_t          safe_read_hw(void *dst, uintptr_t src, size_t n);
 size_t          safe_read_vm(void *dst, uintptr_t src, size_t n);
-
-// zalloc.cc
-char*           zalloc(const char* name);
-void            zfree(void* p);
 
 // other exported/imported functions
 void cmain(u64 mbmagic, u64 mbaddr);

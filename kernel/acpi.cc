@@ -825,6 +825,5 @@ acpi_power_off(void)
 void
 acpi_reboot(void)
 {
-  int  i = AcpiReset();
-  cprintf("AcpiReset returned %d\n", i);
+  AcpiReset();
 }
