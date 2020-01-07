@@ -26,6 +26,7 @@ int strcmp(const char*, const char*);
 int strncmp(const char *p, const char *q, size_t n);
 char *strstr(const char *haystack, const char *needle);
 
+long int strtol(const char *s, char **endptr, int base);
 
 // Not C11
 void *mempcpy(void *dest, const void *src, size_t n);
