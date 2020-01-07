@@ -288,7 +288,7 @@ $(O)/boot.fat: $(O)/kernel.elf
 	mkfs.fat -F 32 $@
 	mmd -i $@ ::boot
 	mmd -i $@ ::boot/syslinux
-	mcopy -i $@ /usr/lib/syslinux/bios/*.c32 ::boot/syslinux/
+	mcopy -i $@ /usr/lib/syslinux/modules/bios/*.c32 ::boot/syslinux/
 	mcopy -i $@ $(O)/kernel.elf ::boot/sv6
 	mcopy -i $@ ./syslinux.cfg ::
 	syslinux --directory boot/syslinux -i $@
@@ -296,7 +296,7 @@ $(O)/boot.iso: $(O)/boot.fat
 	dd if=$< of=$@ conv=sparse obs=512 seek=2048
 	truncate -s "+1048576" $@
 	parted -s --align optimal $@ mklabel msdos mkpart primary 1MiB '100%' set 1 boot on
-	dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/bios/mbr.bin of=$@
+	dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/mbr.bin of=$@
 $(O)/boot.vhdx: $(O)/boot.iso
 	qemu-img convert -f raw -O vhdx $< $@
 $(O)/boot.vdi: $(O)/boot.iso
