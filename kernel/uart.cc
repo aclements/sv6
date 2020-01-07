@@ -152,7 +152,7 @@ inituart(void)
     uartputc(*p);
 
   // Announce that we're here.
-  for (const char *p=DEBUG?"xv6 DEBUG\n":"xv6\n"; *p; p++)
+  for (const char *p=DEBUG?"xv6 DEBUG\r\n":"xv6\r\n"; *p; p++)
     uartputc(*p);
 }
 
