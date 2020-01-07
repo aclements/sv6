@@ -222,22 +222,38 @@ QEMUOPTS += -numa node -numa node
 endif
 
 ifeq ($(PLATFORM),xv6)
-QEMUOPTS += -device ahci,id=ahci0 \
-	    -drive if=none,file=$(O)/fs.img,format=raw,id=drive-sata0-0-0 \
+QEMUOPTS += -device ahci,id=ahci0
+ifeq ($(BOOT),syslinux)
+QEMUOPTS += -drive if=none,file=$(O)/boot.img,format=raw,id=drive-sata0-0-0 \
+	    -device ide-drive,bus=ahci0.0,drive=drive-sata0-0-0,id=sata0-0-0 \
+	    -drive if=none,file=$(O)/fs.img,format=raw,id=drive-sata0-1-0 \
+	    -device ide-drive,bus=ahci0.1,drive=drive-sata0-1-0,id=sata0-1-0
+qemu: $(O)/boot.img
+gdb: $(O)/boot.img
+else
+QEMUOPTS += -drive if=none,file=$(O)/fs.img,format=raw,id=drive-sata0-0-0 \
 	    -device ide-drive,bus=ahci0.0,drive=drive-sata0-0-0,id=sata0-0-0
+endif
 qemu: $(O)/fs.img
+gdb: $(O)/fs.img
 endif
 ifeq ($(PLATFORM),native)
 QEMUOPTS += -initrd $(O)/initramfs
 endif
 
+ifneq ($(BOOT),syslinux)
+QEMUOPTS += -kernel $(KERN)
+qemu: $(KERN)
+gdb: $(KERN)
+endif
+
 # User-provided QEMU options
 QEMUOPTS += $(QEMUEXTRA)
 
-qemu: $(KERN)
-	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -no-reboot #-d int,cpu_reset #
-gdb: $(KERN)
-	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -kernel $(KERN) -s -S
+qemu:
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -no-reboot #-d int,cpu_reset #
+gdb:
+	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -s -S
 
 codex: $(KERN)
 
@@ -249,10 +265,10 @@ MTRACEOPTS = -rtc clock=vm -mtrace-enable -mtrace-file $(MTRACEOUT) \
 	     -mtrace-calls -snapshot
 $(MTRACEOUT): $(KERN)
 	$(Q)rm -f $(MTRACEOUT)
-	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel $(KERN) -s
+	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -s
 $(MTRACEOUT)-scripted:
 	$(Q)rm -f $(MTRACEOUT)
-	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -kernel $(KERN)
+	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS)
 .PHONY: $(MTRACEOUT) $(MTRACEOUT)-scripted
 
 mscan.out: $(MTRACESRC)/mtrace-tools/mscan $(MTRACEOUT)
