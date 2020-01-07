@@ -2,6 +2,7 @@
 #include "kernel.hh"
 #include "disk.hh"
 #include "vector.hh"
+#include "cmdline.hh"
 #include <cstring>
 
 static static_vector<disk*, 64> disks;
@@ -56,19 +57,26 @@ sys_disktest(void)
 
 #if AHCIIDE
 
+static disk *
+selected_disk(void)
+{
+  unsigned long index = cmdline_params.root_disk;
+  if (index >= disks.size())
+    panic("disk %lu not found (%lu disks were found)", index, disks.size());
+  return disks[index];
+}
+
 // compat for a single IDE disk..
 void
 ideread(u32 dev, char* data, u64 count, u64 offset)
 {
-  assert(disks.size() > 0);
-  disks[0]->read(data, count, offset);
+  selected_disk()->read(data, count, offset);
 }
 
 void
 idewrite(u32 dev, const char* data, u64 count, u64 offset)
 {
-  assert(disks.size() > 0);
-  disks[0]->write(data, count, offset);
+  selected_disk()->write(data, count, offset);
 }
 
 void initdisk() {}

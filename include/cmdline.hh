@@ -13,12 +13,15 @@ Supported params and corresponding values:
  - keep_retpolines (default=no)
    - yes -> keep retpolines
    - no -> remove retpolines
+ - root_disk (default=0)
+    -> index of detected disks to use as root disk
  */
 struct cmdline_params
 {
   bool disable_pcid;
   bool keep_retpolines;
   bool lazy_barrier;
+  unsigned long root_disk;
 };
 
 extern struct cmdline_params cmdline_params;

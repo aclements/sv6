@@ -10,6 +10,8 @@
 #include "cmdline.hh"
 #include "multiboot.hh"
 
+#include <string.h>
+
 struct cmdline_params cmdline_params;
 
 static int
@@ -66,6 +68,8 @@ static void
 parsecmdline(void)
 {
   char value[CMDLINE_VALUE+1];  // add one for null char
+  char *end = NULL;
+  long integer;
 
   if(!getvalue("disable_pcid", value))
     strcpy(value, "no");
@@ -88,6 +92,15 @@ parsecmdline(void)
     cprintf("ERROR: cmdline: unrecognized value \"%s\" for param \"keep_retpolines\"\n", value);
     panic("cmdline");
   }
+
+  if(!getvalue("root_disk", value) || value[0] == '\0')
+    strcpy(value, "0");
+  integer = strtol(value, &end, 10);
+  if(*end != '\0' || integer < 0){
+    cprintf("ERROR: cmdline: unrecognized value \"%s\" for param \"root_disk\"\n", value);
+    panic("cmdline");
+  }
+  cmdline_params.root_disk = integer;
 
   if(!getvalue("lazy_barrier", value))
     strcpy(value, "yes");
@@ -112,6 +125,7 @@ initcmdline()
   if(CMDLINE_DEBUG){
     cprintf("cmdline: disable pcid? %s\n", cmdline_params.disable_pcid ? "yes" : "no");
     cprintf("cmdline: keep retpolines? %s\n", cmdline_params.keep_retpolines ? "yes" : "no");
+    cprintf("cmdline: root disk? %lu\n", cmdline_params.root_disk);
   }
 
   devsw[MAJ_CMDLINE].pread = cmdlineread;
