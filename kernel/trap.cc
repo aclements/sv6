@@ -38,9 +38,6 @@ static struct irq_info
 // Instruction pointers that cause transparent world barriers.
 linearhash<u64, u64> wm_rips(10240);
 
-// Addresses that trigger transparent world barriers.
-linearhash<u64, u64> wm_addrs(10240);
-
 static void trap(struct trapframe *tf, bool had_secrets);
 
 u64
@@ -72,7 +69,6 @@ do_pagefault(struct trapframe *tf, bool had_secrets)
     // Page fault was probably caused by trying to access secret
     // data so map all secrets in now and record where this happened.
     switch_to_kstack();
-    wm_addrs.increment(addr);
     wm_rips.increment(tf->rip);
 
     return 0;
