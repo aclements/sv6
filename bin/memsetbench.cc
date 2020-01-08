@@ -98,5 +98,9 @@ main(int argc, char *argv[])
   printf("fastest: %lu.%03lu ps/byte\n", fastest / 1000, fastest % 1000);
   printf("count: %d\n", countbelow(rates, j+1, (unsigned long) (fastest * (1.0 + BOUND))));
 
+  unsigned long speed = (1000ul * 1000 * 1000 * 1000 * 1000 * 1000) / (fastest * 1024 * 1024 * 1024);
+
+  printf("fastest rate: %lu.%03lu GiB/s\n", speed / 1000, speed % 1000);
+
   return 0;
 }
