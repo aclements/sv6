@@ -1223,8 +1223,6 @@ ksfree(int slab, void *v)
   kfree(v, 1 << slabmem[slab].order);
 }
 
-extern "C" void zpage(void*);
-
 // Allocate a zeroed page.  This page can be freed with kfree or, if
 // it is known to be zeroed when it is freed, zfree.
 char* zalloc(const char* name) {
@@ -1236,7 +1234,7 @@ char* zalloc(const char* name) {
       if (!page) {
         break;
       } else {
-        zpage(page);
+        memset(page, 0, PGSIZE);
         mem->zero_pages[mem->nzero++] = page;
       }
     }
