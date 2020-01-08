@@ -54,8 +54,8 @@ timerintr(void)
   ticks++;
 
   now = nsectime();
-  again = 0;
   do {
+    again = 0;
     scoped_acquire l(&sleepers_lock);
     for (auto it = sleepers.begin(); it != sleepers.end(); it++) {
       struct proc &p = *it;
