@@ -151,6 +151,9 @@ void initvga() {
     front_buffer = multiboot.framebuffer;
     screen_width = multiboot.framebuffer_width;
     screen_height = multiboot.framebuffer_height;
+
+    for (const char *p=DEBUG?"xv6 DEBUG VGA\n":"xv6 VGA\n"; *p; p++)
+      vgaputc(*p);
   } else {
     cprintf("vga: could not detect framebuffer\n");
   }

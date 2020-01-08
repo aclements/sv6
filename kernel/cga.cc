@@ -55,6 +55,6 @@ initcga(void)
   outb(CRTPORT+1, 0);
 
   // Announce that we're here.
-  for (const char *p=DEBUG?"xv6 DEBUG\n":"xv6\n"; *p; p++)
+  for (const char *p=DEBUG?"xv6 DEBUG CGA\n":"xv6 CGA\n"; *p; p++)
     cgaputc(*p);
 }
