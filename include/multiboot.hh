@@ -105,4 +105,4 @@ extern multiboot_saved multiboot;
 #define MULTIBOOT2_FLAG_EFI_MMAP         (1 << 30)
 #define MULTIBOOT2_FLAG_EFI_SYSTEM_TABLE (1 << 31)
 
-
+// #define DEBUGMULTIBOOT

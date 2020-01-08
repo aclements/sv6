@@ -115,6 +115,8 @@ struct vesa_mode_info {
   uint8_t reserved[206];
 } __attribute__ ((packed));
 
+static multiboot_info *savedinfo;
+
 void initmultiboot(u64 mbmagic, u64 mbaddr) {
   if (mbmagic == 0x2BADB002) {
     // Multiboot 1
@@ -123,6 +125,8 @@ void initmultiboot(u64 mbmagic, u64 mbaddr) {
     multiboot.mem_lower = info->mem_lower;
     multiboot.mem_upper = info->mem_upper;
     multiboot.boot_device = info->boot_device;
+
+    savedinfo = info;
 
     if (info->flags & MULTIBOOT_FLAG_CMDLINE)
       safestrcpy(multiboot.cmdline, (const char*)p2v(info->cmdline), sizeof(multiboot.cmdline));
@@ -239,4 +243,128 @@ void initmultiboot(u64 mbmagic, u64 mbaddr) {
       t = (multiboot2_tag*)((char*)t + ((t->size + 7) & ~7));
     }
   }
+}
+
+#ifdef DEBUGMULTIBOOT
+static const char *flag_names[] = {
+  "mem",
+  "boot_dev",
+  "cmdline",
+  NULL,
+  NULL,
+  NULL,
+  "mmap",
+  NULL,
+  NULL,
+  "boot_loader_name",
+  NULL,
+  "vbe",
+  "framebuffer",
+};
+
+static const char *flag_name_for(int index) {
+  if (index < 0 || index >= sizeof(flag_names) / sizeof(flag_names[0])) {
+    return NULL;
+  }
+  return flag_names[index];
+}
+#endif
+
+void debugmultiboot(void) {
+#ifdef DEBUGMULTIBOOT
+  if (savedinfo == NULL) {
+    cprintf("multiboot: did not boot with multiboot1 header\n");
+    return;
+  }
+  cprintf("flags: %x:\n", savedinfo->flags);
+  for (int i = 0; i < 32; i++) {
+    if (savedinfo->flags & (1 << i)) {
+      const char *name = flag_name_for(i);
+      if (name)
+        cprintf(" -> %s\n", name);
+      else
+        cprintf(" -> ignored bit %d\n", i);
+    }
+  }
+  cprintf("mem_lower = %x\n", savedinfo->mem_lower);
+  cprintf("mem_upper = %x\n", savedinfo->mem_upper);
+  cprintf("boot_device = %x\n", savedinfo->boot_device);
+  cprintf("cmdline = %x\n", savedinfo->cmdline);
+  cprintf("mods_count = %x\n", savedinfo->mods_count);
+  cprintf("mods_addr = %x\n", savedinfo->mods_addr);
+  for (int i = 0; i < 4; i++) {
+    cprintf("syms[%d] = %x\n", i, savedinfo->syms[i]);
+  }
+  cprintf("mmap_length = %x\n", savedinfo->mmap_length);
+  cprintf("mmap_addr = %x\n", savedinfo->mmap_addr);
+  cprintf("drives_length = %x\n", savedinfo->drives_length);
+  cprintf("drives_addr = %x\n", savedinfo->drives_addr);
+  cprintf("config_table = %x\n", savedinfo->config_table);
+  cprintf("boot_loader_name = %x\n", savedinfo->boot_loader_name);
+  cprintf("apm_table = %x\n", savedinfo->apm_table);
+  cprintf("vbe_control_info = %x\n", savedinfo->vbe_control_info);
+  cprintf("vbe_mode_info = %x\n", savedinfo->vbe_mode_info);
+  if (savedinfo->flags & MULTIBOOT_FLAG_VBE) {
+    auto mode_info = *(vesa_mode_info*)p2v(savedinfo->vbe_mode_info);
+
+    cprintf(" -> mode_attr = %x\n", mode_info.mode_attr);
+    cprintf(" -> win_attr[0] = %x\n", mode_info.win_attr[0]);
+    cprintf(" -> win_attr[1] = %x\n", mode_info.win_attr[1]);
+    cprintf(" -> win_grain = %x\n", mode_info.win_grain);
+    cprintf(" -> win_size = %x\n", mode_info.win_size);
+    cprintf(" -> win_seg[0] = %x\n", mode_info.win_seg[0]);
+    cprintf(" -> win_seg[1] = %x\n", mode_info.win_seg[1]);
+    cprintf(" -> win_scheme = %x\n", mode_info.win_scheme);
+    cprintf(" -> logical_scan = %x\n", mode_info.logical_scan);
+
+    cprintf(" -> h_res = %x\n", mode_info.h_res);
+    cprintf(" -> v_res = %x\n", mode_info.v_res);
+    cprintf(" -> char_width = %x\n", mode_info.char_width);
+    cprintf(" -> char_height = %x\n", mode_info.char_height);
+    cprintf(" -> memory_planes = %x\n", mode_info.memory_planes);
+    cprintf(" -> bpp = %x\n", mode_info.bpp);
+    cprintf(" -> banks = %x\n", mode_info.banks);
+    cprintf(" -> memory_layout = %x\n", mode_info.memory_layout);
+    cprintf(" -> bank_size = %x\n", mode_info.bank_size);
+    cprintf(" -> image_pages = %x\n", mode_info.image_pages);
+    cprintf(" -> page_function = %x\n", mode_info.page_function);
+
+    cprintf(" -> rmask = %x\n", mode_info.rmask);
+    cprintf(" -> rpos = %x\n", mode_info.rpos);
+    cprintf(" -> gmask = %x\n", mode_info.gmask);
+    cprintf(" -> gpos = %x\n", mode_info.gpos);
+    cprintf(" -> bmask = %x\n", mode_info.bmask);
+    cprintf(" -> bpos = %x\n", mode_info.bpos);
+    cprintf(" -> resv_mask = %x\n", mode_info.resv_mask);
+    cprintf(" -> resv_pos = %x\n", mode_info.resv_pos);
+    cprintf(" -> dcm_info = %x\n", mode_info.dcm_info);
+
+    cprintf(" -> lfb_ptr = %x\n", mode_info.lfb_ptr);
+    cprintf(" -> offscreen_ptr = %x\n", mode_info.offscreen_ptr);
+    cprintf(" -> offscreen_size = %x\n", mode_info.offscreen_size);
+  }
+  cprintf("vbe_mode = %x\n", savedinfo->vbe_mode);
+  cprintf(" -> mode number = %x\n", savedinfo->vbe_mode & 0xFF);
+  cprintf(" -> VESA-defined? %s\n", (savedinfo->vbe_mode & 0x100) ? "yes" : "no");
+  cprintf(" -> reserved = %x\n", (savedinfo->vbe_mode & 0x600) >> 9);
+  cprintf(" -> custom refresh rate? %s\n", (savedinfo->vbe_mode & 0x800) ? "yes" : "no");
+  cprintf(" -> reserved = %x\n", (savedinfo->vbe_mode & 0x3000) >> 9);
+  cprintf(" -> linear/flat buffer? %s\n", (savedinfo->vbe_mode & 0x4000) ? "yes" : "no");
+  cprintf(" -> preserve display? %s\n", (savedinfo->vbe_mode & 0x8000) ? "yes" : "no");
+  cprintf("vbe_interface_seg = %x\n", savedinfo->vbe_interface_seg);
+  cprintf("vbe_interface_off = %x\n", savedinfo->vbe_interface_off);
+  cprintf("vbe_interface_len = %x\n", savedinfo->vbe_interface_len);
+  cprintf("framebuffer_addr = %lx\n", savedinfo->framebuffer_addr);
+  cprintf("framebuffer_pitch = %x\n", savedinfo->framebuffer_pitch);
+  cprintf("framebuffer_width = %x\n", savedinfo->framebuffer_width);
+  cprintf("framebuffer_height = %x\n", savedinfo->framebuffer_height);
+  cprintf("framebuffer_bpp = %x\n", savedinfo->framebuffer_bpp);
+  cprintf("framebuffer_type = %x\n", savedinfo->framebuffer_type);
+  cprintf("framebuffer_red_field_position = %x\n", savedinfo->framebuffer_red_field_position);
+  cprintf("framebuffer_red_mask_size = %x\n", savedinfo->framebuffer_red_mask_size);
+  cprintf("framebuffer_green_field_position = %x\n", savedinfo->framebuffer_green_field_position);
+  cprintf("framebuffer_green_mask_size = %x\n", savedinfo->framebuffer_green_mask_size);
+  cprintf("framebuffer_blue_field_position = %x\n", savedinfo->framebuffer_blue_field_position);
+  cprintf("framebuffer_blue_mask_size = %x\n", savedinfo->framebuffer_blue_mask_size);
+#endif
 }
