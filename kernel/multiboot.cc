@@ -163,7 +163,7 @@ void initmultiboot(u64 mbmagic, u64 mbaddr) {
       }
     } else if (info->flags & MULTIBOOT_FLAG_VBE) {
       // Needed for syslinux which sets vbe info but not framebuffer
-      auto mode_info = *(vesa_mode_info*)p2v(*(u32*)p2v(info->vbe_mode_info));
+      auto mode_info = *(vesa_mode_info*)p2v(info->vbe_mode_info);
       multiboot.framebuffer = (u32*)p2v(mode_info.lfb_ptr);
       multiboot.framebuffer_width = mode_info.h_res;
       multiboot.framebuffer_height = mode_info.v_res;
