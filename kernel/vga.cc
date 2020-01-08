@@ -145,9 +145,14 @@ u16 cursor_y = BORDER;
 
 void initvga() {
   if (multiboot.flags & MULTIBOOT_FLAG_FRAMEBUFFER) {
+    cprintf("vga: detected framebuffer at %16p [w=%d, h=%d]\n",
+            multiboot.framebuffer, multiboot.framebuffer_width, multiboot.framebuffer_height);
+
     front_buffer = multiboot.framebuffer;
     screen_width = multiboot.framebuffer_width;
     screen_height = multiboot.framebuffer_height;
+  } else {
+    cprintf("vga: could not detect framebuffer\n");
   }
 }
 
