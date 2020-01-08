@@ -209,10 +209,14 @@ endif
 
 QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid,+fsgsbase,+md-clear,+spec-ctrl \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
-	-nographic -device sga \
+	-device sga \
 	$(foreach x,$(QEMUNUMA),-numa $(x)) \
 	-net user,hostfwd=tcp::2323-:23,hostfwd=tcp::8080-:80 -net nic,model=e1000 \
 	$(if $(QEMUAPPEND),-append "$(QEMUAPPEND)",) \
+
+ifneq ($(GRAPHIC),vga)
+QEMUOPTS += -nographic
+endif
 
 ## One NUMA node per CPU when mtrace'ing
 ifeq ($(HW),linuxmtrace)
