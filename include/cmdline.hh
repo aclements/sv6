@@ -22,6 +22,7 @@ struct cmdline_params
   bool keep_retpolines;
   bool lazy_barrier;
   unsigned long root_disk;
+  bool use_vga;
 };
 
 extern struct cmdline_params cmdline_params;

@@ -102,6 +102,17 @@ parsecmdline(void)
   }
   cmdline_params.root_disk = integer;
 
+  if(!getvalue("use_vga", value))
+    strcpy(value, "yes");
+  if(strcmp(value, "yes") == 0)
+    cmdline_params.use_vga = true;
+  else if(strcmp(value, "no") == 0)
+    cmdline_params.use_vga = false;
+  else{
+    cprintf("ERROR: cmdline: unrecognized value \"%s\" for param \"use_vga\"\n", value);
+    panic("cmdline");
+  }
+
   if(!getvalue("lazy_barrier", value))
     strcpy(value, "yes");
   if(strcmp(value, "yes") == 0)
@@ -126,6 +137,7 @@ initcmdline()
     cprintf("cmdline: disable pcid? %s\n", cmdline_params.disable_pcid ? "yes" : "no");
     cprintf("cmdline: keep retpolines? %s\n", cmdline_params.keep_retpolines ? "yes" : "no");
     cprintf("cmdline: root disk? %lu\n", cmdline_params.root_disk);
+    cprintf("cmdline: use vga? %s\n", cmdline_params.use_vga ? "yes" : "no");
   }
 
   devsw[MAJ_CMDLINE].pread = cmdlineread;

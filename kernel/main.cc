@@ -190,8 +190,8 @@ cmain(u64 mbmagic, u64 mbaddr)
   initmultiboot(mbmagic, mbaddr);
   inituart();
   debugmultiboot();
-  initvga();               // Requires initmultiboot
   initcmdline();           // Requires initmultiboot
+  initvga();               // Requires initmultiboot, initcmdline
   initphysmem();           // Requires initmultiboot
   initpg(&cpus[0]);        // Requires initphysmem
   inithz();                // CPU Hz, microdelay

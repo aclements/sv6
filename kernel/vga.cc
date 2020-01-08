@@ -1,6 +1,7 @@
 #include "kernel.hh"
 #include "string.h"
 #include "multiboot.hh"
+#include "cmdline.hh"
 
 // From http://czyborra.com/unifont
 static const char* unifont[] = {
@@ -144,7 +145,9 @@ u16 cursor_x = BORDER;
 u16 cursor_y = BORDER;
 
 void initvga() {
-  if (multiboot.flags & MULTIBOOT_FLAG_FRAMEBUFFER) {
+  if (!cmdline_params.use_vga) {
+    cprintf("vga: disabled by command line\n");
+  } else if (multiboot.flags & MULTIBOOT_FLAG_FRAMEBUFFER) {
     cprintf("vga: detected framebuffer at %16p [w=%d, h=%d]\n",
             multiboot.framebuffer, multiboot.framebuffer_width, multiboot.framebuffer_height);
 
