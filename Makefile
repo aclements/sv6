@@ -225,26 +225,45 @@ else ifeq ($(HW),mtrace)
 QEMUOPTS += -numa node -numa node
 endif
 
-ifeq ($(PLATFORM),xv6)
-QEMUOPTS += -device ahci,id=ahci0
 ifeq ($(BOOT),syslinux)
-QEMUOPTS += -drive if=none,file=$(O)/boot.img,format=raw,id=drive-sata0-0-0 \
-	    -device ide-drive,bus=ahci0.0,drive=drive-sata0-0-0,id=sata0-0-0
-ifneq ($(FSDISK),no)
-QEMUOPTS += -drive if=none,file=$(O)/fs.img,format=raw,id=drive-sata0-1-0 \
-	    -device ide-drive,bus=ahci0.1,drive=drive-sata0-1-0,id=sata0-1-0
+SATA0 := $(O)/boot.img
 endif
-qemu: $(O)/boot.img
-gdb: $(O)/boot.img
+
+ifeq ($(PLATFORM),xv6)
+ifeq ($(FSDISK),ide)
+IDE0 := $(O)/fs.img
 else
 ifneq ($(FSDISK),no)
-QEMUOPTS += -drive if=none,file=$(O)/fs.img,format=raw,id=drive-sata0-0-0 \
+ifeq ($(SATA0),)
+SATA0 := $(O)/fs.img
+else
+SATA1 := $(O)/fs.img
+endif
+endif
+endif
+endif
+
+ifneq ($(IDE0),)
+QEMUOPTS += -drive file=$(IDE0),index=0,media=disk,format=raw
+## QEMUOPTS += -drive if=none,file=$(IDE0),format=raw,id=drive-ide0-0 \
+## 	    -device ide-drive,bus=ide.0,drive=drive-ide0-0,id=ide0-0
+endif
+ifneq ($(SATA0)$(SATA1),)
+QEMUOPTS += -device ahci,id=ahci0
+endif
+ifneq ($(SATA0),)
+QEMUOPTS += -drive if=none,file=$(SATA0),format=raw,id=drive-sata0-0-0 \
 	    -device ide-drive,bus=ahci0.0,drive=drive-sata0-0-0,id=sata0-0-0
+qemu: $(SATA0)
+gdb: $(SATA0)
 endif
+ifneq ($(SATA1),)
+QEMUOPTS += -drive if=none,file=$(SATA1),format=raw,id=drive-sata0-1-0 \
+	    -device ide-drive,bus=ahci0.1,drive=drive-sata0-1-0,id=sata0-1-0
+qemu: $(SATA1)
+gdb: $(SATA1)
 endif
-qemu: $(O)/fs.img
-gdb: $(O)/fs.img
-endif
+
 ifeq ($(PLATFORM),native)
 QEMUOPTS += -initrd $(O)/initramfs
 endif
