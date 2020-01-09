@@ -36,6 +36,8 @@ idewait(int checkerr)
 void
 initdisk(void)
 {
+  // Start by selecting disk 0, because the BIOS might have left it at disk 1
+  outb(0x1f6, 0xe0 | (0<<4));
   idewait(0);
 
   // Check if disk 1 is present
@@ -73,7 +75,8 @@ void
 ideread(u32 dev, char* data, u64 count, u64 offset)
 {
   assert(dev == 1);
-  assert(havedisk1);
+  if (!havedisk1)
+    dev = 0;
   scoped_acquire l(&idelock);
 
   ide_select(dev, count, offset);
@@ -87,7 +90,8 @@ void
 idewrite(u32 dev, const char* data, u64 count, u64 offset)
 {
   assert(dev == 1);
-  assert(havedisk1);
+  if (!havedisk1)
+    dev = 0;
   scoped_acquire l(&idelock);
 
   ide_select(dev, count, offset);
