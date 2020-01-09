@@ -63,66 +63,34 @@ getvalue(const char* param, char* dst)
   return true;
 }
 
-// parse cmdline to populate global cmdline_params struct
-static void
-parsecmdline(void)
-{
+static bool parse_binary_option(const char* name, bool default_value) {
+  char value[CMDLINE_VALUE+1];  // add one for null char
+  if(!getvalue(name, value))
+    return default_value;
+  if(strcmp(value, "yes") == 0)
+    return true;
+  else if(strcmp(value, "no") == 0)
+    return false;
+  else{
+    cprintf("cmdline: unrecognized value \"%s\" for param \"%s\"\n", value, name);
+    panic("cmdline");  // hack to halt execution, requires inituartcons to actually print message
+  }
+}
+
+static u64 parse_uint_option(const char* name, long default_value) {
   char value[CMDLINE_VALUE+1];  // add one for null char
   char *end = NULL;
-  long integer;
+  long ret;
 
-  if(!getvalue("disable_pcid", value))
-    strcpy(value, "no");
-  if(strcmp(value, "yes") == 0)
-    cmdline_params.disable_pcid = true;
-  else if(strcmp(value, "no") == 0)
-    cmdline_params.disable_pcid = false;
-  else{
-    cprintf("cmdline: unrecognized value \"%s\" for param \"disable_pcid\"\n", value);
-    panic("cmdline");  // hack to halt execution, requires inituartcons to actually print message
-  }
-
-  if(!getvalue("keep_retpolines", value))
-    strcpy(value, "no");
-  if(strcmp(value, "yes") == 0)
-    cmdline_params.keep_retpolines = true;
-  else if(strcmp(value, "no") == 0)
-    cmdline_params.keep_retpolines = false;
-  else{
-    cprintf("ERROR: cmdline: unrecognized value \"%s\" for param \"keep_retpolines\"\n", value);
+  if(!getvalue(name, value) || value[0] == '\0')
+    return default_value;
+  ret = strtol(value, &end, 10);
+  if(*end != '\0' || ret < 0){
+    cprintf("ERROR: cmdline: unrecognized value \"%s\" for param \"%s\"\n", value, name);
     panic("cmdline");
   }
 
-  if(!getvalue("root_disk", value) || value[0] == '\0')
-    strcpy(value, "0");
-  integer = strtol(value, &end, 10);
-  if(*end != '\0' || integer < 0){
-    cprintf("ERROR: cmdline: unrecognized value \"%s\" for param \"root_disk\"\n", value);
-    panic("cmdline");
-  }
-  cmdline_params.root_disk = integer;
-
-  if(!getvalue("use_vga", value))
-    strcpy(value, "yes");
-  if(strcmp(value, "yes") == 0)
-    cmdline_params.use_vga = true;
-  else if(strcmp(value, "no") == 0)
-    cmdline_params.use_vga = false;
-  else{
-    cprintf("ERROR: cmdline: unrecognized value \"%s\" for param \"use_vga\"\n", value);
-    panic("cmdline");
-  }
-
-  if(!getvalue("lazy_barrier", value))
-    strcpy(value, "yes");
-  if(strcmp(value, "yes") == 0)
-    cmdline_params.lazy_barrier = true;
-  else if(strcmp(value, "no") == 0)
-    cmdline_params.lazy_barrier = false;
-  else{
-    cprintf("cmdline: unrecognized value \"%s\" for param \"lazy_barrier\"\n", value);
-    panic("cmdline");  // hack to halt execution, requires inituartcons to actually print message
-  }
+  return (u64)ret;
 }
 
 void
@@ -131,7 +99,11 @@ initcmdline()
   if(CMDLINE_DEBUG)
     cprintf("cmdline: %s\n", multiboot.cmdline);
 
-  parsecmdline();
+  cmdline_params.disable_pcid = parse_binary_option("disable_pcid", false);
+  cmdline_params.keep_retpolines = parse_binary_option("keep_retpolines", false);
+  cmdline_params.use_vga = parse_binary_option("use_vga", true);
+  cmdline_params.lazy_barrier = parse_binary_option("lazy_barrier", true);
+  cmdline_params.root_disk = parse_uint_option("root_disk", 0);
 
   if(CMDLINE_DEBUG){
     cprintf("cmdline: disable pcid? %s\n", cmdline_params.disable_pcid ? "yes" : "no");
