@@ -602,10 +602,12 @@ parse_mb_map()
     panic("multiboot header has no memory map");
 
   // Print the map
-  for (int i = 0; i < multiboot.mmap_entries; i++) {
-    console.println("e820: ", shex(multiboot.mmap[i].base).width(18).pad(), "-",
-                    shex(multiboot.mmap[i].base + multiboot.mmap[i].length - 1).width(18).pad(), " ",
-                    multiboot.mmap[i].type == 1 ? "usable" : "reserved");
+  if (DEBUG) {
+    for (int i = 0; i < multiboot.mmap_entries; i++) {
+      console.println("e820: ", shex(multiboot.mmap[i].base).width(18).pad(), "-",
+                      shex(multiboot.mmap[i].base + multiboot.mmap[i].length - 1).width(18).pad(), " ",
+                      multiboot.mmap[i].type == 1 ? "usable" : "reserved");
+    }
   }
 
   // The E820 map can be out of order and it can have overlapping

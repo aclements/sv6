@@ -138,6 +138,7 @@ static const char* unifont[] = {
 const u16 BORDER = 4;
 
 u32* front_buffer = nullptr;
+u32* back_buffer = nullptr;
 u16 screen_width;
 u16 screen_height;
 
@@ -151,9 +152,15 @@ void initvga() {
     cprintf("vga: detected framebuffer at %16p [w=%d, h=%d]\n",
             multiboot.framebuffer, multiboot.framebuffer_width, multiboot.framebuffer_height);
 
+    if(multiboot.framebuffer_width > 4096 || multiboot.framebuffer_width > 4096) {
+      cprintf("vga: unsupported framebuffer size\n");
+      return;
+    }
+
     front_buffer = multiboot.framebuffer;
     screen_width = multiboot.framebuffer_width;
     screen_height = multiboot.framebuffer_height;
+
 
     for (const char *p=DEBUG?"xv6 DEBUG VGA\n":"xv6 VGA\n"; *p; p++)
       vgaputc(*p);
@@ -162,8 +169,16 @@ void initvga() {
   }
 }
 
+void initdoublebuffer() {
+  if (front_buffer) {
+    back_buffer = (u32*)kalloc("back_buffer", screen_width * screen_height * 4);
+    memcpy(back_buffer, front_buffer, screen_width * screen_height * 4);
+  }
+}
+
 void vgaputc(int c) {
-  if (!front_buffer)
+  u32* buffer = back_buffer ? back_buffer : front_buffer;
+  if (!buffer)
     return;
 
   if (c == '\n') {
@@ -180,20 +195,23 @@ void vgaputc(int c) {
   int width = bitmap[32] == '\0' ? 8 : 16;
   int height = 16;
 
+  bool full_redraw = false;
+
   if (cursor_x + width + BORDER > screen_width) {
     cursor_x = 0;
     cursor_y += 16;
   }
   while (cursor_y + height + BORDER > screen_height) {
-    memmove(front_buffer,
-            front_buffer + 16 * screen_width,
+    memmove(buffer,
+            buffer + 16 * screen_width,
             screen_width * (screen_height - 16) * 4);
-    memset(front_buffer + (screen_height - 16) * screen_width, 0,
+    memset(buffer + (screen_height - 16) * screen_width, 0,
            16 * screen_width * 4);
     cursor_y -= 16;
+    full_redraw = true;
   }
 
-  for(int i = 0; bitmap[i]; i++) {
+  for (int i = 0; bitmap[i]; i++) {
     u8 nibble = 0;
     if (bitmap[i] >= '0' && bitmap[i] <= '9')
       nibble = bitmap[i] - '0';
@@ -203,7 +221,19 @@ void vgaputc(int c) {
     for(int j = 0; j < 4; j++) {
       int h = (i*4+j) % width;
       int k = (i*4+j) / width;
-      front_buffer[(cursor_x+h) + (cursor_y+k) * screen_width] = nibble & (1<<(3-j)) ? 0xffffff : 0;
+      buffer[(cursor_x+h) + (cursor_y+k) * screen_width] = nibble & (1<<(3-j)) ? 0xffffff : 0;
+    }
+  }
+
+  if (back_buffer) {
+    if (full_redraw) {
+      memcpy(front_buffer, back_buffer, screen_width * screen_height * 4);
+    } else {
+      for (int y = cursor_y; y < cursor_y + height; y++){
+        memcpy(&front_buffer[cursor_x + y * screen_width],
+               &back_buffer[cursor_x + y * screen_width],
+               width * 4);
+      }
     }
   }
 

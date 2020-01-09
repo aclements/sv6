@@ -20,6 +20,7 @@ void inituart(void);
 void inituartcons(void);
 void initcga(void);
 void initvga(void);
+void initdoublebuffer(void);
 void initconsole(void);
 void initpg(struct cpu *c);
 void cleanuppg(void);
@@ -197,6 +198,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   inithz();                // CPU Hz, microdelay
   initseg(&cpus[0]);
   inittls(&cpus[0]);       // Requires initseg
+  initdoublebuffer();      // Requires initpg
 
   initacpitables();        // Requires initpg, inittls
   initlapic();             // Requires initpg
