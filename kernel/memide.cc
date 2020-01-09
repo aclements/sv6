@@ -2,62 +2,83 @@
 // Useful for running kernel without scratch disk.
 
 #include "types.h"
-#include "mmu.h"
+#include <cstring>
 #include "kernel.hh"
-#include "spinlock.hh"
-#include "condvar.hh"
-#include "proc.hh"
-#include "amd64.h"
-#include "traps.h"
-
-#include "buf.hh"
+#include "cpputil.hh"
+#include "disk.hh"
 
 extern u8 _fs_img_start[];
 extern u64 _fs_img_size;
 
-#if MEMIDE
+class memdisk : public disk
+{
+public:
+  memdisk(u8 *disk, size_t length, u32 diskindex);
 
-static u8 *memdisk;
+  void readv(kiovec *iov, int iov_cnt, u64 off) override;
+  void writev(kiovec *iov, int iov_cnt, u64 off) override;
+  void flush() override;
+
+  NEW_DELETE_OPS(memdisk);
+
+private:
+  u8 *disk;
+  size_t length;
+  u32 index;
+};
 
 void
-initdisk(void)
+initmemide(void)
 {
-  memdisk = _fs_img_start;
+  if (_fs_img_size > 0) {
+    disk_register(new memdisk(_fs_img_start, _fs_img_size, 0));
+  }
 }
 
-// Interrupt handler.
-void
-ideintr(void)
+memdisk::memdisk(u8 *disk, size_t length, u32 diskindex)
+  : disk(disk), length(length), index(diskindex)
 {
-  // no-op
-}
-
-void
-ideread(u32 dev, char* data, u64 count, u64 offset)
-{
-  u8 *p;
-
-  if(dev != 1)
-    panic("ideread: request not for disk 1");
-  if(offset > _fs_img_size || offset + count > _fs_img_size)
-    panic("ideread: sector out of range");
-
-  p = memdisk + offset;
-  memmove(data, p, count);
+  dk_nbytes = length;
+  snprintf(dk_model, sizeof(dk_model), "SV6 MEMDISK");
+  snprintf(dk_serial, sizeof(dk_serial), "%16p", disk);
+  snprintf(dk_firmware, sizeof(dk_firmware), "n/a");
+  snprintf(dk_busloc, sizeof(dk_busloc), "memide.%d", diskindex);
 }
 
 void
-idewrite(u32 dev, const char* data, u64 count, u64 offset)
+memdisk::readv(kiovec *iov, int iov_cnt, u64 offset)
 {
-  u8 *p;
+  for (int i = 0; i < iov_cnt; i++) {
+    kiovec v = iov[i];
 
-  if(dev != 1)
-    panic("ideread: request not for disk 1");
-  if(offset > _fs_img_size || offset + count > _fs_img_size)
-    panic("ideread: sector out of range");
+    if (offset + v.iov_len > this->length || offset + v.iov_len < offset)
+      panic("readv: sector out of range");
 
-  p = memdisk + offset;
-  memmove(p, data, count);
+    u8 *p = this->disk + offset;
+    memmove(iov->iov_base, p, iov->iov_len);
+
+    offset += v.iov_len;
+  }
 }
 
-#endif  /* MEMIDE */
+void
+memdisk::writev(kiovec *iov, int iov_cnt, u64 offset)
+{
+  for (int i = 0; i < iov_cnt; i++) {
+    kiovec v = iov[i];
+
+    if (offset + v.iov_len > this->length || offset + v.iov_len < offset)
+      panic("writev: sector out of range");
+
+    u8 *p = this->disk + offset;
+    memmove(p, iov->iov_base, iov->iov_len);
+
+    offset += v.iov_len;
+  }
+}
+
+void
+memdisk::flush()
+{
+  // nothing needed
+}

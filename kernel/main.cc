@@ -40,6 +40,7 @@ void initrcu(void);
 void initproc(void);
 void initinode(void);
 void initdisk(void);
+void initmemide(void);
 void inituser(void);
 void initsamp(void);
 void inite1000(void);
@@ -253,6 +254,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initrtc();               // Requires inithpet
   initdev();               // Misc /dev nodes
   initdisk();      // disk
+  initmemide();
   initinode();     // inode cache
   initmfs();
 

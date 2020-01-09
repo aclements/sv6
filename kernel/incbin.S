@@ -16,4 +16,10 @@ include_bin(kernel/bootother,bootother)
 
 #if MEMIDE
 include_bin(fs.img,fs_img)
+#else
+.globl _fs_img_start
+_fs_img_start:
+.globl _fs_img_size
+_fs_img_size:
+  .quad 0
 #endif

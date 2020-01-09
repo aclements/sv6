@@ -15,6 +15,7 @@ disk_register(disk* d)
   disks.push_back(d);
 }
 
+// FIXME: make this an automated test
 static void
 disk_test(disk *d)
 {
@@ -55,7 +56,7 @@ sys_disktest(void)
   disk_test_all();
 }
 
-#if AHCIIDE
+#if AHCIIDE || MEMIDE
 
 static disk *
 selected_disk(void)

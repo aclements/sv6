@@ -111,9 +111,11 @@ private:
 void
 initahci(void)
 {
+#if AHCIIDE
   pci_register_class_driver(PCI_CLASS_MASS_STORAGE,
                             PCI_SUBCLASS_MASS_STORAGE_SATA,
                             &ahci_hba::attach);
+#endif
 }
 
 int

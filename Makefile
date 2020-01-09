@@ -229,14 +229,18 @@ ifeq ($(PLATFORM),xv6)
 QEMUOPTS += -device ahci,id=ahci0
 ifeq ($(BOOT),syslinux)
 QEMUOPTS += -drive if=none,file=$(O)/boot.img,format=raw,id=drive-sata0-0-0 \
-	    -device ide-drive,bus=ahci0.0,drive=drive-sata0-0-0,id=sata0-0-0 \
-	    -drive if=none,file=$(O)/fs.img,format=raw,id=drive-sata0-1-0 \
+	    -device ide-drive,bus=ahci0.0,drive=drive-sata0-0-0,id=sata0-0-0
+ifneq ($(FSDISK),no)
+QEMUOPTS += -drive if=none,file=$(O)/fs.img,format=raw,id=drive-sata0-1-0 \
 	    -device ide-drive,bus=ahci0.1,drive=drive-sata0-1-0,id=sata0-1-0
+endif
 qemu: $(O)/boot.img
 gdb: $(O)/boot.img
 else
+ifneq ($(FSDISK),no)
 QEMUOPTS += -drive if=none,file=$(O)/fs.img,format=raw,id=drive-sata0-0-0 \
 	    -device ide-drive,bus=ahci0.0,drive=drive-sata0-0-0,id=sata0-0-0
+endif
 endif
 qemu: $(O)/fs.img
 gdb: $(O)/fs.img
@@ -303,7 +307,7 @@ setup-linux:
 	ssh amsterdam.csail.mit.edu \
 	sed -i .bak "'s/^default /#&/;/^# *default localboot/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg
 
-$(O)/boot.fat: $(O)/kernel.elf
+$(O)/boot.fat: $(O)/kernel.elf syslinux.cfg
 	dd if=/dev/zero of=$@ bs=1024 count=65536
 	mkfs.fat -F 32 $@
 	mmd -i $@ ::boot
