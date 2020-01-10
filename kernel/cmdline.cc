@@ -104,12 +104,14 @@ initcmdline()
   cmdline_params.use_vga = parse_binary_option("use_vga", true);
   cmdline_params.lazy_barrier = parse_binary_option("lazy_barrier", true);
   cmdline_params.root_disk = parse_uint_option("root_disk", 0);
+  cmdline_params.mds = parse_binary_option("mds", true);
 
   if(CMDLINE_DEBUG){
     cprintf("cmdline: disable pcid? %s\n", cmdline_params.disable_pcid ? "yes" : "no");
     cprintf("cmdline: keep retpolines? %s\n", cmdline_params.keep_retpolines ? "yes" : "no");
     cprintf("cmdline: root disk? %lu\n", cmdline_params.root_disk);
     cprintf("cmdline: use vga? %s\n", cmdline_params.use_vga ? "yes" : "no");
+    cprintf("cmdline: mitigate MDS? %s\n", cmdline_params.mds ? "yes" : "no");
   }
 
   devsw[MAJ_CMDLINE].pread = cmdlineread;

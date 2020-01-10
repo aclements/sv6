@@ -19,6 +19,35 @@
 #define TRAP(x) _TRAP(x, NOEC)
 #define TRAPCODE(x) _TRAP(x, EC)
 
+#define _OPTIONAL(option, value, opcode) \
+    .section .rodata; \
+91:  .asciz option; \
+92:  .asciz value; \
+    .previous; \
+    .section .hotpatch, "a"; \
+    .quad opcode, 91b, 92b, 93f; \
+    .previous; \
+    93:
+
+#define OPTIONAL(option, value) \
+    _OPTIONAL(option, value, 0x1)
+#define OPTIONAL_KTEXT(option, value) \
+    _OPTIONAL(option, value, 0x2)
+#define OPTIONAL_QTEXT(option, value) \
+    _OPTIONAL(option, value, 0x3)
+
+#define OPTIONAL_OR_NOPS(option) \
+    .section .hotpatch, "a"; \
+    .quad 0x4, 0, 91f; \
+    .previous; \
+    91:
+
+#define OPTIONAL_OR_CALL(option, alternative) \
+    .section .hotpatch, "a"; \
+    .quad 0x5, alternative, 91f; \
+    .previous; \
+    91:
+
 .section .rodata
 mds_clear_cpu_buffers_ds:
 .long KDSEG
@@ -46,16 +75,13 @@ sysentry:
         swapgs
         movq    %rsp, %gs:GS_SCRATCH
 
-// hotpatch.cc will remove this if lazy_barrier is enabled.
-.globl sysentry_switch_pt
-sysentry_switch_pt:
+OPTIONAL("lazy_barrier", "no")
         lfence
 		movq %cr3, %rsp
 	    andq $(~0x1001), %rsp
 	    andq %gs:GS_CR3_MASK, %rsp
 	    movq %rsp, %cr3
-.globl sysentry_switch_pt_end
-sysentry_switch_pt_end:
+OPTIONAL_OR_NOPS("lazy_barrier")
 
         // %rsp and set it to point to the kstack
         movq    %gs:GS_PROC, %rsp  // myproc()
@@ -96,8 +122,10 @@ sysentry_switch_pt_end:
         pushq   %rax // syscall#
 
         movq $text, %rax
-.globl wfs1
-wfs1:   wrfsbase %rax
+
+OPTIONAL("fsgsbase", "yes")
+        wrfsbase %rax
+OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
 
         sti
         call    sysentry_c
@@ -106,8 +134,10 @@ wfs1:   wrfsbase %rax
         push    %rax
         movq    %gs:GS_PROC, %rax
         movq    PROC_USER_FS(%rax), %rax
-.globl wfs2
-wfs2:   wrfsbase %rax
+
+OPTIONAL("fsgsbase", "yes")
+        wrfsbase %rax
+OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
         pop     %rax
 
         // return using SYSRET
@@ -134,7 +164,9 @@ wfs2:   wrfsbase %rax
         movq    %rax, %cr3  // swap page table back
         movq    %gs:GS_SCRATCH, %rax
 
+OPTIONAL("mds", "yes")
         verw (mds_clear_cpu_buffers_ds)
+OPTIONAL_OR_NOPS("mds")
 
 1:      lfence
         swapgs
@@ -189,21 +221,20 @@ trapcommon:
         swapgs
 1:      lfence
 
-// This will be removed if lazy_barrier is enabled
-.globl trapcommon_switch_pt
-trapcommon_switch_pt:
+OPTIONAL("lazy_barrier", "no")
         call switch_to_kstack
-.globl trapcommon_switch_pt_end
-trapcommon_switch_pt_end:
+OPTIONAL_OR_NOPS("lazy_barrier")
 
         movq %rsp, %rdi  // first argument to trap
         movq (secrets_mapped), %rsi  // second argument to trap
-.globl rfs1
-rfs1:   rdfsbase %rax
+OPTIONAL("fsgsbase", "yes")
+        rdfsbase %rax
+OPTIONAL_OR_CALL("fsgsbase", emulate_rdfsbase)
         pushq %rax
         movq $text, %rax
-.globl wfs3
-wfs3:   wrfsbase %rax
+OPTIONAL("fsgsbase", "yes")
+        wrfsbase %rax
+OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
         call trap_c
         popq %rax
         // Fall through to trapret
@@ -212,8 +243,9 @@ wfs3:   wrfsbase %rax
 .balign 8
 trapret:
         cli
-.globl wfs4
-wfs4:   wrfsbase %rax
+OPTIONAL("fsgsbase", "yes")
+        wrfsbase %rax
+OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
         addq $0x10, %rsp
         popq %r15
         popq %r14

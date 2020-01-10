@@ -13,6 +13,12 @@ SECTIONS
         *(.rodata .rodata.* .gnu.linkonce.r.* .sflag)
     }
     . = ALIGN(0x1000);
+    .hotpatch : {
+        PROVIDE(__hotpatch_start = .);
+        *(.hotpatch)
+        PROVIDE(__hotpatch_end = .);
+    }
+    . = ALIGN(0x1000);
     .init_array : {
         PROVIDE_HIDDEN(__init_array_start = .);
         KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
