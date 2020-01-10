@@ -10,6 +10,11 @@ static static_vector<disk*, 64> disks;
 void
 disk_register(disk* d)
 {
+  for (disk *existing : disks) {
+    if (strcmp(d->dk_busloc, existing->dk_busloc) == 0) {
+      panic("attempt to register a second disk with the bus location \"%s\"\n", d->dk_busloc);
+    }
+  }
   cprintf("disk_register(%lu): %s: %ld bytes: %s\n",
           disks.size(), d->dk_busloc, d->dk_nbytes, d->dk_model);
   disks.push_back(d);
