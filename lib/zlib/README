@@ -1,0 +1,2 @@
+This directory contains selected files from zlib-1.2.11 -- currently just the
+files required to use crc32, but others might be used in the future.
