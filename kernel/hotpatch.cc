@@ -13,8 +13,13 @@
   if ((volatile void*)&symbol != NULL)           \
     replace(text_base, (u64)&symbol, replacement);
 
+#define PATCH_SEGMENT_KTEXT 0x1
+#define PATCH_SEGMENT_QTEXT 0x2
+#define PATCH_OPCODE_OR_NOPS 4
+#define PATCH_OPCODE_OR_CALL 5
+
 struct patch {
-  u64 segment;
+  u64 segment_mask;
   char* option;
   char* value;
   u64 start;
@@ -23,7 +28,7 @@ struct patch {
   u64 end;
 };
 
-void* qtext;
+char* qtext, *original_text;
 u8 secrets_mapped __attribute__((section (".sflag"))) = 1;
 extern u64 __hotpatch_start, __hotpatch_end;
 
@@ -71,76 +76,98 @@ void remove_range(char* text_base, u64 start, u64 end)
 
 void remove_retpolines()
 {
-  REPLACE((char*)qtext, __x86_indirect_thunk_rax, "\xff\xe0");
-  REPLACE((char*)qtext, __x86_indirect_thunk_rcx, "\xff\xe1");
-  REPLACE((char*)qtext, __x86_indirect_thunk_rdx, "\xff\xe2");
-  REPLACE((char*)qtext, __x86_indirect_thunk_rbx, "\xff\xe3");
-  REPLACE((char*)qtext, __x86_indirect_thunk_rsp, "\xff\xe4");
-  REPLACE((char*)qtext, __x86_indirect_thunk_rbp, "\xff\xe5");
-  REPLACE((char*)qtext, __x86_indirect_thunk_rsi, "\xff\xe6");
-  REPLACE((char*)qtext, __x86_indirect_thunk_rdi, "\xff\xe7");
-  REPLACE((char*)qtext, __x86_indirect_thunk_r8, "\x41\xff\xe0");
-  REPLACE((char*)qtext, __x86_indirect_thunk_r9, "\x41\xff\xe1");
-  REPLACE((char*)qtext, __x86_indirect_thunk_r10, "\x41\xff\xe2");
-  REPLACE((char*)qtext, __x86_indirect_thunk_r11, "\x41\xff\xe3");
-  REPLACE((char*)qtext, __x86_indirect_thunk_r12, "\x41\xff\xe4");
-  REPLACE((char*)qtext, __x86_indirect_thunk_r13, "\x41\xff\xe5");
-  REPLACE((char*)qtext, __x86_indirect_thunk_r14, "\x41\xff\xe6");
-  REPLACE((char*)qtext, __x86_indirect_thunk_r15, "\x41\xff\xe7");
+  REPLACE(qtext, __x86_indirect_thunk_rax, "\xff\xe0");
+  REPLACE(qtext, __x86_indirect_thunk_rcx, "\xff\xe1");
+  REPLACE(qtext, __x86_indirect_thunk_rdx, "\xff\xe2");
+  REPLACE(qtext, __x86_indirect_thunk_rbx, "\xff\xe3");
+  REPLACE(qtext, __x86_indirect_thunk_rsp, "\xff\xe4");
+  REPLACE(qtext, __x86_indirect_thunk_rbp, "\xff\xe5");
+  REPLACE(qtext, __x86_indirect_thunk_rsi, "\xff\xe6");
+  REPLACE(qtext, __x86_indirect_thunk_rdi, "\xff\xe7");
+  REPLACE(qtext, __x86_indirect_thunk_r8, "\x41\xff\xe0");
+  REPLACE(qtext, __x86_indirect_thunk_r9, "\x41\xff\xe1");
+  REPLACE(qtext, __x86_indirect_thunk_r10, "\x41\xff\xe2");
+  REPLACE(qtext, __x86_indirect_thunk_r11, "\x41\xff\xe3");
+  REPLACE(qtext, __x86_indirect_thunk_r12, "\x41\xff\xe4");
+  REPLACE(qtext, __x86_indirect_thunk_r13, "\x41\xff\xe5");
+  REPLACE(qtext, __x86_indirect_thunk_r14, "\x41\xff\xe6");
+  REPLACE(qtext, __x86_indirect_thunk_r15, "\x41\xff\xe7");
 }
 
-void apply_hotpatches(char* text_base, u64 segment)
+bool patch_needed(patch* p) {
+  bool value;
+
+  if(strcmp(p->value, "yes") == 0) {
+    value = true;
+  } else if(strcmp(p->value, "no") == 0) {
+    value = false;
+  } else {
+    return false;
+  }
+
+  bool cmdline_value = false;
+  if(strcmp(p->option, "lazy_barrier") == 0) {
+    cmdline_value = cmdline_params.lazy_barrier;
+  } else if(strcmp(p->option, "mds") == 0) {
+    cmdline_value = cmdline_params.mds;
+  } else if(strcmp(p->option, "fsgsbase") == 0) {
+    cmdline_value = cpuid::features().fsgsbase;
+  } else {
+    return false;
+  }
+
+  return cmdline_value != value;
+}
+
+void apply_hotpatches()
 {
+  char* text_bases[2] = {(char*)KTEXT, qtext};
+
   for (patch* p = (patch*)&__hotpatch_start; p < (patch*)&__hotpatch_end; p++) {
-    assert(p->segment == 1 || p->segment == 2 || p->segment == 3);
-    assert(p->opcode == 4 || p->opcode == 5);
+    assert(p->segment_mask == 1 || p->segment_mask == 2 || p->segment_mask == 3);
 
-    if(p->segment != segment)
-      continue;
+    for (int i = 0; i < 2; i++) {
+      if(!(p->segment_mask & (1<<i)))
+        continue;
 
-    // TODO: make this more programmatic
-    bool cmdline_value = false;
-    if(strcmp(p->option, "lazy_barrier") == 0)
-      cmdline_value = cmdline_params.lazy_barrier;
-    else if(strcmp(p->option, "mds") == 0)
-      cmdline_value = cmdline_params.mds;
-    else if(strcmp(p->option, "fsgsbase") == 0)
-      cmdline_value = cpuid::features().fsgsbase;
-
-
-    if ((!cmdline_value && strcmp(p->value, "yes") == 0) ||
-        (cmdline_value && strcmp(p->value, "no") == 0)) {
-      if (p->opcode == 0x5) {
-        assert(p->end - p->start >= 5);
-        insert_call_instruction(text_base, p->start, p->alternative);
-        p->start += 5;
+      if(patch_needed(p)) {
+        switch(p->opcode) {
+        case PATCH_OPCODE_OR_NOPS:
+          remove_range(text_bases[i], p->start, p->end);
+          break;
+        case PATCH_OPCODE_OR_CALL:
+          assert(p->end - p->start >= 5);
+          insert_call_instruction(text_bases[i], p->start, p->alternative);
+          remove_range(text_bases[i], p->start+5, p->end);
+          break;
+        default:
+          panic("hotpatch: bad opcode");
+        }
+      } else {
+        memcpy(&text_bases[i][p->start - KTEXT],
+               &original_text[p->start - KTEXT],
+               p->end - p->start);
       }
-      remove_range(text_base, p->start, p->end);
     }
   }
 }
 
 void inithotpatch()
 {
+  original_text = kalloc("original_text", 0x200000);
+  memmove(original_text, (void*)KTEXT, 0x200000);
+
+  qtext = kalloc("qtext", 0x200000);
+  memmove(qtext, (void*)KTEXT, 0x200000);
+
   // Hotpatching involves modifying the (normally) read only text
   // segment. Thus we temporarily disable write protection for kernel
   // pages. We'll re-enable it again at the end of this function.
   lcr0(rcr0() & ~CR0_WP);
 
-  // Apply any hotpatches that are for both ktext and qtext.
-  apply_hotpatches((char*)KTEXT, 1);
-
-  qtext = kalloc("qtext", 0x200000);
-  memmove(qtext, (void*)KTEXT, 0x200000);
   if(!cmdline_params.keep_retpolines)
     remove_retpolines();
-
-  // Apply ktext patches
-  apply_hotpatches((char*)KTEXT, 2);
-
-  // Apply qtext patches
-  apply_hotpatches((char*)qtext, 3);
-
+  apply_hotpatches();
   *(&secrets_mapped - KTEXT + (u64)qtext) = 0;
 
   lcr0(rcr0() | CR0_WP);

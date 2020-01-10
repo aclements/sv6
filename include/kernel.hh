@@ -124,7 +124,7 @@ long            futexwait(futexkey_t key, u64 val, u64 timer);
 long            futexwake(futexkey_t key, u64 nwake);
 
 // hotpatch.cc
-extern void*    qtext;
+extern char*    qtext;
 extern u8       secrets_mapped;
 void            remove_fsgsbase(void);
 

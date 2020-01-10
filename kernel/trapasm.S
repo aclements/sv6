@@ -30,11 +30,11 @@
     93:
 
 #define OPTIONAL(option, value) \
-    _OPTIONAL(option, value, 0x1)
-#define OPTIONAL_KTEXT(option, value) \
-    _OPTIONAL(option, value, 0x2)
-#define OPTIONAL_QTEXT(option, value) \
     _OPTIONAL(option, value, 0x3)
+#define OPTIONAL_KTEXT(option, value) \
+    _OPTIONAL(option, value, 0x1)
+#define OPTIONAL_QTEXT(option, value) \
+    _OPTIONAL(option, value, 0x2)
 
 #define OPTIONAL_OR_NOPS(option) \
     .section .hotpatch, "a"; \
