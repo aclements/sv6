@@ -28,12 +28,6 @@ our multicore machines also has a `HW` target (like `josmp` and
 `ben`), and other interesting `HW` targets are mentioned below.
 Builds go to `o.$HW`.
 
-### Common problems
-
-`panic: unhandled inode 369 type 0` on boot: This seems to be a bug in
-the virtual IDE controller of some versions of QEMU (though we're not
-positive).  Try upgrading (or downgrading) QEMU.
-
 
 Running sv6 on real hardware
 ----------------------------

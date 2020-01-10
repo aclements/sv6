@@ -82,8 +82,13 @@ ideread(u32 dev, char* data, u64 count, u64 offset)
   ide_select(dev, count, offset);
   outb(0x1f7, IDE_CMD_READ);
 
-  assert(idewait(1) >= 0);
-  insl(0x1f0, data, count/4);
+  assert(count % 512 == 0);
+  for (u32 sector = 0; sector < count / 512; sector++) {
+    // we need to wait for DRDY every sector
+    int err = idewait(1);
+    assert(err >= 0);
+    insl(0x1f0, data + sector * 512, 512 / 4);
+  }
 }
 
 void
@@ -96,9 +101,14 @@ idewrite(u32 dev, const char* data, u64 count, u64 offset)
 
   ide_select(dev, count, offset);
   outb(0x1f7, IDE_CMD_WRITE);
-  outsl(0x1f0, data, count/4);
 
-  assert(idewait(1) >= 0);
+  assert(count % 512 == 0);
+  for (u32 sector = 0; sector < count / 512; sector++) {
+    outsl(0x1f0, data + sector * 512, 512 / 4);
+    // we need to wait for DRDY every sector
+    int err = idewait(1);
+    assert(err >= 0);
+  }
 }
 
 void
