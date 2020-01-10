@@ -56,26 +56,19 @@ sys_disktest(void)
   disk_test_all();
 }
 
-static disk *
-selected_disk(void)
-{
-  unsigned long index = cmdline_params.root_disk;
-  if (index >= disks.size())
-    panic("disk %lu not found (%lu disks were found)", index, disks.size());
-  return disks[index];
-}
-
 // compat for a single IDE disk..
 void
-ideread(u32 dev, char* data, u64 count, u64 offset)
+disk_read(u32 dev, char* data, u64 count, u64 offset)
 {
-  selected_disk()->read(data, count, offset);
+  if (dev >= disks.size())
+    panic("disk %u not found (%lu disks were found)", dev, disks.size());
+  disks[dev]->read(data, count, offset);
 }
 
 void
-idewrite(u32 dev, const char* data, u64 count, u64 offset)
+disk_write(u32 dev, const char* data, u64 count, u64 offset)
 {
-  disk *d = selected_disk();
-  d->write(data, count, offset);
-  d->flush();
+  if (dev >= disks.size())
+    panic("disk %u not found (%lu disks were found)", dev, disks.size());
+  disks[dev]->write(data, count, offset);
 }

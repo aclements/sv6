@@ -2,6 +2,7 @@
 #include "kernel.hh"
 #include "buf.hh"
 #include "weakcache.hh"
+#include "disk.hh"
 
 static weakcache<buf::key_t, buf> bufcache(512 << 10);
 
@@ -22,7 +23,7 @@ buf::get(u32 dev, u64 block)
     auto locked = nb->write();
     if (bufcache.insert(k, nb.get())) {
       nb->inc();  // keep it in the cache
-      ideread(dev, locked->data, BSIZE, block*BSIZE);
+      disk_read(dev, locked->data, BSIZE, block*BSIZE);
       return nb;
     }
   }
@@ -37,7 +38,7 @@ buf::writeback()
 
   // write copy[] to disk; don't need to wait for write to finish,
   // as long as write order to disk has been established.
-  idewrite(dev_, copy->data, BSIZE, block_*BSIZE);
+  disk_write(dev_, copy->data, BSIZE, block_*BSIZE);
 }
 
 void

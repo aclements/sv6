@@ -5,10 +5,11 @@
 #include "mnode.hh"
 #include "linearhash.hh"
 #include "mfs.hh"
+#include "cmdline.hh"
 
 static linearhash<u64, sref<mnode>> *inum_to_mnode;
 
-static sref<mnode> load_inum(u64 inum);
+static sref<mnode> load_inum(u32 dev, u64 inum);
 
 static void
 load_dir(sref<inode> i, sref<mnode> m)
@@ -19,7 +20,7 @@ load_dir(sref<inode> i, sref<mnode> m)
     if (!de.inum)
       continue;
 
-    sref<mnode> mf = load_inum(de.inum);
+    sref<mnode> mf = load_inum(i->dev, de.inum);
     strbuf<DIRSIZ> name(de.name);
     if (name == ".")
       continue;
@@ -58,13 +59,13 @@ mnode_alloc(u64 inum, u8 mtype)
 }
 
 static sref<mnode>
-load_inum(u64 inum)
+load_inum(u32 dev, u64 inum)
 {
   sref<mnode> m;
   if (inum_to_mnode->lookup(inum, &m))
     return m;
 
-  sref<inode> i = iget(1, inum);
+  sref<inode> i = iget(dev, inum);
   switch (i->type.load()) {
   case T_DIR:
     m = mnode_alloc(inum, mnode::types::dir);
@@ -90,7 +91,7 @@ mfsload()
   anon_fs = new mfs();
 
   inum_to_mnode = new linearhash<u64, sref<mnode>>(4099);
-  root_inum = load_inum(1)->inum_;
+  root_inum = load_inum(cmdline_params.root_disk, 1)->inum_;
   /* the root inode gets an extra reference because of its own ".." */
   delete inum_to_mnode;
 }

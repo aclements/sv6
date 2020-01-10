@@ -41,6 +41,7 @@
 #include "dirns.hh"
 #include "kstream.hh"
 #include "lb.hh"
+#include "cmdline.hh"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 static sref<inode> the_root;
@@ -176,9 +177,10 @@ void
 initinode(void)
 {
   scoped_gc_epoch e;
+  u32 devnum = cmdline_params.root_disk;
 
   ins = new nstbl<pair<u32, u32>, inode*, ino_hash>();
-  the_root = inode::alloc(ROOTDEV, ROOTINO);
+  the_root = inode::alloc(devnum, ROOTINO);
   if (!ins->insert({the_root->dev, the_root->inum}, the_root.get()))
     panic("initinode: insert the_root failed");
   the_root->init();
@@ -187,7 +189,7 @@ initinode(void)
     struct superblock sb;
     u64 blocks;
 
-    readsb(ROOTDEV, &sb);
+    readsb(devnum, &sb);
     blocks = sb.ninodes/IPB;
     cprintf("initinode: %lu inode blocks (%lu / core)\n",
             blocks, blocks/NCPU);

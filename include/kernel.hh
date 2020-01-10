@@ -133,10 +133,7 @@ void            microdelay(u64);
 void            inithz(void);
 
 // ide.c
-void            ideinit(void);
 void            ideintr(void);
-void            ideread(u32 dev, char* data, u64 count, u64 offset);
-void            idewrite(u32 dev, const char* data, u64 count, u64 offset);
 
 // idle.cc
 struct proc *   idleproc(void);
