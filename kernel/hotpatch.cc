@@ -6,6 +6,23 @@
 #include "cpuid.hh"
 #include "cmdline.hh"
 
+struct patch {
+  u64 segment_mask;
+  const char* option;
+  const char* value;
+  u64 start;
+  u64 opcode;
+  u64 alternative;
+  u64 end;
+  u64 padding;
+};
+
+#define PATCH_SEGMENT_KTEXT 0x1
+#define PATCH_SEGMENT_QTEXT 0x2
+#define PATCH_OPCODE_OR_NOPS 4
+#define PATCH_OPCODE_OR_CALL 5
+#define PATCH_OPCODE_OR_STRING 6
+
 // Since we can't detect whether a symbol exists, we instead have kernel.ld
 // add non-present symbols with a value of zero.
 #define REPLACE(text_base, symbol, replacement)  \
@@ -13,20 +30,35 @@
   if ((volatile void*)&symbol != NULL)           \
     replace(text_base, (u64)&symbol, replacement);
 
-#define PATCH_SEGMENT_KTEXT 0x1
-#define PATCH_SEGMENT_QTEXT 0x2
-#define PATCH_OPCODE_OR_NOPS 4
-#define PATCH_OPCODE_OR_CALL 5
+#define PATCH_RETPOLINE(symbol, replacement)   \
+  extern u64 symbol;                           \
+  patch patch_##symbol                         \
+    __attribute__((section (".hotpatch"))) = { \
+    .segment_mask = PATCH_SEGMENT_QTEXT,       \
+    .option = "keep_retpolines",               \
+    .value = "no",                             \
+    .start = (u64)&symbol,                     \
+    .opcode = PATCH_OPCODE_OR_STRING,          \
+    .alternative = (u64)replacement,           \
+    .end = (u64)&symbol+sizeof(replacement)-1  \
+  };
 
-struct patch {
-  u64 segment_mask;
-  char* option;
-  char* value;
-  u64 start;
-  u64 opcode;
-  u64 alternative;
-  u64 end;
-};
+PATCH_RETPOLINE(__x86_indirect_thunk_rax, "\xff\xe0");
+PATCH_RETPOLINE(__x86_indirect_thunk_rcx, "\xff\xe1");
+PATCH_RETPOLINE(__x86_indirect_thunk_rdx, "\xff\xe2");
+PATCH_RETPOLINE(__x86_indirect_thunk_rbx, "\xff\xe3");
+PATCH_RETPOLINE(__x86_indirect_thunk_rsp, "\xff\xe4");
+PATCH_RETPOLINE(__x86_indirect_thunk_rbp, "\xff\xe5");
+PATCH_RETPOLINE(__x86_indirect_thunk_rsi, "\xff\xe6");
+PATCH_RETPOLINE(__x86_indirect_thunk_rdi, "\xff\xe7");
+PATCH_RETPOLINE(__x86_indirect_thunk_r8, "\x41\xff\xe0");
+PATCH_RETPOLINE(__x86_indirect_thunk_r9, "\x41\xff\xe1");
+PATCH_RETPOLINE(__x86_indirect_thunk_r10, "\x41\xff\xe2");
+PATCH_RETPOLINE(__x86_indirect_thunk_r11, "\x41\xff\xe3");
+PATCH_RETPOLINE(__x86_indirect_thunk_r12, "\x41\xff\xe4");
+PATCH_RETPOLINE(__x86_indirect_thunk_r13, "\x41\xff\xe5");
+PATCH_RETPOLINE(__x86_indirect_thunk_r14, "\x41\xff\xe6");
+PATCH_RETPOLINE(__x86_indirect_thunk_r15, "\x41\xff\xe7");
 
 char* qtext, *original_text;
 u8 secrets_mapped __attribute__((section (".sflag"))) = 1;
@@ -44,12 +76,6 @@ const char* NOP[] = {
   "\x0f\x1f\x84\x00\x00\x00\x00\x00",
   "\x66\x0f\x1f\x84\x00\x00\x00\x00\x00",
 };
-
-void replace(char* text_base, u64 location, const char* value)
-{
-  for(int i = 0; value[i] != '\0'; i++)
-    text_base[location - KTEXT + i] = value[i];
-}
 
 // Replace the 5 bytes at location with a call instruction to func
 void insert_call_instruction(char* text_base, u64 location, u64 func)
@@ -74,26 +100,6 @@ void remove_range(char* text_base, u64 start, u64 end)
   }
 }
 
-void remove_retpolines()
-{
-  REPLACE(qtext, __x86_indirect_thunk_rax, "\xff\xe0");
-  REPLACE(qtext, __x86_indirect_thunk_rcx, "\xff\xe1");
-  REPLACE(qtext, __x86_indirect_thunk_rdx, "\xff\xe2");
-  REPLACE(qtext, __x86_indirect_thunk_rbx, "\xff\xe3");
-  REPLACE(qtext, __x86_indirect_thunk_rsp, "\xff\xe4");
-  REPLACE(qtext, __x86_indirect_thunk_rbp, "\xff\xe5");
-  REPLACE(qtext, __x86_indirect_thunk_rsi, "\xff\xe6");
-  REPLACE(qtext, __x86_indirect_thunk_rdi, "\xff\xe7");
-  REPLACE(qtext, __x86_indirect_thunk_r8, "\x41\xff\xe0");
-  REPLACE(qtext, __x86_indirect_thunk_r9, "\x41\xff\xe1");
-  REPLACE(qtext, __x86_indirect_thunk_r10, "\x41\xff\xe2");
-  REPLACE(qtext, __x86_indirect_thunk_r11, "\x41\xff\xe3");
-  REPLACE(qtext, __x86_indirect_thunk_r12, "\x41\xff\xe4");
-  REPLACE(qtext, __x86_indirect_thunk_r13, "\x41\xff\xe5");
-  REPLACE(qtext, __x86_indirect_thunk_r14, "\x41\xff\xe6");
-  REPLACE(qtext, __x86_indirect_thunk_r15, "\x41\xff\xe7");
-}
-
 bool patch_needed(patch* p) {
   bool value;
 
@@ -112,6 +118,8 @@ bool patch_needed(patch* p) {
     cmdline_value = cmdline_params.mds;
   } else if(strcmp(p->option, "fsgsbase") == 0) {
     cmdline_value = cpuid::features().fsgsbase;
+  } else if(strcmp(p->option, "keep_retpolines") == 0) {
+    cmdline_value = cmdline_params.keep_retpolines;
   } else {
     return false;
   }
@@ -140,6 +148,11 @@ void apply_hotpatches()
           insert_call_instruction(text_bases[i], p->start, p->alternative);
           remove_range(text_bases[i], p->start+5, p->end);
           break;
+        case PATCH_OPCODE_OR_STRING:
+          memcpy(&text_bases[i][p->start - KTEXT],
+                 (char*)p->alternative,
+                 p->end - p->start);
+          break;
         default:
           panic("hotpatch: bad opcode");
         }
@@ -165,8 +178,6 @@ void inithotpatch()
   // pages. We'll re-enable it again at the end of this function.
   lcr0(rcr0() & ~CR0_WP);
 
-  if(!cmdline_params.keep_retpolines)
-    remove_retpolines();
   apply_hotpatches();
   *(&secrets_mapped - KTEXT + (u64)qtext) = 0;
 

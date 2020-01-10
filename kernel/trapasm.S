@@ -38,13 +38,13 @@
 
 #define OPTIONAL_OR_NOPS(option) \
     .section .hotpatch, "a"; \
-    .quad 0x4, 0, 91f; \
+    .quad 0x4, 0, 91f, 0; \
     .previous; \
     91:
 
 #define OPTIONAL_OR_CALL(option, alternative) \
     .section .hotpatch, "a"; \
-    .quad 0x5, alternative, 91f; \
+    .quad 0x5, alternative, 91f, 0; \
     .previous; \
     91:
 
