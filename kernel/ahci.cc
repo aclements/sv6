@@ -92,11 +92,13 @@ private:
 class ahci_hba : public irq_handler
 {
 public:
-  ahci_hba(struct pci_func *pcif);
+  ahci_hba(struct pci_func *pcif, u32 bus_num);
   ahci_hba(const ahci_hba &) = delete;
   ahci_hba &operator=(const ahci_hba &) = delete;
 
   static int attach(struct pci_func *pcif);
+
+  u32 bus_num();
 
   void handle_irq() override;
 
@@ -106,6 +108,7 @@ private:
   const u32 membase;
   volatile ahci_reg *const reg;
   ahci_port* port[32];
+  u32 _bus_num;
 };
 
 void
@@ -119,6 +122,8 @@ initahci(void)
 int
 ahci_hba::attach(struct pci_func *pcif)
 {
+  static u32 next_bus_num = 0;
+
   if (PCI_INTERFACE(pcif->dev_class) != 0x01) {
     console.println("AHCI: not an AHCI controller");
     return 0;
@@ -126,14 +131,15 @@ ahci_hba::attach(struct pci_func *pcif)
 
   console.println("AHCI: attaching");
   pci_func_enable(pcif);
-  ahci_hba *hba __attribute__((unused)) = new ahci_hba(pcif);
+  ahci_hba *hba __attribute__((unused)) = new ahci_hba(pcif, next_bus_num++);
   console.println("AHCI: done");
   return 1;
 }
 
-ahci_hba::ahci_hba(struct pci_func *pcif)
+ahci_hba::ahci_hba(struct pci_func *pcif, u32 bus_num)
   : membase(pcif->reg_base[5]),
-    reg((ahci_reg*) p2v(membase))
+    reg((ahci_reg*) p2v(membase)),
+    _bus_num(bus_num)
 {
   reg->g.ghc |= AHCI_GHC_AE;
 
@@ -147,6 +153,12 @@ ahci_hba::ahci_hba(struct pci_func *pcif)
   ahci_irq.enable();
   ahci_irq.register_handler(this);
   reg->g.ghc |= AHCI_GHC_IE;
+}
+
+u32
+ahci_hba::bus_num()
+{
+  return _bus_num;
 }
 
 void
@@ -248,7 +260,7 @@ ahci_port::ahci_port(ahci_hba *h, int p, volatile ahci_reg_port* reg)
   dk_serial[sizeof(dk_serial) - 1] = '\0';
   memcpy(dk_firmware, id_buf.id.firmware, sizeof(id_buf.id.firmware));
   dk_firmware[sizeof(dk_firmware) - 1] = '\0';
-  snprintf(dk_busloc, sizeof(dk_busloc), "ahci.%d", pid);
+  snprintf(dk_busloc, sizeof(dk_busloc), "ahci%u.%d", hba->bus_num(), pid);
 
   /* Enable write-caching, read look-ahead */
   memset(&fis, 0, sizeof(fis));
