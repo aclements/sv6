@@ -39,7 +39,7 @@ void initkalloc(void);
 void initrcu(void);
 void initproc(void);
 void initinode(void);
-void initdisk(void);
+void initide(void);
 void initmemide(void);
 void inituser(void);
 void initsamp(void);
@@ -248,12 +248,16 @@ cmain(u64 mbmagic, u64 mbaddr)
   initlockstat();
   initacpi();              // Requires initacpitables, initkalloc?
   inite1000();             // Before initpci
+#if AHCIIDE
   initahci();
+#endif
   initpci();               // Suggests initacpi
   initnet();
   initrtc();               // Requires inithpet
   initdev();               // Misc /dev nodes
-  initdisk();      // disk
+#if PORTIDE
+  initide();      // IDE driver
+#endif
   initmemide();
   initinode();     // inode cache
   initmfs();

@@ -72,6 +72,7 @@
 #define PERFSIZE      (16<<20ull)
 #define MEMIDE        1
 #define AHCIIDE       0
+#define PORTIDE       0
 #elif defined(HW_mtrace)
 #define DEBUG         0
 #define NCPU          16   // maximum number of CPUs
@@ -167,4 +168,7 @@
 #endif
 #ifndef AHCIIDE
 #define AHCIIDE 0
+#endif
+#ifndef PORTIDE
+#define PORTIDE 0
 #endif

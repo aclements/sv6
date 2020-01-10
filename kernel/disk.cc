@@ -56,8 +56,6 @@ sys_disktest(void)
   disk_test_all();
 }
 
-#if AHCIIDE || MEMIDE
-
 static disk *
 selected_disk(void)
 {
@@ -77,10 +75,7 @@ ideread(u32 dev, char* data, u64 count, u64 offset)
 void
 idewrite(u32 dev, const char* data, u64 count, u64 offset)
 {
-  selected_disk()->write(data, count, offset);
+  disk *d = selected_disk();
+  d->write(data, count, offset);
+  d->flush();
 }
-
-void initdisk() {}
-void ideintr() {}
-
-#endif
