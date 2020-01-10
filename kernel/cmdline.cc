@@ -93,6 +93,13 @@ static u64 parse_uint_option(const char* name, long default_value) {
   return (u64)ret;
 }
 
+static void parse_string_option(const char* name, const char *default_value, char *output) {
+  if(!getvalue(name, output) || output[0] == '\0') {
+    strncpy(output, default_value, CMDLINE_VALUE);
+    output[CMDLINE_VALUE] = '\0'; // just in case every byte was filled
+  }
+}
+
 void
 initcmdline()
 {
@@ -103,13 +110,13 @@ initcmdline()
   cmdline_params.keep_retpolines = parse_binary_option("keep_retpolines", false);
   cmdline_params.use_vga = parse_binary_option("use_vga", true);
   cmdline_params.lazy_barrier = parse_binary_option("lazy_barrier", true);
-  cmdline_params.root_disk = parse_uint_option("root_disk", 0);
+  parse_string_option("root_disk", "0", cmdline_params.root_disk);
   cmdline_params.mds = parse_binary_option("mds", true);
 
   if(CMDLINE_DEBUG){
     cprintf("cmdline: disable pcid? %s\n", cmdline_params.disable_pcid ? "yes" : "no");
     cprintf("cmdline: keep retpolines? %s\n", cmdline_params.keep_retpolines ? "yes" : "no");
-    cprintf("cmdline: root disk? %lu\n", cmdline_params.root_disk);
+    cprintf("cmdline: root disk? %s\n", cmdline_params.root_disk);
     cprintf("cmdline: use vga? %s\n", cmdline_params.use_vga ? "yes" : "no");
     cprintf("cmdline: mitigate MDS? %s\n", cmdline_params.mds ? "yes" : "no");
   }

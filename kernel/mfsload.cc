@@ -6,6 +6,7 @@
 #include "linearhash.hh"
 #include "mfs.hh"
 #include "cmdline.hh"
+#include "disk.hh"
 
 static linearhash<u64, sref<mnode>> *inum_to_mnode;
 
@@ -91,7 +92,7 @@ mfsload()
   anon_fs = new mfs();
 
   inum_to_mnode = new linearhash<u64, sref<mnode>>(4099);
-  root_inum = load_inum(cmdline_params.root_disk, 1)->inum_;
+  root_inum = load_inum(disk_find_root(), 1)->inum_;
   /* the root inode gets an extra reference because of its own ".." */
   delete inum_to_mnode;
 }

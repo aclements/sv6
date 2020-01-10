@@ -21,7 +21,7 @@ struct cmdline_params
   bool disable_pcid;
   bool keep_retpolines;
   bool lazy_barrier;
-  unsigned long root_disk;
+  char root_disk[CMDLINE_VALUE+1];
   bool use_vga;
   bool mds;
 };

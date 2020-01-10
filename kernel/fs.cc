@@ -42,6 +42,7 @@
 #include "kstream.hh"
 #include "lb.hh"
 #include "cmdline.hh"
+#include "disk.hh"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 static sref<inode> the_root;
@@ -177,7 +178,7 @@ void
 initinode(void)
 {
   scoped_gc_epoch e;
-  u32 devnum = cmdline_params.root_disk;
+  u32 devnum = disk_find_root();
 
   ins = new nstbl<pair<u32, u32>, inode*, ino_hash>();
   the_root = inode::alloc(devnum, ROOTINO);

@@ -38,5 +38,6 @@ public:
 };
 
 void disk_register(disk* d);
+u32 disk_find_root();
 void disk_read(u32 dev, char* data, u64 count, u64 offset);
 void disk_write(u32 dev, const char* data, u64 count, u64 offset);

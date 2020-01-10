@@ -10,8 +10,8 @@ static static_vector<disk*, 64> disks;
 void
 disk_register(disk* d)
 {
-  cprintf("disk_register: %s: %ld bytes: %s\n",
-          d->dk_busloc, d->dk_nbytes, d->dk_model);
+  cprintf("disk_register(%lu): %s: %ld bytes: %s\n",
+          disks.size(), d->dk_busloc, d->dk_nbytes, d->dk_model);
   disks.push_back(d);
 }
 
@@ -54,6 +54,39 @@ void
 sys_disktest(void)
 {
   disk_test_all();
+}
+
+// for use in parsing the root_disk cmdline; can either take a number or a bus location
+static u32
+disk_find(const char *description)
+{
+  // first, try parsing the description as a number
+  char *end = nullptr;
+  long ret;
+  ret = strtol(description, &end, 10);
+  if (*end == '\0') {
+    if (ret < 0 || ret >= disks.size()) {
+      panic("disk number %ld not identified (%lu disks were identified)", ret, disks.size());
+    }
+    return ret;
+  }
+
+  // if it's not a number, try it as a bus location
+  u32 index = 0;
+  for (disk* d : disks) {
+    if (strcmp(description, d->dk_busloc) == 0) {
+      return index;
+    }
+    index++;
+  }
+
+  panic("cannot identify disk with bus location \"%s\"", description);
+}
+
+u32
+disk_find_root()
+{
+  return disk_find(cmdline_params.root_disk);
 }
 
 // compat for a single IDE disk..
