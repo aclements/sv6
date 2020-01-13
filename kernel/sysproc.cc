@@ -11,6 +11,8 @@
 #include "futex.h"
 #include "version.hh"
 #include "filetable.hh"
+#include "ipi.hh"
+#include "cpuid.hh"
 
 #include <uk/mman.h>
 #include <uk/utsname.h>
@@ -343,5 +345,72 @@ sys_sigaction(int signo, userptr<struct sigaction> act, userptr<struct sigaction
     return -1;
   if (act && !act.load(&myproc()->sig[signo]))
     return -1;
+  return 0;
+}
+
+static u32 microcode_rev(){
+  writemsr(MSR_INTEL_UCODE_REV, 0);
+  cpuid(1, NULL, NULL, NULL, NULL);
+  return readmsr(MSR_INTEL_UCODE_REV) >> 32;
+}
+
+//SYSCALL
+u64
+sys_cpu_info(void)
+{
+  if (!cpuid::vendor_is_intel())
+    return (u64)-1;
+
+  u64 rev = microcode_rev();
+  auto model = cpuid::model();
+
+  return (rev << 32) |
+    ((model.family & 0xfff) << 12) |
+    ((model.model & 0xff) << 4) |
+    (model.stepping & 0xf);
+}
+
+//SYSCALL
+int
+sys_update_microcode(const void* data, u64 len)
+{
+  if (len < 48 || len > 0x100000)
+    return -1;
+
+  if (!cpuid::vendor_is_intel())
+    return -1;
+
+  char* microcode = kalloc("microcode", 0x100000);
+  if(fetchmem(microcode, data, len)) {
+    kfree(microcode);
+    return -1;
+  }
+
+  if (((u32*)microcode)[3] != cpuid::get_leaf(cpuid::leafid::features).a)
+    return -1;
+
+  auto install_microcode = [microcode]() -> bool {
+    u32 initial_rev = microcode_rev();
+    writemsr(MSR_INTEL_UCODE_WRITE, (u64)microcode + 48);
+    return microcode_rev() > initial_rev;
+  };
+
+  bitset<NCPU> remote_cpus;
+  {
+    scoped_cli cli;
+
+    if (!install_microcode()) {
+      kfree(microcode);
+      return -1;
+    }
+
+    for (cpuid_t i = 0; i < ncpu; i++) {
+      if (i != myid())
+        remote_cpus.set(i);
+    }
+  }
+
+  run_on_cpus(remote_cpus, install_microcode);
+  kfree(microcode);
   return 0;
 }

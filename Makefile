@@ -171,9 +171,9 @@ xv6memfs.img: bootblock kernelmemfs
 	dd if=bootblock of=xv6memfs.img conv=notrunc
 	dd if=kernelmemfs of=xv6memfs.img seek=1 conv=notrunc
 
-$(O)/fs.part: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
+$(O)/fs.part: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS) intel-ucode/*
 	@echo "  MKFS   $@"
-	$(Q)$(O)/tools/mkfs $@ $(FSEXTRA) $(UPROGS)
+	$(Q)$(O)/tools/mkfs $@ $(FSEXTRA) $(UPROGS) intel-ucode/*
 
 $(O)/fs.img: $(O)/fs.part
 	dd if=$< of=$@ conv=sparse obs=512 seek=2048

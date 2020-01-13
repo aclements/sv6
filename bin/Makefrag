@@ -69,6 +69,7 @@ UPROGS_BIN= \
 	getpid \
 	anon \
 	memsetbench \
+	update_ucode \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
