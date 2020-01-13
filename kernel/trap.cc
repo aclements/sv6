@@ -117,7 +117,7 @@ trap_c(struct trapframe *tf, bool had_secrets)
 
     // Manually copy the stack
     proc* p = myproc();
-    if (!had_secrets && p) {
+    if (!had_secrets && p && (tf->cs&3) == 0) {
       assert(tf->rsp >= (u64)p->kstack);
       assert(tf->rsp < (u64)p->kstack + KSTACKSIZE);
       memcpy((char*)tf->rsp, (char*)tf->rsp - (u64)p->kstack + (u64)p->qstack,
