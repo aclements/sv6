@@ -8,6 +8,7 @@
 #include "cpu.hh"
 #include "kmtrace.hh"
 #include "errno.h"
+#include "nospec-branch.hh"
 
 extern "C" int __uaccess_mem(void* dst, const void* src, u64 size);
 extern "C" int __uaccess_str(char* dst, const char* src, u64 size);
@@ -109,22 +110,24 @@ syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
 #if EXCEPTIONS
     try {
 #endif
-      if(num < nsyscalls && syscalls[num]) {
-        u64 r;
-        mtstart(syscalls[num], myproc());
-        mtrec();
-        {
-          mt_ascope ascope("syscall:%ld", num);
-          r = syscalls[num](a0, a1, a2, a3, a4, a5);
+      if(num < nsyscalls) {
+        auto fn = syscalls[array_index_nospec(num, nsyscalls)];
+        if (fn) {
+          u64 r;
+          mtstart(fn, myproc());
+          mtrec();
+          {
+            mt_ascope ascope("syscall:%ld", num);
+            r = fn(a0, a1, a2, a3, a4, a5);
+          }
+          mtstop(myproc());
+          mtign();
+          return r;
         }
-        mtstop(myproc());
-        mtign();
-        return r;
-      } else {
-        cprintf("%d %s: unknown sys call %ld\n",
-                myproc()->pid, myproc()->name, num);
-        return -1;
       }
+      cprintf("%d %s: unknown sys call %ld\n",
+              myproc()->pid, myproc()->name, num);
+      return -1;
 #if EXCEPTIONS
     } catch (std::bad_alloc& e) {
       cprintf("%d: syscall retry\n", myproc()->pid);

@@ -9,6 +9,7 @@
 // rdi user src
 // rsi kernel dst
 ENTRY(__uaccess_int64)
+        lfence
         push    %rbp            // For stack traces
         mov     %rsp, %rbp
 
@@ -23,6 +24,7 @@ ENTRY(__uaccess_int64)
 // rsi src
 // rdx dst len
 ENTRY(__uaccess_str)
+        lfence
         push    %rbp            // For stack traces
         mov     %rsp, %rbp
 
@@ -50,6 +52,7 @@ ENTRY(__uaccess_str)
 // rsi max len
 // Returns pointer to NUL or (char*)-1 on failure
 ENTRY(__uaccess_strend)
+        lfence
         push    %rbp            // For stack traces
         mov     %rsp, %rbp
 
@@ -76,6 +79,7 @@ ENTRY(__uaccess_strend)
 // rsi src
 // rdx len
 ENTRY(__uaccess_mem)
+        lfence
         push    %rbp            // For stack traces
         mov     %rsp, %rbp
 
