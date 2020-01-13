@@ -74,6 +74,7 @@ writecons(int c, void *arg)
 struct bufstate {
   char *p;
   char *e;
+  int total;
 };
 
 static void
@@ -84,24 +85,28 @@ writebuf(int c, void *arg)
     bs->p[0] = c;
     bs->p++;
   }
+  bs->total++;
 }
 
-void
+int
 vsnprintf(char *buf, u32 n, const char *fmt, va_list ap)
 {
-  struct bufstate bs = { buf, buf+n-1 };
+  struct bufstate bs = { buf, buf+n-1, 0 };
   vprintfmt(writebuf, (void*) &bs, fmt, ap);
   bs.p[0] = '\0';
+  return bs.total;
 }
 
-void
+int
 snprintf(char *buf, u32 n, const char *fmt, ...)
 {
+  int total;
   va_list ap;
 
   va_start(ap, fmt);
-  vsnprintf(buf, n, fmt, ap);
+  total = vsnprintf(buf, n, fmt, ap);
   va_end(ap);
+  return total;
 }
 
 void
