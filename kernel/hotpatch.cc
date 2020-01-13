@@ -120,6 +120,8 @@ bool patch_needed(patch* p) {
     cmdline_value = cpuid::features().fsgsbase;
   } else if(strcmp(p->option, "keep_retpolines") == 0) {
     cmdline_value = cmdline_params.keep_retpolines;
+  } else if(strcmp(p->option, "kvm_paravirt") == 0) {
+    cmdline_value = (strcmp(cpuid::features().hypervisor_id, "KVMKVMKVM") == 0);
   } else {
     return false;
   }

@@ -21,6 +21,8 @@ public:
     ext_state = 0xd,            // Depends on ecx
     qos = 0xf,                  // Depends on ecx
 
+    hypervisor = 0x40000000,
+
     extended_info = 0x80000000,
     extended_features = 0x80000001,
   };
@@ -169,6 +171,7 @@ public:
     bool pdcm : 1;              // Perfmon and debug
     bool pcid : 1;
     bool x2apic : 1;
+    bool hypervisor: 1;
 
     // 1.EDX
     bool apic : 1;              // "APIC on chip"
@@ -184,6 +187,8 @@ public:
 
     // 80000001.EDX
     bool page1GB : 1;
+
+    char hypervisor_id[13];
   };
 
   static features_info &features()

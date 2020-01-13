@@ -32,6 +32,7 @@ cpuid::cpuid() : basic_{}, extended_{}
   features_.pdcm = l.c & (1<<15);
   features_.pcid = l.c & (1<<17);
   features_.x2apic = l.c & (1<<21);
+  features_.hypervisor = l.c & (1<<31);
 
   features_.apic = l.d & (1<<9);
   features_.ds = l.d & (1<<21);
@@ -39,10 +40,20 @@ cpuid::cpuid() : basic_{}, extended_{}
   l = get_leaf(leafid::ext_features);
   features_.fsgsbase = l.b & (1<<0);
   features_.intel_pt = l.b & (1<<25);
-
-  l = get_leaf(leafid::ext_features);
   features_.md_clear = l.d & (1<<10);
   features_.spec_ctrl = l.d & (1<<26);
+
+  if(features_.hypervisor) {
+    // We can't use get_leaf because the hypervisor leaf will be rejected by the
+    // maximum leaf check.
+    l = read_leaf((uint32_t)leafid::hypervisor);
+    *(uint32_t*)features_.hypervisor_id = l.b;
+    *(uint32_t*)(features_.hypervisor_id+4) = l.c;
+    *(uint32_t*)(features_.hypervisor_id+8) = l.d;
+    features_.hypervisor_id[12] = '\0';
+  } else {
+    features_.hypervisor_id[0] = '\0';
+  }
 
   l = get_leaf(leafid::extended_features);
   features_.page1GB = l.d & (1<<26);
