@@ -335,10 +335,11 @@ $(O)/boot.fat: $(O)/kernel.elf syslinux.cfg
 	mcopy -i $@ $(O)/kernel.elf ::boot/sv6
 	mcopy -i $@ ./syslinux.cfg ::
 	syslinux --directory boot/syslinux -i $@
-$(O)/boot.img: $(O)/boot.fat
+$(O)/boot.img: $(O)/boot.fat $(O)/fs.img
 	dd if=$< of=$@ conv=sparse obs=512 seek=2048
-	truncate -s "+1048576" $@
-	parted -s --align optimal $@ mklabel msdos mkpart primary 1MiB '100%' set 1 boot on
+	dd if=$(O)/fs.img of=$@ conv=sparse obs=512 seek=143360
+	truncate -s "101M" $@
+	parted -s --align optimal $@ mklabel msdos mkpart primary 1MiB 70MiB set 1 boot on mkpart primary 70MiB 100MiB
 	dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/mbr.bin of=$@
 $(O)/boot.vhdx: $(O)/boot.img
 	qemu-img convert -f raw -O vhdx $< $@
