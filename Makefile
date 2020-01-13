@@ -171,9 +171,14 @@ xv6memfs.img: bootblock kernelmemfs
 	dd if=bootblock of=xv6memfs.img conv=notrunc
 	dd if=kernelmemfs of=xv6memfs.img seek=1 conv=notrunc
 
-$(O)/fs.img: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
+$(O)/fs.part: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS)
 	@echo "  MKFS   $@"
 	$(Q)$(O)/tools/mkfs $@ $(FSEXTRA) $(UPROGS)
+
+$(O)/fs.img: $(O)/fs.part
+	dd if=$< of=$@ conv=sparse obs=512 seek=2048
+	truncate -s "51M" $@
+	parted -s --align optimal $@ mklabel gpt mkpart sv6filesystem 1MiB 50MiB
 
 .PRECIOUS: $(O)/%.o
 .PHONY: clean qemu gdb rsync codex
@@ -227,23 +232,31 @@ endif
 
 ifeq ($(BOOT),syslinux)
 SATA0 := $(O)/boot.img
+# root disk configured in syslinux.cfg
 endif
 
 ifeq ($(PLATFORM),xv6)
 ifeq ($(FSDISK),ide)
-IDE0 := $(O)/fs.img
+# not fs.img because IDE disks don't support length detection yet
+IDE0 := $(O)/fs.part
+ROOT_DISK := ide0.0
 else
 ifneq ($(FSDISK),no)
 ifeq ($(SATA0),)
 SATA0 := $(O)/fs.img
+ROOT_DISK := ahci0.0p1
 else
 SATA1 := $(O)/fs.img
+ROOT_DISK := ahci0.1p1
 endif
 endif
 endif
 endif
 
 ifneq ($(IDE0),)
+# FIXME: this currently doesn't work, because the IDE driver can't detect that
+# no CDROM is actually inserted in the CDROM drive that QEMU attaches by default
+# FIXME: this also breaks FSDISK=no
 QEMUOPTS += -drive file=$(IDE0),index=0,media=disk,format=raw
 ## QEMUOPTS += -drive if=none,file=$(IDE0),format=raw,id=drive-ide0-0 \
 ## 	    -device ide-drive,bus=ide.0,drive=drive-ide0-0,id=ide0-0
@@ -269,7 +282,10 @@ QEMUOPTS += -initrd $(O)/initramfs
 endif
 
 ifneq ($(BOOT),syslinux)
-QEMUOPTS += -kernel $(KERN)
+ifeq ($(ROOT_DISK),)
+ROOT_DISK = 0
+endif
+QEMUOPTS += -kernel $(KERN) -append root_disk=$(ROOT_DISK)
 qemu: $(KERN)
 gdb: $(KERN)
 endif
@@ -335,9 +351,9 @@ $(O)/boot.fat: $(O)/kernel.elf syslinux.cfg
 	mcopy -i $@ $(O)/kernel.elf ::boot/sv6
 	mcopy -i $@ ./syslinux.cfg ::
 	syslinux --directory boot/syslinux -i $@
-$(O)/boot.img: $(O)/boot.fat $(O)/fs.img
+$(O)/boot.img: $(O)/boot.fat $(O)/fs.part
 	dd if=$< of=$@ conv=sparse obs=512 seek=2048
-	dd if=$(O)/fs.img of=$@ conv=sparse obs=512 seek=143360
+	dd if=$(O)/fs.part of=$@ conv=sparse obs=512 seek=143360
 	truncate -s "101M" $@
 	parted -s --align optimal $@ mklabel msdos mkpart primary 1MiB 70MiB set 1 boot on mkpart primary 70MiB 100MiB
 	dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/mbr.bin of=$@

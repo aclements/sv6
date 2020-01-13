@@ -131,7 +131,7 @@ $(O)/kernel/%.o: $(O)/kernel/%.cc $(O)/sysroot
 	$(Q)$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(O)/kernel/incbin.o: ASFLAGS+=-DMAKE_OUT=$(O)
-$(O)/kernel/incbin.o: $(O)/kernel/initcode $(O)/kernel/bootother $(O)/fs.img
+$(O)/kernel/incbin.o: $(O)/kernel/initcode $(O)/kernel/bootother $(O)/fs.part
 
 # link initcode against sysstubs to get syscall numbers
 $(O)/kernel/initcode: TTEXT = 0x1000

@@ -15,7 +15,7 @@ include_bin(kernel/initcode,initcode)
 include_bin(kernel/bootother,bootother)
 
 #if MEMIDE
-include_bin(fs.img,fs_img)
+include_bin(fs.part,fs_img)
 #else
 .globl _fs_img_start
 _fs_img_start:
