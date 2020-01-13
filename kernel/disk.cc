@@ -4,11 +4,13 @@
 #include "vector.hh"
 #include "cmdline.hh"
 #include <cstring>
+#include "disk.hh"
 
 static static_vector<disk*, 64> disks;
+static static_vector<disk_listener, 64> listeners;
 
 void
-disk_register(disk* d)
+disk_register(disk *d)
 {
   for (disk *existing : disks) {
     if (strcmp(d->dk_busloc, existing->dk_busloc) == 0) {
@@ -18,6 +20,20 @@ disk_register(disk* d)
   cprintf("disk_register(%lu): %s: %ld bytes: %s\n",
           disks.size(), d->dk_busloc, d->dk_nbytes, d->dk_model);
   disks.push_back(d);
+  // note: disk listeners MAY call disk_register again!
+  // FIXME: make sure this recursion can't break anything
+  for (disk_listener l : listeners) {
+    l(d);
+  }
+}
+
+void
+disk_subscribe(disk_listener l)
+{
+  listeners.push_back(l);
+  for (disk *d : disks) {
+    l(d);
+  }
 }
 
 // FIXME: make this an automated test

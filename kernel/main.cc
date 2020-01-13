@@ -41,6 +41,7 @@ void initproc(void);
 void initinode(void);
 void initide(void);
 void initmemide(void);
+void initpartition(void);
 void inituser(void);
 void initsamp(void);
 void inite1000(void);
@@ -259,6 +260,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initide();      // IDE driver
 #endif
   initmemide();
+  initpartition();
   initinode();     // inode cache
   initmfs();
 

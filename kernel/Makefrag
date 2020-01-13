@@ -81,6 +81,7 @@ OBJS = \
 	disk.o \
 	multiboot.o \
 	vga.o \
+	partition.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 

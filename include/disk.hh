@@ -21,6 +21,7 @@ public:
   char dk_serial[20];
   char dk_firmware[8];
   char dk_busloc[20];
+  bool can_have_partitions = true;
 
   virtual void readv(kiovec *iov, int iov_cnt, u64 off) = 0;
   virtual void writev(kiovec *iov, int iov_cnt, u64 off) = 0;
@@ -37,7 +38,11 @@ public:
   }
 };
 
-void disk_register(disk* d);
+typedef void (*disk_listener)(disk *d);
+
+void disk_register(disk *d);
 u32 disk_find_root();
 void disk_read(u32 dev, char* data, u64 count, u64 offset);
 void disk_write(u32 dev, const char* data, u64 count, u64 offset);
+
+void disk_subscribe(disk_listener l);
