@@ -76,7 +76,7 @@ compute_offset(file_inode *fi, off_t *fioffp, off_t offset, int whence)
   }
 
   case SEEK_END:
-    if (offset < 0 && fi->ip->check_read_at(-offset-1) < 0)
+    if (offset < 0 && !fi->ip->is_offset_in_file(-offset - 1))
       return -1;
 
     return offset + fi->ip->file_size();

@@ -20,7 +20,7 @@ static int
 dosegment(sref<vnode> ip, vmap* vmp, u64 off, u64 *load_addr)
 {
   struct proghdr ph;
-  if(ip->perform_read_at((char*)&ph, off, sizeof(ph)) != sizeof(ph))
+  if(ip->read_at((char *) &ph, off, sizeof(ph)) != sizeof(ph))
     return -1;
   if(ph.type != ELF_PROG_LOAD)
     return -1;
@@ -75,7 +75,7 @@ dosegment(sref<vnode> ip, vmap* vmp, u64 off, u64 *load_addr)
       size_t to_read = ph.filesz - seg_pos;
       if (to_read > sizeof(buf))
         to_read = sizeof(buf);
-      int res = ip->perform_read_at(buf, ph.offset + seg_pos, to_read);
+      int res = ip->read_at(buf, ph.offset + seg_pos, to_read);
       if (res <= 0)
         return -1;
       if (vmp->copyout(ph.vaddr + seg_pos, buf, res) < 0)
@@ -214,7 +214,7 @@ load_image(proc *p, const char *path, const char * const *argv,
   // Check header
   char buf[1024];
 
-  ssize_t sz = ip->perform_read_at(buf, 0, sizeof(buf));
+  ssize_t sz = ip->read_at(buf, 0, sizeof(buf));
   if (sz < 0)
     return -1;
 
@@ -248,9 +248,9 @@ load_image(proc *p, const char *path, const char * const *argv,
   u64 load_addr = -1;
   for (size_t i=0, off=elf->phoff; i<elf->phnum; i++, off+=sizeof(proghdr)){
     Elf64_Word type;
-    if(ip->perform_read_at((char*)&type,
-             off+__offsetof(struct proghdr, type), 
-             sizeof(type)) != sizeof(type))
+    if(ip->read_at((char *) &type,
+                   off + __offsetof(struct proghdr, type),
+                   sizeof(type)) != sizeof(type))
       return -1;
 
     switch (type) {

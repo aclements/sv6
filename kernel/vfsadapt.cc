@@ -8,31 +8,33 @@
 
 class vnode_mfs : public vnode {
 public:
-  explicit vnode_mfs(sref<mnode> node);
+  explicit vnode_mfs(sref<mnode>  node);
 
-  sref<page_info> get_page_info(u64 page_idx) override;
-  int stat(struct stat *st, enum stat_flags flags) override;
-  int get_device(u16 *major_out, u16 *minor_out) override;
-  bool is_directory() override;
+  void stat(struct stat *st, enum stat_flags flags) override;
+
   bool is_regular_file() override;
   u64 file_size() override;
-  bool child_exists(strbuf<14> name) override;
-  int check_read_at(u64 offset) override;
-  int perform_read_at(char *addr, u64 off, size_t len) override;
+  bool is_offset_in_file(u64 offset) override;
+  int read_at(char *addr, u64 off, size_t len) override;
   int write_at(const char *addr, u64 off, size_t len, bool append) override;
-  int perform_write_at(const char *addr, u64 offset, size_t len) override;
   void truncate() override;
+  sref<page_info> get_page_info(u64 page_idx) override;
+
+  bool is_directory() override;
+  bool child_exists(strbuf<14> name) override;
   bool next_dirent(strbuf<DIRSIZ> *last, strbuf<DIRSIZ> *next) override;
+
   int hardlink(strbuf<DIRSIZ> name, sref<vnode> olddir, strbuf<DIRSIZ> oldname) override;
   int rename(strbuf<DIRSIZ> newname, sref<vnode> olddir, strbuf<DIRSIZ> oldname) override;
   int remove(strbuf<DIRSIZ> name) override;
   sref<vnode> create(strbuf<DIRSIZ> name, short type, short major, short minor, bool excl) override;
+
+  bool as_device(u16 *major_out, u16 *minor_out) override;
+
   void setup_socket(struct localsock *sock) override;
   struct localsock *get_socket() override;
 
-  filesystem *fs() const override;
-
-  static sref<vnode_mfs> wrap(sref<mnode> m) {
+  static sref<vnode_mfs> wrap(const sref<mnode>& m) {
     // FIMXE: figure out if adding this ->killed() code here is a problem
     if (m && !(m->type() == mnode::types::dir && m->as_dir()->killed()))
       return make_sref<vnode_mfs>(m);
@@ -58,7 +60,7 @@ vnode_mfs::get_page_info(u64 page_idx)
   return this->node->as_file()->get_page(page_idx).get_page_info();
 }
 
-int
+void
 vnode_mfs::stat(struct stat *st, enum stat_flags flags)
 {
   u8 stattype = 0;
@@ -67,7 +69,7 @@ vnode_mfs::stat(struct stat *st, enum stat_flags flags)
     case mnode::types::file: stattype = T_FILE; break;
     case mnode::types::dev:  stattype = T_DEV;  break;
     case mnode::types::sock: stattype = T_SOCKET;  break;
-    default: cprintf("Unknown type %d\n", node->type());
+    default: panic("unknown inode type %d", node->type());
   }
 
   st->st_mode = stattype << __S_IFMT_SHIFT;
@@ -78,18 +80,16 @@ vnode_mfs::stat(struct stat *st, enum stat_flags flags)
   st->st_size = 0;
   if (node->type() == mnode::types::file)
     st->st_size = *node->as_file()->read_size();
-  return 0;
 }
 
-int
-vnode_mfs::get_device(u16 *major_out, u16 *minor_out)
+bool
+vnode_mfs::as_device(u16 *major_out, u16 *minor_out)
 {
-  if (node->type() == mnode::types::dev) {
-    *major_out = node->as_dev()->major();
-    *minor_out = node->as_dev()->minor();
-    return 0;
-  }
-  return -1;
+  if (node->type() != mnode::types::dev)
+    return false;
+  *major_out = node->as_dev()->major();
+  *minor_out = node->as_dev()->minor();
+  return true;
 }
 
 bool
@@ -116,21 +116,19 @@ vnode_mfs::child_exists(strbuf<14> name)
   return node->as_dir()->exists(name);
 }
 
-int
-vnode_mfs::check_read_at(u64 off)
+bool
+vnode_mfs::is_offset_in_file(u64 off)
 {
-  if (node->type() != mnode::types::file)
-    return -1;
   mfile::page_state ps = node->as_file()->get_page(off / PGSIZE);
   if (!ps.get_page_info())
-    return -2;
-  if (ps.is_partial_page() && off >= *node->as_file()->read_size())
-    return -2;
-  return 0;
+    return false;
+  if (!ps.is_partial_page())
+    return true;
+  return off < this->file_size();
 }
 
 int
-vnode_mfs::perform_read_at(char *addr, u64 off, size_t n)
+vnode_mfs::read_at(char *addr, u64 off, size_t n)
 {
   return readi(node, addr, off, n);
 }
@@ -138,9 +136,6 @@ vnode_mfs::perform_read_at(char *addr, u64 off, size_t n)
 int
 vnode_mfs::write_at(const char *addr, u64 off, size_t n, bool append)
 {
-  if (node->type() != mnode::types::file)
-    return -1;
-
   mfile::resizer resize;
   if (append) {
     resize = node->as_file()->write_size();
@@ -148,12 +143,6 @@ vnode_mfs::write_at(const char *addr, u64 off, size_t n, bool append)
   }
 
   return writei(node, addr, off, n, append ? &resize : nullptr);
-}
-
-int
-vnode_mfs::perform_write_at(const char *addr, u64 off, size_t n)
-{
-  return writei(node, addr, off, n);
 }
 
 void
@@ -172,10 +161,9 @@ vnode_mfs::next_dirent(strbuf<DIRSIZ> *last, strbuf<DIRSIZ> *next)
 int
 vnode_mfs::hardlink(strbuf<DIRSIZ> name, sref<vnode> olddir, strbuf<DIRSIZ> oldname)
 {
-  if (olddir->fs() != fs()) // cannot hardlink across filesystems
+  auto olddir_mfs = olddir->try_cast<vnode_mfs>();
+  if (!olddir_mfs) // cannot hardlink across filesystems
     return -1;
-
-  auto olddir_mfs = olddir->cast<vnode_mfs>(fs());
 
   mlinkref mflink = olddir_mfs->node->as_dir()->lookup_link(oldname);
   if (!mflink.mn() || mflink.mn()->type() == mnode::types::dir)
@@ -193,10 +181,9 @@ vnode_mfs::rename(strbuf<DIRSIZ> newname, sref<vnode> olddir, strbuf<DIRSIZ> old
   if (olddir == this && oldname == newname)
     return 0;
 
-  if (olddir->fs() != fs()) // cannot rename across filesystems
+  auto olddir_mfs = olddir->try_cast<vnode_mfs>();
+  if (!olddir_mfs) // cannot rename across filesystems
     return -1;
-
-  auto olddir_mfs = olddir->cast<vnode_mfs>(fs());
 
   for (;;) {
     sref<mnode> mfold = olddir_mfs->node->as_dir()->lookup(oldname);
@@ -371,12 +358,6 @@ private:
 
 filesystem_mfs filesystem_mfs::_singleton;
 
-filesystem *
-vnode_mfs::fs() const
-{
-  return filesystem_mfs::singleton();
-}
-
 sref<vnode>
 filesystem_mfs::root()
 {
@@ -389,7 +370,7 @@ filesystem_mfs::resolve(sref<vnode> base, const char *path)
   if (!base) {
     return vnode_mfs::wrap(namei(sref<mnode>(), path));
   }
-  auto v = base->cast<vnode_mfs>(this);
+  auto v = base->cast<vnode_mfs>();
   return vnode_mfs::wrap(namei(v->node, path));
 }
 
@@ -399,7 +380,7 @@ filesystem_mfs::resolveparent(sref<vnode> base, const char *path, strbuf<DIRSIZ>
   if (!base) {
     return vnode_mfs::wrap(nameiparent(sref<mnode>(), path, name));
   }
-  auto v = base->cast<vnode_mfs>(this);
+  auto v = base->cast<vnode_mfs>();
   return vnode_mfs::wrap(nameiparent(v->node, path, name));
 }
 

@@ -13,13 +13,9 @@ struct devsw __mpalign__ devsw[NDEV];
 int
 file_inode::stat(struct stat *st, enum stat_flags flags)
 {
-  int err;
-  err = ip->stat(st, flags);
-  if (err < 0) {
-    return err;
-  }
+  ip->stat(st, flags);
   u16 major, minor;
-  if (ip->get_device(&major, &minor) == 0 && major < NDEV && devsw[major].stat)
+  if (ip->as_device(&major, &minor) && major < NDEV && devsw[major].stat)
     devsw[major].stat(st);
   return 0;
 }
@@ -33,7 +29,7 @@ file_inode::read(char *addr, size_t n)
   lock_guard<sleeplock> l;
   ssize_t r;
   u16 major, minor;
-  if (ip->get_device(&major, &minor) == 0) {
+  if (ip->as_device(&major, &minor)) {
     if (major >= NDEV)
       return -1;
     if (devsw[major].read) {
@@ -44,16 +40,14 @@ file_inode::read(char *addr, size_t n)
     } else {
       return -1;
     }
+  } else if (!ip->is_regular_file()) {
+    return -1;
   } else {
-    int status;
-    status = ip->check_read_at(off);
-    if (status == -1) // file not readable
-      return -1;
-    if (status == -2) // EOF
+    if (!ip->is_offset_in_file(off))
       return 0;
 
     l = off_lock.guard();
-    r = ip->perform_read_at(addr, off, n);
+    r = ip->read_at(addr, off, n);
   }
   if (r > 0)
     off += r;
@@ -61,15 +55,14 @@ file_inode::read(char *addr, size_t n)
 }
 
 ssize_t
-file_inode::write(const char *addr, size_t n)
-{
+file_inode::write(const char *addr, size_t n) {
   if (!writable)
     return -1;
 
   lock_guard<sleeplock> l;
   ssize_t r;
   u16 major, minor;
-  if (ip->get_device(&major, &minor) == 0) {
+  if (ip->as_device(&major, &minor)) {
     if (major >= NDEV)
       return -1;
     if (devsw[major].write) {
@@ -80,6 +73,8 @@ file_inode::write(const char *addr, size_t n)
     } else {
       return -1;
     }
+  } else if (!ip->is_regular_file()) {
+    return -1;
   } else {
     l = off_lock.guard();
     r = ip->write_at(addr, off, n, append);
@@ -96,12 +91,12 @@ file_inode::pread(char *addr, size_t n, off_t off)
   if (!readable)
     return -1;
   u16 major, minor;
-  if (ip->get_device(&major, &minor) == 0) {
+  if (ip->as_device(&major, &minor)) {
     if (major >= NDEV || !devsw[major].pread)
       return -1;
     return devsw[major].pread(addr, off, n);
   }
-  return ip->perform_read_at(addr, off, n);
+  return ip->read_at(addr, off, n);
 }
 
 ssize_t
@@ -110,12 +105,12 @@ file_inode::pwrite(const char *addr, size_t n, off_t off)
   if (!writable)
     return -1;
   u16 major, minor;
-  if (ip->get_device(&major, &minor) == 0) {
+  if (ip->as_device(&major, &minor)) {
     if (major >= NDEV || !devsw[major].pwrite)
       return -1;
     return devsw[major].pwrite(addr, off, n);
   }
-  return ip->perform_write_at(addr, off, n);
+  return ip->write_at(addr, off, n, false);
 }
 
 
