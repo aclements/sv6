@@ -1,21 +1,20 @@
 #pragma once
-#define NCPU_PER_SOCKET (NCPU/NSOCKET)
 
 #include "rnd.hh"
 #include "percpu.hh"
 
-#if NCPU_PER_SOCKET < 1
-// we need at least one CPU per socket for the assumptions made by the load
-// balancer code here to work.
-#error Cannot set NSOCKET larger than NCPU
-#endif
-
 template<int N>
 struct random_permutation {
  public:
-  random_permutation() : i_(0) {
-    assert(N <= 256);
-    for (int i = 0; i < N; i++)
+  random_permutation() : i_(0), n_(N) {
+    assert(n_ <= N && n_ <= 256);
+    for (int i = 0; i < n_; i++)
+      x_[i] = i;
+  }
+
+  void resize(int n) {
+    n_ = n;
+    for (int i = 0; i < n_; i++)
       x_[i] = i;
   }
 
@@ -25,9 +24,9 @@ struct random_permutation {
 
   int next() {
 #if CODEX
-    int r = rnd() % (N - i_);
+    int r = rnd() % (n_ - i_);
 #else
-    int r = rdtsc() % (N - i_);
+    int r = rdtsc() % (n_ - i_);
 #endif
     std::swap(x_[i_], x_[r]);
     return x_[i_++];
@@ -36,15 +35,7 @@ struct random_permutation {
  private:
   char x_[N];
   int i_;
-};
-
-// For wrapping into <percpu>, which maybe important to avoid false sharing
-struct persocket {
-  random_permutation<NCPU_PER_SOCKET-1> perm;
-};
-
-struct othersocket {
-  random_permutation<NCPU-NCPU_PER_SOCKET> perm;
+  size_t n_;
 };
 
 template<class Pool>
@@ -77,7 +68,13 @@ class balance_pool {
 template<class PoolDir, class Pool>
 class balancer {
  public:
-  balancer(const PoolDir* bd) : bd_(bd) {}
+  balancer(const PoolDir* bd) : bd_(bd) {
+    assert(ncpu != 0 && nsocket != 0); // make sure ncpu/nsocket have been initialized.
+    for(int i = 0; i < ncpu; i++) {
+      rpsock_[i].resize(ncpu/nsocket - 1);
+      rpother_[i].resize(ncpu - ncpu/nsocket);
+    }
+  }
   ~balancer() {}
 
   void balance() {
@@ -86,14 +83,14 @@ class balancer {
     if (!thispool)
       return;
 
-    u64 sock_first_core = (myid / NCPU_PER_SOCKET) * NCPU_PER_SOCKET;
-    u64 sock_myoff = myid % NCPU_PER_SOCKET;
+    u64 sock_first_core = (myid / (ncpu/nsocket)) * (ncpu/nsocket);
+    u64 sock_myoff = myid % (ncpu/nsocket);
 
-    rpsock_->perm.reset();
+    rpsock_->reset();
 
-    for (int i = 0; i < NCPU_PER_SOCKET-1; i++) {
+    for (int i = 0; i < (ncpu/nsocket)-1; i++) {
       int bal_id = sock_first_core +
-        ((sock_myoff + 1 + rpsock_->perm.next()) % NCPU_PER_SOCKET);
+        ((sock_myoff + 1 + rpsock_->next()) % (ncpu/nsocket));
       Pool* otherpool = bd_->balance_get(bal_id);
       if (otherpool && (thispool != otherpool)) {
         thispool->balance_with(otherpool);
@@ -102,10 +99,10 @@ class balancer {
       }
     }
 
-    rpother_->perm.reset();
-    for (int i = 0; i < NCPU-NCPU_PER_SOCKET; i++) {
-      int bal_id = (sock_first_core + NCPU_PER_SOCKET +
-                 rpother_->perm.next()) % NCPU;
+    rpother_->reset();
+    for (int i = 0; i < NCPU-(ncpu/nsocket); i++) {
+      int bal_id = (sock_first_core + (ncpu/nsocket) +
+                 rpother_->next()) % NCPU;
       Pool* otherpool = bd_->balance_get(bal_id);
       if (otherpool && (thispool != otherpool)) {
         thispool->balance_with(otherpool);
@@ -117,6 +114,6 @@ class balancer {
 
  private:
   const PoolDir* const bd_;
-  percpu<persocket,NO_CRITICAL> rpsock_;
-  percpu<othersocket,NO_CRITICAL> rpother_;
+  percpu<random_permutation<NCPU-1>,NO_CRITICAL> rpsock_;
+  percpu<random_permutation<NCPU-1>,NO_CRITICAL> rpother_;
 };
