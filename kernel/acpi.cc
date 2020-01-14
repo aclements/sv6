@@ -356,6 +356,7 @@ initcpus_acpi(void)
   verbose.println("acpi: Initializing CPUs");
 
   ncpu = cpu_id_to_apicid.size();
+  nsocket = numa_nodes.size();
 
   // Create CPUs.  We already did most of the work in initcpumap.
   for (int cpuid = 0; cpuid < cpu_id_to_apicid.size(); ++cpuid) {

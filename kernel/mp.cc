@@ -14,7 +14,8 @@ abstract_lapic *lapic;
 // remotely before booting each CPU and the static initializer would
 // clear it.
 DEFINE_QPERCPU_NOINIT(struct cpu, cpus);
-int ncpu __mpalign__;
+int ncpu __mpalign__ = 0;
+int nsocket __mpalign__ = 0;
 abstract_extpic *extpic;
 
 bool initlapic_xapic(void);
@@ -87,6 +88,7 @@ initcpus(void)
   verbose.println("mp: Initializing CPUs (uniprocessor mode)");
   cpus[0].id = 0;
   ncpu = 1;
+  nsocket = 1;
 
   numa_nodes.emplace_back(0, 0);
   numa_nodes.back().mems.emplace_back(0, ~0ull);

@@ -163,6 +163,7 @@ void            halt(void) __attribute__((noreturn));
 
 // mp.c
 extern int      ncpu;
+extern int      nsocket;
 
 // net.c
 void            netfree(void *va);
