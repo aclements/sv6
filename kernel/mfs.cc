@@ -226,7 +226,7 @@ writei(sref<mnode> m, const char* buf, u64 start, u64 nbytes,
 }
 
 static int
-mfsstatsread(mdev*, char *dst, u32 off, u32 n)
+mfsstatsread(char *dst, u32 off, u32 n)
 {
   window_stream s(dst, off, n);
   mfsprint(&s);

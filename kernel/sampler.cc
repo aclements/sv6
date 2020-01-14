@@ -679,7 +679,7 @@ readlog(char *dst, u32 off, u32 n)
 }
 
 static void
-sampstat(mdev*, struct stat *st)
+sampstat(struct stat *st)
 {
   u64 sz = 0;
   
@@ -694,7 +694,7 @@ sampstat(mdev*, struct stat *st)
 }
 
 static int
-sampread(mdev*, char *dst, u32 off, u32 n)
+sampread(char *dst, u32 off, u32 n)
 {
   struct logheader *hdr;
   int ret;
@@ -732,7 +732,7 @@ sampread(mdev*, char *dst, u32 off, u32 n)
 }
 
 static int
-sampwrite(mdev*, const char *buf, u32 n)
+sampwrite(const char *buf, u32 n)
 {
   if (n != sizeof(perf_selector))
     return -1;

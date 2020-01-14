@@ -360,7 +360,7 @@ dwork_push(struct dwork *w, int cpu)
 }
 
 static int
-statread(mdev* m, char *dst, u32 off, u32 n)
+statread(char *dst, u32 off, u32 n)
 {
   window_stream s(dst, off, n);
   thesched_dir.scheddump(&s);

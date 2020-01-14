@@ -215,7 +215,7 @@ tcpip_init_done(void *arg)
 }
 
 static int
-netifread(mdev*, char *dst, u32 off, u32 n)
+netifread(char *dst, u32 off, u32 n)
 {
   u32 ip, nm, gw;
   char buf[512];

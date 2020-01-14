@@ -31,8 +31,6 @@ public:
   struct localsock *get_socket() override;
 
   filesystem *fs() const override;
-  // FIXME: eliminate this interface, somehow
-  sref<mnode> get_mnode() const override { return node; };
 
   static sref<vnode_mfs> wrap(sref<mnode> m) {
     // FIMXE: figure out if adding this ->killed() code here is a problem
@@ -45,6 +43,8 @@ public:
   NEW_DELETE_OPS(vnode_mfs);
 private:
   sref<mnode> node;
+
+  friend class filesystem_mfs;
 };
 
 vnode_mfs::vnode_mfs(sref<mnode> node)
@@ -390,7 +390,7 @@ filesystem_mfs::resolve(sref<vnode> base, const char *path)
     return vnode_mfs::wrap(namei(sref<mnode>(), path));
   }
   auto v = base->cast<vnode_mfs>(this);
-  return vnode_mfs::wrap(namei(v->get_mnode(), path));
+  return vnode_mfs::wrap(namei(v->node, path));
 }
 
 sref<vnode>
@@ -400,7 +400,7 @@ filesystem_mfs::resolveparent(sref<vnode> base, const char *path, strbuf<DIRSIZ>
     return vnode_mfs::wrap(nameiparent(sref<mnode>(), path, name));
   }
   auto v = base->cast<vnode_mfs>(this);
-  return vnode_mfs::wrap(nameiparent(v->get_mnode(), path, name));
+  return vnode_mfs::wrap(nameiparent(v->node, path, name));
 }
 
 sref<vnode>

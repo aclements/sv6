@@ -20,7 +20,7 @@ file_inode::stat(struct stat *st, enum stat_flags flags)
   }
   u16 major, minor;
   if (ip->get_device(&major, &minor) == 0 && major < NDEV && devsw[major].stat)
-    devsw[major].stat(ip->get_mnode()->as_dev(), st);
+    devsw[major].stat(st);
   return 0;
 }
 
@@ -37,10 +37,10 @@ file_inode::read(char *addr, size_t n)
     if (major >= NDEV)
       return -1;
     if (devsw[major].read) {
-      return devsw[major].read(ip->get_mnode()->as_dev(), addr, n);
+      return devsw[major].read(addr, n);
     } else if (devsw[major].pread) {
       l = off_lock.guard();
-      r = devsw[major].pread(ip->get_mnode()->as_dev(), addr, off, n);
+      r = devsw[major].pread(addr, off, n);
     } else {
       return -1;
     }
@@ -73,10 +73,10 @@ file_inode::write(const char *addr, size_t n)
     if (major >= NDEV)
       return -1;
     if (devsw[major].write) {
-      return devsw[major].write(ip->get_mnode()->as_dev(), addr, n);
+      return devsw[major].write(addr, n);
     } else if (devsw[major].pwrite) {
       l = off_lock.guard();
-      r = devsw[major].pwrite(ip->get_mnode()->as_dev(), addr, off, n);
+      r = devsw[major].pwrite(addr, off, n);
     } else {
       return -1;
     }
@@ -99,7 +99,7 @@ file_inode::pread(char *addr, size_t n, off_t off)
   if (ip->get_device(&major, &minor) == 0) {
     if (major >= NDEV || !devsw[major].pread)
       return -1;
-    return devsw[major].pread(ip->get_mnode()->as_dev(), addr, off, n);
+    return devsw[major].pread(addr, off, n);
   }
   return ip->perform_read_at(addr, off, n);
 }
@@ -113,7 +113,7 @@ file_inode::pwrite(const char *addr, size_t n, off_t off)
   if (ip->get_device(&major, &minor) == 0) {
     if (major >= NDEV || !devsw[major].pwrite)
       return -1;
-    return devsw[major].pwrite(ip->get_mnode()->as_dev(), addr, off, n);
+    return devsw[major].pwrite(addr, off, n);
   }
   return ip->perform_write_at(addr, off, n);
 }

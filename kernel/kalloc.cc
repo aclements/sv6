@@ -677,7 +677,7 @@ kmemprint(print_stream *s)
 }
 
 static int
-kmemstatsread(mdev*, char *dst, u32 off, u32 n)
+kmemstatsread(char *dst, u32 off, u32 n)
 {
   window_stream s(dst, off, n);
   kmemprint(&s);

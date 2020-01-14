@@ -273,11 +273,11 @@ protected:
 class mdev;
 
 struct devsw {
-  int (*read)(mdev*, char*, u32);
-  int (*pread)(mdev*, char*, u32, u32);
-  int (*write)(mdev*, const char*, u32);
-  int (*pwrite)(mdev*, const char*, u32, u32);
-  void (*stat)(mdev*, struct stat*);
+  int (*read)(char*, u32);
+  int (*pread)(char*, u32, u32);
+  int (*write)(const char*, u32);
+  int (*pwrite)(const char*, u32, u32);
+  void (*stat)(struct stat*);
 };
 
 extern struct devsw devsw[];

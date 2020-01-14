@@ -45,9 +45,6 @@ public:
   virtual void setup_socket(struct localsock *sock) = 0;
   virtual struct localsock *get_socket() = 0;
 
-  // FIXME: eliminate this interface, somehow
-  virtual sref<mnode> get_mnode() const { return sref<mnode>(); }
-
   virtual class filesystem *fs() const = 0;
 
   // FIXME: figure out what the right way to do this in C++ is -cela

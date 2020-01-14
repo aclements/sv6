@@ -283,7 +283,7 @@ panic(const char *fmt, ...)
 }
 
 static int
-consolewrite(mdev*, const char *buf, u32 n)
+consolewrite(const char *buf, u32 n)
 {
   int i;
 
@@ -363,7 +363,7 @@ consoleintr(int (*getc)(void))
 }
 
 static int
-consoleread(mdev*, char *dst, u32 n)
+consoleread(char *dst, u32 n)
 {
   int target;
   int c;

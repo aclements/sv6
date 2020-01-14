@@ -12,7 +12,7 @@ extern const char *kconfig;
 DEFINE_QPERCPU(struct kstats, mykstats, NO_CRITICAL);
 
 static int
-kconfigread(mdev*, char *dst, u32 off, u32 n)
+kconfigread(char *dst, u32 off, u32 n)
 {
   auto len = strlen(kconfig);
   if (off >= len)
@@ -24,7 +24,7 @@ kconfigread(mdev*, char *dst, u32 off, u32 n)
 }
 
 static int
-kstatsread(mdev*, char *dst, u32 off, u32 n)
+kstatsread(char *dst, u32 off, u32 n)
 {
   kstats total{};
   if (off >= sizeof total)
@@ -38,7 +38,7 @@ kstatsread(mdev*, char *dst, u32 off, u32 n)
 }
 
 static int
-qstatsread(mdev*, char *dst, u32 off, u32 n)
+qstatsread(char *dst, u32 off, u32 n)
 {
   window_stream s(dst, off, n);
 

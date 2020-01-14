@@ -269,7 +269,7 @@ gc_worker(void *x)
 }
 
 static int
-readstat(mdev*, char *dst, u32 off, u32 n)
+readstat(char *dst, u32 off, u32 n)
 {
   size_t sz = sizeof(gc_stat);
   int i = off / sz;
@@ -289,7 +289,7 @@ readstat(mdev*, char *dst, u32 off, u32 n)
 }
 
 static int
-writectrl(mdev*, const char *buf, u32 n)
+writectrl(const char *buf, u32 n)
 {
   int op;
   if (n != 3*sizeof(int))

@@ -15,7 +15,7 @@
 struct cmdline_params cmdline_params;
 
 static int
-cmdlineread(mdev*, char *dst, u32 off, u32 n)
+cmdlineread(char *dst, u32 off, u32 n)
 {
   u32 cc;
 
