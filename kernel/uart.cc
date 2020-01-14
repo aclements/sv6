@@ -117,11 +117,7 @@ inituart(void)
   };
 
   int i;
-#if defined(UART_BAUD)
   int baud = UART_BAUD;
-#else
-  int baud = 19200;
-#endif
   for (i = 0; i < 2; i++) {
     com = conf[i].com;
     irq_com = conf[i].irq;

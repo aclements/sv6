@@ -29,6 +29,7 @@
 #define USTACKPAGES   8
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
 #define GC_GLOBAL     true
+#define UART_BAUD     115200
 // The MMU scheme.  One of:
 //  mmu_shared_page_table
 //  mmu_per_core_page_table
@@ -99,7 +100,6 @@
 #define NCPU          4   // maximum number of CPUs
 #define NSOCKET       2
 #define PERFSIZE      (128<<20ull)
-#define UART_BAUD     115200
 #elif defined(HW_tom)
 #define DEBUG         0
 #define NCPU          48  // maximum number of CPUs
@@ -107,12 +107,12 @@
 #define PERFSIZE      (128<<20ull)
 // tom's IPMI SOL console looses sync if we don't delay
 #define UART_SEND_DELAY_USEC 1000
+#define UART_BAUD     19200
 #elif defined(HW_ben)
 #define DEBUG         0
 #define NCPU          80  // maximum number of CPUs
 #define NSOCKET       8
 #define PERFSIZE      (128<<20ull)
-#define UART_BAUD     115200
 // Disable the hardware stream and adjacent cache line prefetcher
 #define DISABLE_PREFETCH_STREAM 1
 #define DISABLE_PREFETCH_ADJ 1
@@ -121,7 +121,6 @@
 #define NCPU          40  // maximum number of CPUs
 #define NSOCKET       2
 #define PERFSIZE      (128<<20ull)
-#define UART_BAUD     115200
 
 //
 // Linux user-space targets (no kernel, so most options aren't set)
