@@ -1,4 +1,5 @@
 #pragma once
+#define NCPU         64  // maximum number of cpus
 #define NPROC        64  // maximum number of processes
 #define KSTACKSIZE 32768 // size of per-process kernel stack
 #define NOFILE      100  // open files per process
@@ -30,6 +31,8 @@
 #define GCINTERVAL    10000 // max. time between GC runs (in msec)
 #define GC_GLOBAL     true
 #define UART_BAUD     115200
+#define PERFSIZE      (128<<20ull)
+#define DEBUG         0
 // The MMU scheme.  One of:
 //  mmu_shared_page_table
 //  mmu_per_core_page_table
@@ -66,61 +69,31 @@
 // QEMU-based targets
 //
 #if defined(HW_qemu)
-#define DEBUG         0
-#define NCPU          8   // maximum number of CPUs
-#define NSOCKET       2
-#define PERFSIZE      (16<<20ull)
 #define MEMIDE        1
 #define AHCIIDE       1
 #define PORTIDE       1
 #elif defined(HW_mtrace)
-#define DEBUG         0
-#define NCPU          16   // maximum number of CPUs
-#define NSOCKET       2
 #define MTRACE        1
-#define PERFSIZE      (16<<20ull)
 #define QUANTUM       100
 #elif defined(HW_codex)
-#define DEBUG         0
 #define CODEX         1
-#define NCPU          2
-#define NSOCKET       2
-#define PERFSIZE      (16<<20ull)
 
 //
 // Physical hardware targets
 //
 #elif defined(HW_josmp)
-#define DEBUG         0
-#define NCPU          16  // maximum number of CPUs
-#define NSOCKET       4
-#define PERFSIZE      (128<<20ull)
 #define E1000_PORT    1   // use second E1000 port
 #elif defined(HW_ud0) || defined(HW_ud1)
-#define NCPU          4   // maximum number of CPUs
-#define NSOCKET       2
-#define PERFSIZE      (128<<20ull)
 #elif defined(HW_tom)
-#define DEBUG         0
-#define NCPU          48  // maximum number of CPUs
-#define NSOCKET       8
-#define PERFSIZE      (128<<20ull)
 // tom's IPMI SOL console looses sync if we don't delay
 #define UART_SEND_DELAY_USEC 1000
 #define UART_BAUD     19200
 #elif defined(HW_ben)
-#define DEBUG         0
 #define NCPU          80  // maximum number of CPUs
-#define NSOCKET       8
-#define PERFSIZE      (128<<20ull)
 // Disable the hardware stream and adjacent cache line prefetcher
 #define DISABLE_PREFETCH_STREAM 1
 #define DISABLE_PREFETCH_ADJ 1
 #elif defined(HW_bhw2)
-#define DEBUG         0
-#define NCPU          40  // maximum number of CPUs
-#define NSOCKET       2
-#define PERFSIZE      (128<<20ull)
 
 //
 // Linux user-space targets (no kernel, so most options aren't set)
