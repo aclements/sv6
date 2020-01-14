@@ -83,6 +83,8 @@ OBJS = \
 	vga.o \
 	partition.o \
 	crc32.o \
+	vfs.o \
+	vfsadapt.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 

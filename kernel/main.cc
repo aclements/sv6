@@ -67,6 +67,7 @@ void inithpet(void);
 void inittsc(void);
 void initrtc(void);
 void initmfs(void);
+void initvfs(void);
 void idleloop(void);
 void inithotpatch(void);
 
@@ -274,6 +275,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   // XXX hack until mnodes can load from disk
   extern void mfsload();
   mfsload();
+  initvfs();
 
 #if CODEX
   initcodex();

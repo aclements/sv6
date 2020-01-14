@@ -727,7 +727,7 @@ vmap::ensure_page(const vmap::vpf_array::iterator &it, vmap::access_type type,
       page = page_info_ref(page_info::of(p));
     } else {
       u64 page_idx = (it.index() * PGSIZE - desc.start) / PGSIZE;
-      page = desc.inode->as_file()->get_page(page_idx).get_page_info();
+      page = desc.inode->get_page_info(page_idx);
       if (!page)
         return 0;
     }

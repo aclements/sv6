@@ -6,23 +6,21 @@
 #include "proc.hh"
 #include "amd64.h"
 #include <uk/stat.h>
-#include "fs.h"
 #include "file.hh"
 #include "vm.hh"
 #include "elf.hh"
 #include "cpu.hh"
 #include "kmtrace.hh"
-#include "mfs.hh"
 #include "work.hh"
 #include "filetable.hh"
 
 #define BRK (USERTOP >> 1)
 
 static int
-dosegment(sref<mnode> ip, vmap* vmp, u64 off, u64 *load_addr)
+dosegment(sref<vnode> ip, vmap* vmp, u64 off, u64 *load_addr)
 {
   struct proghdr ph;
-  if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
+  if(ip->perform_read_at((char*)&ph, off, sizeof(ph)) != sizeof(ph))
     return -1;
   if(ph.type != ELF_PROG_LOAD)
     return -1;
@@ -77,7 +75,7 @@ dosegment(sref<mnode> ip, vmap* vmp, u64 off, u64 *load_addr)
       size_t to_read = ph.filesz - seg_pos;
       if (to_read > sizeof(buf))
         to_read = sizeof(buf);
-      int res = readi(ip, buf, ph.offset + seg_pos, to_read);
+      int res = ip->perform_read_at(buf, ph.offset + seg_pos, to_read);
       if (res <= 0)
         return -1;
       if (vmp->copyout(ph.vaddr + seg_pos, buf, res) < 0)
@@ -197,7 +195,7 @@ exec(const char *path, const char * const *argv)
   return 0;
 }
 
-// Load an ELF image or script into the given process.  p->cwd_m must
+// Load an ELF image or script into the given process.  p->cwd must
 // be set (path is resolved relative to this) and p->tf must be a
 // valid pointer.  This sets p->vmap, *p->tf, p->run_cpuid_,
 // p->data_cpuid, and p->name.  If this fails, p will not be modified.
@@ -207,7 +205,7 @@ int
 load_image(proc *p, const char *path, const char * const *argv,
            sref<vmap> *oldvmap_out)
 {
-  sref<mnode> ip = namei(p->cwd_m, path);
+  sref<vnode> ip = vfs_root()->resolve(p->cwd, path);
   if (!ip)
     return -1;
 
@@ -215,9 +213,8 @@ load_image(proc *p, const char *path, const char * const *argv,
 
   // Check header
   char buf[1024];
-  if (ip->type() != mnode::types::file)
-    return -1;
-  size_t sz = readi(ip, buf, 0, sizeof(buf));
+
+  ssize_t sz = ip->perform_read_at(buf, 0, sizeof(buf));
   if (sz < 0)
     return -1;
 
@@ -251,7 +248,7 @@ load_image(proc *p, const char *path, const char * const *argv,
   u64 load_addr = -1;
   for (size_t i=0, off=elf->phoff; i<elf->phnum; i++, off+=sizeof(proghdr)){
     Elf64_Word type;
-    if(readi(ip, (char*)&type, 
+    if(ip->perform_read_at((char*)&type,
              off+__offsetof(struct proghdr, type), 
              sizeof(type)) != sizeof(type))
       return -1;

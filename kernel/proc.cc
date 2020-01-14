@@ -129,12 +129,9 @@ forkret(void)
   // in which to call condvar::sleep().
   if(myproc()->cwd == nullptr) {
     mtstart(forkret, myproc());
-    myproc()->cwd = namei(myproc()->cwd, "/");
+    myproc()->cwd = vfs_root()->root();
     mtstop(myproc());
   }
-
-  if (myproc()->cwd_m == nullptr)
-    myproc()->cwd_m = namei(myproc()->cwd_m, "/");
 
   // Return to "caller", actually trapret (see allocproc).
   return myproc()->user_fs_;
@@ -423,7 +420,6 @@ doclone(clone_flags flags)
   }
 
   np->cwd = myproc()->cwd;
-  np->cwd_m = myproc()->cwd_m;
   safestrcpy(np->name, myproc()->name, sizeof(myproc()->name));
   acquire(&myproc()->lock);
   myproc()->childq.push_back(np);

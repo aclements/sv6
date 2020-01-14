@@ -44,6 +44,7 @@ struct dwork;
 struct irq;
 class print_stream;
 class mnode;
+class vnode;
 class buf;
 
 // acpi.c
@@ -239,7 +240,7 @@ int             doexec(userptr_str upath,
                        userptr<userptr_str> uargv);
 int             fdalloc(sref<file>&& f, int omode);
 sref<file>      getfile(int fd);
-sref<mnode>     create(sref<mnode>, const char *, short, short, short, bool);
+sref<vnode>     create(sref<vnode>, const char *, short, short, short, bool);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

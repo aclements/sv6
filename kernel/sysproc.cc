@@ -112,7 +112,7 @@ void *
 sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
          off_t offset)
 {
-  sref<mnode> m;
+  sref<vnode> m;
 
   if (!(prot & (PROT_READ | PROT_WRITE))) {
     cprintf("not implemented: !(prot & (PROT_READ | PROT_WRITE))\n");
@@ -124,23 +124,15 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
       return MAP_FAILED;
 
     if (flags & MAP_SHARED) {
-      m = anon_fs->alloc(mnode::types::file).mn();
-      auto resizer = m->as_file()->write_size();
-      for (size_t i = 0; i < len; i += PGSIZE) {
-        void* p = zalloc("MAP_ANON|MAP_SHARED");
-        if (!p)
-          throw_bad_alloc();
-        auto pi = sref<page_info>::transfer(new (page_info::of(p)) page_info());
-        resizer.resize_append(i + PGSIZE, pi);
-      }
+      m = vfs_root()->anonymous_pages((len + PGSIZE - 1) / PGSIZE);
     }
   } else {
     sref<file> f = myproc()->ftable->getfile(fd);
     if (!f)
       return MAP_FAILED;
 
-    m = f->get_mnode();
-    if (!m || m->type() != mnode::types::file)
+    m = f->get_vnode();
+    if (!m || !m->is_regular_file())
       return MAP_FAILED;
   }
 

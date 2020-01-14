@@ -250,12 +250,12 @@ public:
     if (!uaddr)
       return -1;
 
-    sref<mnode> ip = create(myproc()->cwd_m, uaddr->sun_path,
+    sref<vnode> ip = create(myproc()->cwd, uaddr->sun_path,
                             T_SOCKET, 0, 0, true);
     if (!ip)
       return -1;
 
-    ip->as_sock()->init(localsock_);
+    ip->setup_socket(localsock_);
     strncpy(socketpath_, uaddr->sun_path, UNIX_PATH_MAX);
 
     return 0;
@@ -272,11 +272,12 @@ public:
     if (!uaddr)
       return -1;
 
-    sref<mnode> ip = namei(myproc()->cwd_m, uaddr->sun_path);
+    sref<vnode> ip = vfs_root()->resolve(myproc()->cwd, uaddr->sun_path);
     if (!ip)
       return -1;
 
-    if (ip->type() != mnode::types::sock)
+    localsock *sock = ip->get_socket();
+    if (!sock)
       return -1;
 
     char *b = kalloc("writebuf");
@@ -296,7 +297,7 @@ public:
     m->uaddr.sun_family = AF_UNIX;
     strncpy(m->uaddr.sun_path, socketpath_, UNIX_PATH_MAX);
 
-    int r = ip->as_sock()->get_sock()->write(m);
+    int r = sock->write(m);
     if (r < 0) {
       kfree(b);
       delete m;

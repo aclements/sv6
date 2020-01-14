@@ -14,7 +14,7 @@
 struct pgmap;
 struct gc_handle;
 class filetable;
-class mnode;
+class vnode;
 
 #if 0
 // This should be per-address space
@@ -80,8 +80,7 @@ struct proc {
   int status;                  // exit's returns status
   struct context *context;     // swtch() here to run process
   sref<filetable> ftable;      // File descriptor table
-  sref<inode> cwd;             // Current directory
-  sref<mnode> cwd_m;           // Current directory
+  sref<vnode> cwd;             // Current directory
   char name[16];               // Process name (debugging)
   u64 tsc;
   u64 curcycles;

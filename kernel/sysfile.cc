@@ -10,7 +10,6 @@
 #include "net.hh"
 #include "kmtrace.hh"
 #include "dirns.hh"
-#include "mfs.hh"
 #include <uk/fcntl.h>
 #include <uk/stat.h>
 #include "kstats.hh"
@@ -77,14 +76,10 @@ compute_offset(file_inode *fi, off_t *fioffp, off_t offset, int whence)
   }
 
   case SEEK_END:
-    if (offset < 0) {
-      mfile::page_state ps = fi->ip->as_file()->get_page((-offset - 1) / PGSIZE);
-      if (!ps.get_page_info())
-        // Attempt to seek before the beginning of the file
-        return -1;
-    }
+    if (offset < 0 && fi->ip->check_read_at(-offset-1) < 0)
+      return -1;
 
-    return offset + *fi->ip->as_file()->read_size();
+    return offset + fi->ip->file_size();
   }
   return -1;
 }
@@ -102,7 +97,7 @@ sys_lseek(int fd, off_t offset, int whence)
     return -1;
 
   file_inode* fi = static_cast<file_inode*>(ff);
-  if (fi->ip->type() != mnode::types::file)
+  if (!fi->ip->is_regular_file())
     return -1;                  // ESPIPE
 
   // Pre-validate offset and whence.  Be careful to only read fi->off
@@ -259,16 +254,16 @@ sys_link(userptr_str old_path, userptr_str new_path)
     return -1;
 
   strbuf<DIRSIZ> oldname;
-  sref<mnode> olddir = nameiparent(myproc()->cwd_m, old, &oldname);
+  sref<vnode> olddir = vfs_root()->resolveparent(myproc()->cwd, old, &oldname);
   if (!olddir)
     return -1;
 
   /* Check if the old name exists; if not, abort right away */
-  if (!olddir->as_dir()->exists(oldname))
+  if (!olddir->child_exists(oldname))
     return -1;
 
   strbuf<DIRSIZ> name;
-  sref<mnode> md = nameiparent(myproc()->cwd_m, newn, &name);
+  sref<vnode> md = vfs_root()->resolveparent(myproc()->cwd, newn, &name);
   if (!md)
     return -1;
 
@@ -276,17 +271,10 @@ sys_link(userptr_str old_path, userptr_str new_path)
    * Check if the target name already exists; if so,
    * no need to grab a link count on the old name.
    */
-  if (md->as_dir()->exists(name))
+  if (md->child_exists(name))
     return -1;
 
-  mlinkref mflink = olddir->as_dir()->lookup_link(oldname);
-  if (!mflink.mn() || mflink.mn()->type() == mnode::types::dir)
-    return -1;
-
-  if (!md->as_dir()->insert(name, &mflink))
-    return -1;
-
-  return 0;
+  return md->hardlink(name, olddir, oldname);
 }
 
 //SYSCALL
@@ -298,60 +286,19 @@ sys_rename(userptr_str old_path, userptr_str new_path)
     return -1;
 
   strbuf<DIRSIZ> oldname;
-  sref<mnode> mdold = nameiparent(myproc()->cwd_m, old, &oldname);
+  sref<vnode> mdold = vfs_root()->resolveparent(myproc()->cwd, old, &oldname);
   if (!mdold)
     return -1;
 
-  if (!mdold->as_dir()->exists(oldname))
+  if (!mdold->child_exists(oldname))
     return -1;
 
   strbuf<DIRSIZ> newname;
-  sref<mnode> mdnew = nameiparent(myproc()->cwd_m, newn, &newname);
+  sref<vnode> mdnew = vfs_root()->resolveparent(myproc()->cwd, newn, &newname);
   if (!mdnew)
     return -1;
 
-  if (mdold == mdnew && oldname == newname)
-    return 0;
-
-  for (;;) {
-    sref<mnode> mfold = mdold->as_dir()->lookup(oldname);
-    if (!mfold || mfold->type() == mnode::types::dir)
-      /*
-       * Renaming directories not currently supported.
-       * Would require checking for loops.  This can be
-       * complicated by concurrent renames of the same
-       * source directory when one of the renames has
-       * already added a new name for the directory,
-       * but not removed the previous name yet.  Would
-       * also require changing ".." in the subdirectory,
-       * dealing with a possible rmdir / rename race, and
-       * checking for "." and "..".
-       */
-      return -1;
-
-    sref<mnode> mfroadblock = mdnew->as_dir()->lookup(newname);
-    if (mfroadblock && mfroadblock->type() == mnode::types::dir)
-      /*
-       * POSIX says rename should replace a directory only with another
-       * directory, and we currently don't support directory rename (see
-       * above).
-       */
-      return -1;
-
-    if (mfroadblock == mfold) {
-      if (mdold->as_dir()->remove(oldname, mfold))
-        return 0;
-    } else {
-      if (mdnew->as_dir()->replace_from(newname, mfroadblock,
-                                        mdold->as_dir(), oldname, mfold))
-        return 0;
-    }
-
-    /*
-     * The inodes for the source and/or the destination file names
-     * must have changed.  Retry.
-     */
-  }
+  return mdnew->rename(newname, mdold, oldname);
 }
 
 //SYSCALL
@@ -363,115 +310,30 @@ sys_unlink(userptr_str path)
     return -1;
 
   strbuf<DIRSIZ> name;
-  sref<mnode> md = nameiparent(myproc()->cwd_m, path_copy, &name);
+  sref<vnode> md = vfs_root()->resolveparent(myproc()->cwd, path_copy, &name);
   if (!md)
     return -1;
 
-  if (name == "." || name == "..")
-    return -1;
-
-  sref<mnode> mf = md->as_dir()->lookup(name);
-  if (!mf)
-    return -1;
-
-  if (mf->type() == mnode::types::dir) {
-    /*
-     * Remove a subdirectory only if it has zero files in it.  No files
-     * or sub-directories can be subsequently created in that directory.
-     */
-    if (!mf->as_dir()->kill(md))
-      return -1;
-
-    /*
-     * We killed the directory, so we must succeed at removing it from
-     * the parent.  The only way to remove a directory name is to unlink
-     * it (we do not support directory rename), and the only way to unlink
-     * a directory is to kill it, as we did above.
-     */
-    assert(md->as_dir()->remove(name, mf));
-    return 0;
-  }
-
-  if (!md->as_dir()->remove(name, mf))
-    return -1;
-
-  return 0;
+  return md->remove(name);
 }
 
-sref<mnode>
-create(sref<mnode> cwd, const char *path, short type, short major, short minor, bool excl)
+sref<vnode>
+create(sref<vnode> cwd, const char *path, short type, short major, short minor, bool excl)
 {
-  for (;;) {
-    strbuf<DIRSIZ> name;
-    sref<mnode> md = nameiparent(cwd, path, &name);
-    if (!md || md->as_dir()->killed())
-      return sref<mnode>();
-
-    if (excl && md->as_dir()->exists(name))
-      return sref<mnode>();
-
-    sref<mnode> mf = md->as_dir()->lookup(name);
-    if (mf) {
-      if (type != T_FILE || mf->type() != mnode::types::file || excl)
-        return sref<mnode>();
-      return mf;
-    }
-
-    u8 mtype = 0;
-    switch (type) {
-    case T_DIR:    mtype = mnode::types::dir;  break;
-    case T_FILE:   mtype = mnode::types::file; break;
-    case T_DEV:    mtype = mnode::types::dev;  break;
-    case T_SOCKET: mtype = mnode::types::sock; break;
-    default:     cprintf("unhandled type %d\n", type);
-    }
-
-    auto ilink = md->fs_->alloc(mtype);
-    mf = ilink.mn();
-
-    if (mtype == mnode::types::dir) {
-      /*
-       * We need to bump the refcount on the parent directory (md)
-       * to create ".." in the new subdirectory (mf), but only if
-       * the parent directory had a non-zero link count already.
-       * We serialize on whether md was killed: its link count drops
-       * only after a successful kill (see unlink), and insert into
-       * md succeeds iff md's kill fails.
-       *
-       * Mild POSIX violation: this may temporarily raise md's link
-       * count (as observed by fstat) from zero to positive.
-       */
-      mlinkref parentlink(md);
-      parentlink.acquire();
-      assert(mf->as_dir()->insert("..", &parentlink));
-      if (md->as_dir()->insert(name, &ilink))
-        return mf;
-
-      /*
-       * Didn't work, clean up and retry.  The expectation is that the
-       * parent directory (md) was removed, and nameiparent will fail.
-       */
-      assert(mf->as_dir()->remove("..", md));
-      continue;
-    }
-
-    if (mtype == mnode::types::dev)
-      mf->as_dev()->init(major, minor);
-
-    if (md->as_dir()->insert(name, &ilink))
-      return mf;
-
-    /* Failed to insert, retry */
-  }
+  strbuf<DIRSIZ> name;
+  auto parent = vfs_root()->resolveparent(cwd, path, &name);
+  if (!parent)
+    return sref<vnode>();
+  return parent->create(name, type, major, minor, excl);
 }
 
 //SYSCALL
 int
 sys_openat(int dirfd, userptr_str path, int omode, ...)
 {
-  sref<mnode> cwd;
+  sref<vnode> cwd;
   if (dirfd == AT_FDCWD) {
-    cwd = myproc()->cwd_m;
+    cwd = myproc()->cwd;
   } else {
     sref<file> fdir = getfile(dirfd);
     if (!fdir)
@@ -487,22 +349,21 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
   if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
 
-  sref<mnode> m;
+  sref<vnode> m;
   if (omode & O_CREAT)
     m = create(cwd, path_copy, T_FILE, 0, 0, omode & O_EXCL);
   else
-    m = namei(cwd, path_copy);
+    m = vfs_root()->resolve(cwd, path_copy);
 
   if (!m)
     return -1;
 
   int rwmode = omode & (O_RDONLY|O_WRONLY|O_RDWR);
-  if (m->type() == mnode::types::dir && (rwmode != O_RDONLY))
+  if (m->is_directory() && (rwmode != O_RDONLY))
     return -1;
 
-  if (m->type() == mnode::types::file && (omode & O_TRUNC))
-    if (*m->as_file()->read_size())
-      m->as_file()->write_size().resize_nogrow(0);
+  if (m->is_regular_file() && (omode & O_TRUNC))
+    m->truncate();
 
   sref<file> f = make_sref<file_inode>(
     m, !(rwmode == O_WRONLY), !(rwmode == O_RDONLY), !!(omode & O_APPEND));
@@ -513,9 +374,9 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
 int
 sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
 {
-  sref<mnode> cwd;
+  sref<vnode> cwd;
   if (dirfd == AT_FDCWD) {
-    cwd = myproc()->cwd_m;
+    cwd = myproc()->cwd;
   } else {
     sref<file> fdir = getfile(dirfd);
     if (!fdir)
@@ -545,7 +406,7 @@ sys_mknod(userptr_str path, int major, int minor)
   if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
 
-  if (!create(myproc()->cwd_m, path_copy, T_DEV, major, minor, true))
+  if (!create(myproc()->cwd, path_copy, T_DEV, major, minor, true))
     return -1;
 
   return 0;
@@ -559,11 +420,11 @@ sys_chdir(userptr_str path)
   if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
 
-  sref<mnode> m = namei(myproc()->cwd_m, path_copy);
-  if (!m || m->type() != mnode::types::dir)
+  sref<vnode> m = vfs_root()->resolve(myproc()->cwd, path_copy);
+  if (!m || !m->is_directory())
     return -1;
 
-  myproc()->cwd_m = m;
+  myproc()->cwd = m;
   return 0;
 }
 
@@ -658,7 +519,7 @@ sys_readdir(int dirfd, const userptr<char> prevptr, userptr<char> nameptr)
     return -1;
 
   file_inode* dfi = static_cast<file_inode*>(dff);
-  if (dfi->ip->type() != mnode::types::dir)
+  if (!dfi->ip->is_directory())
     return -1;
 
   strbuf<DIRSIZ> prev;
@@ -666,7 +527,7 @@ sys_readdir(int dirfd, const userptr<char> prevptr, userptr<char> nameptr)
     return -1;
 
   strbuf<DIRSIZ> name;
-  if (!dfi->ip->as_dir()->enumerate(prevptr ? &prev : nullptr, &name))
+  if (!dfi->ip->next_dirent(prevptr ? &prev : nullptr, &name))
     return 0;
 
   if (!nameptr.store(name.buf_, sizeof(name.buf_)))

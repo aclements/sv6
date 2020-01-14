@@ -9,8 +9,8 @@
 #include "condvar.hh"
 #include "semaphore.hh"
 #include "seqlock.hh"
-#include "mfs.hh"
 #include "sleeplock.hh"
+#include "vfs.hh"
 #include <uk/unistd.h>
 
 class dirns;
@@ -54,7 +54,7 @@ struct file {
                            size_t *addrlen)
   { return -1; }
 
-  virtual sref<mnode> get_mnode() { return sref<mnode>(); }
+  virtual sref<vnode> get_vnode() { return sref<vnode>(); }
 
   virtual void inc() = 0;
   virtual void dec() = 0;
@@ -65,14 +65,14 @@ protected:
 
 struct file_inode : public refcache::referenced, public file {
 public:
-  file_inode(sref<mnode> i, bool r, bool w, bool a)
+  file_inode(sref<vnode> i, bool r, bool w, bool a)
     : ip(i), readable(r), writable(w), append(a), off(0) {}
   NEW_DELETE_OPS(file_inode);
 
   void inc() override { refcache::referenced::inc(); }
   void dec() override { refcache::referenced::dec(); }
 
-  const sref<mnode> ip;
+  const sref<vnode> ip;
   const bool readable;
   const bool writable;
   const bool append;
@@ -89,12 +89,12 @@ public:
     delete this;
   }
 
-  sref<mnode> get_mnode() override { return ip; }
+  sref<vnode> get_vnode() override { return ip; }
 };
 
 struct file_pipe_reader : public refcache::referenced, public file {
 public:
-  file_pipe_reader(pipe* p) : pipe(p) {}
+  file_pipe_reader(struct pipe* p) : pipe(p) {}
   NEW_DELETE_OPS(file_pipe_reader);
 
   void inc() override { refcache::referenced::inc(); }
@@ -188,7 +188,7 @@ private:
 
 struct file_pipe_writer : public referenced, public file {
 public:
-  file_pipe_writer(pipe* p) : pipe(p) {}
+  file_pipe_writer(struct pipe* p) : pipe(p) {}
   NEW_DELETE_OPS(file_pipe_writer);
 
   void inc() override { referenced::inc(); }
