@@ -164,8 +164,8 @@ void initmultiboot(u64 mbmagic, u64 mbaddr) {
       multiboot.framebuffer_width = mode_info.h_res;
       multiboot.framebuffer_height = mode_info.v_res;
 
-      // XXX: support other formats?
-      multiboot.framebuffer_pitch = multiboot.framebuffer_width * 4;
+      multiboot.framebuffer_pitch = mode_info.logical_scan;
+      multiboot.framebuffer_bpp = mode_info.bpp;
 
       multiboot.flags &= ~MULTIBOOT_FLAG_VBE;
       multiboot.flags |= MULTIBOOT_FLAG_FRAMEBUFFER;

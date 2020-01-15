@@ -158,7 +158,7 @@ void initvga() {
     }
 
     front_buffer = multiboot.framebuffer;
-    screen_width = multiboot.framebuffer_width;
+    screen_width = multiboot.framebuffer_pitch / 4;
     screen_height = multiboot.framebuffer_height;
 
 
@@ -221,7 +221,7 @@ void vgaputc(int c) {
     for(int j = 0; j < 4; j++) {
       int h = (i*4+j) % width;
       int k = (i*4+j) / width;
-      buffer[(cursor_x+h) + (cursor_y+k) * screen_width] = nibble & (1<<(3-j)) ? 0xffffff : 0;
+      buffer[(cursor_x+h) + (cursor_y+k) * screen_width] = nibble & (1<<(3-j)) ? 0xffffffff : 0;
     }
   }
 
