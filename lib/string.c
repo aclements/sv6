@@ -95,6 +95,17 @@ strncpy(char *s, const char *t, size_t n)
   return os;
 }
 
+// Like strncpy but returns a bool of whether all of the characters fit (but no null termination, unlike safestrcpy)
+int
+strncpyok(char *s, const char *t, size_t n)
+{
+  while (n > 0 && (*s++ = *t++) != 0)
+    n--;
+  if (n > 0)
+    *s = 0;
+  return *t == 0;
+}
+
 // Like strncpy but guaranteed to NUL-terminate.
 char*
 safestrcpy(char *s, const char *t, size_t n)

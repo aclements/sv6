@@ -250,12 +250,11 @@ public:
     if (!uaddr)
       return -1;
 
-    sref<vnode> ip = create(myproc()->cwd, uaddr->sun_path,
-                            T_SOCKET, 0, 0, true);
+
+    sref<vnode> ip = vfs_root()->create_socket(myproc()->cwd, uaddr->sun_path, localsock_, true);
     if (!ip)
       return -1;
 
-    ip->setup_socket(localsock_);
     strncpy(socketpath_, uaddr->sun_path, UNIX_PATH_MAX);
 
     return 0;

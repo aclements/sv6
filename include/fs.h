@@ -58,3 +58,8 @@ struct dirent {
 // XXX(Austin) PATH_MAX sucks.  It would be nice if we didn't need it
 // to size kernel copy buffers.
 #define PATH_MAX 256
+
+#if defined(XV6_USER) || defined(XV6_KERNEL) // cannot be defined on linux; conflicts with builtin name
+// across all possible filesystems
+#define FILENAME_MAX 256
+#endif

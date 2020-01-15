@@ -647,7 +647,7 @@ concreate(void)
   char file[3];
   int i, pid, n, fd;
   char fa[40];
-  char namebuf[14];
+  char namebuf[FILENAME_MAX];
   char *prev;
 
   printf("concreate test\n");

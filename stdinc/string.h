@@ -31,5 +31,6 @@ long int strtol(const char *s, char **endptr, int base);
 // Not C11
 void *mempcpy(void *dest, const void *src, size_t n);
 char *safestrcpy(char *s, const char *t, size_t n);
+int strncpyok(char *s, const char *t, size_t n) XV6_STRING_NOEXCEPT;
 
 END_DECLS

@@ -21,18 +21,25 @@ public:
   sref<page_info> get_page_info(u64 page_idx) override;
 
   bool is_directory() override;
-  bool child_exists(strbuf<14> name) override;
-  bool next_dirent(strbuf<DIRSIZ> *last, strbuf<DIRSIZ> *next) override;
+  bool child_exists(const char *name) override;
+  bool next_dirent(const char *last, strbuf<FILENAME_MAX> *next) override;
 
-  int hardlink(strbuf<DIRSIZ> name, sref<vnode> olddir, strbuf<DIRSIZ> oldname) override;
-  int rename(strbuf<DIRSIZ> newname, sref<vnode> olddir, strbuf<DIRSIZ> oldname) override;
-  int remove(strbuf<DIRSIZ> name) override;
-  sref<vnode> create(strbuf<DIRSIZ> name, short type, short major, short minor, bool excl) override;
+  int hardlink(const char *name, sref<vnode> olddir, const char *oldname) override;
+  int rename(const char *newname, sref<vnode> olddir, const char *oldname) override;
+  int remove(const char *name) override;
+  sref<vnode> create(const char *name, short type, short major, short minor, bool excl) override;
 
   bool as_device(u16 *major_out, u16 *minor_out) override;
 
   void setup_socket(struct localsock *sock) override;
   struct localsock *get_socket() override;
+
+  static sref<mnode> unwrap(const sref<vnode>& vn) {
+    if (!vn)
+      return sref<mnode>();
+    else
+      return vn->cast<vnode_mfs>()->node;
+  }
 
   static sref<vnode_mfs> wrap(const sref<mnode>& m) {
     // FIMXE: figure out if adding this ->killed() code here is a problem
@@ -111,9 +118,12 @@ vnode_mfs::file_size()
 }
 
 bool
-vnode_mfs::child_exists(strbuf<14> name)
+vnode_mfs::child_exists(const char *name)
 {
-  return node->as_dir()->exists(name);
+  strbuf<DIRSIZ> sb;
+  if (!sb.loadok(name))
+    return false; // name too long; cannot exist in mfs
+  return node->as_dir()->exists(sb);
 }
 
 bool
@@ -153,40 +163,54 @@ vnode_mfs::truncate()
 }
 
 bool
-vnode_mfs::next_dirent(strbuf<DIRSIZ> *last, strbuf<DIRSIZ> *next)
+vnode_mfs::next_dirent(const char *last, strbuf<FILENAME_MAX> *next)
 {
-  return this->node->as_dir()->enumerate(last, next);
+  strbuf<DIRSIZ> lastb, nextb;
+  if (last && !lastb.loadok(last))
+    return false; // name too long; cannot exist in mfs
+  if (!this->node->as_dir()->enumerate(last ? &lastb : nullptr, &nextb))
+    return false;
+  *next = strbuf<FILENAME_MAX>(nextb);
+  return true;
 }
 
 int
-vnode_mfs::hardlink(strbuf<DIRSIZ> name, sref<vnode> olddir, strbuf<DIRSIZ> oldname)
+vnode_mfs::hardlink(const char *name, sref<vnode> olddir, const char *oldname)
 {
   auto olddir_mfs = olddir->try_cast<vnode_mfs>();
   if (!olddir_mfs) // cannot hardlink across filesystems
     return -1;
 
-  mlinkref mflink = olddir_mfs->node->as_dir()->lookup_link(oldname);
+  strbuf<DIRSIZ> nameb, oldnameb;
+  if (!nameb.loadok(name) || !oldnameb.loadok(oldname))
+    return -1; // name too long; cannot exist in mfs
+
+  mlinkref mflink = olddir_mfs->node->as_dir()->lookup_link(oldnameb);
   if (!mflink.mn() || mflink.mn()->type() == mnode::types::dir)
     return -1;
 
-  if (!this->node->as_dir()->insert(name, &mflink))
+  if (!this->node->as_dir()->insert(nameb, &mflink))
     return -1;
 
   return 0;
 }
 
 int
-vnode_mfs::rename(strbuf<DIRSIZ> newname, sref<vnode> olddir, strbuf<DIRSIZ> oldname)
+vnode_mfs::rename(const char *newname, sref<vnode> olddir, const char *oldname)
 {
-  if (olddir == this && oldname == newname)
+  if (olddir == this && strcmp(oldname, newname) == 0)
     return 0;
 
   auto olddir_mfs = olddir->try_cast<vnode_mfs>();
   if (!olddir_mfs) // cannot rename across filesystems
     return -1;
 
+  strbuf<DIRSIZ> newnameb, oldnameb;
+  if (!newnameb.loadok(newname) || !oldnameb.loadok(oldname))
+    return -1; // name too long; cannot exist in mfs
+
   for (;;) {
-    sref<mnode> mfold = olddir_mfs->node->as_dir()->lookup(oldname);
+    sref<mnode> mfold = olddir_mfs->node->as_dir()->lookup(oldnameb);
     if (!mfold || mfold->type() == mnode::types::dir)
       /*
        * Renaming directories not currently supported.
@@ -201,7 +225,7 @@ vnode_mfs::rename(strbuf<DIRSIZ> newname, sref<vnode> olddir, strbuf<DIRSIZ> old
        */
       return -1;
 
-    sref<mnode> mfroadblock = this->node->as_dir()->lookup(newname);
+    sref<mnode> mfroadblock = this->node->as_dir()->lookup(newnameb);
     if (mfroadblock && mfroadblock->type() == mnode::types::dir)
       /*
        * POSIX says rename should replace a directory only with another
@@ -211,11 +235,11 @@ vnode_mfs::rename(strbuf<DIRSIZ> newname, sref<vnode> olddir, strbuf<DIRSIZ> old
       return -1;
 
     if (mfroadblock == mfold) {
-      if (olddir_mfs->node->as_dir()->remove(oldname, mfold))
+      if (olddir_mfs->node->as_dir()->remove(oldnameb, mfold))
         return 0;
     } else {
-      if (this->node->as_dir()->replace_from(newname, mfroadblock,
-                                             olddir_mfs->node->as_dir(), oldname, mfold))
+      if (this->node->as_dir()->replace_from(newnameb, mfroadblock,
+                                             olddir_mfs->node->as_dir(), oldnameb, mfold))
         return 0;
     }
 
@@ -227,12 +251,16 @@ vnode_mfs::rename(strbuf<DIRSIZ> newname, sref<vnode> olddir, strbuf<DIRSIZ> old
 }
 
 int
-vnode_mfs::remove(strbuf<DIRSIZ> name)
+vnode_mfs::remove(const char *name)
 {
-  if (name == "." || name == "..")
+  if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
     return -1;
 
-  sref<mnode> mf = this->node->as_dir()->lookup(name);
+  strbuf<DIRSIZ> nameb;
+  if (!nameb.loadok(name))
+    return -1; // name too long; cannot exist in mfs
+
+  sref<mnode> mf = this->node->as_dir()->lookup(nameb);
   if (!mf)
     return -1;
 
@@ -250,29 +278,33 @@ vnode_mfs::remove(strbuf<DIRSIZ> name)
      * it (we do not support directory rename), and the only way to unlink
      * a directory is to kill it, as we did above.
      */
-    bool ok = this->node->as_dir()->remove(name, mf);
+    bool ok = this->node->as_dir()->remove(nameb, mf);
     assert(ok);
     return 0;
   }
 
-  if (!this->node->as_dir()->remove(name, mf))
+  if (!this->node->as_dir()->remove(nameb, mf))
     return -1;
 
   return 0;
 }
 
 sref<vnode>
-vnode_mfs::create(strbuf<DIRSIZ> name, short type, short major, short minor, bool excl)
+vnode_mfs::create(const char *name, short type, short major, short minor, bool excl)
 {
+  strbuf<DIRSIZ> nameb;
+  if (!nameb.loadok(name))
+    return sref<vnode>(); // name too long; cannot exist in mfs
+
   auto dir = this->node->as_dir();
   for (;;) {
     if (dir->killed())
       return sref<vnode>();
 
-    if (excl && dir->exists(name))
+    if (excl && dir->exists(nameb))
       return sref<vnode>();
 
-    sref<mnode> mf = dir->lookup(name);
+    sref<mnode> mf = dir->lookup(nameb);
     if (mf) {
       if (type != T_FILE || mf->type() != mnode::types::file || excl)
         return sref<vnode>();
@@ -285,7 +317,7 @@ vnode_mfs::create(strbuf<DIRSIZ> name, short type, short major, short minor, boo
       case T_FILE:   mtype = mnode::types::file; break;
       case T_DEV:    mtype = mnode::types::dev;  break;
       case T_SOCKET: mtype = mnode::types::sock; break;
-      default:     cprintf("unhandled type %d\n", type);
+      default:     panic("unhandled type %d\n", type);
     }
 
     auto ilink = dir->fs_->alloc(mtype);
@@ -306,7 +338,7 @@ vnode_mfs::create(strbuf<DIRSIZ> name, short type, short major, short minor, boo
       mlinkref parentlink(this->node);
       parentlink.acquire();
       assert(mf->as_dir()->insert("..", &parentlink));
-      if (dir->insert(name, &ilink))
+      if (dir->insert(nameb, &ilink))
         return wrap(mf);
 
       /*
@@ -320,7 +352,7 @@ vnode_mfs::create(strbuf<DIRSIZ> name, short type, short major, short minor, boo
     if (mtype == mnode::types::dev)
       mf->as_dev()->init(major, minor);
 
-    if (dir->insert(name, &ilink))
+    if (dir->insert(nameb, &ilink))
       return wrap(mf);
 
     /* Failed to insert, retry */
@@ -344,8 +376,8 @@ vnode_mfs::get_socket()
 class filesystem_mfs : public filesystem {
 public:
   sref<vnode> root() override;
-  sref<vnode> resolve(sref<vnode> base, const char *path) override;
-  sref<vnode> resolveparent(sref<vnode> base, const char *path, strbuf<DIRSIZ> *name) override;
+  sref<vnode> resolve(const sref<vnode>& base, const char *path) override;
+  sref<vnode> resolveparent(const sref<vnode>& base, const char *path, strbuf<FILENAME_MAX> *name) override;
   sref<vnode> anonymous_pages(size_t pages) override;
 
   static filesystem_mfs *singleton() {
@@ -365,23 +397,19 @@ filesystem_mfs::root()
 }
 
 sref<vnode>
-filesystem_mfs::resolve(sref<vnode> base, const char *path)
+filesystem_mfs::resolve(const sref<vnode>& base, const char *path)
 {
-  if (!base) {
-    return vnode_mfs::wrap(namei(sref<mnode>(), path));
-  }
-  auto v = base->cast<vnode_mfs>();
-  return vnode_mfs::wrap(namei(v->node, path));
+  return vnode_mfs::wrap(namei(vnode_mfs::unwrap(base), path));
 }
 
 sref<vnode>
-filesystem_mfs::resolveparent(sref<vnode> base, const char *path, strbuf<DIRSIZ> *name)
+filesystem_mfs::resolveparent(const sref<vnode>& base, const char *path, strbuf<FILENAME_MAX> *name)
 {
-  if (!base) {
-    return vnode_mfs::wrap(nameiparent(sref<mnode>(), path, name));
-  }
-  auto v = base->cast<vnode_mfs>();
-  return vnode_mfs::wrap(nameiparent(v->node, path, name));
+  strbuf<DIRSIZ> nameout;
+  auto out = vnode_mfs::wrap(nameiparent(vnode_mfs::unwrap(base), path, &nameout));
+  if (out)
+    *name = strbuf<FILENAME_MAX>(nameout);
+  return out;
 }
 
 sref<vnode>

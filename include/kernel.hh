@@ -240,7 +240,6 @@ int             doexec(userptr_str upath,
                        userptr<userptr_str> uargv);
 int             fdalloc(sref<file>&& f, int omode);
 sref<file>      getfile(int fd);
-sref<vnode>     create(sref<vnode>, const char *, short, short, short, bool);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

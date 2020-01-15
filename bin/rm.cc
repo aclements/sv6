@@ -25,7 +25,7 @@ rmtree(const char *base)
     int fd = open(base, O_RDONLY);
     if (fd < 0)
       edie("rm: failed to open %s", base);
-    char buf[DIRSIZ];
+    char buf[FILENAME_MAX];
     char *prev = nullptr;
     while (true) {
       int r = readdir(fd, prev, buf);

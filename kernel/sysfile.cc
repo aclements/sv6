@@ -253,28 +253,7 @@ sys_link(userptr_str old_path, userptr_str new_path)
   if (!old_path.load(old, sizeof old) || !new_path.load(newn, sizeof newn))
     return -1;
 
-  strbuf<DIRSIZ> oldname;
-  sref<vnode> olddir = vfs_root()->resolveparent(myproc()->cwd, old, &oldname);
-  if (!olddir)
-    return -1;
-
-  /* Check if the old name exists; if not, abort right away */
-  if (!olddir->child_exists(oldname))
-    return -1;
-
-  strbuf<DIRSIZ> name;
-  sref<vnode> md = vfs_root()->resolveparent(myproc()->cwd, newn, &name);
-  if (!md)
-    return -1;
-
-  /*
-   * Check if the target name already exists; if so,
-   * no need to grab a link count on the old name.
-   */
-  if (md->child_exists(name))
-    return -1;
-
-  return md->hardlink(name, olddir, oldname);
+  return vfs_root()->hardlink(myproc()->cwd, old, newn);
 }
 
 //SYSCALL
@@ -285,20 +264,7 @@ sys_rename(userptr_str old_path, userptr_str new_path)
   if (!old_path.load(old, sizeof old) || !new_path.load(newn, sizeof newn))
     return -1;
 
-  strbuf<DIRSIZ> oldname;
-  sref<vnode> mdold = vfs_root()->resolveparent(myproc()->cwd, old, &oldname);
-  if (!mdold)
-    return -1;
-
-  if (!mdold->child_exists(oldname))
-    return -1;
-
-  strbuf<DIRSIZ> newname;
-  sref<vnode> mdnew = vfs_root()->resolveparent(myproc()->cwd, newn, &newname);
-  if (!mdnew)
-    return -1;
-
-  return mdnew->rename(newname, mdold, oldname);
+  return vfs_root()->rename(myproc()->cwd, old, newn);
 }
 
 //SYSCALL
@@ -309,22 +275,7 @@ sys_unlink(userptr_str path)
   if (!path.load(path_copy, sizeof path_copy))
     return -1;
 
-  strbuf<DIRSIZ> name;
-  sref<vnode> md = vfs_root()->resolveparent(myproc()->cwd, path_copy, &name);
-  if (!md)
-    return -1;
-
-  return md->remove(name);
-}
-
-sref<vnode>
-create(sref<vnode> cwd, const char *path, short type, short major, short minor, bool excl)
-{
-  strbuf<DIRSIZ> name;
-  auto parent = vfs_root()->resolveparent(cwd, path, &name);
-  if (!parent)
-    return sref<vnode>();
-  return parent->create(name, type, major, minor, excl);
+  return vfs_root()->remove(myproc()->cwd, path_copy);
 }
 
 //SYSCALL
@@ -351,7 +302,7 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
 
   sref<vnode> m;
   if (omode & O_CREAT)
-    m = create(cwd, path_copy, T_FILE, 0, 0, omode & O_EXCL);
+    m = vfs_root()->create_file(cwd, path_copy, omode & O_EXCL);
   else
     m = vfs_root()->resolve(cwd, path_copy);
 
@@ -392,7 +343,7 @@ sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
   if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
 
-  if (!create(cwd, path_copy, T_DIR, 0, 0, true))
+  if (!vfs_root()->create_dir(cwd, path_copy, true))
     return -1;
 
   return 0;
@@ -406,7 +357,7 @@ sys_mknod(userptr_str path, int major, int minor)
   if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
 
-  if (!create(myproc()->cwd, path_copy, T_DEV, major, minor, true))
+  if (!vfs_root()->create_device(myproc()->cwd, path_copy, major, minor, true))
     return -1;
 
   return 0;
@@ -456,7 +407,7 @@ int
 doexec(userptr_str upath, userptr<userptr_str> uargv)
 {
   std::unique_ptr<char[]> path;
-  if (!(path = upath.load_alloc(DIRSIZ+1)))
+  if (!(path = upath.load_alloc(FILENAME_MAX+1)))
     return -1;
 
   std::vector<std::unique_ptr<char[]> > xargv;
@@ -522,16 +473,16 @@ sys_readdir(int dirfd, const userptr<char> prevptr, userptr<char> nameptr)
   if (!dfi->ip->is_directory())
     return -1;
 
-  strbuf<DIRSIZ> prev;
-  if (prevptr && !prevptr.load(prev.buf_, DIRSIZ))
+  strbuf<FILENAME_MAX> prev;
+  if (prevptr && !prevptr.load(prev.buf_, FILENAME_MAX))
     return -1;
-  prev.buf_[DIRSIZ] = '\0';
+  prev.buf_[FILENAME_MAX] = '\0';
 
-  strbuf<DIRSIZ> name;
-  if (!dfi->ip->next_dirent(prevptr ? &prev : nullptr, &name))
+  strbuf<FILENAME_MAX> name;
+  if (!dfi->ip->next_dirent(prevptr ? prev.ptr() : nullptr, &name))
     return 0;
 
-  if (!nameptr.store(name.buf_, DIRSIZ))
+  if (!nameptr.store(name.buf_, FILENAME_MAX))
     return -1;
 
   return 1;
@@ -617,7 +568,7 @@ sys_sys_spawn(userptr_str upath, userptr<userptr_str> uargv,
   // Load the new image
   {
     std::unique_ptr<char[]> path;
-    if (!(path = upath.load_alloc(DIRSIZ+1)))
+    if (!(path = upath.load_alloc(FILENAME_MAX+1)))
       return -1;
     std::vector<std::unique_ptr<char[]> > xargv;
     if (load_str_list(uargv, MAXARG, MAXARGLEN, &xargv) < 0)

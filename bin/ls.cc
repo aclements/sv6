@@ -70,7 +70,7 @@ ls(const std::string &path)
   case S_IFDIR:
     std::vector<std::string> names;
 #ifdef XV6_USER
-    char namebuf[DIRSIZ+1];
+    char namebuf[FILENAME_MAX+1];
     char *prev = nullptr;
     while(readdir(fd, prev, namebuf) > 0) {
       prev = namebuf;

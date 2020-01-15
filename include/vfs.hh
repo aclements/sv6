@@ -28,14 +28,14 @@ public:
 
   // directory operations
   virtual bool is_directory() = 0;
-  virtual bool child_exists(strbuf<DIRSIZ> name) = 0;
-  virtual bool next_dirent(strbuf<DIRSIZ> *last, strbuf<DIRSIZ> *next) = 0;
+  virtual bool child_exists(const char *name) = 0;
+  virtual bool next_dirent(const char *last, strbuf<FILENAME_MAX> *next) = 0;
 
   // FIXME: this is probably at the wrong layer of abstraction
-  virtual int hardlink(strbuf<DIRSIZ> name, sref<vnode> olddir, strbuf<DIRSIZ> oldname) = 0;
-  virtual int rename(strbuf<DIRSIZ> name, sref<vnode> olddir, strbuf<DIRSIZ> oldname) = 0;
-  virtual int remove(strbuf<DIRSIZ> name) = 0;
-  virtual sref<vnode> create(strbuf<DIRSIZ> name, short type, short major, short minor, bool excl) = 0;
+  virtual int hardlink(const char *name, sref<vnode> olddir, const char *oldname) = 0;
+  virtual int rename(const char *name, sref<vnode> olddir, const char *oldname) = 0;
+  virtual int remove(const char *name) = 0;
+  virtual sref<vnode> create(const char *name, short type, short major, short minor, bool excl) = 0;
 
   // device operations
   virtual bool as_device(u16 *major_out, u16 *minor_out) = 0;
@@ -60,8 +60,16 @@ public:
 class filesystem {
 public:
   virtual sref<vnode> root() = 0;
-  virtual sref<vnode> resolve(sref<vnode> base, const char *path) = 0;
-  virtual sref<vnode> resolveparent(sref<vnode> base, const char *path, strbuf<DIRSIZ> *name) = 0;
+  virtual sref<vnode> resolve(const sref<vnode>& base, const char *path) = 0;
+  virtual sref<vnode> resolveparent(const sref<vnode>& base, const char *path, strbuf<FILENAME_MAX> *name) = 0;
+
+  int hardlink(const sref<vnode> &base, const char *oldpath, const char *newpath);
+  int rename(const sref<vnode>& base, const char *oldpath, const char *newpath);
+  int remove(const sref<vnode>& base, const char *path);
+  sref<vnode> create_file(const sref<vnode>& base, const char *path, bool excl);
+  sref<vnode> create_dir(const sref<vnode>& base, const char *path, bool excl);
+  sref<vnode> create_device(const sref<vnode>& base, const char *path, u16 major, u16 minor, bool excl);
+  sref<vnode> create_socket(const sref<vnode>& base, const char *path, struct localsock *sock, bool excl);
 
   // FIXME: make this more reasonable -- MAP_ANON|MAP_SHARED should not be integrated into the filesystem!
   virtual sref<vnode> anonymous_pages(size_t pages) = 0;

@@ -28,8 +28,22 @@ class strbuf {
     buf_[N] = '\0';
   }
 
-  explicit operator const char *() const {
-    return &buf_;
+  template<int M>
+  explicit strbuf(const strbuf<M> &s) {
+    static_assert(N >= M, "implicit conversion only valid when lengthening");
+    strncpy(buf_, s.buf_, M);
+    buf_[M] = '\0';
+  }
+
+  // returns true if the string fit
+  bool loadok(const char *s) {
+    auto out = strncpyok(buf_, s, N);
+    buf_[N] = '\0';
+    return out;
+  }
+
+  const char *ptr() const {
+    return buf_;
   }
 
   bool operator==(const strbuf<N> &other) const {

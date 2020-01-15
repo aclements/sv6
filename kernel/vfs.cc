@@ -22,3 +22,102 @@ vfs_root()
     panic("root filesystem not yet mounted");
   return root;
 }
+
+int
+filesystem::hardlink(const sref<vnode> &base, const char *oldpath, const char *newpath)
+{
+  strbuf<FILENAME_MAX> oldname;
+  sref<vnode> olddir = this->resolveparent(base, oldpath, &oldname);
+  if (!olddir)
+    return -1;
+
+  /* Check if the old name exists; if not, abort right away */
+  if (!olddir->child_exists(oldname.ptr()))
+    return -1;
+
+  strbuf<FILENAME_MAX> name;
+  sref<vnode> newdir = this->resolveparent(base, newpath, &name);
+  if (!newdir)
+    return -1;
+
+  /*
+   * Check if the target name already exists; if so,
+   * no need to grab a link count on the old name.
+   */
+  if (newdir->child_exists(name.ptr()))
+    return -1;
+
+  return newdir->hardlink(name.ptr(), olddir, oldname.ptr());
+}
+
+int
+filesystem::rename(const sref<vnode>& base, const char *oldpath, const char *newpath)
+{
+  strbuf<FILENAME_MAX> oldname;
+  sref<vnode> olddir = this->resolveparent(base, oldpath, &oldname);
+  if (!olddir)
+    return -1;
+
+  if (!olddir->child_exists(oldname.ptr()))
+    return -1;
+
+  strbuf<FILENAME_MAX> newname;
+  sref<vnode> newdir = this->resolveparent(base, newpath, &newname);
+  if (!newdir)
+    return -1;
+
+  return newdir->rename(newname.ptr(), olddir, oldname.ptr());
+}
+
+int
+filesystem::remove(const sref<vnode>& base, const char *path)
+{
+  strbuf<FILENAME_MAX> name;
+  sref<vnode> md = this->resolveparent(base, path, &name);
+  if (!md)
+    return -1;
+
+  return md->remove(name.ptr());
+}
+
+sref<vnode>
+filesystem::create_file(const sref<vnode>& base, const char *path, bool excl)
+{
+  strbuf<FILENAME_MAX> name;
+  auto parent = this->resolveparent(base, path, &name);
+  if (!parent)
+    return sref<vnode>();
+  return parent->create(name.ptr(), T_FILE, 0, 0, excl);
+}
+
+sref<vnode>
+filesystem::create_dir(const sref<vnode>& base, const char *path, bool excl)
+{
+  strbuf<FILENAME_MAX> name;
+  auto parent = this->resolveparent(base, path, &name);
+  if (!parent)
+    return sref<vnode>();
+  return parent->create(name.ptr(), T_DIR, 0, 0, excl);
+}
+
+sref<vnode>
+filesystem::create_device(const sref<vnode>& base, const char *path, u16 major, u16 minor, bool excl)
+{
+  strbuf<FILENAME_MAX> name;
+  auto parent = this->resolveparent(base, path, &name);
+  if (!parent)
+    return sref<vnode>();
+  return parent->create(name.ptr(), T_DEV, major, minor, excl);
+}
+
+sref<vnode>
+filesystem::create_socket(const sref<vnode>& base, const char *path, struct localsock *sock, bool excl)
+{
+  strbuf<FILENAME_MAX> name;
+  auto parent = this->resolveparent(base, path, &name);
+  if (!parent)
+    return sref<vnode>();
+  auto node = parent->create(name.ptr(), T_SOCKET, 0, 0, excl);
+  node->setup_socket(sock);
+  return node;
+}
