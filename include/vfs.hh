@@ -11,8 +11,13 @@
 #include "mnode.hh"
 #include "fs.h"
 
+class pageable : public referenced {
+public:
+  virtual sref<page_info> get_page_info(u64 page_idx) = 0; // for memory mapping
+};
+
 // abstract class for a reference to a filesystem node.
-class vnode : public referenced {
+class vnode : public pageable {
 public:
   // general operations
   virtual void stat(struct stat *st, enum stat_flags flags) = 0;
@@ -24,7 +29,6 @@ public:
   virtual int read_at(char *data, u64 offset, size_t len) = 0;
   virtual int write_at(const char *data, u64 offset, size_t len, bool append) = 0;
   virtual void truncate() = 0;
-  virtual sref<page_info> get_page_info(u64 page_idx) = 0; // for memory mapping
 
   // directory operations
   virtual bool is_directory() = 0;
@@ -73,7 +77,7 @@ public:
   sref<vnode> create_socket(const sref<vnode>& base, const char *path, struct localsock *sock);
 
   // FIXME: make this more reasonable -- MAP_ANON|MAP_SHARED should not be integrated into the filesystem!
-  virtual sref<vnode> anonymous_pages(size_t pages) = 0;
+  virtual sref<pageable> anonymous_pages(size_t pages) = 0;
 };
 
 void vfs_mount(filesystem *fs, const char *path);

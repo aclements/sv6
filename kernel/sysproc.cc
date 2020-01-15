@@ -112,7 +112,7 @@ void *
 sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
          off_t offset)
 {
-  sref<vnode> m;
+  sref<pageable> m;
 
   if (!(prot & (PROT_READ | PROT_WRITE))) {
     cprintf("not implemented: !(prot & (PROT_READ | PROT_WRITE))\n");
@@ -131,9 +131,10 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
     if (!f)
       return MAP_FAILED;
 
-    m = f->get_vnode();
-    if (!m || !m->is_regular_file())
+    auto v = f->get_vnode();
+    if (!v || !v->is_regular_file())
       return MAP_FAILED;
+    m = v;
   }
 
   uptr start = PGROUNDDOWN((uptr)addr);

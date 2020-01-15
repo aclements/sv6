@@ -8,7 +8,7 @@
 
 class vnode_mfs : public vnode {
 public:
-  explicit vnode_mfs(sref<mnode>  node);
+  explicit vnode_mfs(sref<mnode> node);
 
   void stat(struct stat *st, enum stat_flags flags) override;
 
@@ -424,7 +424,7 @@ public:
   sref<vnode> root() override;
   sref<vnode> resolve(const sref<vnode>& base, const char *path) override;
   sref<vnode> resolveparent(const sref<vnode>& base, const char *path, strbuf<FILENAME_MAX> *name) override;
-  sref<vnode> anonymous_pages(size_t pages) override;
+  sref<pageable> anonymous_pages(size_t pages) override;
 
   static filesystem_mfs *singleton() {
     return &_singleton;
@@ -458,7 +458,23 @@ filesystem_mfs::resolveparent(const sref<vnode>& base, const char *path, strbuf<
   return out;
 }
 
-sref<vnode>
+class anonymous_memory_region : public pageable {
+public:
+  explicit anonymous_memory_region(sref<mnode> node) {
+    this->node = node;
+  }
+  NEW_DELETE_OPS(anonymous_memory_region);
+  sref<mnode> node;
+  sref<page_info> get_page_info(u64 page_idx) override;
+};
+
+sref<page_info>
+anonymous_memory_region::get_page_info(u64 page_idx)
+{
+  return this->node->as_file()->get_page(page_idx).get_page_info();
+}
+
+sref<pageable>
 filesystem_mfs::anonymous_pages(size_t pages)
 {
   auto m = anon_fs->alloc(mnode::types::file).mn();
@@ -470,7 +486,7 @@ filesystem_mfs::anonymous_pages(size_t pages)
     auto pi = sref<page_info>::transfer(new (page_info::of(p)) page_info());
     resizer.resize_append(i * PGSIZE + PGSIZE, pi);
   }
-  return vnode_mfs::wrap(m);
+  return make_sref<anonymous_memory_region>(m);
 }
 
 void

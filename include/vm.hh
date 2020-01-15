@@ -65,7 +65,7 @@ struct vmdesc : public mmu::page_tracker
   // ourselves.
 
   // The file mapped at this page frame.
-  sref<vnode> inode;
+  sref<pageable> inode;
 
   // If a file is mapped at this page frame, the virtual address of
   // that file's 0 byte.  For anonymous memory, this must be 0.  We
@@ -80,7 +80,7 @@ struct vmdesc : public mmu::page_tracker
 
   // Construct a descriptor that maps the beginning of ip's file to
   // virtual address start (which may be negative).
-  vmdesc(const sref<vnode> &ip, intptr_t start)
+  vmdesc(const sref<pageable> &ip, intptr_t start)
     : flags(FLAG_MAPPED | FLAG_WRITE), inode(ip), start(start) { }
 
   // Radix_array element methods
@@ -119,7 +119,7 @@ private:
 
   // Create a new vmdesc with an empty page tracker.
   vmdesc(u64 flags, page_info_ref &&page,
-         const sref<vnode> &inode, intptr_t start)
+         const sref<pageable> &inode, intptr_t start)
     : flags(flags), page(std::move(page)), inode(inode), start(start) { }
 };
 
