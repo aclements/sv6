@@ -468,7 +468,7 @@ filesystem_mfs::anonymous_pages(size_t pages)
     if (!p)
       throw_bad_alloc();
     auto pi = sref<page_info>::transfer(new (page_info::of(p)) page_info());
-    resizer.resize_append(i + PGSIZE, pi);
+    resizer.resize_append(i * PGSIZE + PGSIZE, pi);
   }
   return vnode_mfs::wrap(m);
 }
