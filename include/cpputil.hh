@@ -15,15 +15,21 @@ using std::make_pair;
 template<int N>
 class strbuf {
  public:
-  char buf_[N];
+  // NOTE: buf_ used to be non-null-terminated, but now it always is.
+  char buf_[N+1];
 
   strbuf() {
-    if (N > 0)
-      buf_[0] = '\0';
+    buf_[0] = '\0';
   }
 
+  // FIXME: consider making this an explicit conversion, so that nobody gets caught off guard with the truncation aspect
   strbuf(const char *s) {
     strncpy(buf_, s, N);
+    buf_[N] = '\0';
+  }
+
+  explicit operator const char *() const {
+    return &buf_;
   }
 
   bool operator==(const strbuf<N> &other) const {

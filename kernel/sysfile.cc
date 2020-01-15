@@ -523,14 +523,15 @@ sys_readdir(int dirfd, const userptr<char> prevptr, userptr<char> nameptr)
     return -1;
 
   strbuf<DIRSIZ> prev;
-  if (prevptr && !prevptr.load(prev.buf_, sizeof(prev.buf_)))
+  if (prevptr && !prevptr.load(prev.buf_, DIRSIZ))
     return -1;
+  prev.buf_[DIRSIZ] = '\0';
 
   strbuf<DIRSIZ> name;
   if (!dfi->ip->next_dirent(prevptr ? &prev : nullptr, &name))
     return 0;
 
-  if (!nameptr.store(name.buf_, sizeof(name.buf_)))
+  if (!nameptr.store(name.buf_, DIRSIZ))
     return -1;
 
   return 1;
