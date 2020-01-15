@@ -31,17 +31,18 @@ public:
   virtual bool child_exists(const char *name) = 0;
   virtual bool next_dirent(const char *last, strbuf<FILENAME_MAX> *next) = 0;
 
-  // FIXME: this is probably at the wrong layer of abstraction
   virtual int hardlink(const char *name, sref<vnode> olddir, const char *oldname) = 0;
   virtual int rename(const char *name, sref<vnode> olddir, const char *oldname) = 0;
   virtual int remove(const char *name) = 0;
-  virtual sref<vnode> create(const char *name, short type, short major, short minor, bool excl) = 0;
+  virtual sref<vnode> create_file(const char *name, bool excl) = 0;
+  virtual sref<vnode> create_dir(const char *name) = 0;
+  virtual sref<vnode> create_device(const char *name, u16 major, u16 minor) = 0;
+  virtual sref<vnode> create_socket(const char *name, struct localsock *sock) = 0;
 
   // device operations
   virtual bool as_device(u16 *major_out, u16 *minor_out) = 0;
 
   // socket operations
-  virtual void setup_socket(struct localsock *sock) = 0;
   virtual struct localsock *get_socket() = 0;
 
   // vnode metadata
@@ -67,9 +68,9 @@ public:
   int rename(const sref<vnode>& base, const char *oldpath, const char *newpath);
   int remove(const sref<vnode>& base, const char *path);
   sref<vnode> create_file(const sref<vnode>& base, const char *path, bool excl);
-  sref<vnode> create_dir(const sref<vnode>& base, const char *path, bool excl);
-  sref<vnode> create_device(const sref<vnode>& base, const char *path, u16 major, u16 minor, bool excl);
-  sref<vnode> create_socket(const sref<vnode>& base, const char *path, struct localsock *sock, bool excl);
+  sref<vnode> create_dir(const sref<vnode>& base, const char *path);
+  sref<vnode> create_device(const sref<vnode>& base, const char *path, u16 major, u16 minor);
+  sref<vnode> create_socket(const sref<vnode>& base, const char *path, struct localsock *sock);
 
   // FIXME: make this more reasonable -- MAP_ANON|MAP_SHARED should not be integrated into the filesystem!
   virtual sref<vnode> anonymous_pages(size_t pages) = 0;

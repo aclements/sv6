@@ -87,37 +87,35 @@ filesystem::create_file(const sref<vnode>& base, const char *path, bool excl)
   auto parent = this->resolveparent(base, path, &name);
   if (!parent)
     return sref<vnode>();
-  return parent->create(name.ptr(), T_FILE, 0, 0, excl);
+  return parent->create_file(name.ptr(), excl);
 }
 
 sref<vnode>
-filesystem::create_dir(const sref<vnode>& base, const char *path, bool excl)
+filesystem::create_dir(const sref<vnode>& base, const char *path)
 {
   strbuf<FILENAME_MAX> name;
   auto parent = this->resolveparent(base, path, &name);
   if (!parent)
     return sref<vnode>();
-  return parent->create(name.ptr(), T_DIR, 0, 0, excl);
+  return parent->create_dir(name.ptr());
 }
 
 sref<vnode>
-filesystem::create_device(const sref<vnode>& base, const char *path, u16 major, u16 minor, bool excl)
+filesystem::create_device(const sref<vnode>& base, const char *path, u16 major, u16 minor)
 {
   strbuf<FILENAME_MAX> name;
   auto parent = this->resolveparent(base, path, &name);
   if (!parent)
     return sref<vnode>();
-  return parent->create(name.ptr(), T_DEV, major, minor, excl);
+  return parent->create_device(name.ptr(), major, minor);
 }
 
 sref<vnode>
-filesystem::create_socket(const sref<vnode>& base, const char *path, struct localsock *sock, bool excl)
+filesystem::create_socket(const sref<vnode>& base, const char *path, struct localsock *sock)
 {
   strbuf<FILENAME_MAX> name;
   auto parent = this->resolveparent(base, path, &name);
   if (!parent)
     return sref<vnode>();
-  auto node = parent->create(name.ptr(), T_SOCKET, 0, 0, excl);
-  node->setup_socket(sock);
-  return node;
+  return parent->create_socket(name.ptr(), sock);
 }

@@ -27,11 +27,13 @@ public:
   int hardlink(const char *name, sref<vnode> olddir, const char *oldname) override;
   int rename(const char *newname, sref<vnode> olddir, const char *oldname) override;
   int remove(const char *name) override;
-  sref<vnode> create(const char *name, short type, short major, short minor, bool excl) override;
+  sref<vnode> create_file(const char *name, bool excl) override;
+  sref<vnode> create_dir(const char *name) override;
+  sref<vnode> create_device(const char *name, u16 major, u16 minor) override;
+  sref<vnode> create_socket(const char *name, struct localsock *sock) override;
 
   bool as_device(u16 *major_out, u16 *minor_out) override;
 
-  void setup_socket(struct localsock *sock) override;
   struct localsock *get_socket() override;
 
   static sref<mnode> unwrap(const sref<vnode>& vn) {
@@ -289,8 +291,10 @@ vnode_mfs::remove(const char *name)
   return 0;
 }
 
+// FIXME: the creation functions would originally retry all the way back up to name resolution if they failed; maybe
+// that behavior should be preserved in this new format?
 sref<vnode>
-vnode_mfs::create(const char *name, short type, short major, short minor, bool excl)
+vnode_mfs::create_file(const char *name, bool excl)
 {
   strbuf<DIRSIZ> nameb;
   if (!nameb.loadok(name))
@@ -306,63 +310,105 @@ vnode_mfs::create(const char *name, short type, short major, short minor, bool e
 
     sref<mnode> mf = dir->lookup(nameb);
     if (mf) {
-      if (type != T_FILE || mf->type() != mnode::types::file || excl)
+      if (mf->type() != mnode::types::file || excl)
         return sref<vnode>();
       return wrap(mf);
     }
 
-    u8 mtype = 0;
-    switch (type) {
-      case T_DIR:    mtype = mnode::types::dir;  break;
-      case T_FILE:   mtype = mnode::types::file; break;
-      case T_DEV:    mtype = mnode::types::dev;  break;
-      case T_SOCKET: mtype = mnode::types::sock; break;
-      default:     panic("unhandled type %d\n", type);
-    }
-
-    auto ilink = dir->fs_->alloc(mtype);
-    mf = ilink.mn();
-
-    if (mtype == mnode::types::dir) {
-      /*
-       * We need to bump the refcount on the parent directory (md)
-       * to create ".." in the new subdirectory (mf), but only if
-       * the parent directory had a non-zero link count already.
-       * We serialize on whether md was killed: its link count drops
-       * only after a successful kill (see unlink), and insert into
-       * md succeeds iff md's kill fails.
-       *
-       * Mild POSIX violation: this may temporarily raise md's link
-       * count (as observed by fstat) from zero to positive.
-       */
-      mlinkref parentlink(this->node);
-      parentlink.acquire();
-      assert(mf->as_dir()->insert("..", &parentlink));
-      if (dir->insert(nameb, &ilink))
-        return wrap(mf);
-
-      /*
-       * Didn't work, clean up and retry.  The expectation is that the
-       * parent directory (md) was removed, and nameiparent will fail.
-       */
-      assert(mf->as_dir()->remove("..", this->node));
-      continue;
-    }
-
-    if (mtype == mnode::types::dev)
-      mf->as_dev()->init(major, minor);
+    auto ilink = dir->fs_->alloc(mnode::types::file);
 
     if (dir->insert(nameb, &ilink))
-      return wrap(mf);
+      return wrap(ilink.mn());
 
     /* Failed to insert, retry */
   }
 }
 
-void
-vnode_mfs::setup_socket(struct localsock *sock)
+sref<vnode>
+vnode_mfs::create_dir(const char *name)
 {
-  this->node->as_sock()->init(sock);
+  strbuf<DIRSIZ> nameb;
+  if (!nameb.loadok(name))
+    return sref<vnode>(); // name too long; cannot exist in mfs
+
+  auto dir = this->node->as_dir();
+  if (dir->killed() || dir->exists(nameb))
+    return sref<vnode>();
+
+  auto ilink = dir->fs_->alloc(mnode::types::dir);
+  auto mf = ilink.mn();
+
+  /*
+   * We need to bump the refcount on the parent directory (md)
+   * to create ".." in the new subdirectory (mf), but only if
+   * the parent directory had a non-zero link count already.
+   * We serialize on whether md was killed: its link count drops
+   * only after a successful kill (see unlink), and insert into
+   * md succeeds iff md's kill fails.
+   *
+   * Mild POSIX violation: this may temporarily raise md's link
+   * count (as observed by fstat) from zero to positive.
+   */
+  mlinkref parentlink(this->node);
+  parentlink.acquire();
+  assert(mf->as_dir()->insert("..", &parentlink));
+  if (dir->insert(nameb, &ilink))
+    return wrap(mf);
+
+  /*
+   * Didn't work, clean up and retry.  The expectation is that the
+   * parent directory (md) was removed, and nameiparent will fail.
+   */
+  assert(mf->as_dir()->remove("..", this->node));
+  // don't actually retry; without the FIXME above getting fixed, and being able to retry back to nameiparent, there's
+  // no point in this
+  return sref<vnode>();
+}
+
+sref<vnode>
+vnode_mfs::create_device(const char *name, u16 major, u16 minor)
+{
+  strbuf<DIRSIZ> nameb;
+  if (!nameb.loadok(name))
+    return sref<vnode>(); // name too long; cannot exist in mfs
+
+  auto dir = this->node->as_dir();
+  if (dir->killed() || dir->exists(nameb))
+    return sref<vnode>();
+
+  auto ilink = dir->fs_->alloc(mnode::types::dev);
+  auto mf = ilink.mn();
+  mf->as_dev()->init(major, minor);
+
+  if (dir->insert(nameb, &ilink))
+    return wrap(mf);
+
+  // don't actually retry; without the FIXME above getting fixed, and being able to retry back to nameiparent, there's
+  // no point in that.
+  return sref<vnode>();
+}
+
+sref<vnode>
+vnode_mfs::create_socket(const char *name, struct localsock *sock)
+{
+  strbuf<DIRSIZ> nameb;
+  if (!nameb.loadok(name))
+    return sref<vnode>(); // name too long; cannot exist in mfs
+
+  auto dir = this->node->as_dir();
+  if (dir->killed() || dir->exists(nameb))
+    return sref<vnode>();
+
+  auto ilink = dir->fs_->alloc(mnode::types::sock);
+  auto mf = ilink.mn();
+  mf->as_sock()->init(sock);
+
+  if (dir->insert(nameb, &ilink))
+    return wrap(mf);
+
+  // don't actually retry; without the FIXME above getting fixed, and being able to retry back to nameiparent, there's
+  // no point in that.
+  return sref<vnode>();
 }
 
 struct localsock *

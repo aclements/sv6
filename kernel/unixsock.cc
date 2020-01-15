@@ -250,8 +250,7 @@ public:
     if (!uaddr)
       return -1;
 
-
-    sref<vnode> ip = vfs_root()->create_socket(myproc()->cwd, uaddr->sun_path, localsock_, true);
+    sref<vnode> ip = vfs_root()->create_socket(myproc()->cwd, uaddr->sun_path, localsock_);
     if (!ip)
       return -1;
 

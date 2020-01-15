@@ -343,7 +343,7 @@ sys_mkdirat(int dirfd, userptr_str path, mode_t mode)
   if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
 
-  if (!vfs_root()->create_dir(cwd, path_copy, true))
+  if (!vfs_root()->create_dir(cwd, path_copy))
     return -1;
 
   return 0;
@@ -357,7 +357,7 @@ sys_mknod(userptr_str path, int major, int minor)
   if (!path.load(path_copy, sizeof(path_copy)))
     return -1;
 
-  if (!vfs_root()->create_device(myproc()->cwd, path_copy, major, minor, true))
+  if (!vfs_root()->create_device(myproc()->cwd, path_copy, major, minor))
     return -1;
 
   return 0;
