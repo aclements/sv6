@@ -460,4 +460,4 @@ struct trapframe {
   uint64_t rsp;
   uint16_t ss;
   uint16_t padding0[3];
-} __attribute__((packed));
+} __attribute__((packed, aligned(8)));

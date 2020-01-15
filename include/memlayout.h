@@ -19,5 +19,6 @@
 // memory.
 #define KCODE       0xFFFFFFFFC0000000ull
 #define KTEXT       0xFFFFFFFFC0200000ull
+#define KTEXTEND    0xFFFFFFFFC0400000ull
 
 #define USERTOP     0x0000800000000000ull

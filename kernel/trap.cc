@@ -305,6 +305,35 @@ trap(struct trapframe *tf, bool had_secrets)
     mycpu()->fpu_owner = myproc();
     break;
   }
+  case T_ILLOP: {
+    if((tf->cs&3) == 0 && tf->rip >= KTEXT && tf->rip < KTEXTEND) {
+      u64 instr = *(u64*)tf->rip;
+      u64* regs[16] = {
+        &tf->rax, &tf->rcx, &tf->rdx, &tf->rbx, &tf->rsp, &tf->rbp, &tf->rsi, &tf->rdi,
+        &tf->r8, &tf->r9, &tf->r10, &tf->r11, &tf->r12, &tf->r13, &tf->r14, &tf->r15,
+      };
+
+      // popcntq: This instruction is supported by all current processors, but
+      // not QEMU's default 'qemu64'. This small emulation routine is only
+      // needed so that Ward can run with qemu-system-x86_64 without passing any
+      // extra arguments (ie '-cpu qemu64,+popcnt'). If QEMU bumps its default
+      // provided features or compatibility is ever no-longer wanted, this code
+      // can be removed.
+      if ((instr & 0xc0fffff0ff) == 0xc0b80f40f3) {
+        u64 reg = ((instr>>32) & 0x7) | (((instr>>8) & 0x1) << 3);
+        u64 rm = ((instr>>35) & 0x7) | (((instr>>9) & 0x1) << 3);
+
+        *regs[rm] = 0;
+        for(int i = 0; i < 64; i++)
+          if(*regs[reg] & (1ul << i))
+            regs[rm]++;
+
+        tf->rip += 5;
+        break;
+      }
+    }
+    // fallthrough
+  }
   default:
     if (tf->trapno >= T_IRQ0 && irq_info[tf->trapno - T_IRQ0].handlers) {
       for (auto h = irq_info[tf->trapno - T_IRQ0].handlers; h; h = h->next)
