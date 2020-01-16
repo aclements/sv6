@@ -10,11 +10,7 @@
 #include "cpputil.hh"
 #include "mnode.hh"
 #include "fs.h"
-
-class pageable : public referenced {
-public:
-  virtual sref<page_info> get_page_info(u64 page_idx) = 0; // for memory mapping
-};
+#include "vm.hh"
 
 // abstract class for a reference to a filesystem node.
 class vnode : public pageable {
@@ -75,9 +71,6 @@ public:
   sref<vnode> create_dir(const sref<vnode>& base, const char *path);
   sref<vnode> create_device(const sref<vnode>& base, const char *path, u16 major, u16 minor);
   sref<vnode> create_socket(const sref<vnode>& base, const char *path, struct localsock *sock);
-
-  // FIXME: make this more reasonable -- MAP_ANON|MAP_SHARED should not be integrated into the filesystem!
-  virtual sref<pageable> anonymous_pages(size_t pages) = 0;
 };
 
 void vfs_mount(filesystem *fs, const char *path);

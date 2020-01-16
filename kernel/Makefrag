@@ -85,6 +85,7 @@ OBJS = \
 	crc32.o \
 	vfs.o \
 	vfsadapt.o \
+	sharedmem.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 

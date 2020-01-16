@@ -9,11 +9,17 @@
 #include "kalloc.hh"
 #include "page_info.hh"
 #include "vector.hh"
-#include "vfs.hh"
 
 struct padded_length;
 
 using std::atomic;
+
+class pageable : public referenced {
+public:
+  virtual sref<page_info> get_page_info(u64 page_idx) = 0; // for memory mapping
+};
+
+sref<pageable> new_shared_memory_region(size_t pages);
 
 // XXX(Austin) If we needed to store significantly more per-region
 // metadata, it would be better to keep it in a heap-allocated and

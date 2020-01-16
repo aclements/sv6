@@ -124,7 +124,7 @@ sys_mmap(userptr<void> addr, size_t len, int prot, int flags, int fd,
       return MAP_FAILED;
 
     if (flags & MAP_SHARED) {
-      m = vfs_root()->anonymous_pages((len + PGSIZE - 1) / PGSIZE);
+      m = new_shared_memory_region((len + PGSIZE - 1) / PGSIZE);
     }
   } else {
     sref<file> f = myproc()->ftable->getfile(fd);
