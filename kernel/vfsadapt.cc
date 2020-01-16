@@ -460,33 +460,44 @@ filesystem_mfs::resolveparent(const sref<vnode>& base, const char *path, strbuf<
 
 class anonymous_memory_region : public pageable {
 public:
-  explicit anonymous_memory_region(sref<mnode> node) {
-    this->node = node;
+  explicit anonymous_memory_region(size_t npages)
+    : num_pages(npages)
+  {
+    this->pages = (sref<page_info> *) kmalloc(npages * sizeof(sref<page_info>), "MAP_SHARED metadata");
+    for (size_t i = 0; i < npages; i++) {
+      void *p = zalloc("MAP_ANON|MAP_SHARED");
+      if (!p)
+        throw_bad_alloc();
+      auto pi = sref<page_info>::transfer(new (page_info::of(p)) page_info());
+      new(&this->pages[i]) sref<page_info>(pi);
+    }
+  }
+  void onzero() override {
+    for (size_t i = 0; i < num_pages; i++) {
+      this->pages[i].~sref<page_info>();
+    }
+    kmfree(this->pages, num_pages * sizeof(sref<page_info>));
+    delete this;
   }
   NEW_DELETE_OPS(anonymous_memory_region);
-  sref<mnode> node;
+  sref<page_info> *pages;
+  size_t num_pages;
   sref<page_info> get_page_info(u64 page_idx) override;
 };
 
 sref<page_info>
 anonymous_memory_region::get_page_info(u64 page_idx)
 {
-  return this->node->as_file()->get_page(page_idx).get_page_info();
+  if (page_idx >= num_pages)
+    return sref<page_info>();
+
+  return this->pages[page_idx];
 }
 
 sref<pageable>
 filesystem_mfs::anonymous_pages(size_t pages)
 {
-  auto m = anon_fs->alloc(mnode::types::file).mn();
-  auto resizer = m->as_file()->write_size();
-  for (size_t i = 0; i < pages; i ++) {
-    void* p = zalloc("MAP_ANON|MAP_SHARED");
-    if (!p)
-      throw_bad_alloc();
-    auto pi = sref<page_info>::transfer(new (page_info::of(p)) page_info());
-    resizer.resize_append(i * PGSIZE + PGSIZE, pi);
-  }
-  return make_sref<anonymous_memory_region>(m);
+  return make_sref<anonymous_memory_region>(pages);
 }
 
 void

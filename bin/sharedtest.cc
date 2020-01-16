@@ -27,7 +27,7 @@ int
 main(int argc, char *argv[])
 {
   struct shared_state *p = NULL;
-  if ((p = (struct shared_state *) mmap(NULL, PGSIZE * 1000, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0)) == MAP_FAILED)
+  if ((p = (struct shared_state *) mmap(NULL, PGSIZE * 8, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0)) == MAP_FAILED)
     printf("mmap failed");
 
   pid_t child_pid = fork();
