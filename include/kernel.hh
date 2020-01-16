@@ -82,6 +82,10 @@ void            cgaputc(int c);
 // vga.c
 void            vgaputc(int c);
 
+// cmdline.cc
+int             cmdline_view_param(const char *name);
+int             cmdline_change_param(const char *name, const char *value);
+
 // console.c
 void            cprintf(const char*, ...) __attribute__((format(printf, 1, 2)));
 void            __cprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));

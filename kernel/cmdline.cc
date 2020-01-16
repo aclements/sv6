@@ -63,7 +63,7 @@ getvalue(const char* param, char* dst)
   return true;
 }
 
-static bool parse_binary_option(const char* name, bool default_value) {
+static bool parse_binary_param(const char* name, bool default_value) {
   char value[CMDLINE_VALUE+1];  // add one for null char
   if(!getvalue(name, value))
     return default_value;
@@ -77,7 +77,7 @@ static bool parse_binary_option(const char* name, bool default_value) {
   }
 }
 
-static u64 parse_uint_option(const char* name, long default_value) {
+static u64 parse_uint_param(const char* name, long default_value) {
   char value[CMDLINE_VALUE+1];  // add one for null char
   char *end = NULL;
   long ret;
@@ -93,11 +93,45 @@ static u64 parse_uint_option(const char* name, long default_value) {
   return (u64)ret;
 }
 
-static void parse_string_option(const char* name, const char *default_value, char *output) {
+static void parse_string_param(const char* name, const char *default_value, char *output) {
   if(!getvalue(name, output) || output[0] == '\0') {
     strncpy(output, default_value, CMDLINE_VALUE);
     output[CMDLINE_VALUE] = '\0'; // just in case every byte was filled
   }
+}
+
+void
+view_binary_param(const char *param_name, const char *name, bool value)
+{
+  if (name == NULL || strcmp(param_name, name) == 0)
+    cprintf("%s: %s\n", param_name, value ? "yes" : "no");
+}
+
+void
+view_string_param(const char *param_name, const char *name, char *value)
+{
+  if (name == NULL || strcmp(param_name, name) == 0)
+    cprintf("%s: %s\n", param_name, value);
+}
+
+// print the value of the specified param, or all params if name is null
+int
+cmdline_view_param(const char *name)
+{
+  view_binary_param("disable_pcid", name, cmdline_params.disable_pcid);
+  view_binary_param("keep_retpolines", name, cmdline_params.keep_retpolines);
+  view_binary_param("use_vga", name, cmdline_params.use_vga);
+  view_binary_param("lazy_barrier", name, cmdline_params.lazy_barrier);
+  view_string_param("root_disk", name, cmdline_params.root_disk);
+  view_binary_param("mds", name, cmdline_params.mds);
+  return 0;
+}
+
+int
+cmdline_change_param(const char *name, const char *value)
+{
+  cprintf("hello from kernel\n");
+  return 0;
 }
 
 void
@@ -106,20 +140,15 @@ initcmdline()
   if(CMDLINE_DEBUG)
     cprintf("cmdline: %s\n", multiboot.cmdline);
 
-  cmdline_params.disable_pcid = parse_binary_option("disable_pcid", false);
-  cmdline_params.keep_retpolines = parse_binary_option("keep_retpolines", false);
-  cmdline_params.use_vga = parse_binary_option("use_vga", true);
-  cmdline_params.lazy_barrier = parse_binary_option("lazy_barrier", true);
-  parse_string_option("root_disk", "0", cmdline_params.root_disk);
-  cmdline_params.mds = parse_binary_option("mds", true);
+  cmdline_params.disable_pcid = parse_binary_param("disable_pcid", false);
+  cmdline_params.keep_retpolines = parse_binary_param("keep_retpolines", false);
+  cmdline_params.use_vga = parse_binary_param("use_vga", true);
+  cmdline_params.lazy_barrier = parse_binary_param("lazy_barrier", true);
+  parse_string_param("root_disk", "0", cmdline_params.root_disk);
+  cmdline_params.mds = parse_binary_param("mds", true);
 
-  if(CMDLINE_DEBUG){
-    cprintf("cmdline: disable pcid? %s\n", cmdline_params.disable_pcid ? "yes" : "no");
-    cprintf("cmdline: keep retpolines? %s\n", cmdline_params.keep_retpolines ? "yes" : "no");
-    cprintf("cmdline: root disk? %s\n", cmdline_params.root_disk);
-    cprintf("cmdline: use vga? %s\n", cmdline_params.use_vga ? "yes" : "no");
-    cprintf("cmdline: mitigate MDS? %s\n", cmdline_params.mds ? "yes" : "no");
-  }
+  if(CMDLINE_DEBUG)
+    cmdline_view_param(NULL);
 
   devsw[MAJ_CMDLINE].pread = cmdlineread;
 }

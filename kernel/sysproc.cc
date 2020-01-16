@@ -13,6 +13,7 @@
 #include "filetable.hh"
 #include "ipi.hh"
 #include "cpuid.hh"
+#include "cmdline.hh"
 
 #include <uk/mman.h>
 #include <uk/utsname.h>
@@ -411,4 +412,18 @@ sys_update_microcode(const void* data, u64 len)
   run_on_cpus(remote_cpus, install_microcode);
   kfree(microcode);
   return 0;
+}
+
+//SYSCALL
+int
+sys_cmdline_view_param(const char *name)
+{
+  return cmdline_view_param(name);
+}
+
+//SYSCALL
+int
+sys_cmdline_change_param(const char *name, const char *value)
+{
+  return cmdline_change_param(name, value);
 }

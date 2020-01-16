@@ -71,6 +71,7 @@ UPROGS_BIN= \
 	memsetbench \
 	update_ucode \
 	sharedtest \
+  param \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
