@@ -99,10 +99,14 @@ strncpy(char *s, const char *t, size_t n)
 int
 strncpyok(char *s, const char *t, size_t n)
 {
-  while (n > 0 && (*s++ = *t++) != 0)
+  while (n > 0) {
+    if ((*s++ = *t++) == 0) {
+      if (n > 0)
+        *s = 0;
+      return 1;
+    }
     n--;
-  if (n > 0)
-    *s = 0;
+  }
   return *t == 0;
 }
 
