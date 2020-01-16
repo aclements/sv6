@@ -32,7 +32,7 @@ struct param_metadata<bool> binary_params[] = {
 struct param_metadata<u64> uint_params[] = {};
 
 struct param_metadata<char *> string_params[] = {
-  { "root_disk", (char**) &cmdline_params.root_disk, "0", NULL },
+  { "root_disk", (char**) cmdline_params.root_disk, "0", NULL },
 };
 
 static int
@@ -80,7 +80,7 @@ getvalue(const char* param, char* dst)
   while(*(p+len) != 0 && *(p+len) != ' ' && len < CMDLINE_VALUE)
     len++;
   strncpy(dst, p, len);
-  *(dst+len) = 0;
+  *(dst+len) = '\0';
   return true;
 }
 
@@ -155,10 +155,74 @@ cmdline_view_param(const char *name)
   return 0;
 }
 
+void
+change_binary_param(struct param_metadata<bool> *param, const char *value)
+{
+  bool new_val = *param->pval;
+  if (strcmp(value, "yes") == 0) new_val = true;
+  else if (strcmp(value, "no") == 0) new_val = false;
+  else cprintf("unrecognized value '%s' for bool type, expecting yes/no\n", value);
+
+  if (new_val != *param->pval) {
+    *param->pval = new_val;
+    if (param->on_change != NULL) {
+      // TODO use IPI
+      param->on_change(new_val);
+    }
+  }
+}
+
+void
+change_uint_param(struct param_metadata<u64> *param, const char *value)
+{
+  u64 new_val = strtoul(value, NULL, 10);
+
+  if (new_val != *param->pval) {
+    *param->pval = new_val;
+    if (param->on_change != NULL) {
+      // TODO use IPI
+      param->on_change(new_val);
+    }
+  }
+}
+
+void
+change_string_param(struct param_metadata<char *> *param, const char *value)
+{
+  char *new_val = (char*) param->pval;
+  if (strcmp(new_val, value) != 0) {
+    strncpy(new_val, value, CMDLINE_VALUE);
+    new_val[CMDLINE_VALUE - 1] = '\0';
+
+    if (param->on_change != NULL) {
+      // TODO use IPI
+      param->on_change(new_val);
+    }
+  }
+}
+
 int
 cmdline_change_param(const char *name, const char *value)
 {
-  return 0;
+  for (auto &param : binary_params) {
+    if (strcmp(param.name, name) == 0) {
+      change_binary_param(&param, value);
+      return 0;
+    }
+  }
+  for (auto &param : uint_params) {
+    if (strcmp(param.name, name) == 0) {
+      change_uint_param(&param, value);
+      return 0;
+    }
+  }
+  for (auto &param : string_params) {
+    if (strcmp(param.name, name) == 0) {
+      change_string_param(&param, value);
+      return 0;
+    }
+  }
+  return -1;
 }
 
 void
