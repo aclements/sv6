@@ -11,6 +11,7 @@ public:
   explicit vnode_mfs(sref<mnode> node);
 
   void stat(struct stat *st, enum stat_flags flags) override;
+  sref<class filesystem> get_fs() override;
 
   bool is_regular_file() override;
   u64 file_size() override;
@@ -58,6 +59,21 @@ private:
   friend class filesystem_mfs;
 };
 
+class filesystem_mfs : public filesystem {
+public:
+  sref<vnode> root() override;
+  sref<vnode> resolve(const sref<vnode>& base, const char *path) override;
+  sref<vnode> resolveparent(const sref<vnode>& base, const char *path, strbuf<FILENAME_MAX> *name) override;
+
+  static sref<filesystem_mfs> singleton() {
+    return sref<filesystem_mfs>::newref(&_singleton);
+  }
+private:
+  void onzero() override { delete this; }
+  explicit filesystem_mfs() = default;
+  static filesystem_mfs _singleton;
+};
+
 vnode_mfs::vnode_mfs(sref<mnode> node)
   : node(std::move(node))
 {
@@ -89,6 +105,12 @@ vnode_mfs::stat(struct stat *st, enum stat_flags flags)
   st->st_size = 0;
   if (node->type() == mnode::types::file)
     st->st_size = *node->as_file()->read_size();
+}
+
+sref<class filesystem>
+vnode_mfs::get_fs()
+{
+  return filesystem_mfs::singleton();
 }
 
 bool
@@ -419,20 +441,6 @@ vnode_mfs::get_socket()
   return this->node->as_sock()->get_sock();
 }
 
-class filesystem_mfs : public filesystem {
-public:
-  sref<vnode> root() override;
-  sref<vnode> resolve(const sref<vnode>& base, const char *path) override;
-  sref<vnode> resolveparent(const sref<vnode>& base, const char *path, strbuf<FILENAME_MAX> *name) override;
-
-  static filesystem_mfs *singleton() {
-    return &_singleton;
-  }
-private:
-  explicit filesystem_mfs() = default;
-  static filesystem_mfs _singleton;
-};
-
 filesystem_mfs filesystem_mfs::_singleton;
 
 sref<vnode>
@@ -457,8 +465,8 @@ filesystem_mfs::resolveparent(const sref<vnode>& base, const char *path, strbuf<
   return out;
 }
 
-void
-initvfs()
+sref<filesystem>
+vfs_get_mfs()
 {
-  vfs_mount(filesystem_mfs::singleton(), "/");
+  return filesystem_mfs::singleton();
 }

@@ -17,6 +17,7 @@ class vnode : public pageable {
 public:
   // general operations
   virtual void stat(struct stat *st, enum stat_flags flags) = 0;
+  virtual sref<class filesystem> get_fs() = 0; // may return sref() if filesystem no longer exists
 
   // regular file operations
   virtual bool is_regular_file() = 0;
@@ -39,6 +40,8 @@ public:
   virtual sref<vnode> create_device(const char *name, u16 major, u16 minor) = 0;
   virtual sref<vnode> create_socket(const char *name, struct localsock *sock) = 0;
 
+  // FIXME: have a way to mark mountpoints so that they can't be deleted
+
   // device operations
   virtual bool as_device(u16 *major_out, u16 *minor_out) = 0;
 
@@ -58,7 +61,7 @@ public:
 };
 
 // abstract class for a filesystem.
-class filesystem {
+class filesystem : public refcache::weak_referenced {
 public:
   virtual sref<vnode> root() = 0;
   virtual sref<vnode> resolve(const sref<vnode>& base, const char *path) = 0;
@@ -73,5 +76,47 @@ public:
   sref<vnode> create_socket(const sref<vnode>& base, const char *path, struct localsock *sock);
 };
 
-void vfs_mount(filesystem *fs, const char *path);
-filesystem *vfs_root();
+class step_resolved_filesystem : public filesystem {
+public:
+  sref<vnode> resolve(const sref<vnode>& base, const char *path) override;
+  sref<vnode> resolveparent(const sref<vnode>& base, const char *path, strbuf<FILENAME_MAX> *name) override;
+
+  // does not handle . or ..
+  virtual sref<vnode> resolve_child(const sref<vnode>& base, const char *filename) = 0;
+  // handles the .. case
+  virtual sref<vnode> resolve_parent(const sref<vnode>& base) = 0;
+};
+
+class virtual_filesystem : public step_resolved_filesystem {
+public:
+  explicit virtual_filesystem(sref<filesystem> root);
+
+  sref<vnode> root() override;
+  sref<vnode> resolve_child(const sref<vnode>& base, const char *filename) override;
+  sref<vnode> resolve_parent(const sref<vnode>& base) override;
+
+  int mount(const sref<vnode>& mountpoint, const sref<filesystem>& filesystem);
+  // FIXME: prevent unmounting while a filesystem is still in use
+  int unmount(const sref<vnode>& mountpoint);
+  int change_root(const sref<filesystem>& new_root, const sref<vnode>& mountpoint_for_old_root);
+
+  NEW_DELETE_OPS(virtual_filesystem);
+private:
+  void onzero() override { delete this; }
+  struct virtual_mount {
+    sref<vnode> mountpoint;
+    sref<filesystem> mountpoint_filesystem;
+    sref<filesystem> mounted_filesystem;
+  };
+  // the chainhash instances have their own
+  spinlock modifylock __mpalign__;
+  sref<filesystem> rootmount;
+  chainhash<sref<vnode>, virtual_mount> submounts_forwards;
+  chainhash<sref<filesystem>, virtual_mount> submounts_backwards;
+};
+
+sref<filesystem> vfs_new_nullfs();
+sref<filesystem> vfs_get_mfs();
+
+void vfs_mount(const sref<filesystem>& fs, const char *path);
+sref<filesystem> vfs_root();

@@ -2,25 +2,39 @@
 #include "kernel.hh"
 #include "vfs.hh"
 
-static filesystem *root = nullptr;
+static sref<virtual_filesystem> mounts;
 
 void
-vfs_mount(filesystem *fs, const char *path)
+vfs_mount(const sref<filesystem> &fs, const char *path)
 {
-  if (strcmp(path, "/") != 0)
-    panic("unimplemented: mounting paths besides /");
-  if (root != NULL)
-    panic("unimplemented: mounting multiple paths");
-  assert(fs != NULL);
-  root = fs;
+  if (!mounts)
+    panic("vfs_mount: not yet initialized");
+  if (path[0] != '/')
+    panic("vfs_mount: not given an absolute path by '%s'", path);
+  if (!fs)
+    panic("vfs_mount: given null filesystem");
+  sref<vnode> mountpoint = mounts->resolve(sref<vnode>(), path);
+  if (!mountpoint)
+    panic("vfs_mount: cannot find mountpoint '%s'", path);
+  mounts->mount(mountpoint, fs);
 }
 
-filesystem *
+sref<filesystem>
 vfs_root()
 {
-  if (root == NULL)
-    panic("root filesystem not yet mounted");
-  return root;
+  if (!mounts)
+    panic("vfs_root: not yet initialized");
+  return mounts;
+}
+
+void
+initvfs()
+{
+  assert(!mounts);
+  mounts = make_sref<virtual_filesystem>(vfs_get_mfs());
+
+  // cprintf("not mounting mfs... what will it do?\n");
+  // vfs_mount(vfs_get_mfs(), "/");
 }
 
 int
@@ -118,4 +132,84 @@ filesystem::create_socket(const sref<vnode>& base, const char *path, struct loca
   if (!parent)
     return sref<vnode>();
   return parent->create_socket(name.ptr(), sock);
+}
+
+// Copy the next path element from path into name.
+// Update the pointer to the element following the copied one.
+// The returned path has no leading slashes,
+// so the caller can check *path=='\0' to see if the name is the last one.
+//
+// If copied into name, return 1.
+// If no name to remove, return 0.
+// If the name is longer than DIRSIZ, return -1;
+//
+// Examples:
+//   skipelem("a/bb/c", name) = "bb/c", setting name = "a"
+//   skipelem("///a//bb", name) = "bb", setting name = "a"
+//   skipelem("a", name) = "", setting name = "a"
+//   skipelem("", name) = skipelem("////", name) = 0
+//
+static int
+skipelem(const char **rpath, strbuf<FILENAME_MAX> *name)
+{
+  const char *path = *rpath;
+  const char *s;
+  size_t len;
+
+  while (*path == '/')
+    path++;
+  if (*path == 0)
+    return 0;
+  s = path;
+  while (*path != '/' && *path != 0)
+    path++;
+  len = path - s;
+  if (len > FILENAME_MAX)
+    return -1;
+  else {
+    *name = strbuf<FILENAME_MAX>(s, len);
+  }
+  while (*path == '/')
+    path++;
+  *rpath = path;
+  return 1;
+}
+
+sref<vnode>
+step_resolved_filesystem::resolve(const sref<vnode>& base, const char *path)
+{
+  int rc;
+  strbuf<FILENAME_MAX> name;
+  sref<vnode> cur = base;
+  while (cur) {
+    rc = skipelem(&path, &name);
+    if (rc < 0)
+      return sref<vnode>();
+    if (rc == 0)
+      break;
+    if (name == "..")
+      cur = this->resolve_parent(cur);
+    else if (name != ".")
+      cur = this->resolve_child(cur, name.ptr());
+  }
+  return cur;
+}
+
+sref<vnode>
+step_resolved_filesystem::resolveparent(const sref<vnode>& base, const char *path, strbuf<FILENAME_MAX> *name)
+{
+  int rc;
+  sref<vnode> cur = base;
+  while (cur) {
+    rc = skipelem(&path, name);
+    if (rc <= 0) // if rc == 0, that means there wasn't even a single name element, so we can't provide an output
+      return sref<vnode>();
+    if (*path == 0)
+      break;
+    if (*name == "..")
+      cur = this->resolve_parent(cur);
+    else if (*name != ".")
+      cur = this->resolve_child(cur, name->ptr());
+  }
+  return cur;
 }
