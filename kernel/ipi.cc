@@ -90,3 +90,53 @@ on_ipicall()
     }
   }
 }
+
+std::atomic<int> paused_cpu_counter {0};
+enum pause_state { Ready, Pausing, Paused, Unpausing, Unpaused };
+std::atomic<enum pause_state> pause_state {Ready};
+enum pause_state READY = Ready;
+
+// Use IPI to pause other cores until update is complete.
+void
+pause_other_cpus(void)
+{
+  while (!atomic_compare_exchange_strong(&pause_state, &READY, Pausing)); // wait for any previously paused CPUs to resume
+  pushcli();
+  for (int i = 0; i < ncpu; ++i) {
+    if (i != myid())
+      lapic->send_pause(&cpus[i]);
+  }
+  while (pause_state != Paused); // wait for other CPUs to actually pause
+}
+
+void
+increment_paused_cpu_counter(void)
+{
+  paused_cpu_counter++;
+  if (paused_cpu_counter == ncpu - 1)
+    pause_state = Paused;
+}
+
+bool
+is_paused(void)
+{
+  return pause_state == Pausing || pause_state == Paused;
+}
+
+void
+decrement_paused_cpu_counter(void)
+{
+  paused_cpu_counter--;
+  if (paused_cpu_counter == 0)
+    pause_state = Unpaused;
+}
+
+void
+resume_other_cpus(void)
+{
+  pause_state = Unpausing;
+  while (pause_state != Unpaused);
+  popcli();
+  pause_state = Ready;
+}
+

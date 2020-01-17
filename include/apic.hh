@@ -34,6 +34,12 @@ public:
     send_ipi(c, T_SAMPCONF);
   }
 
+  // Send a T_PAUSE IPI to a remote CPU
+  void send_pause(struct cpu *c)
+  {
+    send_ipi(c, T_PAUSE);
+  }
+
   // Mask or unmask PC
   virtual void mask_pc(bool mask) = 0;
 

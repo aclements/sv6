@@ -19,11 +19,17 @@ struct param_metadata {
   const char *name;
   T *pval;
   const T default_val;
-  void (*on_change)(T);
+  void (*on_change)(void);
 };
 
+void dummy() {
+  cprintf("im a %s\n", cmdline_params.disable_pcid ? "dummy" : "smarty");
+  u64 now = nsectime();
+  while (nsectime() < now + 5 * 1e9);
+}
+
 struct param_metadata<bool> binary_params[] = {
-  { "disable_pcid", &cmdline_params.disable_pcid, false, NULL },
+  { "disable_pcid", &cmdline_params.disable_pcid, false, dummy },
   { "keep_retpolines", &cmdline_params.keep_retpolines, false, NULL },
   { "use_vga", &cmdline_params.use_vga, true, NULL },
   { "mds", &cmdline_params.mds, true, NULL },
@@ -125,21 +131,21 @@ void
 view_binary_param(const char *param_name, const char *name, bool value)
 {
   if (name == NULL || strcmp(param_name, name) == 0)
-    cprintf("%s (bool): %s\n", param_name, value ? "yes" : "no");
+    cprintf("%s: %s (bool)\n", param_name, value ? "yes" : "no");
 }
 
 void
 view_uint_param(const char *param_name, const char *name, u64 value)
 {
   if (name == NULL || strcmp(param_name, name) == 0)
-    cprintf("%s (uint): %lu\n", param_name, value);
+    cprintf("%s: %lu (uint)\n", param_name, value);
 }
 
 void
 view_string_param(const char *param_name, const char *name, char *value)
 {
   if (name == NULL || strcmp(param_name, name) == 0)
-    cprintf("%s (str): %s\n", param_name, value);
+    cprintf("%s: %s (str)\n", param_name, value);
 }
 
 // print the value of the specified param, or all params if name is null
@@ -166,8 +172,9 @@ change_binary_param(struct param_metadata<bool> *param, const char *value)
   if (new_val != *param->pval) {
     *param->pval = new_val;
     if (param->on_change != NULL) {
-      // TODO use IPI
-      param->on_change(new_val);
+      pause_other_cpus();
+      param->on_change();
+      resume_other_cpus();
     }
   }
 }
@@ -180,8 +187,9 @@ change_uint_param(struct param_metadata<u64> *param, const char *value)
   if (new_val != *param->pval) {
     *param->pval = new_val;
     if (param->on_change != NULL) {
-      // TODO use IPI
-      param->on_change(new_val);
+      pause_other_cpus();
+      param->on_change();
+      resume_other_cpus();
     }
   }
 }
@@ -195,8 +203,9 @@ change_string_param(struct param_metadata<char *> *param, const char *value)
     new_val[CMDLINE_VALUE - 1] = '\0';
 
     if (param->on_change != NULL) {
-      // TODO use IPI
-      param->on_change(new_val);
+      pause_other_cpus();
+      param->on_change();
+      resume_other_cpus();
     }
   }
 }
