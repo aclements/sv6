@@ -22,7 +22,22 @@ int
 fetchmem(void* dst, const void* usrc, u64 size)
 {
   if(mycpu()->ncli != 0)
-    panic("fetchstr: cli'd");
+    panic("fetchmem: cli'd");
+  if ((uintptr_t)usrc >= USERTOP || (uintptr_t)usrc + size > USERTOP)
+    return -1;
+  // __uaccess_mem can't handle size == 0
+  if(size == 0)
+    return 0;
+  return __uaccess_mem(dst, usrc, size);
+}
+
+// Unlike the other user acess functions here, this returns -1 if the access
+// page faulted even if that fault was spurious, caused by a lazy mapping, etc.
+int
+fetchmem_ncli(void* dst, const void* usrc, u64 size)
+{
+  if(mycpu()->ncli == 0)
+    panic("fetchmem_ncli: interrupts enabled");
   if ((uintptr_t)usrc >= USERTOP || (uintptr_t)usrc + size > USERTOP)
     return -1;
   // __uaccess_mem can't handle size == 0
@@ -35,7 +50,7 @@ int
 putmem(void *udst, const void *src, u64 size)
 {
   if(mycpu()->ncli != 0)
-    panic("fetchstr: cli'd");
+    panic("putmem: cli'd");
   if ((uintptr_t)udst >= USERTOP || (uintptr_t)udst + size >= USERTOP)
     return -1;
   if(size == 0)

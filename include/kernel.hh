@@ -119,9 +119,9 @@ void            dir_init(sref<inode> dp);
 void	        dir_flush(sref<inode> dp);
 
 // futex.cc
-typedef u64* futexkey_t;
-int             futexkey(const u64* useraddr, vmap* vmap, futexkey_t* key);
-long            futexwait(futexkey_t key, u64 val, u64 timer);
+typedef u64 futexkey_t;
+int             futexkey(const u32* useraddr, vmap* vmap, futexkey_t* key);
+long            futexwait(futexkey_t key, u32 val, u64 timer);
 long            futexwake(futexkey_t key, u64 nwake);
 
 // hotpatch.cc
@@ -230,6 +230,7 @@ int             fetchint64(uptr, u64*);
 int             fetchstr(char*, const char*, u64);
 int             fetchmem(void*, const void*, u64);
 int             putmem(void*, const void*, u64);
+int             fetchmem_ncli(void*, const void*, u64);
 u64             syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num);
 
 // sysfile.cc

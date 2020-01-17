@@ -8,7 +8,7 @@
 #include "cpu.hh"
 #include "vm.hh"
 #include "kmtrace.hh"
-#include "futex.h"
+#include "futex.hh"
 #include "version.hh"
 #include "filetable.hh"
 #include "ipi.hh"
@@ -266,16 +266,21 @@ sys_setaffinity(int cpu)
 
 //SYSCALL
 long
-sys_futex(const u64* addr, int op, u64 val, u64 timer)
+sys_futex(const u32* addr, int op, u32 val, u64 timer)
 {
   futexkey_t key;
+
+  if (!(op & FUTEX_PRIVATE_FLAG)) {
+    cprintf("WARN: non-private futexes are not supported!");
+    return -1;
+  }
 
   if (futexkey(addr, myproc()->vmap.get(), &key) < 0)
     return -1;
 
   mt_ascope ascope("%s(%p,%d,%lu,%lu)", __func__, addr, op, val, timer);
 
-  switch(op) {
+  switch(op & 1) {
   case FUTEX_WAIT:
     return futexwait(key, val, timer);
   case FUTEX_WAKE:

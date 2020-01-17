@@ -76,12 +76,19 @@ do_pagefault(struct trapframe *tf, bool had_secrets)
     if (addr >= USERTOP)
       panic("do_pagefault: %lx", addr);
 
-    sti();
-    if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
-      return 0;
+    // Normally __uaccess_* functions must be called with interrupts disabled so
+    // that we can process page faults caused by unmapped pages. However, futex
+    // critical sections need to hold a lock while checking user memory, so we
+    // offer an escape hatch.
+    if (mycpu()->ncli == 0) {
+      sti();
+      if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
+        return 0;
+      }
+      console.println("pagefault accessing user address from kernel (addr ",
+                      (void*)addr, " rip ", (void*)tf->rip, ")");
     }
-    console.println("pagefault accessing user address from kernel (addr ",
-                    (void*)addr, " rip ", (void*)tf->rip, ")");
+
     tf->rax = -1;
     tf->rip = (u64)__uaccess_end;
     return 0;

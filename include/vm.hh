@@ -4,6 +4,7 @@
 #include <atomic>
 #include "cpputil.hh"
 #include "hwvm.hh"
+#include "futex.hh"
 #include "bit_spinlock.hh"
 #include "radix_array.hh"
 #include "kalloc.hh"
@@ -196,6 +197,8 @@ struct vmap : public referenced {
   void qfree(void* page);
 
   uptr brk_;                    // Top of heap
+
+  futex_list futex_waiters_;
 
 private:
   vmap();

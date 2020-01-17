@@ -73,6 +73,9 @@ struct proc {
   sref<vmap> vmap;             // va -> vma
   uptr unmapped_hint;
 
+  ilink<proc> futex_link;
+  futexkey_t futex_key;
+
   __page_pad__;
 
   vmalloc_ptr<char[]> kstack_vm; // vmalloc'd kstack, if using vmalloc
