@@ -29,10 +29,10 @@ void dummy() {
 }
 
 struct param_metadata<bool> binary_params[] = {
-  { "disable_pcid", &cmdline_params.disable_pcid, false, dummy },
+  { "disable_pcid",    &cmdline_params.disable_pcid,    false, dummy },
   { "keep_retpolines", &cmdline_params.keep_retpolines, false, NULL },
-  { "use_vga", &cmdline_params.use_vga, true, NULL },
-  { "mds", &cmdline_params.mds, true, NULL },
+  { "use_vga",         &cmdline_params.use_vga,         true,  NULL },
+  { "mitigate_mds",    &cmdline_params.mds,             true,  NULL },
 };
 
 struct param_metadata<u64> uint_params[] = {};
@@ -128,37 +128,50 @@ static void parse_string_param(const char* name, const char *default_value, char
 }
 
 void
-view_binary_param(const char *param_name, const char *name, bool value)
+view_binary_param(struct param_metadata<bool> *param)
 {
-  if (name == NULL || strcmp(param_name, name) == 0)
-    cprintf("%s: %s (bool)\n", param_name, value ? "yes" : "no");
+  cprintf("%s: %s (bool)\n", param->name, *param->pval ? "yes" : "no");
 }
 
 void
-view_uint_param(const char *param_name, const char *name, u64 value)
+view_uint_param(struct param_metadata<u64> *param)
 {
-  if (name == NULL || strcmp(param_name, name) == 0)
-    cprintf("%s: %lu (uint)\n", param_name, value);
+  cprintf("%s: %lu (uint)\n", param->name, *param->pval);
 }
 
 void
-view_string_param(const char *param_name, const char *name, char *value)
+view_string_param(struct param_metadata<char *> *param)
 {
-  if (name == NULL || strcmp(param_name, name) == 0)
-    cprintf("%s: %s (str)\n", param_name, value);
+  cprintf("%s: %s (str)\n", param->name, (char*) param->pval);
 }
 
 // print the value of the specified param, or all params if name is null
 int
 cmdline_view_param(const char *name)
 {
-  for (auto &param : binary_params)
-    view_binary_param(param.name, name, *param.pval);
-  for (auto &param : uint_params)
-    view_uint_param(param.name, name, *param.pval);
-  for (auto &param : string_params)
-    view_string_param(param.name, name, (char*) param.pval);
+  for (auto &param : binary_params) {
+    if (name == NULL || strcmp(param.name, name) == 0)
+      view_binary_param(&param);
+  }
+  for (auto &param : uint_params) {
+    if (name == NULL || strcmp(param.name, name) == 0)
+      view_uint_param(&param);
+  }
+  for (auto &param : string_params) {
+    if (name == NULL || strcmp(param.name, name) == 0)
+      view_string_param(&param);
+  }
   return 0;
+}
+
+void
+pause_and_call(void (*fn)(void))
+{
+  if (fn != NULL) {
+    pause_other_cpus();
+    fn();
+    resume_other_cpus();
+  }
 }
 
 void
@@ -171,26 +184,18 @@ change_binary_param(struct param_metadata<bool> *param, const char *value)
 
   if (new_val != *param->pval) {
     *param->pval = new_val;
-    if (param->on_change != NULL) {
-      pause_other_cpus();
-      param->on_change();
-      resume_other_cpus();
-    }
+    pause_and_call(param->on_change);
   }
 }
 
 void
 change_uint_param(struct param_metadata<u64> *param, const char *value)
 {
-  u64 new_val = strtoul(value, NULL, 10);
+  u64 new_val = strtoul(value, NULL, 0);
 
   if (new_val != *param->pval) {
     *param->pval = new_val;
-    if (param->on_change != NULL) {
-      pause_other_cpus();
-      param->on_change();
-      resume_other_cpus();
-    }
+    pause_and_call(param->on_change);
   }
 }
 
@@ -201,12 +206,7 @@ change_string_param(struct param_metadata<char *> *param, const char *value)
   if (strcmp(new_val, value) != 0) {
     strncpy(new_val, value, CMDLINE_VALUE);
     new_val[CMDLINE_VALUE - 1] = '\0';
-
-    if (param->on_change != NULL) {
-      pause_other_cpus();
-      param->on_change();
-      resume_other_cpus();
-    }
+    pause_and_call(param->on_change);
   }
 }
 
