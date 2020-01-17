@@ -180,7 +180,11 @@ step_resolved_filesystem::resolve(const sref<vnode>& base, const char *path)
 {
   int rc;
   strbuf<FILENAME_MAX> name;
-  sref<vnode> cur = base;
+  sref<vnode> cur;
+  if (*path == '/')
+    cur = this->root();
+  else
+    cur = base;
   while (cur) {
     rc = skipelem(&path, &name);
     if (rc < 0)
@@ -199,7 +203,11 @@ sref<vnode>
 step_resolved_filesystem::resolveparent(const sref<vnode>& base, const char *path, strbuf<FILENAME_MAX> *name)
 {
   int rc;
-  sref<vnode> cur = base;
+  sref<vnode> cur;
+  if (*path == '/')
+    cur = this->root();
+  else
+    cur = base;
   while (cur) {
     rc = skipelem(&path, name);
     if (rc <= 0) // if rc == 0, that means there wasn't even a single name element, so we can't provide an output
