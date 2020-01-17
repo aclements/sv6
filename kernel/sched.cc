@@ -12,7 +12,6 @@
 #include "major.h"
 #include "rnd.hh"
 #include "lb.hh"
-#include "work.hh"
 #include "ilist.hh"
 #include "kstream.hh"
 #include "file.hh"
@@ -31,9 +30,6 @@ public:
   proc* deq();
   void dump(print_stream *);
 
-  void enq_dwork(dwork *w);
-  void try_dwork();
-
   void balance_move_to(schedule *other);
   u64 balance_count() const;
 
@@ -44,7 +40,6 @@ private:
 
   struct spinlock lock_ __mpalign__;
   ilist<proc, &proc::sched_link> proc_;
-  isqueue<dwork, &dwork::link_> work_;
   volatile bool cansteal_ __mpalign__;
   __padout__;
 };
@@ -174,23 +169,6 @@ schedule::sanity(void)
 #endif
 }
 
-void
-schedule::enq_dwork(dwork *w)
-{
-  scoped_acquire x(&lock_);
-  work_.push_back(w);
-}
-
-void
-schedule::try_dwork(void)
-{
-  while (!work_.empty()) {
-    auto &w = work_.front();
-    work_.pop_front();
-    w.run();
-  }
-}
-
 struct sched_dir {
 private:
   balancer<sched_dir, schedule> b_;
@@ -219,14 +197,6 @@ public:
   void addrun(struct proc* p) {
     p->set_state(RUNNABLE);
     schedule_[p->cpuid]->enq(p);
-  }
-
-  void pushwork(struct dwork *w, int cpu) {
-    schedule_[cpu]->enq_dwork(w);
-  }
-
-  void trywork() {
-    schedule_[mycpu()->id]->try_dwork();
   }
 
   proc* next() {
@@ -337,7 +307,6 @@ post_swtch(void)
       mycpu()->prev != idleproc())
     addrun(mycpu()->prev);
   release(&mycpu()->prev->lock);
-  thesched_dir.trywork();
 }
 
 void
@@ -350,13 +319,6 @@ void
 addrun(struct proc* p)
 {
   thesched_dir.addrun(p);
-}
-
-int
-dwork_push(struct dwork *w, int cpu)
-{
-  thesched_dir.pushwork(w, cpu);
-  return 0;
 }
 
 static int

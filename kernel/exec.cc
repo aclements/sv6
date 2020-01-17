@@ -11,7 +11,6 @@
 #include "elf.hh"
 #include "cpu.hh"
 #include "kmtrace.hh"
-#include "work.hh"
 #include "filetable.hh"
 
 #define BRK (USERTOP >> 1)
@@ -149,21 +148,6 @@ doheap(vmap* vmp)
   return 0;
 }
 
-struct cleanup_work : public dwork
-{
-  cleanup_work(sref<vmap>&& oldvmap)
-    : dwork(), oldvmap_(std::move(oldvmap)) {}
-
-  virtual void run() override {
-    // The destructor will decref oldvmap_.
-     delete this;
-  }
-
-  sref<vmap> oldvmap_;
-
-  NEW_DELETE_OPS(cleanup_work)
-};
-
 int
 exec(const char *path, const char * const *argv)
 {
@@ -187,10 +171,6 @@ exec(const char *path, const char * const *argv)
 
   // Switch to the new address space
   switchvm(myproc());
-
-  // Now it's safe to clean up the old address space
-  cleanup_work* w = new cleanup_work(std::move(oldvmap));
-  assert(dwork_push(w, myproc()->data_cpuid) >= 0);
 
   return 0;
 }

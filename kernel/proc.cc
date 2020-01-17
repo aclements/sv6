@@ -11,7 +11,6 @@
 #include "kalloc.hh"
 #include "vm.hh"
 #include "ns.hh"
-#include "work.hh"
 #include "filetable.hh"
 #include <uk/fcntl.h>
 #include <uk/unistd.h>
@@ -437,9 +436,9 @@ doclone(clone_flags flags)
 }
 
 void
-finishproc(struct proc *p, bool removepid)
+finishproc(struct proc *p)
 {
-  if (removepid && !xnspid->remove(p->pid, &p))
+  if (!xnspid->remove(p->pid, &p))
     panic("finishproc: ns_remove");
 #if !KSTACK_DEBUG
   if (p->kstack)
@@ -452,22 +451,6 @@ finishproc(struct proc *p, bool removepid)
   p->killed = 0;
   freeproc(p);
 }
-
-struct finishproc_work : public dwork
-{
-  finishproc_work(proc *p)
-    : dwork(), p_(p) {}
-
-  virtual void run() override {
-    finishproc(p_, 0);
-    delete this;
-  };
-
-  proc* p_;
-
-  NEW_DELETE_OPS(finishproc_work)
-};
-
 
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
@@ -484,25 +467,20 @@ wait(int wpid,  userptr<int> status)
       proc &p = *it;
       acquire(&p.lock);
       if (wpid == -1 || wpid == p.pid) {
-	havekids = 1;
-	if(p.get_state() == ZOMBIE){
-	  release(&p.lock);	// noone else better be trying to lock p
-	  pid = p.pid;
+        havekids = 1;
+        if(p.get_state() == ZOMBIE){
+          release(&p.lock);	// no one else better be trying to lock p
+          pid = p.pid;
           myproc()->childq.erase(it);
-	  release(&myproc()->lock);
+          release(&myproc()->lock);
 
           if (status) {
             status.store(&p.status);
           }
 
-          proc *np = &p;
-          if (!xnspid->remove(pid, &np))
-            panic("wait: ns_remove");
-
-          finishproc_work *w = new finishproc_work(&p);
-          assert(dwork_push(w, p.run_cpuid_) >= 0);
-	  return pid;
-	}
+          finishproc(&p);
+          return pid;
+        }
       }
       release(&p.lock);
     }

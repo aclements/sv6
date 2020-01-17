@@ -40,7 +40,6 @@ struct vmap;
 struct pipe;
 struct localsock;
 struct work;
-struct dwork;
 struct irq;
 class print_stream;
 class mnode;
@@ -197,7 +196,7 @@ enum clone_flags
   CLONE_NO_RUN = 1<<4,
 };
 ENUM_BITSET_OPS(clone_flags);
-void            finishproc(struct proc*, bool removepid = true);
+void            finishproc(struct proc*);
 void            exit(int);
 struct proc*    doclone(clone_flags);
 int             growproc(int);
@@ -223,7 +222,6 @@ void            post_swtch(void);
 void            scheddump(void);
 int             steal(void);
 void            addrun(struct proc*);
-int             dwork_push(struct dwork*, int);
 
 // syscall.c
 int             fetchint64(uptr, u64*);
