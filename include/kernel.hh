@@ -131,6 +131,7 @@ long            futexwake(futexkey_t key, u64 nwake);
 extern char*    qtext;
 extern u8       secrets_mapped;
 void            remove_fsgsbase(void);
+void            apply_hotpatches(void);
 
 // hz.c
 void            microdelay(u64);

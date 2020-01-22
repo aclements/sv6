@@ -30,9 +30,10 @@ void dummy() {
 
 struct param_metadata<bool> binary_params[] = {
   { "disable_pcid",    &cmdline_params.disable_pcid,    false, dummy },
-  { "keep_retpolines", &cmdline_params.keep_retpolines, false, NULL },
+  { "keep_retpolines", &cmdline_params.keep_retpolines, false, apply_hotpatches },
+  { "lazy_barrier",    &cmdline_params.lazy_barrier,    true,  apply_hotpatches },
   { "use_vga",         &cmdline_params.use_vga,         true,  NULL },
-  { "mitigate_mds",    &cmdline_params.mds,             true,  NULL },
+  { "mitigate_mds",    &cmdline_params.mds,             true,  apply_hotpatches },
 };
 
 struct param_metadata<u64> uint_params[] = {};
