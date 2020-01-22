@@ -166,16 +166,6 @@ cmdline_view_param(const char *name)
 }
 
 void
-pause_and_call(void (*fn)(void))
-{
-  if (fn != NULL) {
-    pause_other_cpus();
-    fn();
-    resume_other_cpus();
-  }
-}
-
-void
 change_binary_param(struct param_metadata<bool> *param, const char *value)
 {
   bool new_val = *param->pval;
@@ -185,7 +175,7 @@ change_binary_param(struct param_metadata<bool> *param, const char *value)
 
   if (new_val != *param->pval) {
     *param->pval = new_val;
-    pause_and_call(param->on_change);
+    pause_other_cpus_and_call(param->on_change);
   }
 }
 
@@ -196,7 +186,7 @@ change_uint_param(struct param_metadata<u64> *param, const char *value)
 
   if (new_val != *param->pval) {
     *param->pval = new_val;
-    pause_and_call(param->on_change);
+    pause_other_cpus_and_call(param->on_change);
   }
 }
 
@@ -207,7 +197,7 @@ change_string_param(struct param_metadata<char *> *param, const char *value)
   if (strcmp(new_val, value) != 0) {
     strncpy(new_val, value, CMDLINE_VALUE);
     new_val[CMDLINE_VALUE - 1] = '\0';
-    pause_and_call(param->on_change);
+    pause_other_cpus_and_call(param->on_change);
   }
 }
 

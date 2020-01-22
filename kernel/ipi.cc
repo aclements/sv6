@@ -91,52 +91,63 @@ on_ipicall()
   }
 }
 
+/* Logic for implementing pause_other_cpus_and_call */
 std::atomic<int> paused_cpu_counter {0};
-enum pause_state { Ready, Pausing, Paused, Unpausing, Unpaused };
-std::atomic<enum pause_state> pause_state {Ready};
-enum pause_state READY = Ready;
+enum pause_state_t { Ready, Pausing, Paused, Unpausing, Unpaused };
+std::atomic<pause_state_t> pause_state {Ready};
 
 // Use IPI to pause other cores until update is complete.
 void
 pause_other_cpus(void)
 {
-  while (!atomic_compare_exchange_strong(&pause_state, &READY, Pausing)); // wait for any previously paused CPUs to resume
+  // wait for any previously paused CPUs to resume
+  pause_state_t READY = Ready;
+  while (!atomic_compare_exchange_strong(&pause_state, &READY, Pausing)) nop_pause();
+
   pushcli();
-  for (int i = 0; i < ncpu; ++i) {
+  for (cpuid_t i = 0; i < ncpu; ++i) {
     if (i != myid())
       lapic->send_pause(&cpus[i]);
   }
-  while (pause_state != Paused); // wait for other CPUs to actually pause
-}
 
-void
-increment_paused_cpu_counter(void)
-{
-  paused_cpu_counter++;
-  if (paused_cpu_counter == ncpu - 1)
-    pause_state = Paused;
-}
-
-bool
-is_paused(void)
-{
-  return pause_state == Pausing || pause_state == Paused;
-}
-
-void
-decrement_paused_cpu_counter(void)
-{
-  paused_cpu_counter--;
-  if (paused_cpu_counter == 0)
-    pause_state = Unpaused;
+  // wait for other CPUs to actually pause
+  while (pause_state != Paused) nop_pause();
 }
 
 void
 resume_other_cpus(void)
 {
   pause_state = Unpausing;
-  while (pause_state != Unpaused);
+  while (pause_state != Unpaused) nop_pause();
   popcli();
   pause_state = Ready;
 }
 
+void
+pause_other_cpus_and_call(void (*fn)(void))
+{
+  if (fn != NULL) {
+    pause_other_cpus();
+    fn();
+    resume_other_cpus();
+  }
+}
+
+void
+pause_cpu(void)
+{
+  if (DEBUG || true)
+    cprintf("pausing cpu %d\n", mycpu()->id);
+  paused_cpu_counter++;
+  if (paused_cpu_counter == ncpu - 1)
+    pause_state = Paused;
+
+  // spin until the core that called pause_other_cpus_and_call is done
+  while (pause_state != Unpausing) nop_pause();
+
+  if (DEBUG || true)
+    cprintf("resuming cpu %d\n", mycpu()->id);
+  paused_cpu_counter--;
+  if (paused_cpu_counter == 0)
+    pause_state = Unpaused;
+}

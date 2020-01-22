@@ -278,14 +278,9 @@ trap(struct trapframe *tf, bool had_secrets)
     sampconf();
     break;
   case T_PAUSE:
+    extern void pause_cpu(); // ipi.cc
     lapiceoi();
-    if (DEBUG)
-      cprintf("pausing cpu %d\n", mycpu()->id);
-    increment_paused_cpu_counter();
-    while (is_paused());
-    if (DEBUG)
-      cprintf("unpausing cpu %d\n", mycpu()->id);
-    decrement_paused_cpu_counter();
+    pause_cpu();
     break;
   case T_IPICALL: {
     extern void on_ipicall();

@@ -145,12 +145,7 @@ struct proc *   idleproc(void);
 void            idlezombie(struct proc*);
 
 // ipi.cc
-void            pause_other_cpus(void);
-void            resume_other_cpus(void);
-// the following are only supposed to be used in trap.cc
-void            increment_paused_cpu_counter(void);
-bool            is_paused(void);
-void            decrement_paused_cpu_counter(void);
+void            pause_other_cpus_and_call(void (*fn)(void));
 
 // kalloc.c
 char*           kalloc(const char *name, size_t size = PGSIZE);
