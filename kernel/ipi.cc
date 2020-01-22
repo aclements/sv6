@@ -102,7 +102,11 @@ pause_other_cpus(void)
 {
   // wait for any previously paused CPUs to resume
   pause_state_t READY = Ready;
-  while (!atomic_compare_exchange_strong(&pause_state, &READY, Pausing)) nop_pause();
+  while (!pause_state.compare_exchange_weak(READY, Pausing)) {
+    // atomic::compare_exchange_weak modifies the expected variable
+    // in the failure case, so we need to change it back
+    READY = Ready;
+  }
 
   pushcli();
   for (cpuid_t i = 0; i < ncpu; ++i) {
@@ -136,7 +140,7 @@ pause_other_cpus_and_call(void (*fn)(void))
 void
 pause_cpu(void)
 {
-  if (DEBUG || true)
+  if (DEBUG)
     cprintf("pausing cpu %d\n", mycpu()->id);
   paused_cpu_counter++;
   if (paused_cpu_counter == ncpu - 1)
@@ -145,7 +149,7 @@ pause_cpu(void)
   // spin until the core that called pause_other_cpus_and_call is done
   while (pause_state != Unpausing) nop_pause();
 
-  if (DEBUG || true)
+  if (DEBUG)
     cprintf("resuming cpu %d\n", mycpu()->id);
   paused_cpu_counter--;
   if (paused_cpu_counter == 0)
