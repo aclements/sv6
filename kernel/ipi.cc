@@ -91,7 +91,16 @@ on_ipicall()
   }
 }
 
-/* Logic for implementing pause_other_cpus_and_call */
+/* Logic for implementing pause_other_cpus_and_call
+
+ The core that calls pause_other_cpus_and_call changes the
+ state from Ready to Pausing, Paused to Unpausing, and
+ Unpaused to Ready.
+
+ Of the remaining cores, the last one to pause/unpause will
+ change the state from Pausing to Paused and Unpausing to
+ Unpaused respectively.
+ */
 std::atomic<int> paused_cpu_counter {0};
 enum pause_state_t { Ready, Pausing, Paused, Unpausing, Unpaused };
 std::atomic<pause_state_t> pause_state {Ready};
