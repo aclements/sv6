@@ -2,12 +2,16 @@ use addr2line::Frame;
 use clap::{App, Arg};
 use curl::easy::Easy;
 use serde_derive::Deserialize;
-use std::collections::BTreeMap;
 use std::env;
 
+#[derive(Clone, Debug, Deserialize)]
+struct ExitTrigger {
+    backtrace: Vec<String>,
+    count: u64,
+}
 #[derive(Debug, Deserialize)]
 struct QStats {
-    rips: BTreeMap<String, u64>,
+    exit_triggers: Vec<ExitTrigger>,
 }
 
 fn main() {
@@ -64,45 +68,51 @@ fn main() {
     let object = addr2line::object::File::parse(&kernel_file).unwrap();
     let context = addr2line::Context::new(&object).unwrap();
 
-    let mut rips: Vec<(String, u64)> = qstats
-        .rips
-        .iter()
-        .map(|(addr, count)| (addr.clone(), *count))
-        .collect();
-    rips.sort_by_key(|r| r.1);
-    rips.reverse();
+    let mut exits = qstats.exit_triggers.clone();
+    exits.sort_by_key(|e| e.count);
+    exits.reverse();
 
-    for (addr, count) in rips.iter() {
-        let addr = u64::from_str_radix(&addr[2..18], 16).unwrap();
+	let mut skipped = 0;
+    let mut total = 0;
+    for ExitTrigger { backtrace, count } in exits {
+        total += count;
+		if count < 10 {
+			skipped += 1;
+			continue;
+		}
 
-        if let Ok(mut frames) = context.find_frames(addr) {
-            if let Ok(Some(Frame {
-                location: Some(location),
-                ..
-            })) = frames.next()
-            {
-                println!(
-                    "{:>4}: {}:{}",
-                    count,
-                    location.file.unwrap_or("???".to_owned()),
-                    location.line.unwrap_or(0),
-                )
+        let mut combined_frames = Vec::new();
+        for addr in &backtrace {
+            let addr = u64::from_str_radix(&addr[2..18], 16).unwrap();
+            match context.find_frames(addr) {
+                Ok(mut frames) => {
+                    while let Ok(Some(Frame {
+                        location: Some(location),
+                        ..
+                    })) = frames.next()
+                    {
+                        combined_frames.push(location);
+                    }
+                }
+                Err(_) => break,
             }
-            while let Ok(Some(Frame {
-                location: Some(location),
-                ..
-            })) = frames.next()
-            {
-                println!(
-                    "      {}:{}",
-                    location.file.unwrap_or("???".to_owned()),
-                    location.line.unwrap_or(0),
-                )
-            }
-             println!("      {:x}", addr);
         }
+
+        for (i, location) in combined_frames.into_iter().enumerate() {
+            let file = location.file.unwrap_or("???".to_owned());
+            let line = location.line.unwrap_or(0);
+
+            if i == 0 {
+                println!("{:>4}: {}:{}", count, file, line);
+            } else {
+                println!("      {}:{}", file, line);
+            }
+        }
+
+        let addr = u64::from_str_radix(&backtrace[0][2..18], 16).unwrap();
+        println!("      {:x}", addr);
     }
 
     println!();
-    println!("total = {}", rips.iter().map(|r| r.1).sum::<u64>());
+    println!("total = {} ({:.1}% skipped)", total, 100.0 * skipped as f32 / total as f32);
 }

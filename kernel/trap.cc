@@ -69,7 +69,11 @@ do_pagefault(struct trapframe *tf, bool had_secrets)
     // Page fault was probably caused by trying to access secret
     // data so map all secrets in now and record where this happened.
     switch_to_kstack();
-    wm_rips.increment(tf->rip);
+
+    uptr pc[2];
+    getcallerpcs((void *) tf->rbp, pc, NELEM(pc));
+    u64 bt = tf->rip & 0x1fffff | (pc[0] & 0x1fffff) << 21 | (pc[1] & 0x1fffff) << 42;
+    wm_rips.increment(bt);
 
     return 0;
   } else if (myproc()->uaccess_) {

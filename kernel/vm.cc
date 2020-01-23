@@ -797,8 +797,12 @@ vmap::safe_read(void *dst, uintptr_t src, size_t n)
 size_t
 safe_read_vm(void *dst, uintptr_t src, size_t n)
 {
-  if (src >= USERTOP)
+  if (src >= KBASE && src + n < KBASEEND) {
+    memcpy(dst, (void*)src, n);
+    return 0;
+  } else if (src >= USERTOP) {
     return safe_read_hw(dst, src, n);
+  }
 
   scoped_cli cli;
   if (!myproc() || !myproc()->vmap)
