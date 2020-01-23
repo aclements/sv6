@@ -72,7 +72,7 @@ do_pagefault(struct trapframe *tf, bool had_secrets)
 
     uptr pc[2];
     getcallerpcs((void *) tf->rbp, pc, NELEM(pc));
-    u64 bt = tf->rip & 0x1fffff | (pc[0] & 0x1fffff) << 21 | (pc[1] & 0x1fffff) << 42;
+    u64 bt = (tf->rip & 0x1fffff) | ((pc[0] & 0x1fffff) << 21) | ((pc[1] & 0x1fffff) << 42);
     wm_rips.increment(bt);
 
     return 0;

@@ -799,7 +799,7 @@ safe_read_vm(void *dst, uintptr_t src, size_t n)
 {
   if (src >= KBASE && src + n < KBASEEND) {
     memcpy(dst, (void*)src, n);
-    return 0;
+    return n;
   } else if (src >= USERTOP) {
     return safe_read_hw(dst, src, n);
   }

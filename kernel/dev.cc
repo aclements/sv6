@@ -49,10 +49,10 @@ qstatsread(char *dst, u32 off, u32 n)
     u64 key, value;
     if(i.get(&key, &value)) {
       s.print("  { backtrace = [\"", shex(KTEXT | (key & 0x1fffff)));
-      if (key >> 21 != 0) {
+      if ((key >> 21) != 0) {
         s.print("\", \"", shex(KTEXT | ((key>>21) & 0x1fffff)));
       }
-      if (key >> 42 != 0) {
+      if ((key >> 42) != 0) {
         s.print("\", \"", shex(KTEXT | ((key>>42) & 0x1fffff)));
       }
       s.println("\"], count = ", value, " },");
