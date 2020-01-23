@@ -235,7 +235,6 @@ sys_thread_new(const char *name, lwip_thread_fn thread, void *arg,
                int stacksize, int prio)
 {
   struct lwip_thread *lt;
-  struct proc *p;
 
   lt = (struct lwip_thread*) kmalloc(sizeof(*lt), "lwip_thread");
   if (lt == nullptr)
@@ -243,16 +242,7 @@ sys_thread_new(const char *name, lwip_thread_fn thread, void *arg,
   lt->thread = thread;
   lt->arg = arg;
 
-  p = threadalloc(lwip_thread, lt);
-  if (p == nullptr)
-    panic("lwip: sys_thread_new");
-  safestrcpy(p->name, name, sizeof(p->name));
-
-  acquire(&p->lock);
-  addrun(p);
-  release(&p->lock);
-
-  return p;
+  return threadrun(lwip_thread, lt, name);
 }
 
 //

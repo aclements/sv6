@@ -506,7 +506,7 @@ threadhelper(void (*fn)(void *), void *arg)
   exit(0);
 }
 
-struct proc*
+static struct proc*
 threadalloc(void (*fn)(void *), void *arg)
 {
   struct proc *p;
@@ -539,11 +539,23 @@ threadalloc(void (*fn)(void *), void *arg)
 }
 
 struct proc*
+threadrun(void (*fn)(void*), void *arg, const char *name)
+{
+  struct proc *p = threadalloc(fn, arg);
+  if (p == nullptr)
+    panic("threadrun: alloc");
+
+  snprintf(p->name, sizeof(p->name), "%s", name);
+  acquire(&p->lock);
+  addrun(p);
+  release(&p->lock);
+  return p;
+}
+
+struct proc*
 threadpin(void (*fn)(void*), void *arg, const char *name, int cpu)
 {
-  struct proc *p;
-
-  p = threadalloc(fn, arg);
+  struct proc *p = threadalloc(fn, arg);
   if (p == nullptr)
     panic("threadpin: alloc");
 

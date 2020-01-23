@@ -205,7 +205,7 @@ void            procdumpall(void);
 void            scheduler(void) __noret__;
 void            userinit(void);
 void            yield(void);
-struct proc*    threadalloc(void (*fn)(void*), void *arg);
+struct proc*    threadrun(void (*fn)(void*), void *arg, const char *name);
 struct proc*    threadpin(void (*fn)(void*), void *arg, const char *name, int cpu);
 
 // sampler.c

@@ -172,20 +172,11 @@ static void
 start_timer(struct timer_thread *t, void (*func)(void),
             const char *name, u64 msec)
 {
-  struct proc *p;
-
   t->nsec = 1000000000 / 1000*msec;
   t->func = func;
   t->waitcv = condvar(name);
   t->waitlk = spinlock(name, LOCKSTAT_NET);
-  p = threadalloc(net_timer, t);
-  if (p == nullptr)
-    panic("net: start_timer");
-
-  acquire(&p->lock);
-  safestrcpy(p->name, name, sizeof(p->name));
-  addrun(p);
-  release(&p->lock);
+  threadrun(net_timer, t, name);
 }
 
 static void
@@ -323,18 +314,8 @@ initnet_worker(void *x)
 void
 initnet(void)
 {
-  struct proc *t;
-
   devsw[MAJ_NETIF].pread = netifread;
-
-  t = threadalloc(initnet_worker, nullptr);
-  if (t == nullptr)
-    panic("initnet: threadalloc");
-
-  acquire(&t->lock);
-  safestrcpy(t->name, "initnet", sizeof(t->name));
-  addrun(t);
-  release(&t->lock);
+  threadrun(initnet_worker, nullptr, "initnet");
 }
 
 int
