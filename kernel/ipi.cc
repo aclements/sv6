@@ -139,11 +139,10 @@ resume_other_cpus(void)
 void
 pause_other_cpus_and_call(void (*fn)(void))
 {
-  if (fn != NULL) {
-    pause_other_cpus();
-    fn();
-    resume_other_cpus();
-  }
+  assert(fn != NULL);
+  pause_other_cpus();
+  fn();
+  resume_other_cpus();
 }
 
 void
