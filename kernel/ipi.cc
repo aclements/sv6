@@ -150,8 +150,7 @@ pause_cpu(void)
 {
   if (DEBUG)
     cprintf("pausing cpu %d\n", mycpu()->id);
-  paused_cpu_counter++;
-  if (paused_cpu_counter == ncpu - 1)
+  if (++paused_cpu_counter == ncpu - 1)
     pause_state = Paused;
 
   // spin until the core that called pause_other_cpus_and_call is done
@@ -159,7 +158,6 @@ pause_cpu(void)
 
   if (DEBUG)
     cprintf("resuming cpu %d\n", mycpu()->id);
-  paused_cpu_counter--;
-  if (paused_cpu_counter == 0)
+  if (--paused_cpu_counter == 0)
     pause_state = Unpaused;
 }
