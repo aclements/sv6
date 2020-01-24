@@ -90,3 +90,74 @@ on_ipicall()
     }
   }
 }
+
+/* Logic for implementing pause_other_cpus_and_call
+
+ The core that calls pause_other_cpus_and_call changes the
+ state from Ready to Pausing, Paused to Unpausing, and
+ Unpaused to Ready.
+
+ Of the remaining cores, the last one to pause/unpause will
+ change the state from Pausing to Paused and Unpausing to
+ Unpaused respectively.
+ */
+std::atomic<int> paused_cpu_counter {0};
+enum pause_state_t { Ready, Pausing, Paused, Unpausing, Unpaused };
+std::atomic<pause_state_t> pause_state {Ready};
+
+// Use IPI to pause other cores until update is complete.
+void
+pause_other_cpus(void)
+{
+  // wait for any previously paused CPUs to resume
+  pause_state_t READY = Ready;
+  while (!pause_state.compare_exchange_weak(READY, Pausing)) {
+    // atomic::compare_exchange_weak modifies the expected variable
+    // in the failure case, so we need to change it back
+    READY = Ready;
+  }
+
+  pushcli();
+  for (cpuid_t i = 0; i < ncpu; ++i) {
+    if (i != myid())
+      lapic->send_pause(&cpus[i]);
+  }
+
+  // wait for other CPUs to actually pause
+  while (pause_state != Paused) nop_pause();
+}
+
+void
+resume_other_cpus(void)
+{
+  pause_state = Unpausing;
+  while (pause_state != Unpaused) nop_pause();
+  popcli();
+  pause_state = Ready;
+}
+
+void
+pause_other_cpus_and_call(void (*fn)(void))
+{
+  assert(fn != NULL);
+  pause_other_cpus();
+  fn();
+  resume_other_cpus();
+}
+
+void
+pause_cpu(void)
+{
+  if (DEBUG)
+    cprintf("pausing cpu %d\n", mycpu()->id);
+  if (++paused_cpu_counter == ncpu - 1)
+    pause_state = Paused;
+
+  // spin until the core that called pause_other_cpus_and_call is done
+  while (pause_state != Unpausing) nop_pause();
+
+  if (DEBUG)
+    cprintf("resuming cpu %d\n", mycpu()->id);
+  if (--paused_cpu_counter == 0)
+    pause_state = Unpaused;
+}

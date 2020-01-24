@@ -27,6 +27,7 @@
 #define T_TLBFLUSH      65      // flush TLB
 #define T_SAMPCONF      66      // configure event counters
 #define T_IPICALL       67      // Queued IPI call
+#define T_PAUSE         68      // pause cpu
 #define T_DEFAULT      500      // catchall
 
 #define T_IRQ0          32      // IRQ 0 corresponds to int T_IRQ

@@ -82,6 +82,10 @@ void            cgaputc(int c);
 // vga.c
 void            vgaputc(int c);
 
+// cmdline.cc
+int             cmdline_view_param(const char *name);
+int             cmdline_change_param(const char *name, const char *value);
+
 // console.c
 void            cprintf(const char*, ...) __attribute__((format(printf, 1, 2)));
 void            __cprintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -127,6 +131,7 @@ long            futexwake(futexkey_t key, u64 nwake);
 extern char*    qtext;
 extern u8       secrets_mapped;
 void            remove_fsgsbase(void);
+void            apply_hotpatches(void);
 
 // hz.c
 void            microdelay(u64);
@@ -138,6 +143,9 @@ void            ideintr(void);
 // idle.cc
 struct proc *   idleproc(void);
 void            idlezombie(struct proc*);
+
+// ipi.cc
+void            pause_other_cpus_and_call(void (*fn)(void));
 
 // kalloc.c
 char*           kalloc(const char *name, size_t size = PGSIZE);

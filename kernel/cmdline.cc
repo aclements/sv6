@@ -14,6 +14,34 @@
 
 struct cmdline_params cmdline_params;
 
+template<typename T>
+struct param_metadata {
+  const char *name;
+  T *pval;
+  const T default_val;
+  void (*on_change)(void);
+};
+
+void dummy() {
+  cprintf("im a %s\n", cmdline_params.disable_pcid ? "dummy" : "smarty");
+  u64 now = nsectime();
+  while (nsectime() < now + 5 * 1e9);
+}
+
+struct param_metadata<bool> binary_params[] = {
+  { "disable_pcid",    &cmdline_params.disable_pcid,    false, dummy },
+  { "keep_retpolines", &cmdline_params.keep_retpolines, false, apply_hotpatches },
+  { "lazy_barrier",    &cmdline_params.lazy_barrier,    true,  apply_hotpatches },
+  { "use_vga",         &cmdline_params.use_vga,         true,  NULL },
+  { "mitigate_mds",    &cmdline_params.mds,             true,  apply_hotpatches },
+};
+
+struct param_metadata<u64> uint_params[] = {};
+
+struct param_metadata<char *> string_params[] = {
+  { "root_disk", (char**) cmdline_params.root_disk, "0", NULL },
+};
+
 static int
 cmdlineread(char *dst, u32 off, u32 n)
 {
@@ -59,11 +87,11 @@ getvalue(const char* param, char* dst)
   while(*(p+len) != 0 && *(p+len) != ' ' && len < CMDLINE_VALUE)
     len++;
   strncpy(dst, p, len);
-  *(dst+len) = 0;
+  *(dst+len) = '\0';
   return true;
 }
 
-static bool parse_binary_option(const char* name, bool default_value) {
+static bool parse_binary_param(const char* name, bool default_value) {
   char value[CMDLINE_VALUE+1];  // add one for null char
   if(!getvalue(name, value))
     return default_value;
@@ -77,7 +105,7 @@ static bool parse_binary_option(const char* name, bool default_value) {
   }
 }
 
-static u64 parse_uint_option(const char* name, long default_value) {
+static u64 parse_uint_param(const char* name, long default_value) {
   char value[CMDLINE_VALUE+1];  // add one for null char
   char *end = NULL;
   long ret;
@@ -93,11 +121,111 @@ static u64 parse_uint_option(const char* name, long default_value) {
   return (u64)ret;
 }
 
-static void parse_string_option(const char* name, const char *default_value, char *output) {
+static void parse_string_param(const char* name, const char *default_value, char *output) {
   if(!getvalue(name, output) || output[0] == '\0') {
     strncpy(output, default_value, CMDLINE_VALUE);
     output[CMDLINE_VALUE] = '\0'; // just in case every byte was filled
   }
+}
+
+void
+view_binary_param(struct param_metadata<bool> *param)
+{
+  cprintf("%s: %s (bool)\n", param->name, *param->pval ? "yes" : "no");
+}
+
+void
+view_uint_param(struct param_metadata<u64> *param)
+{
+  cprintf("%s: %lu (uint)\n", param->name, *param->pval);
+}
+
+void
+view_string_param(struct param_metadata<char *> *param)
+{
+  cprintf("%s: %s (str)\n", param->name, (char*) param->pval);
+}
+
+// print the value of the specified param, or all params if name is null
+int
+cmdline_view_param(const char *name)
+{
+  for (auto &param : binary_params) {
+    if (name == NULL || strcmp(param.name, name) == 0)
+      view_binary_param(&param);
+  }
+  for (auto &param : uint_params) {
+    if (name == NULL || strcmp(param.name, name) == 0)
+      view_uint_param(&param);
+  }
+  for (auto &param : string_params) {
+    if (name == NULL || strcmp(param.name, name) == 0)
+      view_string_param(&param);
+  }
+  return 0;
+}
+
+void
+change_binary_param(struct param_metadata<bool> *param, const char *value)
+{
+  bool new_val = *param->pval;
+  if (strcmp(value, "yes") == 0) new_val = true;
+  else if (strcmp(value, "no") == 0) new_val = false;
+  else cprintf("unrecognized value '%s' for bool type, expecting yes/no\n", value);
+
+  if (new_val != *param->pval) {
+    *param->pval = new_val;
+    if (param->on_change != NULL)
+      pause_other_cpus_and_call(param->on_change);
+  }
+}
+
+void
+change_uint_param(struct param_metadata<u64> *param, const char *value)
+{
+  u64 new_val = strtoul(value, NULL, 0);
+
+  if (new_val != *param->pval) {
+    *param->pval = new_val;
+    if (param->on_change != NULL)
+      pause_other_cpus_and_call(param->on_change);
+  }
+}
+
+void
+change_string_param(struct param_metadata<char *> *param, const char *value)
+{
+  char *new_val = (char*) param->pval;
+  if (strcmp(new_val, value) != 0) {
+    strncpy(new_val, value, CMDLINE_VALUE);
+    new_val[CMDLINE_VALUE - 1] = '\0';
+    if (param->on_change != NULL)
+      pause_other_cpus_and_call(param->on_change);
+  }
+}
+
+int
+cmdline_change_param(const char *name, const char *value)
+{
+  for (auto &param : binary_params) {
+    if (strcmp(param.name, name) == 0) {
+      change_binary_param(&param, value);
+      return 0;
+    }
+  }
+  for (auto &param : uint_params) {
+    if (strcmp(param.name, name) == 0) {
+      change_uint_param(&param, value);
+      return 0;
+    }
+  }
+  for (auto &param : string_params) {
+    if (strcmp(param.name, name) == 0) {
+      change_string_param(&param, value);
+      return 0;
+    }
+  }
+  return -1;
 }
 
 void
@@ -106,20 +234,15 @@ initcmdline()
   if(CMDLINE_DEBUG)
     cprintf("cmdline: %s\n", multiboot.cmdline);
 
-  cmdline_params.disable_pcid = parse_binary_option("disable_pcid", false);
-  cmdline_params.keep_retpolines = parse_binary_option("keep_retpolines", false);
-  cmdline_params.use_vga = parse_binary_option("use_vga", true);
-  cmdline_params.lazy_barrier = parse_binary_option("lazy_barrier", true);
-  parse_string_option("root_disk", "0", cmdline_params.root_disk);
-  cmdline_params.mds = parse_binary_option("mds", true);
+  for (auto &param : binary_params)
+    *param.pval = parse_binary_param(param.name, param.default_val);
+  for (auto &param : uint_params)
+    *param.pval = parse_uint_param(param.name, param.default_val);
+  for (auto &param : string_params)
+    parse_string_param(param.name, param.default_val, (char*) param.pval);
 
-  if(CMDLINE_DEBUG){
-    cprintf("cmdline: disable pcid? %s\n", cmdline_params.disable_pcid ? "yes" : "no");
-    cprintf("cmdline: keep retpolines? %s\n", cmdline_params.keep_retpolines ? "yes" : "no");
-    cprintf("cmdline: root disk? %s\n", cmdline_params.root_disk);
-    cprintf("cmdline: use vga? %s\n", cmdline_params.use_vga ? "yes" : "no");
-    cprintf("cmdline: mitigate MDS? %s\n", cmdline_params.mds ? "yes" : "no");
-  }
+  if(CMDLINE_DEBUG)
+    cmdline_view_param(NULL);
 
   devsw[MAJ_CMDLINE].pread = cmdlineread;
 }

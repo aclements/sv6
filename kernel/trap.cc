@@ -281,6 +281,11 @@ trap(struct trapframe *tf, bool had_secrets)
     lapiceoi();
     sampconf();
     break;
+  case T_PAUSE:
+    extern void pause_cpu(); // ipi.cc
+    lapiceoi();
+    pause_cpu();
+    break;
   case T_IPICALL: {
     extern void on_ipicall();
     lapiceoi();
