@@ -131,6 +131,11 @@ bool patch_needed(patch* p) {
 
 void apply_hotpatches()
 {
+  // Hotpatching involves modifying the (normally) read only text
+  // segment. Thus we temporarily disable write protection for kernel
+  // pages. We'll re-enable it again at the end of this function.
+  lcr0(rcr0() & ~CR0_WP);
+
   char* text_bases[2] = {(char*)KTEXT, qtext};
 
   for (patch* p = (patch*)&__hotpatch_start; p < (patch*)&__hotpatch_end; p++) {
@@ -165,6 +170,10 @@ void apply_hotpatches()
       }
     }
   }
+
+  *(&secrets_mapped - KTEXT + (u64)qtext) = 0;
+
+  lcr0(rcr0() | CR0_WP);
 }
 
 void inithotpatch()
@@ -175,13 +184,5 @@ void inithotpatch()
   qtext = kalloc("qtext", 0x200000);
   memmove(qtext, (void*)KTEXT, 0x200000);
 
-  // Hotpatching involves modifying the (normally) read only text
-  // segment. Thus we temporarily disable write protection for kernel
-  // pages. We'll re-enable it again at the end of this function.
-  lcr0(rcr0() & ~CR0_WP);
-
   apply_hotpatches();
-  *(&secrets_mapped - KTEXT + (u64)qtext) = 0;
-
-  lcr0(rcr0() | CR0_WP);
 }
