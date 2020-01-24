@@ -16,7 +16,7 @@ Supported params and corresponding values:
  - root_disk (default=0)
     -> index of detected disks to use as root disk
  */
-struct cmdline_params
+struct cmdline_params_t
 {
   bool disable_pcid;
   bool keep_retpolines;
@@ -26,4 +26,4 @@ struct cmdline_params
   bool mds;
 };
 
-extern struct cmdline_params cmdline_params;
+extern cmdline_params_t cmdline_params;

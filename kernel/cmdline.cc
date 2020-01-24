@@ -12,10 +12,10 @@
 
 #include <string.h>
 
-struct cmdline_params cmdline_params;
+cmdline_params_t cmdline_params;
 
 template<typename T>
-struct param_metadata {
+struct param_metadata_t {
   const char *name;
   T *pval;
   const T default_val;
@@ -28,7 +28,7 @@ void dummy() {
   while (nsectime() < now + 5 * 1e9);
 }
 
-struct param_metadata<bool> binary_params[] = {
+param_metadata_t<bool> binary_params[] = {
   { "disable_pcid",    &cmdline_params.disable_pcid,    false, dummy },
   { "keep_retpolines", &cmdline_params.keep_retpolines, false, apply_hotpatches },
   { "lazy_barrier",    &cmdline_params.lazy_barrier,    true,  apply_hotpatches },
@@ -36,9 +36,9 @@ struct param_metadata<bool> binary_params[] = {
   { "mitigate_mds",    &cmdline_params.mds,             true,  apply_hotpatches },
 };
 
-struct param_metadata<u64> uint_params[] = {};
+param_metadata_t<u64> uint_params[] = {};
 
-struct param_metadata<char *> string_params[] = {
+param_metadata_t<char *> string_params[] = {
   { "root_disk", (char**) cmdline_params.root_disk, "0", NULL },
 };
 
@@ -129,19 +129,19 @@ static void parse_string_param(const char* name, const char *default_value, char
 }
 
 void
-view_binary_param(struct param_metadata<bool> *param)
+view_binary_param(param_metadata_t<bool> *param)
 {
   cprintf("%s: %s (bool)\n", param->name, *param->pval ? "yes" : "no");
 }
 
 void
-view_uint_param(struct param_metadata<u64> *param)
+view_uint_param(param_metadata_t<u64> *param)
 {
   cprintf("%s: %lu (uint)\n", param->name, *param->pval);
 }
 
 void
-view_string_param(struct param_metadata<char *> *param)
+view_string_param(param_metadata_t<char *> *param)
 {
   cprintf("%s: %s (str)\n", param->name, (char*) param->pval);
 }
@@ -166,7 +166,7 @@ cmdline_view_param(const char *name)
 }
 
 void
-change_binary_param(struct param_metadata<bool> *param, const char *value)
+change_binary_param(param_metadata_t<bool> *param, const char *value)
 {
   bool new_val = *param->pval;
   if (strcmp(value, "yes") == 0) new_val = true;
@@ -181,7 +181,7 @@ change_binary_param(struct param_metadata<bool> *param, const char *value)
 }
 
 void
-change_uint_param(struct param_metadata<u64> *param, const char *value)
+change_uint_param(param_metadata_t<u64> *param, const char *value)
 {
   u64 new_val = strtoul(value, NULL, 0);
 
@@ -193,7 +193,7 @@ change_uint_param(struct param_metadata<u64> *param, const char *value)
 }
 
 void
-change_string_param(struct param_metadata<char *> *param, const char *value)
+change_string_param(param_metadata_t<char *> *param, const char *value)
 {
   char *new_val = (char*) param->pval;
   if (strcmp(new_val, value) != 0) {
