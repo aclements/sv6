@@ -388,7 +388,7 @@ initrefcache(void)
   refcache::global_epoch = 1;
   refcache::global_epoch_left = ncpu;
 
-  for (int i = 0; i < NCPU; i++)
+  for (int i = 0; i < ncpu; i++)
     threadpin(refcache_reaper, nullptr, "refcache reaper", i);
 
 #ifdef TEST
