@@ -116,6 +116,12 @@ disk_read(u32 dev, char* data, u64 count, u64 offset)
 {
   if (dev >= disks.size())
     panic("disk %u not found (%lu disks were found)", dev, disks.size());
+  while (count > DISK_REQMAX) {
+    disks[dev]->read(data, DISK_REQMAX, offset);
+    data += DISK_REQMAX;
+    offset += DISK_REQMAX;
+    count -= DISK_REQMAX;
+  }
   disks[dev]->read(data, count, offset);
 }
 
@@ -124,5 +130,11 @@ disk_write(u32 dev, const char* data, u64 count, u64 offset)
 {
   if (dev >= disks.size())
     panic("disk %u not found (%lu disks were found)", dev, disks.size());
+  while (count > DISK_REQMAX) {
+    disks[dev]->write(data, DISK_REQMAX, offset);
+    data += DISK_REQMAX;
+    offset += DISK_REQMAX;
+    count -= DISK_REQMAX;
+  }
   disks[dev]->write(data, count, offset);
 }
