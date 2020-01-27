@@ -78,7 +78,7 @@ sys_disktest(void)
 }
 
 // for use in parsing the root_disk cmdline; can either take a number or a bus location
-static u32
+u32
 disk_find(const char *description)
 {
   // first, try parsing the description as a number

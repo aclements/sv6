@@ -11,6 +11,7 @@
 #include "mnode.hh"
 #include "fs.h"
 #include "vm.hh"
+#include "disk.hh"
 
 // abstract class for a reference to a filesystem node.
 class vnode : public pageable {
@@ -122,6 +123,7 @@ private:
 
 sref<filesystem> vfs_new_nullfs();
 sref<filesystem> vfs_get_mfs();
+sref<filesystem> vfs_new_fat32(u32 devno);
 
 void vfs_mount(const sref<filesystem>& fs, const char *path);
 sref<filesystem> vfs_root();

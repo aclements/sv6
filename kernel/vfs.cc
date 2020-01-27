@@ -35,9 +35,15 @@ initvfs()
 
   auto nullfsnode = mounts->root()->create_dir("nullfs");
   int r = mounts->mount(nullfsnode, vfs_new_nullfs());
-  cprintf("mount result: %d\n", r);
-  // cprintf("not mounting mfs... what will it do?\n");
-  // vfs_mount(vfs_get_mfs(), "/");
+  if (r)
+    panic("nullfs mount result: %d\n", r);
+
+  if (false) { // not yet stable
+    auto fat32node = mounts->root()->create_dir("fat32");
+    r = mounts->mount(fat32node, vfs_new_fat32(disk_find("ahci0.0p1")));
+    if (r)
+      panic("nullfs mount result: %d\n", r);
+  }
 }
 
 int

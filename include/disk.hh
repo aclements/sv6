@@ -42,6 +42,7 @@ typedef void (*disk_listener)(disk *d);
 
 void disk_register(disk *d);
 u32 disk_find_root();
+u32 disk_find(const char *description);
 void disk_read(u32 dev, char* data, u64 count, u64 offset);
 void disk_write(u32 dev, const char* data, u64 count, u64 offset);
 

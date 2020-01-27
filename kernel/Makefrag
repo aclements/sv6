@@ -87,6 +87,7 @@ OBJS = \
 	vfsadapt.o \
 	vfsnull.o \
 	vfsmount.o \
+	fat32.o \
 	sharedmem.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
