@@ -186,10 +186,35 @@ printtrace(u64 rbp)
     __cprintf("  %016lx\n", pc[i]);
 }
 
+const char *trapnames[] = {
+  "#DE",
+  "#DB",
+  "NMI",
+  "#BP",
+  "#OF",
+  "#BR",
+  "#UD",
+  "#NM",
+  "#DF",
+  "?",
+  "#TS",
+  "#NP",
+  "#SS",
+  "#GP",
+  "#PF",
+  "?",
+  "#MF",
+  "#AC",
+  "#MC",
+  "#XM",
+  "#VE",
+};
+
 void
 printtrap(struct trapframe *tf, bool lock)
 {
   const char *name = "(no name)";
+  const char *trapname;
   void *kstack = nullptr;
   void *qstack = nullptr;
   int pid = 0;
@@ -206,7 +231,13 @@ printtrap(struct trapframe *tf, bool lock)
     qstack = myproc()->qstack;
   }
 
-  __cprintf("trap %lu err 0x%x cpu %u cs %u ss %u\n"
+  if (tf->trapno >= 0 && tf->trapno < sizeof(trapnames)) {
+    trapname = trapnames[tf->trapno];
+  } else {
+    trapname = "?";
+  }
+
+  __cprintf("trap %lu (%s) err 0x%x cpu %u cs %u ss %u\n"
             // Basic machine state
             "  rip %016lx rsp %016lx rbp %016lx\n"
             "  cr2 %016lx cr3 %016lx cr4 %016lx\n"
@@ -219,7 +250,7 @@ printtrap(struct trapframe *tf, bool lock)
             "  r14 %016lx r15 %016lx rflags %016lx\n"
             // Process state
             "  proc: name %s pid %u kstack %p qstack %p\n",
-            tf->trapno, tf->err, mycpu()->id, tf->cs, tf->ss,
+            tf->trapno, trapname, tf->err, mycpu()->id, tf->cs, tf->ss,
             tf->rip, tf->rsp, tf->rbp,
             rcr2(), rcr3(), rcr4(),
             tf->rdi, tf->rsi, tf->rdx,
