@@ -840,7 +840,7 @@ initsamp(void)
 //
 
 namespace {
-  DEFINE_PERCPU(int, wd_count);
+  DEFINE_QPERCPU(int, wd_count);
   spinlock wdlock("wdlock");
 };
 
