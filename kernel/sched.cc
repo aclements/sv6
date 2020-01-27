@@ -20,11 +20,9 @@ enum { sched_debug = 0 };
 
 struct schedule : public balance_pool<schedule> {
 public:
-  schedule(int id);
+  schedule();
   ~schedule() {};
   NEW_DELETE_OPS(schedule);
-  
-  int id_;    // XXX false sharing on this var???
 
   void enq(proc* entry);
   proc* deq();
@@ -44,8 +42,8 @@ private:
   __padout__;
 };
 
-schedule::schedule(int id)
-  : balance_pool(1), id_(id), lock_("schedule::lock_", LOCKSTAT_SCHED)
+schedule::schedule()
+  : balance_pool(1), lock_("schedule::lock_", LOCKSTAT_SCHED)
 {
   ncansteal_ = 0;
   stats_.enqs = 0;
@@ -57,7 +55,7 @@ schedule::schedule(int id)
   stats_.schedstart = 0;
 }
 
-u64 
+u64
 schedule::balance_count() const {
   // 1 if the number of processes that in runnable state and have
   // run long enough that they could be stolen is bigger than 1?
@@ -68,7 +66,7 @@ schedule::balance_count() const {
   return cansteal_ > 0 ? 1 : 0;
 }
 
-void 
+void
 schedule::balance_move_to(schedule* target)
 {
   proc *victim = nullptr;
@@ -91,29 +89,17 @@ schedule::balance_move_to(schedule* target)
     return;
   }
 
-  acquire(&victim->lock);
+  scoped_acquire l(&victim->lock);
   if (victim->get_state() == RUNNABLE && !victim->cpu_pin &&
       victim->curcycles != 0 && victim->curcycles > VICTIMAGE)
   {
     victim->curcycles = 0;
     victim->cpuid = mycpu()->id;
     target->enq(victim);
-    release(&victim->lock);
-    //cprintf("%d: stole %s from %d\n", mycpu()->id, victim->name, id_);
     ++stats_.steals;
-    return;
+  } else {
+    ++stats_.misses;
   }
-  ++stats_.misses;
-  cprintf("%d: don't steal %s---hasn't run long enough\n", 
-          mycpu()->id, victim->name);
-#if 0
-  // XXX why is this code here?  you should only steal a runnable process
-  // it has run for a while on the cpu, or not all.
-  if (victim->get_state() == RUNNABLE) {
-    target->enq(victim);
-  }
-#endif
-  release(&victim->lock);
 }
 
 void
@@ -131,12 +117,12 @@ schedule::enq(proc* p)
 
 proc*
 schedule::deq(void)
-{   
+{
   if (proc_.empty())
     return nullptr;
   // Remove from head
   scoped_acquire x(&lock_);
-  if (proc_.empty()) 
+  if (proc_.empty())
     return nullptr;
   proc &p = proc_.front();
   proc_.pop_front();
@@ -160,10 +146,10 @@ schedule::sanity(void)
 #if DEBUG
   u64 n = 0;
 
-  for (auto &p : proc_) 
+  for (auto &p : proc_)
     if (p.cansteal(true))
       n++;
-  
+
   if (n != ncansteal_)
     panic("schedule::sanity: %lu != %lu", n, ncansteal_);
 #endif
@@ -176,7 +162,7 @@ private:
 public:
   sched_dir() : b_(this) {
     for (int i = 0; i < NCPU; i++) {
-      schedule_[i] = new schedule(i);
+      schedule_[i] = new schedule();
     }
   };
   ~sched_dir() {};
@@ -189,9 +175,9 @@ public:
   void steal() {
     if (!SCHED_LOAD_BALANCE)
       return;
-    pushcli();
+
+    scoped_cli cli;
     b_.balance();
-    popcli();
   }
 
   void addrun(struct proc* p) {
@@ -199,12 +185,7 @@ public:
     schedule_[p->cpuid]->enq(p);
   }
 
-  proc* next() {
-    return schedule_[mycpu()->id]->deq();
-  }
-
-  void
-  sched(void)
+  void sched(void)
   {
     extern void forkret(void);
     int intena;
@@ -229,7 +210,7 @@ public:
     myproc()->curcycles += rdtsc() - myproc()->tsc;
 
     // Interrupts are disabled
-    next = this->next();
+    next = schedule_[mycpu()->id]->deq();
 
     u64 t = rdtsc();
     if (myproc() == idleproc())
@@ -237,7 +218,7 @@ public:
     else
       schedule_[mycpu()->id]->stats_.busy += t - schedule_[mycpu()->id]->stats_.schedstart;
     schedule_[mycpu()->id]->stats_.schedstart = t;
-  
+
     if (next == nullptr) {
       if (myproc()->get_state() != RUNNABLE ||
           // proc changed its CPU pin?
@@ -303,8 +284,7 @@ sched_dir thesched_dir __mpalign__;
 void
 post_swtch(void)
 {
-  if (mycpu()->prev->get_state() == RUNNABLE && 
-      mycpu()->prev != idleproc())
+  if (mycpu()->prev->get_state() == RUNNABLE && mycpu()->prev != idleproc())
     addrun(mycpu()->prev);
   release(&mycpu()->prev->lock);
 }
