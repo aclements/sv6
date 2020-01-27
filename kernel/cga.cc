@@ -1,6 +1,7 @@
 #include "types.h"
 #include "kernel.hh"
 #include "amd64.h"
+#include "cmdline.hh"
 
 #include <string.h>
 
@@ -13,6 +14,8 @@ static int color = ((0 << 4) | 15) << 8;
 void
 cgaputc(int c)
 {
+  if (!cmdline_params.use_cga)
+    return;
   int pos;
   
   // Cursor position: col + 80*row.
@@ -44,6 +47,9 @@ cgaputc(int c)
 void
 initcga(void)
 {
+  if (!cmdline_params.use_cga)
+    return;
+
   int i;
 
   for (i = 0; i < 80*25; i++)

@@ -23,6 +23,7 @@ struct cmdline_params_t
   bool lazy_barrier;
   char root_disk[CMDLINE_VALUE+1];
   bool use_vga;
+  bool use_cga;
   bool mds;
 };
 
