@@ -33,6 +33,9 @@ initvfs()
   assert(!mounts);
   mounts = make_sref<virtual_filesystem>(vfs_get_mfs());
 
+  auto nullfsnode = mounts->root()->create_dir("nullfs");
+  int r = mounts->mount(nullfsnode, vfs_new_nullfs());
+  cprintf("mount result: %d\n", r);
   // cprintf("not mounting mfs... what will it do?\n");
   // vfs_mount(vfs_get_mfs(), "/");
 }
