@@ -32,6 +32,10 @@ public:
     return filesystem.get();
   }
 
+  bool is_same(const sref<vnode>& other) override {
+    return this == other.get();
+  }
+
   bool is_regular_file() override {
     return false;
   }
@@ -69,7 +73,8 @@ public:
   }
 
   bool next_dirent(const char *last, strbuf<FILENAME_MAX> *next) override {
-    if (!*last) {
+    assert(next);
+    if (!last) {
       *next = ".";
       return true;
     } else if (strcmp(last, ".") == 0) {
@@ -78,6 +83,14 @@ public:
     } else {
       return false;
     }
+  }
+
+  sref<virtual_mount> get_mount_data() override {
+    return sref<virtual_mount>();
+  }
+
+  bool set_mount_data(sref<virtual_mount> m) override {
+    panic("cannot set mount data on root directory of vfsnull");
   }
 
   int hardlink(const char *name, sref<vnode> olddir, const char *oldname) override {

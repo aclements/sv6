@@ -18,6 +18,7 @@ public:
   // general operations
   virtual void stat(struct stat *st, enum stat_flags flags) = 0;
   virtual sref<class filesystem> get_fs() = 0; // may return sref() if filesystem no longer exists
+  virtual bool is_same(const sref<vnode> &other) = 0;
 
   // regular file operations
   virtual bool is_regular_file() = 0;
@@ -31,6 +32,8 @@ public:
   virtual bool is_directory() = 0;
   virtual bool child_exists(const char *name) = 0;
   virtual bool next_dirent(const char *last, strbuf<FILENAME_MAX> *next) = 0;
+  virtual sref<struct virtual_mount> get_mount_data() = 0;
+  virtual bool set_mount_data(sref<virtual_mount> m) = 0;
 
   virtual int hardlink(const char *name, sref<vnode> olddir, const char *oldname) = 0;
   virtual int rename(const char *name, sref<vnode> olddir, const char *oldname) = 0;
@@ -74,6 +77,8 @@ public:
   sref<vnode> create_dir(const sref<vnode>& base, const char *path);
   sref<vnode> create_device(const sref<vnode>& base, const char *path, u16 major, u16 minor);
   sref<vnode> create_socket(const sref<vnode>& base, const char *path, struct localsock *sock);
+
+  struct sref<struct virtual_mount> mount_info;
 };
 
 class step_resolved_filesystem : public filesystem {
@@ -85,6 +90,14 @@ public:
   virtual sref<vnode> resolve_child(const sref<vnode>& base, const char *filename) = 0;
   // handles the .. case
   virtual sref<vnode> resolve_parent(const sref<vnode>& base) = 0;
+};
+
+struct virtual_mount : public referenced {
+  sref<vnode> mountpoint;
+  sref<filesystem> mountpoint_filesystem;
+  sref<filesystem> mounted_filesystem;
+
+  NEW_DELETE_OPS(virtual_mount);
 };
 
 class virtual_filesystem : public step_resolved_filesystem {
@@ -103,16 +116,8 @@ public:
   NEW_DELETE_OPS(virtual_filesystem);
 private:
   void onzero() override { delete this; }
-  struct virtual_mount {
-    sref<vnode> mountpoint;
-    sref<filesystem> mountpoint_filesystem;
-    sref<filesystem> mounted_filesystem;
-  };
-  // the chainhash instances have their own
   spinlock modifylock __mpalign__;
-  sref<filesystem> rootmount;
-  chainhash<sref<vnode>, virtual_mount> submounts_forwards;
-  chainhash<sref<filesystem>, virtual_mount> submounts_backwards;
+  sref<filesystem> root_filesystem;
 };
 
 sref<filesystem> vfs_new_nullfs();

@@ -12,6 +12,7 @@ public:
 
   void stat(struct stat *st, enum stat_flags flags) override;
   sref<class filesystem> get_fs() override;
+  bool is_same(const sref<vnode> &other) override;
 
   bool is_regular_file() override;
   u64 file_size() override;
@@ -24,6 +25,8 @@ public:
   bool is_directory() override;
   bool child_exists(const char *name) override;
   bool next_dirent(const char *last, strbuf<FILENAME_MAX> *next) override;
+  sref<struct virtual_mount> get_mount_data() override;
+  bool set_mount_data(sref<virtual_mount> m) override;
 
   int hardlink(const char *name, sref<vnode> olddir, const char *oldname) override;
   int rename(const char *newname, sref<vnode> olddir, const char *oldname) override;
@@ -114,6 +117,13 @@ vnode_mfs::get_fs()
 }
 
 bool
+vnode_mfs::is_same(const sref<vnode> &other)
+{
+  auto o = other->try_cast<vnode_mfs>();
+  return o && this->node == o->node;
+}
+
+bool
 vnode_mfs::as_device(u16 *major_out, u16 *minor_out)
 {
   if (node->type() != mnode::types::dev)
@@ -195,6 +205,22 @@ vnode_mfs::next_dirent(const char *last, strbuf<FILENAME_MAX> *next)
   if (!this->node->as_dir()->enumerate(last ? &lastb : nullptr, &nextb))
     return false;
   *next = strbuf<FILENAME_MAX>(nextb);
+  return true;
+}
+
+sref<struct virtual_mount>
+vnode_mfs::get_mount_data()
+{
+  return sref<virtual_mount>::newref((virtual_mount *) this->node->as_dir()->mount_data);
+}
+
+bool
+vnode_mfs::set_mount_data(sref<virtual_mount> m)
+{
+  mdir *d = this->node->as_dir();
+  if (d->mount_data)
+    panic("mount_data already populated");
+  d->mount_data = m.transfer_to_ptr();
   return true;
 }
 
@@ -289,6 +315,13 @@ vnode_mfs::remove(const char *name)
     return -1;
 
   if (mf->type() == mnode::types::dir) {
+    /*
+     * Do not remove a directory if it is an active mountpoint.
+     */
+    // FIXME: make sure this race condition gets fixed
+    if (mf->as_dir()->mount_data)
+      return -1;
+
     /*
      * Remove a subdirectory only if it has zero files in it.  No files
      * or sub-directories can be subsequently created in that directory.

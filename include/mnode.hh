@@ -162,6 +162,8 @@ private:
   chainhash<strbuf<DIRSIZ>, u64> map_;
 
 public:
+  void *mount_data;
+
   bool insert(const strbuf<DIRSIZ>& name, mlinkref* ilink) {
     if (name == ".")
       return false;
