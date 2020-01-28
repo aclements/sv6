@@ -223,6 +223,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat,
       num = (unsigned long long)
 	(uptr) va_arg (ap, void *);
       base = 16;
+      padc = '0';
       goto number;
 
       // (unsigned) hexadecimal
