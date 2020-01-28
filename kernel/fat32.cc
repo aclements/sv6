@@ -216,6 +216,8 @@ public:
   NEW_DELETE_OPS(vnode_fat32);
 private:
   u8 *get_cluster_data(u32 nth);
+  u64 data_cluster_to_sector(u32 cluster_num);
+  void validate_cluster(fat32_header &hdr, u32 cluster_num);
   bool iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent_out);
 
   void onzero() override;
@@ -224,6 +226,7 @@ private:
   sref<vnode_fat32> parent_dir;
   u32 devno;
   u32 sectors_per_cluster;
+  u32 first_data_sector;
   bool directory;
   u32 file_bytes;
 
@@ -269,7 +272,7 @@ private:
 vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size)
   : filesystem(std::move(fs)), parent_dir(parent_dir), directory(is_directory), file_bytes(file_size)
 {
-  if (!is_directory)
+  if (is_directory)
     assert(file_size == 0);
   if (!parent_dir)
     assert(is_directory); // we're the root dir!
@@ -278,8 +281,9 @@ vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster, bool is_d
     panic("filesystem should not have been freed during a vnode allocation!");
   devno = ref->devno;
   sectors_per_cluster = ref->hdr.sectors_per_cluster;
+  first_data_sector = ref->hdr.first_data_sector();
 
-  assert(first_cluster >= ref->hdr.first_data_sector() && first_cluster < ref->hdr.total_sectors());
+  validate_cluster(ref->hdr, first_cluster);
 
   // count number of clusters
   u32 cluster_count = 1;
@@ -292,25 +296,46 @@ vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster, bool is_d
   cluster_data_cache = (u8**) kmalloc(sizeof(u8 *) * cluster_count, "vnode_fat32 cluster_data_cache");
   last_cluster = first_cluster;
   for (u32 i = 0; i < cluster_count; i++) {
-    assert(last_cluster >= ref->hdr.first_data_sector() && last_cluster < ref->hdr.total_sectors());
+    if (last_cluster >= 0x0FFFFFF8)
+      panic("cluster count changed!");
+    validate_cluster(ref->hdr, last_cluster);
     cluster_nums[i] = last_cluster;
     cluster_data_cache[i] = nullptr;
     last_cluster = ref->fat.next_cluster(last_cluster);
-    if (last_cluster >= 0x0FFFFFF8)
-      panic("cluster count changed!");
   }
   if (last_cluster < 0x0FFFFFF8)
     panic("cluster count changed!");
+  num_clusters = cluster_count;
+  assert(num_clusters >= 1);
+}
+
+u64
+vnode_fat32::data_cluster_to_sector(u32 cluster)
+{
+  return (cluster - 2) * sectors_per_cluster + first_data_sector;
+}
+
+void
+vnode_fat32::validate_cluster(fat32_header &hdr, u32 cluster)
+{
+  u64 sector = data_cluster_to_sector(cluster);
+  if (sector < hdr.first_data_sector() || sector >= hdr.total_sectors())
+    panic("vnode_fat32: invalid cluster %u's sector %lu is not in the range [%u, %u)",
+          cluster, sector, hdr.first_data_sector(), hdr.total_sectors());
 }
 
 void
 vnode_fat32::onzero()
 {
-  for (u32 i = 0; i < num_clusters; i++)
-    if (cluster_data_cache[i])
-      kfree(cluster_data_cache[i]);
-  kfree(cluster_data_cache);
-  kfree(cluster_nums);
+  size_t bytes_per_cluster = SECTORSIZ * this->sectors_per_cluster;
+  for (u32 i = 0; i < num_clusters; i++) {
+    if (cluster_data_cache[i]) {
+      kmfree(cluster_data_cache[i], bytes_per_cluster);
+      cprintf("freed buffer at %016p-%016p\n", cluster_data_cache[i], cluster_data_cache[i] + bytes_per_cluster);
+    }
+  }
+  kmfree(cluster_data_cache, sizeof(u8 *) * num_clusters);
+  kmfree(cluster_nums, sizeof(u32) * num_clusters);
   delete this;
 }
 
@@ -339,12 +364,14 @@ bool
 vnode_fat32::is_same(const sref<vnode> &other)
 {
   auto o = other->try_cast<vnode_fat32>();
+  if (!o)
+    return false;
   // this is sketchy, because it doesn't check for the case where the two entries had different info parsed into them
   // (that is unlikely... but it's worth thinking about it)
   // maybe that'll get fixed when we have better caching; maybe not?
   // TODO: make this less sketchy
   assert(this->num_clusters >= 1 && o->num_clusters >= 1);
-  return o && this->devno == o->devno && this->cluster_nums[0] == o->cluster_nums[0];
+  return this->devno == o->devno && this->cluster_nums[0] == o->cluster_nums[0];
 }
 
 bool
@@ -371,7 +398,29 @@ int
 vnode_fat32::read_at(char *addr, u64 off, size_t len)
 {
   assert(!directory);
-  panic("unimplemented: actually reading files");
+  if (off >= file_bytes)
+    return 0;
+  if (off + len > file_bytes)
+    len = file_bytes - off;
+  assert(off + len <= file_bytes);
+  ssize_t total_read = 0;
+  size_t bytes_per_cluster = SECTORSIZ * this->sectors_per_cluster;
+  while (len > 0) {
+    u32 cluster_nth = off / bytes_per_cluster;
+    u32 cluster_offset = off % bytes_per_cluster;
+    u8 *dptr = get_cluster_data(cluster_nth);
+    if (!dptr)
+      panic("cluster %u missing while reading data for file of length %lu\n", cluster_nth, file_bytes);
+    size_t read_size = MIN(bytes_per_cluster - cluster_offset, len);
+    memmove(addr, dptr + cluster_offset, read_size);
+    total_read += read_size;
+    addr += read_size;
+    off += read_size;
+    len -= read_size;
+    assert(len == 0 || off % bytes_per_cluster == 0);
+  }
+  // TODO: change the return type of the read_at API to accept ssize_t
+  return total_read;
 }
 
 int
@@ -412,7 +461,9 @@ vnode_fat32::get_cluster_data(u32 nth)
     d = (u8*) kmalloc(bytes_per_cluster, "vnode_fat32 data");
     if (!d)
       panic("could not allocate memory in vnode_fat32::get_cluster_data");
-    disk_read(devno, (char*) d, bytes_per_cluster, bytes_per_cluster * cluster_nums[nth]);
+    cprintf("allocated buffer at %016p-%016p\n", d, d + bytes_per_cluster);
+    u64 offset = data_cluster_to_sector(cluster_nums[nth]) * SECTORSIZ;
+    disk_read(devno, (char*) d, bytes_per_cluster, offset);
     cluster_data_cache[nth] = d;
   }
   return d;
