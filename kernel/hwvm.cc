@@ -484,34 +484,24 @@ switchvm(struct proc *p)
 {
   scoped_cli cli;
 
-  // If we try to switch to a different proc's page tables while executing on a
-  // qstack then things will go horribly wrong in hard to debug ways.
-  ensure_secrets();
+  if (!p->vmap && *cur_page_map_cache) {
+    assert(secrets_mapped);
 
-  u64 base = (u64) &mycpu()->ts;
-  mycpu()->gdt[TSSSEG>>3] = (struct segdesc)
-    SEGDESC(base, (sizeof(mycpu()->ts)-1), SEG_P|SEG_TSS64A);
-  mycpu()->gdt[(TSSSEG>>3)+1] = (struct segdesc) SEGDESCHI(base);
-  mycpu()->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
-  ltr(TSSSEG);
-
-  if (*cur_page_map_cache)
-    (*cur_page_map_cache)->switch_from();
-
-  if (p->vmap) {
-    p->vmap->cache.switch_to();
-
-    if (*cur_page_map_cache != &p->vmap->cache) {
-      if (cpuid::features().spec_ctrl) {
-        indirect_branch_prediction_barrier();
-      }
-    }
-
-    *cur_page_map_cache = &p->vmap->cache;
-  } else {
     // Switch directly to the base kernel page table, using PCID=0.
     lcr3(v2p(&kpml4));
     *cur_page_map_cache = nullptr;
+  } else if (p->vmap && &p->vmap->cache != *cur_page_map_cache) {
+    assert(secrets_mapped);
+
+    if (*cur_page_map_cache) {
+      (*cur_page_map_cache)->switch_from();
+    }
+    *cur_page_map_cache = &p->vmap->cache;
+    (*cur_page_map_cache)->switch_to();
+
+    if (cpuid::features().spec_ctrl) { // TODO: control via param
+      indirect_branch_prediction_barrier();
+    }
   }
 
   mycpu()->ts.rsp[0] = (u64) p->kstack + KSTACKSIZE;

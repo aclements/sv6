@@ -534,6 +534,13 @@ initseg(struct cpu *c)
                  "movw %%ax, %%ss\n"
                  "movw %%ax, %%ds" : : : "eax");
 
+  u64 base = (u64) &c->ts;
+  c->gdt[TSSSEG>>3] = (struct segdesc)
+    SEGDESC(base, (sizeof(c->ts)-1), SEG_P|SEG_TSS64A);
+  c->gdt[(TSSSEG>>3)+1] = (struct segdesc) SEGDESCHI(base);
+  c->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
+  ltr(TSSSEG);
+
   // When executing a syscall instruction the CPU sets the SS selector
   // to (star >> 32) + 8 and the CS selector to (star >> 32).
   // When executing a sysret instruction the CPU sets the SS selector
