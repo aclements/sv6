@@ -38,12 +38,10 @@ initvfs()
   if (r)
     panic("nullfs mount result: %d\n", r);
 
-  if (false) { // not yet stable
-    auto fat32node = mounts->root()->create_dir("fat32");
-    r = mounts->mount(fat32node, vfs_new_fat32(disk_find("ahci0.0p1")));
-    if (r)
-      panic("nullfs mount result: %d\n", r);
-  }
+  auto fat32node = mounts->root()->create_dir("fat32");
+  r = mounts->mount(fat32node, vfs_new_fat32(disk_find("ahci0.0p1")));
+  if (r)
+    panic("fat32 mount result: %d\n", r);
 }
 
 int
