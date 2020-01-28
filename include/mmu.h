@@ -126,7 +126,6 @@ struct taskstate
   uint64_t ist[8];
   uint8_t reserved1[10];
   uint16_t iomba;
-  uint8_t iopb[0];
 } __attribute__ ((packed, aligned(16)));
 
 typedef struct hwid { 

@@ -538,7 +538,10 @@ initseg(struct cpu *c)
   c->gdt[TSSSEG>>3] = (struct segdesc)
     SEGDESC(base, (sizeof(c->ts)-1), SEG_P|SEG_TSS64A);
   c->gdt[(TSSSEG>>3)+1] = (struct segdesc) SEGDESCHI(base);
-  c->ts.iomba = (u16)__offsetof(struct taskstate, iopb);
+  // "If the I/O bit map base address is greater than or equal to the TSS
+  // segment limit, there is no I/O permission map, and all I/O instructions
+  // generate exceptions when the CPL is greater than the current IOPL."
+  c->ts.iomba = 0xffff;
   ltr(TSSSEG);
 
   // When executing a syscall instruction the CPU sets the SS selector
