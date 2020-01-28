@@ -331,7 +331,6 @@ vnode_fat32::onzero()
   for (u32 i = 0; i < num_clusters; i++) {
     if (cluster_data_cache[i]) {
       kmfree(cluster_data_cache[i], bytes_per_cluster);
-      cprintf("freed buffer at %016p-%016p\n", cluster_data_cache[i], cluster_data_cache[i] + bytes_per_cluster);
     }
   }
   kmfree(cluster_data_cache, sizeof(u8 *) * num_clusters);
@@ -410,7 +409,7 @@ vnode_fat32::read_at(char *addr, u64 off, size_t len)
     u32 cluster_offset = off % bytes_per_cluster;
     u8 *dptr = get_cluster_data(cluster_nth);
     if (!dptr)
-      panic("cluster %u missing while reading data for file of length %lu\n", cluster_nth, file_bytes);
+      panic("cluster %u missing while reading data for file of length %u\n", cluster_nth, file_bytes);
     size_t read_size = MIN(bytes_per_cluster - cluster_offset, len);
     memmove(addr, dptr + cluster_offset, read_size);
     total_read += read_size;
@@ -461,7 +460,6 @@ vnode_fat32::get_cluster_data(u32 nth)
     d = (u8*) kmalloc(bytes_per_cluster, "vnode_fat32 data");
     if (!d)
       panic("could not allocate memory in vnode_fat32::get_cluster_data");
-    cprintf("allocated buffer at %016p-%016p\n", d, d + bytes_per_cluster);
     u64 offset = data_cluster_to_sector(cluster_nums[nth]) * SECTORSIZ;
     disk_read(devno, (char*) d, bytes_per_cluster, offset);
     cluster_data_cache[nth] = d;
@@ -499,8 +497,11 @@ vnode_fat32::iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent
         continue; // TODO: handle long filenames
       if (d->filename[0] == '\0')
         break; // no more entries in this cluster (at least)
+      if (d->filename[0] == '.')
+        continue; // . or .. entry; we add these back in ourselves, so they don't need to be here
       if (d->filename[0] == 0xE5)
         continue; // unused entry
+
       *index = i + 1 + cluster_n * dirents_per_cluster;
 
       // TODO: make this code less sketchy
@@ -513,6 +514,8 @@ vnode_fat32::iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent
       memcpy(&out->buf_[strlen(out->buf_)], d->extension, sizeof(d->extension));
       strip_char(out->buf_, ' ');
       strip_char(out->buf_, '.');
+      if (strlen(out->ptr()) == 0)
+        panic("file at index=%u had zero-length filename constructed from '%8s.%3s' (first byte %2x, attributes %2x)\n", *index-1, d->filename, d->extension, d->filename[0], d->attributes);
       if (ent_out)
         *ent_out = *d;
       return true;
@@ -606,37 +609,43 @@ vnode_fat32::hardlink(const char *name, sref<vnode> olddir, const char *oldname)
 int
 vnode_fat32::rename(const char *newname, sref<vnode> olddir, const char *oldname)
 {
-  panic("unimplemented: fat32 renaming"); // fat32 is read-only for now
+  cprintf("unimplemented: fat32 renaming\n"); // fat32 is read-only for now
+  return -1;
 }
 
 int
 vnode_fat32::remove(const char *name)
 {
-  panic("unimplemented: fat32 removal"); // fat32 is read-only for now
+  cprintf("unimplemented: fat32 removal\n"); // fat32 is read-only for now
+  return -1;
 }
 
 sref<vnode>
 vnode_fat32::create_file(const char *name, bool excl)
 {
-  panic("unimplemented: fat32 file creation"); // fat32 is read-only for now
+  cprintf("unimplemented: fat32 file creation\n"); // fat32 is read-only for now
+  return sref<vnode>();
 }
 
 sref<vnode>
 vnode_fat32::create_dir(const char *name)
 {
-  panic("unimplemented: fat32 directory creation"); // fat32 is read-only for now
+  cprintf("unimplemented: fat32 directory creation\n"); // fat32 is read-only for now
+  return sref<vnode>();
 }
 
 sref<vnode>
 vnode_fat32::create_device(const char *name, u16 major, u16 minor)
 {
-  panic("unimplemented: fat32 device creation"); // fat32 does not directly support devices
+  cprintf("unimplemented: fat32 device creation\n"); // fat32 does not directly support devices
+  return sref<vnode>();
 }
 
 sref<vnode>
 vnode_fat32::create_socket(const char *name, struct localsock *sock)
 {
-  panic("unimplemented: fat32 socket creation"); // fat32 does not directly support sockets
+  cprintf("unimplemented: fat32 socket creation\n"); // fat32 does not directly support sockets
+  return sref<vnode>();
 }
 
 bool
@@ -681,11 +690,11 @@ fat32fs::root()
 sref<vnode>
 fat32fs::resolve_child(const sref<vnode>& base, const char *filename)
 {
-  return root_node->cast<vnode_fat32>()->ref_child(filename);
+  return base->cast<vnode_fat32>()->ref_child(filename);
 }
 
 sref<vnode>
 fat32fs::resolve_parent(const sref<vnode>& base)
 {
-  return root_node->cast<vnode_fat32>()->ref_parent();
+  return base->cast<vnode_fat32>()->ref_parent();
 }
