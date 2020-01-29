@@ -79,7 +79,7 @@ sys_disktest(void)
 }
 
 // for use in parsing the root_disk cmdline; can either take a number or a bus location
-u32
+disk *
 disk_find(const char *description)
 {
   // first, try parsing the description as a number
@@ -87,28 +87,28 @@ disk_find(const char *description)
   long ret;
   ret = strtol(description, &end, 10);
   if (*end == '\0') {
-    if (ret < 0 || ret >= disks.size()) {
-      panic("disk number %ld not identified (%lu disks were identified)", ret, disks.size());
-    }
-    return ret;
+    if (ret < 0)
+      panic("negative disk number %ld not valid", ret);
+    return disk_by_devno(ret);
   }
 
   // if it's not a number, try it as a bus location
-  u32 index = 0;
   for (disk* d : disks) {
     if (strcmp(description, d->dk_busloc) == 0) {
-      return index;
+      return d;
     }
-    index++;
   }
 
-  panic("cannot identify disk with bus location \"%s\"", description);
+  return nullptr;
 }
 
 u32
 disk_find_root()
 {
-  return disk_find(cmdline_params.root_disk);
+  disk *d = disk_find(cmdline_params.root_disk);
+  if (!d)
+    panic("cannot identify root disk with bus location \"%s\"", cmdline_params.root_disk);
+  return d->devno;
 }
 
 disk *
