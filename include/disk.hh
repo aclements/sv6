@@ -22,6 +22,7 @@ public:
   char dk_firmware[8];
   char dk_busloc[20];
   bool can_have_partitions = true;
+  u32 devno = 0xFFFFFFFF;
 
   virtual void readv(kiovec *iov, int iov_cnt, u64 off) = 0;
   virtual void writev(kiovec *iov, int iov_cnt, u64 off) = 0;
@@ -43,6 +44,7 @@ typedef void (*disk_listener)(disk *d);
 void disk_register(disk *d);
 u32 disk_find_root();
 u32 disk_find(const char *description);
+disk *disk_by_devno(u32 devno);
 void disk_read(u32 dev, char* data, u64 count, u64 offset);
 void disk_write(u32 dev, const char* data, u64 count, u64 offset);
 

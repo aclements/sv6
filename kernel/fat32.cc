@@ -2,6 +2,7 @@
 #include "kernel.hh"
 #include "vfs.hh"
 #include <utility>
+#include "sleeplock.hh"
 
 #define SECTORSIZ 512
 
@@ -83,7 +84,6 @@ fat32_header::num_data_sectors()
 u32
 fat32_header::num_data_clusters()
 {
-  // TODO: does it matter that this rounds down?
   return num_data_sectors() / sectors_per_cluster;
 }
 
@@ -146,23 +146,214 @@ static_assert(sizeof(fat32_dirent) == 32, "expected fat32 directory entry to be 
 
 // TODO: long filename support
 
+class fat32_buffer_cache : public referenced {
+public:
+  fat32_buffer_cache(disk *device, u64 max_blocks_used, u64 block_size, u64 first_cluster_offset)
+    : max_blocks_used(max_blocks_used), block_size(block_size), first_cluster_offset(first_cluster_offset), device(device), cached_clusters(max_blocks_used)
+  {}
+
+  // cluster is refcounted, but does not automatically get deallocated when the refcount drops to zero. instead, one ref
+  // is implicitly kept in the cached_clusters table; when we need to free an unused cluster, we iterate through the
+  // clusters and try decrementing and then re-incrementing each of their reference counts. if we can't re-increment,
+  // then we must have just decremented the last reference to the cluster, and we can drop it from the cache.
+  //
+  // worst case scenario, someone tries to reference that otherwise-unreferenced block exactly at the moment where we've
+  // just called dec(), and then they'll fail to tryinc(), so they'll fall through to taking the cluster lock, and once
+  // we release it in the code that's actively freeing the cluster, it will go back and allocate that exact same cluster
+  // once again.
+  class cluster : public referenced {
+  public:
+    u8 *buffer_ptr() {
+      if (!cluster_bytes) {
+        data_available.acquire();
+        if (!cluster_bytes)
+          panic("once buffer_ptr() acquires data_available, cluster_bytes must be populated");
+        data_available.release();
+      }
+      u8 *out = cluster_bytes;
+      assert(out);
+      return out;
+    }
+    // cluster numbers are signed, because you may need to access a negative cluster number to reach the FAT itself
+    explicit cluster(s64 block) : block(block) {}
+
+    NEW_DELETE_OPS(cluster);
+  private:
+    // force-acquires data_available
+    void claim_buffer_population() {
+      if (!data_available.try_acquire())
+        panic("expected to be able to claim buffer population");
+    }
+    // expects data_available to be held; will release it
+    void populate_buffer_ptr(fat32_buffer_cache *outer) {
+      assert(!cluster_bytes);
+      assert(outer);
+      u8 *data = (u8*) kmalloc(outer->block_size, "FAT32 disk block");
+      if (!data)
+        panic("out of memory in FAT32 block cache");
+      s64 offset = (s64) outer->block_size * block + outer->first_cluster_offset;
+      if (offset <= -(s64) outer->block_size)
+        panic("offset too far before the start of disk: %ld <= %ld", offset, -outer->block_size); // only allow reads that are at least partially in the disk
+      u64 read_len = outer->block_size;
+      if (offset < 0) {
+        u64 corrective_shift = -offset;
+        assert(corrective_shift < outer->block_size);
+        memset(data, 0, corrective_shift); // fill unavailable bytes with zeroes
+        data += corrective_shift;
+        read_len -= corrective_shift;
+        offset += corrective_shift;
+        assert(offset == 0);
+      }
+      outer->device->read((char*) data, read_len, offset);
+      barrier();
+      cluster_bytes = data;
+      data_available.release();
+    }
+    void onzero() override {}
+    u8 *cluster_bytes = nullptr;
+    sleeplock data_available;
+    s64 block;
+    cluster *next_try_free = nullptr, *prev_try_free = nullptr;
+
+    friend fat32_buffer_cache;
+  };
+
+  sref<cluster> get_cluster_for_disk_byte_offset(u64 offset, u64 *offset_within_block_out) {
+    s64 offset_from_base = offset - first_cluster_offset;
+    // we can't divide offset_from_base directly, because it's signed; we'll need to shift it positive first, if it's negative.
+    u64 positive_shift_blocks = offset_from_base >= 0 ? 0 : ((-offset_from_base + block_size - 1) / block_size);
+    s64 shifted = offset_from_base + positive_shift_blocks * block_size;
+    assert(shifted >= 0);
+    s64 block_number = (shifted) / block_size - positive_shift_blocks;
+    *offset_within_block_out = shifted % block_size;
+    return this->get(block_number);
+  }
+
+  sref<cluster> get(s64 block) {
+    static u64 block_fetches = 0;
+    // cprintf("cache get(%ld) -> %d fetches\n", block, ++block_fetches);
+    sref<cluster> r;
+    cluster *i;
+    if (cached_clusters.lookup(block, &i)) {
+      assert(i);
+      if (i->tryinc())
+        return sref<cluster>::transfer(i);
+    }
+    // TODO: is it okay to take a spinlock here, or do we need a sleeplock to avoid causing deadlocks?
+    lock_guard<spinlock> l(&alloc);
+    if (cached_clusters.lookup(block, &i)) {
+      assert(i);
+      if (i->tryinc())
+        return sref<cluster>::transfer(i);
+      panic("should never fail to increment while we have the lock!");
+    }
+    if (blocks_used >= max_blocks_used) {
+      if (!evict_unused_block())
+        panic("entire FAT32 block cache used up by unfreeable blocks");
+      assert(blocks_used < max_blocks_used);
+    }
+    i = new cluster(block);
+    blocks_used++;
+    // cprintf("cached cluster for block %ld; %lu now used\n", block, blocks_used);
+    // this ends up being "least recently allocated" order, which is imperfect but better than some of the other options
+    if (first_try_free) {
+      i->next_try_free = first_try_free;
+      i->prev_try_free = first_try_free->prev_try_free;
+      i->next_try_free->prev_try_free = i->prev_try_free->next_try_free = i;
+    } else {
+      first_try_free = i;
+      i->next_try_free = i->prev_try_free = i;
+    }
+    // grab the lock on the cluster buffer, so that anyone who tries to access its data will wait on us
+    i->claim_buffer_population();
+    if (!cached_clusters.insert(block, i))
+      panic("should never fail to insert into cached_clusters");
+    // release the lock explicitly so that we can start our potentially-sleeping read
+    l.release();
+    // releases the lock on the cluster buffer once data has been loaded
+    i->populate_buffer_ptr(this);
+    // newref because i's placement into cached_clusters is the original implicit ref
+    return sref<cluster>::newref(i);
+  }
+  // at the point where this is deallocated, it must be the case that no references remain through which a get()
+  // operation could be performed, so we do not bother taking the lock.
+  ~fat32_buffer_cache() {
+    // all we need to do to handle our deletion is to get rid of our manually-tracked references in cached_clusters.
+    // that way, all of our clusters will be freed as their remaining references drop.
+    cluster *try_free = first_try_free;
+    first_try_free = nullptr;
+    while (try_free) {
+      cluster *cur = try_free;
+      cur->dec();
+      try_free = try_free->next_try_free;
+      cur->next_try_free = cur->prev_try_free = nullptr;
+      blocks_used--;
+    }
+    assert(blocks_used == 0);
+  }
+
+  u32 devno() {
+    return device->devno;
+  }
+
+  const u64 max_blocks_used, block_size, first_cluster_offset;
+
+  NEW_DELETE_OPS(fat32_buffer_cache);
+private:
+  // alloc lock must be held
+  bool evict_unused_block() {
+    if (!first_try_free) {
+      assert(blocks_used == 0);
+      return false;
+    }
+    assert(blocks_used > 0);
+    cluster *try_free = first_try_free;
+    do {
+      try_free->dec();
+      // if tryinc fails, then # of refs has dropped to zero, and we can safely free this
+      if (!try_free->tryinc()) {
+        // let's free this one. remove it from the linked list and chainhash, then actually free it and decrement the number of blocks used
+        if (try_free == try_free->next_try_free) {
+          assert(first_try_free == try_free);
+          assert(try_free->prev_try_free == try_free);
+          first_try_free = nullptr;
+        } else {
+          first_try_free = try_free->next_try_free;
+          try_free->next_try_free->prev_try_free = try_free->prev_try_free;
+          try_free->prev_try_free->next_try_free = try_free->next_try_free;
+        }
+        if (!cached_clusters.remove(try_free->block, try_free))
+          panic("should have been able to remove cluster from FAT32 cached_clusters");
+        blocks_used--;
+        // cprintf("evicted cluster for block %ld; %lu now used\n", try_free->block, blocks_used);
+        delete try_free;
+        return true;
+      }
+    } while (try_free != first_try_free);
+    return false;
+  }
+  spinlock alloc;
+  disk *device;
+  u64 blocks_used = 0;
+  cluster *first_try_free = nullptr;
+  chainhash<s64, cluster*> cached_clusters;
+};
+
 class file_allocation_table {
 public:
-  explicit file_allocation_table(u32 devno, u32 offset, u32 sectors);
+  explicit file_allocation_table(sref<fat32_buffer_cache> buffer_cache, u32 offset, u32 sectors);
 
   u32 next_cluster(u32 from_cluster);
 
 private:
-  u32 *loaded_table;
+  sref<fat32_buffer_cache> buffer_cache;
+  u32 table_base_offset;
   size_t table_len;
 };
 
-file_allocation_table::file_allocation_table(u32 devno, u32 offset, u32 sectors)
+file_allocation_table::file_allocation_table(sref<fat32_buffer_cache> buffer_cache, u32 offset, u32 sectors)
+  : buffer_cache(std::move(buffer_cache)), table_base_offset(offset)
 {
-  loaded_table = (u32 *) kmalloc(sectors * SECTORSIZ, "fat32 table");
-  if (!loaded_table)
-    panic("out of memory when loading FAT table from disk");
-  disk_read(devno, (char *) loaded_table, sectors * SECTORSIZ, offset * SECTORSIZ);
   table_len = sectors * SECTORSIZ / sizeof(u32);
 }
 
@@ -170,8 +361,17 @@ file_allocation_table::file_allocation_table(u32 devno, u32 offset, u32 sectors)
 u32
 file_allocation_table::next_cluster(u32 from_cluster)
 {
+  assert(from_cluster < table_len);
+  u64 byte_offset_on_disk = table_base_offset * SECTORSIZ + from_cluster * sizeof(u32);
+
+  u64 offset_within_cluster = 0;
+  sref<fat32_buffer_cache::cluster> c = buffer_cache->get_cluster_for_disk_byte_offset(byte_offset_on_disk, &offset_within_cluster);
+  assert(offset_within_cluster >= 0 && offset_within_cluster + sizeof(u32) <= buffer_cache->block_size);
+  u8 *ptr = c->buffer_ptr();
+  u32 table_entry = *(u32*) (&ptr[offset_within_cluster]);
+
   // use top 28 bits for FAT32
-  u32 next_cluster = loaded_table[from_cluster] & 0x0FFFFFFFu;
+  u32 next_cluster = table_entry & 0x0FFFFFFFu;
   if (next_cluster == 0x0FFFFFF7)
     panic("should never encounter a bad cluster while scanning a file");
   return next_cluster;
@@ -179,7 +379,7 @@ file_allocation_table::next_cluster(u32 from_cluster)
 
 class vnode_fat32 : public vnode {
 public:
-  explicit vnode_fat32(sref<class fat32fs_weaklink> fs, u32 first_cluster, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size);
+  explicit vnode_fat32(sref<class fat32fs_weaklink> fs, u32 first_cluster, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size, sref<fat32_buffer_cache> buffer_cache);
 
   void stat(struct stat *st, enum stat_flags flags) override;
   sref<class filesystem> get_fs() override;
@@ -215,8 +415,7 @@ public:
 
   NEW_DELETE_OPS(vnode_fat32);
 private:
-  u8 *get_cluster_data(u32 nth);
-  u64 data_cluster_to_sector(u32 cluster_num);
+  sref<fat32_buffer_cache::cluster> get_cluster_data(u32 nth);
   void validate_cluster(fat32_header &hdr, u32 cluster_num);
   bool iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent_out);
 
@@ -224,20 +423,17 @@ private:
 
   sref<fat32fs_weaklink> filesystem;
   sref<vnode_fat32> parent_dir;
-  u32 devno;
-  u32 sectors_per_cluster;
-  u32 first_data_sector;
+  sref<fat32_buffer_cache> buffer_cache;
   bool directory;
   u32 file_bytes;
 
   u32 num_clusters;
   u32 *cluster_nums;
-  u8 **cluster_data_cache;
 };
 
 class fat32fs : public step_resolved_filesystem {
 public:
-  explicit fat32fs(u32 devno, fat32_header hdr);
+  explicit fat32fs(const sref<fat32_buffer_cache>& buffer_cache, fat32_header hdr);
 
   sref<vnode> root() override;
   sref<vnode> resolve_child(const sref<vnode>& base, const char *filename) override;
@@ -248,9 +444,9 @@ private:
   void onzero() override { delete this; }
   file_allocation_table fat;
   fat32_header hdr;
-  u32 devno;
   sref<vnode_fat32> root_node;
   sref<class fat32fs_weaklink> weaklink;
+  sref<fat32_buffer_cache> buffer_cache;
 
   friend class vnode_fat32;
 };
@@ -269,8 +465,8 @@ private:
   refcache::weakref<fat32fs> filesystem;
 };
 
-vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size)
-  : filesystem(std::move(fs)), parent_dir(parent_dir), directory(is_directory), file_bytes(file_size)
+vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size, sref<fat32_buffer_cache> buffer_cache)
+  : filesystem(std::move(fs)), parent_dir(parent_dir), buffer_cache(buffer_cache), directory(is_directory), file_bytes(file_size)
 {
   if (is_directory)
     assert(file_size == 0);
@@ -279,9 +475,7 @@ vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster, bool is_d
   auto ref = filesystem->get();
   if (!ref)
     panic("filesystem should not have been freed during a vnode allocation!");
-  devno = ref->devno;
-  sectors_per_cluster = ref->hdr.sectors_per_cluster;
-  first_data_sector = ref->hdr.first_data_sector();
+  ref->hdr.first_data_sector();
 
   validate_cluster(ref->hdr, first_cluster);
 
@@ -291,16 +485,13 @@ vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster, bool is_d
   while ((last_cluster = ref->fat.next_cluster(last_cluster)) < 0x0FFFFFF8)
     cluster_count++;
 
-  // TODO: use a better caching system that's actually frees memory and caches between vnodes too
   cluster_nums = (u32*) kmalloc(sizeof(u32) * cluster_count, "vnode_fat32 cluster_nums");
-  cluster_data_cache = (u8**) kmalloc(sizeof(u8 *) * cluster_count, "vnode_fat32 cluster_data_cache");
   last_cluster = first_cluster;
   for (u32 i = 0; i < cluster_count; i++) {
     if (last_cluster >= 0x0FFFFFF8)
       panic("cluster count changed!");
     validate_cluster(ref->hdr, last_cluster);
     cluster_nums[i] = last_cluster;
-    cluster_data_cache[i] = nullptr;
     last_cluster = ref->fat.next_cluster(last_cluster);
   }
   if (last_cluster < 0x0FFFFFF8)
@@ -309,31 +500,17 @@ vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster, bool is_d
   assert(num_clusters >= 1);
 }
 
-u64
-vnode_fat32::data_cluster_to_sector(u32 cluster)
-{
-  return (cluster - 2) * sectors_per_cluster + first_data_sector;
-}
-
 void
 vnode_fat32::validate_cluster(fat32_header &hdr, u32 cluster)
 {
-  u64 sector = data_cluster_to_sector(cluster);
-  if (sector < hdr.first_data_sector() || sector >= hdr.total_sectors())
-    panic("vnode_fat32: invalid cluster %u's sector %lu is not in the range [%u, %u)",
-          cluster, sector, hdr.first_data_sector(), hdr.total_sectors());
+  if (cluster < 2 || cluster >= hdr.num_data_clusters() + 2)
+    panic("vnode_fat32: invalid cluster %u is not in the range [%u, %u)",
+          cluster, 2, hdr.num_data_clusters() + 2);
 }
 
 void
 vnode_fat32::onzero()
 {
-  size_t bytes_per_cluster = SECTORSIZ * this->sectors_per_cluster;
-  for (u32 i = 0; i < num_clusters; i++) {
-    if (cluster_data_cache[i]) {
-      kmfree(cluster_data_cache[i], bytes_per_cluster);
-    }
-  }
-  kmfree(cluster_data_cache, sizeof(u8 *) * num_clusters);
   kmfree(cluster_nums, sizeof(u32) * num_clusters);
   delete this;
 }
@@ -343,7 +520,7 @@ vnode_fat32::stat(struct stat *st, enum stat_flags flags)
 {
   st->st_mode = (directory ? T_DIR : T_FILE) << __S_IFMT_SHIFT;
 
-  st->st_dev = devno;
+  st->st_dev = buffer_cache->devno();
   assert(num_clusters >= 1);
   st->st_ino = cluster_nums[0];
   // this doesn't follow convention but is probably okay per https://sourceforge.net/p/fuse/mailman/message/29281571/
@@ -370,7 +547,7 @@ vnode_fat32::is_same(const sref<vnode> &other)
   // maybe that'll get fixed when we have better caching; maybe not?
   // TODO: make this less sketchy
   assert(this->num_clusters >= 1 && o->num_clusters >= 1);
-  return this->devno == o->devno && this->cluster_nums[0] == o->cluster_nums[0];
+  return this->buffer_cache == o->buffer_cache && this->cluster_nums[0] == o->cluster_nums[0];
 }
 
 bool
@@ -403,15 +580,15 @@ vnode_fat32::read_at(char *addr, u64 off, size_t len)
     len = file_bytes - off;
   assert(off + len <= file_bytes);
   ssize_t total_read = 0;
-  size_t bytes_per_cluster = SECTORSIZ * this->sectors_per_cluster;
+  size_t bytes_per_cluster = buffer_cache->block_size;
   while (len > 0) {
     u32 cluster_nth = off / bytes_per_cluster;
     u32 cluster_offset = off % bytes_per_cluster;
-    u8 *dptr = get_cluster_data(cluster_nth);
-    if (!dptr)
+    sref<fat32_buffer_cache::cluster> cluster = get_cluster_data(cluster_nth);
+    if (!cluster)
       panic("cluster %u missing while reading data for file of length %u\n", cluster_nth, file_bytes);
     size_t read_size = MIN(bytes_per_cluster - cluster_offset, len);
-    memmove(addr, dptr + cluster_offset, read_size);
+    memmove(addr, cluster->buffer_ptr() + cluster_offset, read_size);
     total_read += read_size;
     addr += read_size;
     off += read_size;
@@ -448,23 +625,14 @@ vnode_fat32::is_directory()
   return directory;
 }
 
-u8*
+sref<fat32_buffer_cache::cluster>
 vnode_fat32::get_cluster_data(u32 nth)
 {
   if (nth >= num_clusters)
-    return nullptr;
-  // TODO: fix the race conditions here
-  u8 *d = cluster_data_cache[nth];
-  if (!d) {
-    size_t bytes_per_cluster = SECTORSIZ * this->sectors_per_cluster;
-    d = (u8*) kmalloc(bytes_per_cluster, "vnode_fat32 data");
-    if (!d)
-      panic("could not allocate memory in vnode_fat32::get_cluster_data");
-    u64 offset = data_cluster_to_sector(cluster_nums[nth]) * SECTORSIZ;
-    disk_read(devno, (char*) d, bytes_per_cluster, offset);
-    cluster_data_cache[nth] = d;
-  }
-  return d;
+    return sref<fat32_buffer_cache::cluster>();
+  u64 cluster_num = cluster_nums[nth];
+  assert(cluster_num >= 2);
+  return buffer_cache->get(cluster_num - 2);
 }
 
 static void
@@ -484,13 +652,14 @@ strip_char(char *buf, char s)
 bool
 vnode_fat32::iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent_out)
 {
-  u32 dirents_per_cluster = SECTORSIZ * this->sectors_per_cluster / sizeof(fat32_dirent);
+  u32 dirents_per_cluster = buffer_cache->block_size / sizeof(fat32_dirent);
   u32 cluster_n = *index / dirents_per_cluster;
   u32 dirent_i = *index % dirents_per_cluster;
   for (;;) {
-    auto dirents = (fat32_dirent *) this->get_cluster_data(cluster_n);
-    if (!dirents)
+    sref<fat32_buffer_cache::cluster> cluster = this->get_cluster_data(cluster_n);
+    if (!cluster)
       return false; // off the end; we're out of clusters to scan for directory data
+    auto dirents = (fat32_dirent *) cluster->buffer_ptr();
     for (u32 i = dirent_i; i < dirents_per_cluster; i++) {
       fat32_dirent *d = &dirents[i];
       if (d->attributes == ATTR_LFN)
@@ -559,7 +728,7 @@ vnode_fat32::ref_child(const char *name)
   while (this->iter_files(&index, &next, &ent)) {
     if (next == name) {
       bool isdir = (ent.attributes & ATTR_DIRECTORY) != 0;
-      return make_sref<vnode_fat32>(filesystem, ent.cluster_number(), isdir, sref<vnode_fat32>::newref(this), ent.file_size_bytes);
+      return make_sref<vnode_fat32>(filesystem, ent.cluster_number(), isdir, sref<vnode_fat32>::newref(this), ent.file_size_bytes, buffer_cache);
     }
   }
   return sref<vnode_fat32>();
@@ -660,25 +829,27 @@ vnode_fat32::get_socket()
   return nullptr;
 }
 
-// TODO: make this use the buffered I/O system, instead of reading lots of blocks every time
 // TODO: make the filesystem writable (and therefore include locking), instead of having it be read-only
 sref<filesystem>
-vfs_new_fat32(u32 devno)
+vfs_new_fat32(disk *device)
 {
   fat32_header hdr = {};
-  disk_read(devno, (char*) &hdr, sizeof(fat32_header), 0);
-  return make_sref<fat32fs>(devno, hdr);
+  device->read((char*) &hdr, sizeof(fat32_header), 0);
+  u64 block_size = hdr.sectors_per_cluster * SECTORSIZ;
+  u64 max_blocks = 1024 * 1024 / block_size; // use 1 MB for block cache
+  auto buffer_cache = make_sref<fat32_buffer_cache>(device,max_blocks, block_size, hdr.first_data_sector() * SECTORSIZ);
+  return make_sref<fat32fs>(buffer_cache, hdr);
 }
 
-fat32fs::fat32fs(u32 devno, fat32_header hdr)
-  : fat(devno, hdr.first_fat_sector(), hdr.sectors_per_fat()), hdr(hdr), devno(devno)
+fat32fs::fat32fs(const sref<fat32_buffer_cache>& buffer_cache, fat32_header hdr)
+  : fat(buffer_cache, hdr.first_fat_sector(), hdr.sectors_per_fat()), hdr(hdr), buffer_cache(buffer_cache)
 {
   if (!hdr.check_signature())
     panic("not a valid fat32 header");
   cprintf("found a valid FAT32 signature\n");
   weaklink = make_sref<fat32fs_weaklink>(this);
   u32 first_cluster = hdr.root_directory_cluster;
-  root_node = make_sref<vnode_fat32>(weaklink, first_cluster, true, sref<vnode_fat32>(), 0);
+  root_node = make_sref<vnode_fat32>(weaklink, first_cluster, true, sref<vnode_fat32>(), 0, buffer_cache);
 }
 
 sref<vnode>

@@ -17,8 +17,9 @@ disk_register(disk *d)
       panic("attempt to register a second disk with the bus location \"%s\"\n", d->dk_busloc);
     }
   }
-  cprintf("disk_register(%lu): %s: %ld bytes: %s\n",
-          disks.size(), d->dk_busloc, d->dk_nbytes, d->dk_model);
+  d->devno = disks.size();
+  cprintf("disk_register(%u): %s: %ld bytes: %s\n",
+          d->devno, d->dk_busloc, d->dk_nbytes, d->dk_model);
   disks.push_back(d);
   // note: disk listeners MAY call disk_register again!
   // FIXME: make sure this recursion can't break anything
@@ -110,31 +111,37 @@ disk_find_root()
   return disk_find(cmdline_params.root_disk);
 }
 
+disk *
+disk_by_devno(u32 dev)
+{
+  if (dev >= disks.size())
+    panic("disk %u not found (%lu disks were found)", dev, disks.size());
+  return disks[dev];
+}
+
 // compat for a single IDE disk..
 void
 disk_read(u32 dev, char* data, u64 count, u64 offset)
 {
-  if (dev >= disks.size())
-    panic("disk %u not found (%lu disks were found)", dev, disks.size());
+  disk *disk = disk_by_devno(dev);
   while (count > DISK_REQMAX) {
-    disks[dev]->read(data, DISK_REQMAX, offset);
+    disk->read(data, DISK_REQMAX, offset);
     data += DISK_REQMAX;
     offset += DISK_REQMAX;
     count -= DISK_REQMAX;
   }
-  disks[dev]->read(data, count, offset);
+  disk->read(data, count, offset);
 }
 
 void
 disk_write(u32 dev, const char* data, u64 count, u64 offset)
 {
-  if (dev >= disks.size())
-    panic("disk %u not found (%lu disks were found)", dev, disks.size());
+  disk *disk = disk_by_devno(dev);
   while (count > DISK_REQMAX) {
-    disks[dev]->write(data, DISK_REQMAX, offset);
+    disk->write(data, DISK_REQMAX, offset);
     data += DISK_REQMAX;
     offset += DISK_REQMAX;
     count -= DISK_REQMAX;
   }
-  disks[dev]->write(data, count, offset);
+  disk->write(data, count, offset);
 }

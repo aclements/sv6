@@ -17,6 +17,13 @@ hash(const u64& v)
 
 template<>
 inline u64
+hash(const s64& v)
+{
+  return hash((u64) v);
+}
+
+template<>
+inline u64
 hash(const strbuf<DIRSIZ>& v)
 {
   u64 h = 0;
