@@ -183,8 +183,28 @@ public:
       assert(out);
       return out;
     }
+    sref<page_info> page_ref(u32 page) {
+      buffer_ptr(); // just so that we wait for data_available
+      assert(kalloc_pages > 0);
+      assert(page < kalloc_pages);
+      assert(cluster_data);
+      // this is valid because cluster already has a reference to each of the pages,
+      // so creating another reference is just fine.
+      return sref<page_info>::newref(page_info::of(cluster_data + PGSIZE * page));
+    }
     // cluster IDs are signed here, because you may need to access a negative cluster ID to reach the FAT itself
     explicit cluster(s64 cluster_id) : cluster_id(cluster_id) {}
+    ~cluster() override {
+      if (cluster_data) {
+        assert(kalloc_pages > 0);
+        for (u32 i = 0; i < kalloc_pages; i++) {
+          // free the reference that we had to each of our pages; this will likely deallocate everything except for any
+          // pages that are still memory-mapped; those are going to linger, despite not counting as using cache space.
+          page_info::of(cluster_data + PGSIZE * i)->dec();
+        }
+        cluster_data = nullptr;
+      }
+    }
 
     NEW_DELETE_OPS(cluster);
   private:
@@ -197,9 +217,16 @@ public:
     void populate_buffer_ptr(fat32_cluster_cache *outer) {
       assert(!cluster_data);
       assert(outer);
-      u8 *data = (u8*) kmalloc(outer->cluster_size, "FAT32 disk cluster");
+      assert(outer->cluster_size % PGSIZE == 0);
+      kalloc_pages = outer->cluster_size / PGSIZE;
+      u8 *data = (u8*) kalloc("FAT32 disk cluster", kalloc_pages * PGSIZE);
       if (!data)
         panic("out of memory in FAT32 cluster cache");
+      for (u32 i = 0; i < kalloc_pages; i++) {
+        // allocate the page tracking entry, but do not create an sref; this leaves us with a page reference to each
+        // page up to kalloc_pages.
+        new (page_info::of(data + PGSIZE * i)) page_info();
+      }
       s64 offset = (s64) outer->cluster_size * cluster_id + outer->first_cluster_offset;
       if (offset <= -(s64) outer->cluster_size)
         panic("offset too far before the start of disk: %ld <= %ld", offset, -outer->cluster_size); // only allow reads that are at least partially in the disk
@@ -218,8 +245,14 @@ public:
       cluster_data = data;
       data_available.release();
     }
-    void onzero() override {}
-    u8 *cluster_data = nullptr;
+    void onzero() override {
+      if (delete_on_zero) {
+        delete this;
+      }
+    }
+    bool delete_on_zero = false;
+    u32 kalloc_pages = 0;
+    u8 *cluster_data = nullptr; // this counts as a page reference to every page up to kalloc_pages
     sleeplock data_available;
     s64 cluster_id;
     cluster *next_try_free = nullptr, *prev_try_free = nullptr;
@@ -286,16 +319,17 @@ public:
   }
   // at the point where this is deallocated, it must be the case that no references remain through which a get()
   // operation could be performed, so we do not bother taking the lock.
-  ~fat32_cluster_cache() {
+  ~fat32_cluster_cache() override {
     // all we need to do to handle our deletion is to get rid of our manually-tracked references in cached_clusters.
     // that way, all of our clusters will be freed as their remaining references drop.
     cluster *try_free = first_try_free;
     first_try_free = nullptr;
     while (try_free) {
       cluster *cur = try_free;
-      cur->dec();
-      try_free = try_free->next_try_free;
+      try_free = cur->next_try_free;
       cur->next_try_free = cur->prev_try_free = nullptr;
+      cur->delete_on_zero = true;
+      cur->dec();
       clusters_used--;
     }
     assert(clusters_used == 0);
@@ -623,8 +657,13 @@ vnode_fat32::truncate()
 sref<page_info>
 vnode_fat32::get_page_info(u64 page_idx)
 {
-  // FAT32 filesystems do not necessarily
-  panic("unimplemented: memory mapping from fat32 filesystems");
+  assert(this->cluster_cache->cluster_size % PGSIZE == 0);
+  u32 pages_per_cluster = this->cluster_cache->cluster_size / PGSIZE;
+  u64 cluster_local_id = page_idx / pages_per_cluster;
+  u32 page_within_cluster = page_idx % pages_per_cluster;
+
+  auto cluster = this->get_cluster_data(cluster_local_id);
+  return cluster->page_ref(page_within_cluster);
 }
 
 bool
