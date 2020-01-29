@@ -230,7 +230,7 @@ public:
   }
 
   sref<cluster> get(s64 block) {
-    static u64 block_fetches = 0;
+    // static u64 block_fetches = 0;
     // cprintf("cache get(%ld) -> %d fetches\n", block, ++block_fetches);
     sref<cluster> r;
     cluster *i;
@@ -835,6 +835,8 @@ vfs_new_fat32(disk *device)
 {
   fat32_header hdr = {};
   device->read((char*) &hdr, sizeof(fat32_header), 0);
+  if (!hdr.check_signature())
+    return sref<filesystem>();
   u64 block_size = hdr.sectors_per_cluster * SECTORSIZ;
   u64 max_blocks = 1024 * 1024 / block_size; // use 1 MB for block cache
   auto buffer_cache = make_sref<fat32_buffer_cache>(device,max_blocks, block_size, hdr.first_data_sector() * SECTORSIZ);
@@ -844,8 +846,6 @@ vfs_new_fat32(disk *device)
 fat32fs::fat32fs(const sref<fat32_buffer_cache>& buffer_cache, fat32_header hdr)
   : fat(buffer_cache, hdr.first_fat_sector(), hdr.sectors_per_fat()), hdr(hdr), buffer_cache(buffer_cache)
 {
-  if (!hdr.check_signature())
-    panic("not a valid fat32 header");
   cprintf("found a valid FAT32 signature\n");
   weaklink = make_sref<fat32fs_weaklink>(this);
   u32 first_cluster = hdr.root_directory_cluster;

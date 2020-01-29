@@ -35,15 +35,20 @@ initvfs()
 
   auto nullfsnode = mounts->root()->create_dir("nullfs");
   int r = mounts->mount(nullfsnode, vfs_new_nullfs());
-  if (r)
-    panic("nullfs mount result: %d\n", r);
+  if (r) {
+    panic("nullfs mount failed: %d\n", r);
+  }
 
-#if 0
   auto fat32node = mounts->root()->create_dir("fat32");
-  r = mounts->mount(fat32node, vfs_new_fat32(disk_by_devno(disk_find("ahci0.0p1"))));
-  if (r)
-    panic("fat32 mount result: %d\n", r);
-#endif
+  auto fat32fs = vfs_new_fat32(disk_by_devno(disk_find("ahci0.0p1")));
+  if (!fat32fs) {
+    cprintf("could not find a valid fat32 filesystem on ahci0.0p1\n");
+  } else {
+    r = mounts->mount(fat32node, fat32fs);
+    if (r) {
+      panic("fat32 mount failed: %d\n", r);
+    }
+  }
 }
 
 int
