@@ -343,8 +343,8 @@ setup-linux:
 	sed -i .bak "'s/^default /#&/;/^# *default localboot/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg
 
 $(O)/boot.fat: $(O)/kernel.elf syslinux.cfg
-	dd if=/dev/zero of=$@ bs=1024 count=65536
-	mkfs.fat -F 32 $@
+	dd if=/dev/zero of=$@ bs=4096 count=66560
+	mkfs.fat -F 32 -s 8 -S 512 $@
 	mmd -i $@ ::boot
 	mmd -i $@ ::boot/syslinux
 	mcopy -i $@ /usr/lib/syslinux/modules/bios/*.c32 ::boot/syslinux/
