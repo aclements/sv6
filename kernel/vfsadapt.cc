@@ -19,7 +19,7 @@ public:
   bool is_offset_in_file(u64 offset) override;
   int read_at(char *addr, u64 off, size_t len) override;
   int write_at(const char *addr, u64 off, size_t len, bool append) override;
-  void truncate() override;
+  int truncate() override;
   sref<page_info> get_page_info(u64 page_idx) override;
 
   bool is_directory() override;
@@ -189,11 +189,12 @@ vnode_mfs::write_at(const char *addr, u64 off, size_t n, bool append)
   return writei(node, addr, off, n, append ? &resize : nullptr);
 }
 
-void
+int
 vnode_mfs::truncate()
 {
   if (*this->node->as_file()->read_size())
     this->node->as_file()->write_size().resize_nogrow(0);
+  return 0;
 }
 
 bool

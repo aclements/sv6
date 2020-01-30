@@ -526,7 +526,7 @@ public:
   bool is_offset_in_file(u64 offset) override;
   int read_at(char *addr, u64 off, size_t len) override;
   int write_at(const char *addr, u64 off, size_t len, bool append) override;
-  void truncate() override;
+  int truncate() override;
   sref<page_info> get_page_info(u64 page_idx) override;
 
   bool is_directory() override;
@@ -740,11 +740,12 @@ vnode_fat32::write_at(const char *addr, u64 off, size_t len, bool append)
   return -1;
 }
 
-void
+int
 vnode_fat32::truncate()
 {
   // TODO: make this not panic; we should be able to signal an error
-  panic("cannot truncate: unwritable file system");
+  cprintf("cannot truncate: unwritable file system");
+  return -1;
 }
 
 sref<page_info>
@@ -955,7 +956,8 @@ vnode_fat32::get_mount_data()
 bool
 vnode_fat32::set_mount_data(sref<virtual_mount> m)
 {
-  panic("unimplemented: mounting over fat32 filesystems");
+  cprintf("unimplemented: mounting over fat32 filesystems");
+  return false;
 }
 
 int

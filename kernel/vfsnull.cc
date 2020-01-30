@@ -56,7 +56,7 @@ public:
     panic("not a file");
   }
 
-  void truncate() override {
+  int truncate() override {
     panic("not a file");
   }
 

@@ -27,7 +27,7 @@ public:
   virtual bool is_offset_in_file(u64 offset) = 0; // this exists for optimization purposes
   virtual int read_at(char *data, u64 offset, size_t len) = 0;
   virtual int write_at(const char *data, u64 offset, size_t len, bool append) = 0;
-  virtual void truncate() = 0;
+  virtual int truncate() = 0;
 
   // directory operations
   virtual bool is_directory() = 0;

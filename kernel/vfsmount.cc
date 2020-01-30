@@ -84,7 +84,7 @@ virtual_filesystem::mount(const sref<vnode>& mountpoint, const sref<filesystem>&
   m->mountpoint_filesystem = mountpointfs;
   m->mounted_filesystem = filesystem;
   if (!mountpoint->set_mount_data(m))
-    panic("should never fail to insert");
+    return -1;
   if (filesystem->mount_info)
     panic("should never fail to insert");
   filesystem->mount_info = m;

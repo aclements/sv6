@@ -314,7 +314,8 @@ sys_openat(int dirfd, userptr_str path, int omode, ...)
     return -1;
 
   if (m->is_regular_file() && (omode & O_TRUNC))
-    m->truncate();
+    if (m->truncate() < 0)
+      return -1;
 
   sref<file> f = make_sref<file_inode>(
     m, !(rwmode == O_WRONLY), !(rwmode == O_RDONLY), !!(omode & O_APPEND));
