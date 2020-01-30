@@ -516,7 +516,6 @@ file_allocation_table::next_cluster_id(u32 from_cluster_id)
 class vnode_fat32 : public vnode {
 public:
   explicit vnode_fat32(sref<class fat32fs_weaklink> fs, u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size, sref<fat32_cluster_cache> cluster_cache);
-  bool matches_construction(u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size);
   u32 first_cluster_id();
 
   void stat(struct stat *st, enum stat_flags flags) override;
@@ -580,16 +579,6 @@ private:
   u32 *cluster_ids;
 };
 
-class fat32_vnode_cache {
-public:
-  fat32_vnode_cache(sref<fat32fs_weaklink> fs, size_t vmap_buckets) : fs(fs), vmap(vmap_buckets) {};
-  sref<vnode_fat32> lookup(u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size);
-private:
-  sref<fat32fs_weaklink> fs;
-  sleeplock modify_lock;
-  chainhash<u32, sref<vnode_fat32>> vmap;
-};
-
 class fat32fs : public step_resolved_filesystem {
 public:
   explicit fat32fs(const sref<fat32_cluster_cache>& cluster_cache, fat32_header hdr);
@@ -606,10 +595,8 @@ private:
   sref<vnode_fat32> root_node;
   sref<class fat32fs_weaklink> weaklink;
   sref<fat32_cluster_cache> cluster_cache;
-  fat32_vnode_cache vnode_cache;
 
   friend vnode_fat32;
-  friend fat32_vnode_cache;
 };
 
 class fat32fs_weaklink : public referenced {
@@ -625,28 +612,6 @@ private:
 
   refcache::weakref<fat32fs> filesystem;
 };
-
-sref<vnode_fat32>
-fat32_vnode_cache::lookup(u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size)
-{
-  // TODO: eviction?
-  sref<vnode_fat32> vn;
-  if (!vmap.lookup(first_cluster_id, &vn)) {
-    lock_guard<sleeplock> l(&modify_lock);
-    // recheck condition
-    if (!vmap.lookup(first_cluster_id, &vn)) {
-      auto filesystem = fs->get();
-      assert(filesystem); // should always be available when this is called
-      // cprintf("allocating vnode cache entry for node at cluster=%u (dir=%d, parent=%u, size=%u)\n", first_cluster_id, is_directory, parent_dir ? parent_dir->first_cluster_id() : 0, file_size);
-      vn = make_sref<vnode_fat32>(fs, first_cluster_id, is_directory, parent_dir, file_size, filesystem->cluster_cache);
-      if (!vmap.insert(first_cluster_id, vn))
-        panic("should never fail to insert into vnode cache");
-    }
-  }
-  if (!vn->matches_construction(first_cluster_id, is_directory, parent_dir, file_size))
-    panic("mismatch while validating cache lookup in FAT32 vnode cache");
-  return vn;
-}
 
 vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size, sref<fat32_cluster_cache> cluster_cache)
   : filesystem(std::move(fs)), parent_dir(parent_dir), cluster_cache(cluster_cache), directory(is_directory), file_byte_length(file_size)
@@ -679,25 +644,6 @@ vnode_fat32::vnode_fat32(sref<fat32fs_weaklink> fs, u32 first_cluster_id, bool i
     panic("cluster count changed!");
   assert(count >= 1);
   this->cluster_count = count;
-}
-
-bool
-vnode_fat32::matches_construction(u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size)
-{
-  if (first_cluster_id != this->first_cluster_id())
-    return false;
-  if (is_directory != directory)
-    return false;
-  if (parent_dir) {
-    if (!parent_dir->is_same(this->parent_dir))
-      return false;
-  } else {
-    if (this->parent_dir)
-      return false;
-  }
-  if (file_size != file_byte_length)
-    return false;
-  return true;
 }
 
 u32
@@ -927,7 +873,8 @@ vnode_fat32::populate_children()
         memcpy(long_filename_buffer + long_filename_offset, name_segment.ptr(), length);
       } else {
         bool isdir = (d->attributes & ATTR_DIRECTORY) != 0;
-        sref<vnode_fat32> new_child = fs->vnode_cache.lookup(d->cluster_id(), isdir, sref<vnode_fat32>::newref(this), d->file_size_bytes);
+        u32 file_size = d->file_size_bytes;
+        sref<vnode_fat32> new_child = make_sref<vnode_fat32>(filesystem, d->cluster_id(), isdir, sref<vnode_fat32>::newref(this), file_size, fs->cluster_cache);
 
         if (has_long_filename && long_filename_last_index == 1 && long_filename_checksum == d->checksum()) {
           // use long filename entry
@@ -1120,10 +1067,10 @@ vfs_new_fat32(disk *device)
 
 fat32fs::fat32fs(const sref<fat32_cluster_cache>& cluster_cache, fat32_header hdr)
   : fat(cluster_cache, hdr.first_fat_sector(), hdr.sectors_per_fat()), hdr(hdr),
-    weaklink(make_sref<fat32fs_weaklink>(this)), cluster_cache(cluster_cache),
-    vnode_cache(weaklink, 1024) // TODO: choose a better number than 1024
+    weaklink(make_sref<fat32fs_weaklink>(this)), cluster_cache(cluster_cache)
 {
-  root_node = vnode_cache.lookup(hdr.root_directory_cluster_id, true, sref<vnode_fat32>(), 0);
+  u32 cluster = hdr.root_directory_cluster_id;
+  root_node = make_sref<vnode_fat32>(weaklink, cluster, true, sref<vnode_fat32>(), 0, cluster_cache);
 }
 
 sref<vnode>
