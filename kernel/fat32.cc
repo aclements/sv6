@@ -192,8 +192,8 @@ struct fat32_dirent_lfn {
     return sequence_number & 0x1Fu;
   }
 
-  bool is_last() { // last logical, but stored first
-    return (sequence_number & 0x40u) != 0;
+  bool is_continuation() { // after the first physical segment (which means before the last logical segment)
+    return (sequence_number & 0x40u) == 0;
   }
 
   bool validate() {
@@ -555,12 +555,23 @@ public:
 private:
   sref<fat32_cluster_cache::cluster> get_cluster_data(u32 cluster_local_id);
   void validate_cluster_id(fat32_header &hdr, u32 cluster_id);
-  bool iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent_out);
+  void populate_children();
 
   void onzero() override;
 
   sref<fat32fs_weaklink> filesystem;
+
+  // FIXME: this new structure prevents us from ever freeing vnodes due to circular dependencies
+
+  // these three references form the directory tree structure
   sref<vnode_fat32> parent_dir;
+  sleeplock structure_lock; // taken while populating children
+  bool children_populated = false;
+  sref<vnode_fat32> first_child_node;
+  // these two are managed by the PARENT node!
+  sref<vnode_fat32> next_sibling_node;
+  strbuf<FILENAME_MAX> my_filename;
+
   sref<fat32_cluster_cache> cluster_cache;
   bool directory;
   u32 file_byte_length;
@@ -796,8 +807,7 @@ vnode_fat32::write_at(const char *addr, u64 off, size_t len, bool append)
 int
 vnode_fat32::truncate()
 {
-  // TODO: make this not panic; we should be able to signal an error
-  cprintf("cannot truncate: unwritable file system");
+  cprintf("cannot truncate: unwritable file system\n");
   return -1;
 }
 
@@ -845,58 +855,66 @@ static void warn_invalid_lfn_entry() {
   }
 }
 
-bool
-vnode_fat32::iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent_out)
+void
+vnode_fat32::populate_children()
 {
+  if (children_populated)
+    return;
+  lock_guard<sleeplock> guard(&structure_lock);
+  if (children_populated)
+    return;
+  auto fs = filesystem->get();
+  if (!fs)
+    panic("attempt to populate children when there is no filesystem present"); // TODO: handle this gracefully, make sure it's never a problem, or refactor these references
+  assert(!first_child_node);
+
   u32 dirents_per_cluster = cluster_cache->cluster_size / sizeof(fat32_dirent);
-  u32 cluster_local_id = *index / dirents_per_cluster;
-  u32 dirent_index = *index % dirents_per_cluster;
+
+  sref<vnode_fat32> last_child_created;
 
   // filled up backwards
   char long_filename_buffer[13 * 20 + 1];
+  bool has_long_filename = false;
   u8 long_filename_checksum = 0;
-  u32 long_filename_offset = sizeof(long_filename_buffer) - 1;
-  u32 long_filename_last_index = 0;
-  for (;;) {
+  u32 long_filename_offset = 0;
+  u32 long_filename_last_index = 1;
+  for (u32 cluster_local_id = 0;; cluster_local_id++) {
     sref<fat32_cluster_cache::cluster> cluster = this->get_cluster_data(cluster_local_id);
     if (!cluster)
-      return false; // off the end; we're out of clusters to scan for directory data
+      break; // off the end; we're out of clusters to scan for directory data
     auto dirents = (fat32_dirent *) cluster->buffer_ptr();
-    for (u32 i = dirent_index; i < dirents_per_cluster; i++) {
+    for (u32 i = 0; i < dirents_per_cluster; i++) {
       fat32_dirent *d = &dirents[i];
       if (d->filename[0] == 0xE5)
         continue; // unused entry
+      if (d->filename[0] == '\0')
+        break; // no more entries in this cluster (at least)
+      if (d->filename[0] == '.')
+        continue; // . or .. entry; we add these back in ourselves, so they don't need to be here
       if (d->attributes == ATTR_LFN) {
         auto l = (fat32_dirent_lfn *) d;
         if (!l->validate()) {
           warn_invalid_lfn_entry();
           continue;
         }
-        if (long_filename_offset == sizeof(long_filename_buffer) - 1) {
-          if (!l->is_last()) {
+        assert(long_filename_last_index >= 1);
+        if (l->is_continuation() && (!has_long_filename || long_filename_checksum != l->checksum || long_filename_last_index == 1 || long_filename_last_index - 1 != l->index())) {
+          // we were supposed to find a continuation, but instead we found a mismatch, so we've gotta throw it away
+          warn_invalid_lfn_entry();
+          // wipe away what we have so far
+          has_long_filename = false;
+          continue;
+        }
+        if (!l->is_continuation()) {
+          if (has_long_filename)
+            // found a new long filename without using the last one; start over
             warn_invalid_lfn_entry();
-            continue;
-          }
+          else
+            // start a new long filename
+            has_long_filename = true;
+          long_filename_offset = sizeof(long_filename_buffer) - 1;
           long_filename_buffer[long_filename_offset] = '\0';
           long_filename_checksum = l->checksum;
-        } else {
-          assert(long_filename_last_index >= 1);
-          if (l->is_last()) {
-            warn_invalid_lfn_entry();
-            // found a new long filename without using the last one; start over
-            long_filename_offset = sizeof(long_filename_buffer) - 1;
-            long_filename_buffer[long_filename_offset] = '\0';
-            long_filename_checksum = l->checksum;
-          } else {
-            if (long_filename_checksum != l->checksum || long_filename_last_index == 1 ||
-                long_filename_last_index - 1 != l->index()) {
-              warn_invalid_lfn_entry();
-              // wipe away what we have so far
-              long_filename_offset = sizeof(long_filename_buffer) - 1;
-              continue;
-            }
-            // not marked as last AND has the same checksum AND is the next index; this is part of the same filename!
-          }
         }
         long_filename_last_index = l->index();
         assert(long_filename_last_index >= 1 && long_filename_last_index <= 20);
@@ -907,34 +925,36 @@ vnode_fat32::iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent
         assert(long_filename_offset >= length);
         long_filename_offset -= length;
         memcpy(long_filename_buffer + long_filename_offset, name_segment.ptr(), length);
-
-        // parse the next entry
-        continue;
-      }
-      if (d->filename[0] == '\0')
-        break; // no more entries in this cluster (at least)
-      if (d->filename[0] == '.')
-        continue; // . or .. entry; we add these back in ourselves, so they don't need to be here
-
-      *index = i + 1 + cluster_local_id * dirents_per_cluster;
-
-      if (long_filename_offset < sizeof(long_filename_buffer) - 1 && long_filename_last_index == 1 && long_filename_checksum == d->checksum()) {
-        // use long filename entry
-        *out = &long_filename_buffer[long_filename_offset];
       } else {
-        if (long_filename_offset < sizeof(long_filename_buffer) - 1)
-          warn_invalid_lfn_entry();
-        // use short filename entry
-        *out = strbuf<FILENAME_MAX>(d->extract_filename());
+        bool isdir = (d->attributes & ATTR_DIRECTORY) != 0;
+        sref<vnode_fat32> new_child = fs->vnode_cache.lookup(d->cluster_id(), isdir, sref<vnode_fat32>::newref(this), d->file_size_bytes);
+
+        if (has_long_filename && long_filename_last_index == 1 && long_filename_checksum == d->checksum()) {
+          // use long filename entry
+          new_child->my_filename = &long_filename_buffer[long_filename_offset];
+        } else {
+          if (has_long_filename)
+            warn_invalid_lfn_entry();
+          // use short filename entry
+          new_child->my_filename = strbuf<FILENAME_MAX>(d->extract_filename());
+        }
+        lowercase(new_child->my_filename.buf_);
+
+        if (last_child_created)
+          last_child_created->next_sibling_node = new_child;
+        else
+          this->first_child_node = new_child;
+        last_child_created = new_child;
+
+        has_long_filename = false;
       }
-      lowercase(out->buf_);
-      if (ent_out)
-        *ent_out = *d;
-      return true;
     }
-    cluster_local_id++;
-    dirent_index = 0;
   }
+  assert(!last_child_created->next_sibling_node);
+  if (has_long_filename)
+    warn_invalid_lfn_entry();
+  barrier();
+  children_populated = true;
 }
 
 bool
@@ -945,12 +965,8 @@ vnode_fat32::child_exists(const char *name)
     return true;
   if (strcmp(name, "..") == 0)
     return true;
-  u32 index;
-  strbuf<FILENAME_MAX> next;
-  while (this->iter_files(&index, &next, nullptr))
-    if (strcasecmp(next.ptr(), name) == 0)
-      return true;
-  return false;
+
+  return !!ref_child(name);
 }
 
 sref<vnode_fat32>
@@ -965,17 +981,11 @@ vnode_fat32::ref_child(const char *name)
   assert(directory);
   assert(strcmp(name, ".") != 0);
   assert(strcmp(name, "..") != 0);
-  auto fs = filesystem->get();
-  assert(fs); // ref_child should only ever be called while the filesystem still exists
-  u32 index = 0;
-  strbuf<FILENAME_MAX> next;
-  fat32_dirent ent = {};
-  while (this->iter_files(&index, &next, &ent)) {
-    if (strcasecmp(next.ptr(), name) == 0) {
-      bool isdir = (ent.attributes & ATTR_DIRECTORY) != 0;
-      return fs->vnode_cache.lookup(ent.cluster_id(), isdir, sref<vnode_fat32>::newref(this), ent.file_size_bytes);
-    }
-  }
+
+  populate_children();
+  for (sref<vnode_fat32> child = first_child_node; child; child = child->next_sibling_node)
+    if (strcasecmp(child->my_filename.ptr(), name) == 0)
+      return child;
   return sref<vnode_fat32>();
 }
 
@@ -990,14 +1000,21 @@ vnode_fat32::next_dirent(const char *last, strbuf<FILENAME_MAX> *next)
     *next = "..";
     return true;
   } else {
-    u32 index = 0;
+    populate_children();
+
     // TODO: make FAT32 directory scanning not O(n^2) by changing the next_dirent API
-    if (strcmp(last, "..") == 0)
-      return this->iter_files(&index, next, nullptr);
-    while (this->iter_files(&index, next, nullptr))
-      if (*next == last)
-        return this->iter_files(&index, next, nullptr);
-    panic("previous name not found when returning to next_dirent");
+    sref<vnode_fat32> v;
+    if (strcmp(last, "..") == 0) {
+      v = first_child_node;
+    } else {
+      v = ref_child(last);
+      if (!v)
+        panic("previous name not found when returning to next_dirent");
+      v = v->next_sibling_node;
+    }
+    if (v)
+      *next = v->my_filename;
+    return !!v;
   }
 }
 
@@ -1038,6 +1055,12 @@ vnode_fat32::remove(const char *name)
 sref<vnode>
 vnode_fat32::create_file(const char *name, bool excl)
 {
+  auto child = ref_child(name);
+  if (child) {
+    if (excl || !child->is_regular_file())
+      return sref<vnode>();
+    return child;
+  }
   cprintf("unimplemented: fat32 file creation\n"); // fat32 is read-only for now
   return sref<vnode>();
 }
