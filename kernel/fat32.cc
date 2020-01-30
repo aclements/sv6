@@ -3,6 +3,7 @@
 #include "vfs.hh"
 #include <utility>
 #include "sleeplock.hh"
+#include "strings.h"
 
 #define SECTORSIZ 512
 
@@ -696,6 +697,14 @@ strip_char(char *buf, char s)
   }
 }
 
+static void
+lowercase(char *buf)
+{
+  for (; *buf; buf++)
+    if (*buf >= 'A' && *buf <= 'Z')
+      *buf += 'a' - 'A';
+}
+
 bool
 vnode_fat32::iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent_out)
 {
@@ -730,6 +739,7 @@ vnode_fat32::iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent
       memcpy(&out->buf_[strlen(out->buf_)], d->extension, sizeof(d->extension));
       strip_char(out->buf_, ' ');
       strip_char(out->buf_, '.');
+      lowercase(out->buf_);
       if (strlen(out->ptr()) == 0)
         panic("file at index=%u had zero-length filename constructed from '%8s.%3s' (first byte %2x, attributes %2x)\n", *index-1, d->filename, d->extension, d->filename[0], d->attributes);
       if (ent_out)
@@ -752,7 +762,7 @@ vnode_fat32::child_exists(const char *name)
   u32 index;
   strbuf<FILENAME_MAX> next;
   while (this->iter_files(&index, &next, nullptr))
-    if (next == name)
+    if (strcasecmp(next.ptr(), name) == 0)
       return true;
   return false;
 }
@@ -773,7 +783,7 @@ vnode_fat32::ref_child(const char *name)
   strbuf<FILENAME_MAX> next;
   fat32_dirent ent = {};
   while (this->iter_files(&index, &next, &ent)) {
-    if (next == name) {
+    if (strcasecmp(next.ptr(), name) == 0) {
       bool isdir = (ent.attributes & ATTR_DIRECTORY) != 0;
       return make_sref<vnode_fat32>(filesystem, ent.cluster_id(), isdir, sref<vnode_fat32>::newref(this), ent.file_size_bytes, cluster_cache);
     }
