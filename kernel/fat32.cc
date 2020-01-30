@@ -115,6 +115,20 @@ fat32_header::check_signature()
   return true;
 }
 
+static void
+strip_char(char *buf, char s)
+{
+  assert(buf);
+  char *lastch = buf;
+  while (*lastch)
+    lastch++;
+  lastch--;
+  while (lastch >= buf && *lastch == s) {
+    *lastch = '\0';
+    lastch--;
+  }
+}
+
 struct fat32_dirent {
   u8 filename[8];
   u8 extension[3];
@@ -133,9 +147,89 @@ struct fat32_dirent {
   u32 cluster_id() {
     return ((u32) cluster_id_high << 16u) | cluster_id_low;
   }
-};
+
+  strbuf<12> extract_filename() {
+    strbuf<sizeof(filename) + 1 + sizeof(extension)> out;
+    // TODO: make this code less sketchy
+    static_assert(sizeof(filename) + 1 + sizeof(extension) + 1 <= FILENAME_MAX, "8.3 filename must fit in FILENAME_MAX");
+    memcpy(out.buf_, filename, sizeof(filename));
+    out.buf_[sizeof(filename)] = '\0';
+    strip_char(out.buf_, ' ');
+    memcpy(&out.buf_[strlen(out.buf_)], ".", 2);
+    out.buf_[strlen(out.buf_)+sizeof(extension)] = '\0';
+    memcpy(&out.buf_[strlen(out.buf_)], extension, sizeof(extension));
+    strip_char(out.buf_, ' ');
+    strip_char(out.buf_, '.');
+    if (strlen(out.ptr()) == 0)
+      panic("file had zero-length filename constructed from '%8s.%3s' (first byte %2x, attributes %2x)\n", filename, extension, filename[0], attributes);
+    return out;
+  }
+
+  u8 checksum() {
+    // based on https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system#VFAT_long_file_names
+    u8 checksum = 0;
+    for (u8 c : filename)
+      checksum = ((checksum & 1u) << 7u) + (checksum >> 1u) + c;
+    for (u8 c : extension)
+      checksum = ((checksum & 1u) << 7u) + (checksum >> 1u) + c;
+    return checksum;
+  }
+} __attribute__((__packed__));
 
 static_assert(sizeof(fat32_dirent) == 32, "expected fat32 directory entry to be 32 bytes long");
+
+struct fat32_dirent_lfn {
+  u8 sequence_number;
+  u16 name_a[5];
+  u8 attributes;
+  u8 vfat_type;
+  u8 checksum;
+  u16 name_b[6];
+  u16 zero_cluster;
+  u16 name_c[2];
+
+  unsigned int index() {
+    return sequence_number & 0x1Fu;
+  }
+
+  bool is_last() { // last logical, but stored first
+    return (sequence_number & 0x40u) != 0;
+  }
+
+  bool validate() {
+    return zero_cluster == 0 && attributes == 0x0F && vfat_type == 0x00 && (sequence_number & 0xA0u) == 0 && convert_char(name_a[0]) != 0;
+  }
+
+  strbuf<13> extract_name_segment() {
+    strbuf<(sizeof(name_a) + sizeof(name_b) + sizeof(name_c)) / sizeof(u16)> out;
+    int oi = 0;
+    for (int i = 0; i < sizeof(name_a) / sizeof(u16); i++)
+      out.buf_[oi++] = convert_char(name_a[i]);
+    for (int i = 0; i < sizeof(name_b) / sizeof(u16); i++)
+      out.buf_[oi++] = convert_char(name_b[i]);
+    for (int i = 0; i < sizeof(name_c) / sizeof(u16); i++)
+      out.buf_[oi++] = convert_char(name_c[i]);
+    out.buf_[oi++] = '\0';
+    assert(oi == sizeof(out.buf_));
+    return out;
+  }
+private:
+  // does not support non-ASCII characters
+  static u8 convert_char(u16 ucs_2) {
+    if (ucs_2 == 0xFFFF) // used as padding
+      return '\0';
+    if (ucs_2 > 0xFF) {
+      static bool has_reported_warning = false;
+      if (!has_reported_warning) {
+        has_reported_warning = true;
+        cprintf("warning: FAT32 driver does not support non-ASCII characters, but found %u in long filename entry [not reporting future unsupported characters]\n", ucs_2);
+      }
+    }
+    return (u8) ucs_2;
+  }
+} __attribute__((__packed__));
+
+static_assert(sizeof(fat32_dirent_lfn) == 32, "expected fat32 directory entry to be 32 bytes long");
 
 #define ATTR_READ_ONLY 0x01u
 #define ATTR_HIDDEN 0x02u
@@ -144,8 +238,6 @@ static_assert(sizeof(fat32_dirent) == 32, "expected fat32 directory entry to be 
 #define ATTR_DIRECTORY 0x10u
 #define ATTR_ARCHIVE 0x20u
 #define ATTR_LFN (ATTR_READ_ONLY | ATTR_HIDDEN | ATTR_SYSTEM | ATTR_VOLUME_ID)
-
-// TODO: long filename support
 
 // sizing terminology:
 //   - SECTOR: 512 bytes, the disk unit
@@ -684,25 +776,19 @@ vnode_fat32::get_cluster_data(u32 cluster_local_id)
 }
 
 static void
-strip_char(char *buf, char s)
-{
-  assert(buf);
-  char *lastch = buf;
-  while (*lastch)
-    lastch++;
-  lastch--;
-  while (lastch >= buf && *lastch == s) {
-    *lastch = '\0';
-    lastch--;
-  }
-}
-
-static void
 lowercase(char *buf)
 {
   for (; *buf; buf++)
     if (*buf >= 'A' && *buf <= 'Z')
       *buf += 'a' - 'A';
+}
+
+static void warn_invalid_lfn_entry() {
+  static bool warned_invalid_entry = false;
+  if (!warned_invalid_entry) {
+    warned_invalid_entry = true;
+    cprintf("warning: hit invalid long filename entry in FAT32 directory [not reporting future detections]\n");
+  }
 }
 
 bool
@@ -711,6 +797,12 @@ vnode_fat32::iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent
   u32 dirents_per_cluster = cluster_cache->cluster_size / sizeof(fat32_dirent);
   u32 cluster_local_id = *index / dirents_per_cluster;
   u32 dirent_index = *index % dirents_per_cluster;
+
+  // filled up backwards
+  char long_filename_buffer[13 * 20 + 1];
+  u8 long_filename_checksum = 0;
+  u32 long_filename_offset = sizeof(long_filename_buffer) - 1;
+  u32 long_filename_last_index = 0;
   for (;;) {
     sref<fat32_cluster_cache::cluster> cluster = this->get_cluster_data(cluster_local_id);
     if (!cluster)
@@ -718,30 +810,70 @@ vnode_fat32::iter_files(u32 *index, strbuf<FILENAME_MAX> *out, fat32_dirent *ent
     auto dirents = (fat32_dirent *) cluster->buffer_ptr();
     for (u32 i = dirent_index; i < dirents_per_cluster; i++) {
       fat32_dirent *d = &dirents[i];
-      if (d->attributes == ATTR_LFN)
-        continue; // TODO: handle long filenames
+      if (d->filename[0] == 0xE5)
+        continue; // unused entry
+      if (d->attributes == ATTR_LFN) {
+        auto l = (fat32_dirent_lfn *) d;
+        if (!l->validate()) {
+          warn_invalid_lfn_entry();
+          continue;
+        }
+        if (long_filename_offset == sizeof(long_filename_buffer) - 1) {
+          if (!l->is_last()) {
+            warn_invalid_lfn_entry();
+            continue;
+          }
+          long_filename_buffer[long_filename_offset] = '\0';
+          long_filename_checksum = l->checksum;
+        } else {
+          assert(long_filename_last_index >= 1);
+          if (l->is_last()) {
+            warn_invalid_lfn_entry();
+            // found a new long filename without using the last one; start over
+            long_filename_offset = sizeof(long_filename_buffer) - 1;
+            long_filename_buffer[long_filename_offset] = '\0';
+            long_filename_checksum = l->checksum;
+          } else {
+            if (long_filename_checksum != l->checksum || long_filename_last_index == 1 ||
+                long_filename_last_index - 1 != l->index()) {
+              warn_invalid_lfn_entry();
+              // wipe away what we have so far
+              long_filename_offset = sizeof(long_filename_buffer) - 1;
+              continue;
+            }
+            // not marked as last AND has the same checksum AND is the next index; this is part of the same filename!
+          }
+        }
+        long_filename_last_index = l->index();
+        assert(long_filename_last_index >= 1 && long_filename_last_index <= 20);
+
+        strbuf<13> name_segment = l->extract_name_segment();
+        u32 length = strlen(name_segment.ptr());
+        assert(length > 0 && length <= 13);
+        assert(long_filename_offset >= length);
+        long_filename_offset -= length;
+        memcpy(long_filename_buffer + long_filename_offset, name_segment.ptr(), length);
+
+        // parse the next entry
+        continue;
+      }
       if (d->filename[0] == '\0')
         break; // no more entries in this cluster (at least)
       if (d->filename[0] == '.')
         continue; // . or .. entry; we add these back in ourselves, so they don't need to be here
-      if (d->filename[0] == 0xE5)
-        continue; // unused entry
 
       *index = i + 1 + cluster_local_id * dirents_per_cluster;
 
-      // TODO: make this code less sketchy
-      static_assert(sizeof(d->filename) + 1 + sizeof(d->extension) + 1 <= FILENAME_MAX, "8.3 filename must fit in FILENAME_MAX");
-      memcpy(out, d->filename, sizeof(d->filename));
-      out->buf_[sizeof(d->filename)] = '\0';
-      strip_char(out->buf_, ' ');
-      memcpy(&out->buf_[strlen(out->buf_)], ".", 2);
-      out->buf_[strlen(out->buf_)+sizeof(d->extension)] = '\0';
-      memcpy(&out->buf_[strlen(out->buf_)], d->extension, sizeof(d->extension));
-      strip_char(out->buf_, ' ');
-      strip_char(out->buf_, '.');
+      if (long_filename_offset < sizeof(long_filename_buffer) - 1 && long_filename_last_index == 1 && long_filename_checksum == d->checksum()) {
+        // use long filename entry
+        *out = &long_filename_buffer[long_filename_offset];
+      } else {
+        if (long_filename_offset < sizeof(long_filename_buffer) - 1)
+          warn_invalid_lfn_entry();
+        // use short filename entry
+        *out = strbuf<FILENAME_MAX>(d->extract_filename());
+      }
       lowercase(out->buf_);
-      if (strlen(out->ptr()) == 0)
-        panic("file at index=%u had zero-length filename constructed from '%8s.%3s' (first byte %2x, attributes %2x)\n", *index-1, d->filename, d->extension, d->filename[0], d->attributes);
       if (ent_out)
         *ent_out = *d;
       return true;
@@ -785,7 +917,8 @@ vnode_fat32::ref_child(const char *name)
   while (this->iter_files(&index, &next, &ent)) {
     if (strcasecmp(next.ptr(), name) == 0) {
       bool isdir = (ent.attributes & ATTR_DIRECTORY) != 0;
-      return make_sref<vnode_fat32>(filesystem, ent.cluster_id(), isdir, sref<vnode_fat32>::newref(this), ent.file_size_bytes, cluster_cache);
+      u32 file_size_bytes = ent.file_size_bytes;
+      return make_sref<vnode_fat32>(filesystem, ent.cluster_id(), isdir, sref<vnode_fat32>::newref(this), file_size_bytes, cluster_cache);
     }
   }
   return sref<vnode_fat32>();
