@@ -217,7 +217,6 @@ QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid,+fsgsba
 	-device sga \
 	$(foreach x,$(QEMUNUMA),-numa $(x)) \
 	-net user,hostfwd=tcp::2323-:23,hostfwd=tcp::8080-:80 -net nic,model=e1000 \
-	$(if $(QEMUAPPEND),-append "$(QEMUAPPEND)",) \
 
 ifneq ($(GRAPHIC),vga)
 QEMUOPTS += -nographic
@@ -285,10 +284,11 @@ ifneq ($(BOOT),syslinux)
 ifeq ($(ROOT_DISK),)
 ROOT_DISK = 0
 endif
-QEMUOPTS += -kernel $(KERN) -append root_disk=$(ROOT_DISK)
+QEMUOPTS += -kernel $(KERN) -append "$(QEMUAPPEND) root_disk=$(ROOT_DISK)"
 qemu: $(KERN)
 gdb: $(KERN)
 endif
+
 
 # User-provided QEMU options
 QEMUOPTS += $(QEMUEXTRA)
