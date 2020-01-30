@@ -437,6 +437,9 @@ initpg(struct cpu *c)
     cprintf("WARN: spec-ctrl feature unavailable?!\n");
   }
 
+  // Enable recording of last branch records (if supported).
+  writemsr(MSR_INTEL_DEBUGCTL, 0x1);
+
   // Enable global pages. This has to happen on every core.
   lcr4(rcr4() | CR4_PGE);
 

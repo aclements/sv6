@@ -284,6 +284,11 @@ kerneltrap(struct trapframe *tf)
   printtrace(tf->rbp);
   printbinctx(tf->rip);
 
+  if (readmsr(MSR_INTEL_DEBUGCTL) & 1) {
+    __cprintf("\nLast branch before exception: %lx -> %lx\n",
+              readmsr(MSR_INTEL_LER_FROM_LIP), readmsr(MSR_INTEL_LER_TO_LIP));
+  }
+
   panicked = 1;
   halt();
   for(;;)

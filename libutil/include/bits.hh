@@ -100,7 +100,8 @@
 #define MSR_INTEL_UCODE_WRITE    0x00000079
 #define MSR_INTEL_UCODE_REV      0x0000008b
 #define MSR_INTEL_DEBUGCTL       0x1d9
-
+#define MSR_INTEL_LER_FROM_LIP   0x1dd
+#define MSR_INTEL_LER_TO_LIP     0x1de
 
 // Common event-select bits
 #define PERF_SEL_USR        (1ULL << 16)
