@@ -74,7 +74,7 @@ main(int ac, char** av)
 
   if (ac == 1) {
     iters = 50000;
-    nworkers = 2;
+    nworkers = 4;
   } else if (ac < 3){
     die("usage: %s iters nworkers", av[0]);
   } else {
