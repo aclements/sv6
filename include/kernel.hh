@@ -225,7 +225,7 @@ void            wdpoke(void);
 
 // sched.cc
 void            addrun(struct proc *);
-void            sched(void);
+void            sched(bool voluntary);
 void            post_swtch(void);
 void            scheddump(void);
 int             steal(void);

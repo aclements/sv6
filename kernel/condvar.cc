@@ -111,7 +111,7 @@ condvar::sleep_to(struct spinlock *lk, u64 timeout, struct spinlock *lk2)
  }
 
   lock.release();
-  sched();
+  sched(true);
   // Reacquire original lock.
   lk->acquire();
   if (lk2)

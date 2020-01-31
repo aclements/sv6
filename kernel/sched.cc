@@ -185,7 +185,7 @@ public:
     schedule_[p->cpuid]->enq(p);
   }
 
-  void sched(void)
+  void sched(bool voluntary)
   {
     extern void forkret(void);
     int intena;
@@ -290,9 +290,9 @@ post_swtch(void)
 }
 
 void
-sched(void)
+sched(bool voluntary)
 {
-  thesched_dir.sched();
+  thesched_dir.sched(voluntary);
 }
 
 void

@@ -100,7 +100,7 @@ proc::set_cpu_pin(int cpu)
   cpuid = cpu;
   cpu_pin = 1;
   myproc()->set_state(RUNNABLE);
-  sched();
+  sched(true);
   assert(mycpu()->id == cpu);
   return 0;
 }
@@ -112,7 +112,7 @@ yield(void)
   acquire(&myproc()->lock);  //DOC: yieldlock
   myproc()->set_state(RUNNABLE);
   myproc()->yield_ = false;
-  sched();
+  sched(true);
 }
 
 
@@ -207,7 +207,7 @@ exit(int status)
 
   // Jump into the scheduler, never to return.
   myproc()->set_state(ZOMBIE);
-  sched();
+  sched(true);
   panic("zombie exit");
 }
 
