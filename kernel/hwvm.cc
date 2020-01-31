@@ -724,11 +724,12 @@ namespace mmu_shared_page_table {
       | (new_context * 2)
       | (flush_tlb ? 0 : ((u64)1<<63));
     cr3 &= mycpu()->cr3_mask;
-    lcr3(cr3);
 
-    if (pcids_enabled()) {
+    if (pcids_enabled() && flush_tlb) {
       invpcid((cr3 & 0xfff) ^ 0x1, 0, INVPCID_ONE_PCID);
     }
+
+    lcr3(cr3);
   }
 
   void
