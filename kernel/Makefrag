@@ -201,5 +201,6 @@ $(O)/kernel/kconfig.cc: always
 
 .PRECIOUS: $(O)/kernel/%.o
 -include $(O)/kernel/*.d
+-include $(O)/kernel/fat32/*.d
 
 # vim: set noexpandtab:
