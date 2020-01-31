@@ -39,8 +39,8 @@ param_metadata_t<bool> binary_params[] = {
 
 param_metadata_t<u64> uint_params[] = {};
 
-param_metadata_t<char *> string_params[] = {
-  { "root_disk", (char**) cmdline_params.root_disk, "0", NULL },
+param_metadata_t<const char*> string_params[] = {
+  { "root_disk", (const char**) cmdline_params.root_disk, "memide.0", NULL },
 };
 
 static int
@@ -142,7 +142,7 @@ view_uint_param(param_metadata_t<u64> *param)
 }
 
 void
-view_string_param(param_metadata_t<char *> *param)
+view_string_param(param_metadata_t<const char*> *param)
 {
   cprintf("%s: %s (str)\n", param->name, (char*) param->pval);
 }
@@ -194,7 +194,7 @@ change_uint_param(param_metadata_t<u64> *param, const char *value)
 }
 
 void
-change_string_param(param_metadata_t<char *> *param, const char *value)
+change_string_param(param_metadata_t<const char*> *param, const char *value)
 {
   char *new_val = (char*) param->pval;
   if (strcmp(new_val, value) != 0) {
