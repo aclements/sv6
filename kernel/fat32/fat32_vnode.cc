@@ -121,7 +121,7 @@ vnode_fat32::read_at(char *addr, u64 off, size_t len)
   if (off + len > file_length)
     len = file_length - off;
   assert(off + len <= file_length);
-  ssize_t total_read = 0;
+  size_t total_read = 0;
   size_t bytes_per_cluster = cluster_cache->cache_metadata->cluster_size;
   while (len > 0) {
     u32 cluster_local_id = off / bytes_per_cluster;
@@ -137,27 +137,156 @@ vnode_fat32::read_at(char *addr, u64 off, size_t len)
     len -= read_size;
     assert(len == 0 || off % bytes_per_cluster == 0);
   }
-  // TODO: change the return type of the read_at API to accept ssize_t
+  // TODO: change the return types of the read_at and write_at APIs to accept ssize_t
   return total_read;
+}
+
+void
+vnode_fat32::expand_to_cluster_count(size_t clusters_needed)
+{
+  assert(cluster_count >= 1);
+  assert(clusters_needed > cluster_count);
+
+  lock_guard<spinlock> l(&resize_lock);
+  u32 *new_cluster_ids = (u32*) kmalloc(sizeof(u32) * clusters_needed, "vnode_fat32 cluster_ids");
+
+  for (u32 i = 0; i < cluster_count; i++) {
+    new_cluster_ids[i] = cluster_ids[i];
+  }
+  for (u32 i = cluster_count; i < clusters_needed; i++) {
+    // when we requisition a cluster, it comes already set to the "final cluster in the file" state.
+    u32 new_cluster = 0;
+    if (!fat->requisition_free_cluster(&new_cluster))
+      panic("unimplemented: handling for running out of disk space");
+    assert(new_cluster >= 2);
+    new_cluster_ids[i] = new_cluster;
+    if (cluster_cache->try_get_cluster(new_cluster))
+      panic("clusters that we've just requisitioned should either have never entered the cache, or should have been evicted!");
+    // link the previous cluster into this cluster
+    fat->set_next_cluster_id(new_cluster_ids[i-1], new_cluster);
+  }
+
+  kmfree(cluster_ids, sizeof(u32) * cluster_count);
+  cluster_count = clusters_needed;
+  cluster_ids = new_cluster_ids;
+}
+
+size_t
+vnode_fat32::write_at_nogrow(const char *addr, u64 off, size_t len)
+{
+  size_t total_written = 0;
+  size_t bytes_per_cluster = cluster_cache->cache_metadata->cluster_size;
+  while (len > 0) {
+    u32 cluster_local_id = off / bytes_per_cluster;
+    u32 cluster_byte_offset = off % bytes_per_cluster;
+    sref<fat32_cluster_cache::cluster> cluster = get_cluster_data(cluster_local_id);
+    if (!cluster)
+      // this means we actually do need to grow, probably because an operation occurred after we started.
+      // so return immediately, and let write_at grow the file before we continue.
+      break;
+
+    size_t write_size = MIN(bytes_per_cluster - cluster_byte_offset, len);
+    memmove(cluster->buffer_ptr() + cluster_byte_offset, addr, write_size);
+    cluster->mark_dirty();
+
+    total_written += write_size;
+    addr += write_size;
+    off += write_size;
+    len -= write_size;
+    assert(len == 0 || off % bytes_per_cluster == 0);
+  }
+  return total_written;
+}
+
+void
+vnode_fat32::zero_range_nogrow(u64 off, size_t len)
+{
+  size_t bytes_per_cluster = cluster_cache->cache_metadata->cluster_size;
+  while (len > 0) {
+    u32 cluster_local_id = off / bytes_per_cluster;
+    u32 cluster_byte_offset = off % bytes_per_cluster;
+    sref<fat32_cluster_cache::cluster> cluster = get_cluster_data(cluster_local_id);
+    if (!cluster)
+      // because this is only called with the resize lock held, and after the ranges have been checked
+      panic("should never fail to zero a range given");
+
+    size_t write_size = MIN(bytes_per_cluster - cluster_byte_offset, len);
+    memset(cluster->buffer_ptr() + cluster_byte_offset, 0, write_size);
+    cluster->mark_dirty();
+
+    off += write_size;
+    len -= write_size;
+    assert(len == 0 || off % bytes_per_cluster == 0);
+  }
 }
 
 int
 vnode_fat32::write_at(const char *addr, u64 off, size_t len, bool append)
 {
-  // not writable
-  return -1;
+  size_t total_written = 0;
+  if (len == 0)
+    return 0;
+  if (!append && off + len <= file_size()) {
+    // this write is entirely within the existing bounds of the file; we should be able to fast-path it, optimistically.
+    total_written = write_at_nogrow(addr, off, len);
+    assert(total_written <= len);
+    if (total_written == len)
+      return total_written; // successfully wrote everything!
+
+    // otherwise, someone else has been freeing clusters while we work. that's okay; we'll resize and then pick up the
+    // rest of the write operation.
+    addr += total_written;
+    off += total_written;
+    len -= total_written;
+  }
+  // we take the lock if any of the following apply:
+  //   - we're in append mode (so that multiple threads can append simultaneously without clobbering each others' data)
+  //   - we know ahead of time that we're going to need to resize the file to fit
+  //   - we thought everything would fit in the file, but someone else resized it while we worked
+
+  lock_guard<sleeplock> lw(&resize_write_lock);
+  if (append)
+    off = file_byte_length;
+
+  size_t bytes_per_cluster = cluster_cache->cache_metadata->cluster_size;
+  u32 clusters_needed = (off + len + bytes_per_cluster - 1) / bytes_per_cluster;
+  // make sure we have enough clusters to fit everything we want to fit
+  if (clusters_needed > cluster_count)
+    expand_to_cluster_count(clusters_needed);
+  // if there's a gap between the previous end of the file and the start of our write, we'll have to zero-fill it.
+  if (off > file_byte_length)
+    zero_range_nogrow(file_byte_length, off - file_byte_length);
+
+  size_t additional_written = write_at_nogrow(addr, off, len);
+  assert(additional_written <= len);
+  if (additional_written < len)
+    panic("should never fail to write once we have the resize lock and have pre-allocated all the clusters");
+  total_written += additional_written;
+
+  size_t new_file_length = off + additional_written;
+
+  if (new_file_length > file_byte_length) {
+    barrier(); // for file_byte_length, which can be read without the lock, so we need a barrier
+    file_byte_length = new_file_length;
+
+    parent_dir->update_child_length_on_disk(this, file_byte_length);
+  }
+  return total_written;
 }
 
 int
 vnode_fat32::truncate()
 {
-  lock_guard<spinlock> l(&resize_lock);
+  lock_guard<sleeplock> lw(&resize_write_lock);
 
   barrier(); // for file_byte_length, which can be read without the lock
   file_byte_length = 0;
 
   parent_dir->update_child_length_on_disk(this, 0);
+
+  assert(cluster_count >= 1);
   if (cluster_count > 1) {
+    lock_guard<spinlock> l(&resize_lock);
     // we have to have the same first cluster, so that the reference to us in the parent directory stays valid
     u64 cluster_to_preserve = cluster_ids[0];
 

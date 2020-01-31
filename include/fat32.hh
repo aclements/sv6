@@ -164,6 +164,8 @@ public:
   // if there is no cluster in the cache, returns a null reference, otherwise evicts and returns it. no internal
   // reference will be maintained, so it will be freed as soon as all references drop.
   sref<cluster> evict_cluster(s64 cluster_id);
+  // only returns a cluster if it happens to be present in the cache
+  sref<cluster> try_get_cluster(s64 cluster_id);
   sref<cluster> get_cluster(s64 cluster_id);
   ~fat32_cluster_cache() override;
   u32 devno();
@@ -190,10 +192,15 @@ public:
   void set_next_cluster_id(u32 from_cluster_id, u32 to_cluster_id);
   void mark_cluster_final(u32 cluster_id);
   void mark_cluster_free(u32 cluster_id);
+  bool requisition_free_cluster(u32 *cluster_id_out);
 
   NEW_DELETE_OPS(fat32_alloc_table);
 private:
   sref<fat32_cluster_cache::cluster> get_table_entry_ptr(u32 cluster_id, u32 **table_entry_ptr_out);
+  bool find_first_free_cluster(u32 *cluster_id_out);
+
+  // to make sure that two threads don't clobber each others' attempts to allocate free clusters
+  sleeplock allocation_lock;
 
   sref<fat32_cluster_cache> cluster_cache;
   u32 table_base_offset;
@@ -244,6 +251,12 @@ private:
   void populate_children();
   void update_child_length_on_disk(vnode_fat32 *child, u32 new_byte_length);
 
+  size_t write_at_nogrow(const char *addr, u64 off, size_t len);
+  void zero_range_nogrow(u64 off, size_t len);
+
+  // must have resize_write_lock acquired during this call
+  void expand_to_cluster_count(size_t clusters_needed);
+
   void onzero() override;
 
   sref<fat32_filesystem_weaklink> filesystem;
@@ -264,7 +277,14 @@ private:
   sref<fat32_alloc_table> fat;
   bool directory;
 
-  spinlock resize_lock; // protects (writing) file_byte_length, and (reading or writing) cluster_ids/cluster_count.
+  // protects reading or writing cluster_ids/cluster_count.
+  spinlock resize_lock;
+  // this exists to arbitrary operations like append and truncate against each other; holding this is necessary to
+  // update cluster_count and cluster_ids, but not sufficient; you must also hold resize_lock. this allows reads to
+  // proceed while appends and truncates are in progress.
+  // it does provide the ability to write file_byte_length, though, because reading that is based on the atomicity
+  // properties of 32-bit loads and stores
+  sleeplock resize_write_lock;
   u32 file_byte_length;
 
   u32 cluster_count;

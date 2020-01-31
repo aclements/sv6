@@ -47,7 +47,6 @@ fat32_cluster_cache::cluster::mark_free_on_delete(sref<class fat32_alloc_table> 
 void
 fat32_cluster_cache::cluster::mark_dirty()
 {
-  cprintf("mark cache dirty: cluster_id=%ld +2\n", cluster_id);
   // TODO: actually do writeback
   needs_writeback = true;
 }
@@ -166,6 +165,18 @@ fat32_cluster_cache::evict_cluster(s64 cluster_id)
   // delete_on_zero is set) -- but our caller wants a reference, however short lived it ends up being, so we use
   // transfer to give them our reference.
   return sref<cluster>::transfer(i);
+}
+
+sref<fat32_cluster_cache::cluster>
+fat32_cluster_cache::try_get_cluster(s64 cluster_id)
+{
+  cluster *i;
+  if (cached_clusters.lookup(cluster_id, &i)) {
+    assert(i);
+    if (i->tryinc())
+      return sref<cluster>::transfer(i);
+  }
+  return sref<cluster>();
 }
 
 sref<fat32_cluster_cache::cluster>
