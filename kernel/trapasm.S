@@ -301,7 +301,9 @@ OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
         popq %rax
         popq %rbx
 
+OPTIONAL("mds", "yes")
         verw (mds_clear_cpu_buffers_ds)
+OPTIONAL_OR_NOPS("mds")
 
 2:      swapgs
 1:      lfence
