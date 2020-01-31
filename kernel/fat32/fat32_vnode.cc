@@ -21,20 +21,18 @@ vnode_fat32::vnode_fat32(sref<fat32_filesystem_weaklink> fs, u32 first_cluster_i
   // count number of clusters
   u32 count = 1;
   u32 last_cluster_id = first_cluster_id;
-  while ((last_cluster_id = fat->next_cluster_id(last_cluster_id)) < 0x0FFFFFF8)
+  while (fat->get_next_cluster_id(last_cluster_id, &last_cluster_id))
     count++;
 
   cluster_ids = (u32*) kmalloc(sizeof(u32) * count, "vnode_fat32 cluster_ids");
   last_cluster_id = first_cluster_id;
   for (u32 i = 0; i < count; i++) {
-    if (last_cluster_id >= 0x0FFFFFF8)
-      panic("cluster count changed!");
     validate_cluster_id(ref->hdr, last_cluster_id);
     cluster_ids[i] = last_cluster_id;
-    last_cluster_id = fat->next_cluster_id(last_cluster_id);
+    bool has_next = fat->get_next_cluster_id(last_cluster_id, &last_cluster_id);
+    if (has_next != (i < count - 1))
+      panic("cluster count changed!");
   }
-  if (last_cluster_id < 0x0FFFFFF8)
-    panic("cluster count changed!");
   assert(count >= 1);
   this->cluster_count = count;
 }
@@ -42,6 +40,8 @@ vnode_fat32::vnode_fat32(sref<fat32_filesystem_weaklink> fs, u32 first_cluster_i
 u32
 vnode_fat32::first_cluster_id()
 {
+  lock_guard<spinlock> l(&resize_lock);
+  assert(cluster_count >= 1);
   return cluster_ids[0];
 }
 
@@ -56,6 +56,7 @@ vnode_fat32::validate_cluster_id(fat32_header &hdr, u32 cluster_id)
 void
 vnode_fat32::onzero()
 {
+  // we assume that, since all references have been dropped, there is no need to take the resize lock
   kmfree(cluster_ids, sizeof(u32) * cluster_count);
   delete this;
 }
@@ -66,13 +67,12 @@ vnode_fat32::stat(struct stat *st, enum stat_flags flags)
   st->st_mode = (directory ? T_DIR : T_FILE) << __S_IFMT_SHIFT;
 
   st->st_dev = cluster_cache->devno();
-  assert(cluster_count >= 1);
-  st->st_ino = cluster_ids[0];
+  st->st_ino = first_cluster_id();
   // this doesn't follow convention but is probably okay per https://sourceforge.net/p/fuse/mailman/message/29281571/
   st->st_nlink = 1;
   st->st_size = 0;
   if (!directory)
-    st->st_size = file_byte_length;
+    st->st_size = file_size();
 }
 
 sref<filesystem>
@@ -97,33 +97,38 @@ u64
 vnode_fat32::file_size()
 {
   assert(!directory);
-  return file_byte_length;
+  // file_byte_length could be modified while we're reading it, but we'll always either get the previous value or the
+  // next value, so that's fine.
+  u32 length = file_byte_length;
+  barrier();
+  return length;
 }
 
 bool
 vnode_fat32::is_offset_in_file(u64 offset)
 {
   assert(!directory);
-  return offset < file_byte_length;
+  return offset < file_size();
 }
 
 int
 vnode_fat32::read_at(char *addr, u64 off, size_t len)
 {
   assert(!directory);
-  if (off >= file_byte_length)
+  u64 file_length = file_size();
+  if (off >= file_length)
     return 0;
-  if (off + len > file_byte_length)
-    len = file_byte_length - off;
-  assert(off + len <= file_byte_length);
+  if (off + len > file_length)
+    len = file_length - off;
+  assert(off + len <= file_length);
   ssize_t total_read = 0;
-  size_t bytes_per_cluster = cluster_cache->cluster_size;
+  size_t bytes_per_cluster = cluster_cache->cache_metadata->cluster_size;
   while (len > 0) {
     u32 cluster_local_id = off / bytes_per_cluster;
     u32 cluster_byte_offset = off % bytes_per_cluster;
     sref<fat32_cluster_cache::cluster> cluster = get_cluster_data(cluster_local_id);
     if (!cluster)
-      panic("cluster %u missing while reading data for file of length %u\n", cluster_local_id, file_byte_length);
+      break; // we assume that the file was resized to be smaller since we checked file_size()
     size_t read_size = MIN(bytes_per_cluster - cluster_byte_offset, len);
     memmove(addr, cluster->buffer_ptr() + cluster_byte_offset, read_size);
     total_read += read_size;
@@ -146,15 +151,44 @@ vnode_fat32::write_at(const char *addr, u64 off, size_t len, bool append)
 int
 vnode_fat32::truncate()
 {
-  cprintf("cannot truncate: unwritable file system\n");
-  return -1;
+  lock_guard<spinlock> l(&resize_lock);
+
+  barrier(); // for file_byte_length, which can be read without the lock
+  file_byte_length = 0;
+
+  parent_dir->update_child_length_on_disk(this, 0);
+  if (cluster_count > 1) {
+    // we have to have the same first cluster, so that the reference to us in the parent directory stays valid
+    u64 cluster_to_preserve = cluster_ids[0];
+
+    fat->mark_cluster_final(cluster_to_preserve);
+
+    for (u32 i = 1; i < cluster_count; i++) {
+      // once we evict this cluster, no one will be able to get a new reference to it until the cluster is re-used,
+      // because the only way for them to do so would be to find it in cluster_ids, from which it is being removed.
+      sref<fat32_cluster_cache::cluster> c = cluster_cache->evict_cluster(cluster_ids[i]);
+
+      if (c) {
+        fat->mark_cluster_final(cluster_ids[i]);
+        c->mark_free_on_delete(fat);
+      } else {
+        fat->mark_cluster_free(cluster_ids[i]);
+      }
+    }
+    kmfree(cluster_ids, sizeof(u32) * cluster_count);
+    cluster_count = 1;
+    cluster_ids = (u32*) kmalloc(sizeof(u32) * cluster_count, "vnode_fat32 cluster_ids");
+    cluster_ids[0] = cluster_to_preserve;
+  }
+
+  return 0;
 }
 
 sref<page_info>
 vnode_fat32::get_page_info(u64 page_idx)
 {
-  assert(this->cluster_cache->cluster_size % PGSIZE == 0);
-  u32 pages_per_cluster = this->cluster_cache->cluster_size / PGSIZE;
+  assert(this->cluster_cache->cache_metadata->cluster_size % PGSIZE == 0);
+  u32 pages_per_cluster = this->cluster_cache->cache_metadata->cluster_size / PGSIZE;
   u64 cluster_local_id = page_idx / pages_per_cluster;
   u32 page_within_cluster = page_idx % pages_per_cluster;
 
@@ -171,11 +205,18 @@ vnode_fat32::is_directory()
 sref<fat32_cluster_cache::cluster>
 vnode_fat32::get_cluster_data(u32 cluster_local_id)
 {
+  sref<fat32_cluster_cache::cluster> c;
+
+  lock_guard<spinlock> l(&resize_lock);
   if (cluster_local_id >= cluster_count)
     return sref<fat32_cluster_cache::cluster>();
   u64 cluster_id = cluster_ids[cluster_local_id];
   assert(cluster_id >= 2);
   return cluster_cache->get_cluster(cluster_id - 2);
+
+  // while the cluster_id might have been removed from cluster_ids by the time we actually return, we will have had a
+  // sref to the cluster before that, so reclaiming the disk space will wait until the use of the reference by the
+  // caller completes.
 }
 
 static void
@@ -197,8 +238,10 @@ static void warn_invalid_lfn_entry() {
 void
 vnode_fat32::populate_children()
 {
-  if (children_populated)
+  if (children_populated) {
+    barrier();
     return;
+  }
   lock_guard<sleeplock> guard(&structure_lock);
   if (children_populated)
     return;
@@ -207,7 +250,7 @@ vnode_fat32::populate_children()
     panic("attempt to populate children when there is no filesystem present"); // TODO: handle this gracefully, make sure it's never a problem, or refactor these references
   assert(!first_child_node);
 
-  u32 dirents_per_cluster = cluster_cache->cluster_size / sizeof(fat32_dirent);
+  u32 dirents_per_cluster = cluster_cache->cache_metadata->cluster_size / sizeof(fat32_dirent);
 
   sref<vnode_fat32> last_child_created;
 
@@ -286,6 +329,9 @@ vnode_fat32::populate_children()
           this->first_child_node = new_child;
         last_child_created = new_child;
 
+        assert(new_child->dirent_index_in_parent == UINT64_MAX);
+        new_child->dirent_index_in_parent = (u64) cluster_local_id * dirents_per_cluster + i;
+
         has_long_filename = false;
       }
     }
@@ -295,6 +341,29 @@ vnode_fat32::populate_children()
     warn_invalid_lfn_entry();
   barrier();
   children_populated = true;
+}
+
+void
+vnode_fat32::update_child_length_on_disk(vnode_fat32 *child, u32 new_byte_length)
+{
+  assert(children_populated);
+  assert(child->parent_dir == this);
+  assert(child->dirent_index_in_parent != UINT64_MAX);
+
+    u32 dirents_per_cluster = cluster_cache->cache_metadata->cluster_size / sizeof(fat32_dirent);
+  u32 cluster_local_id = child->dirent_index_in_parent / dirents_per_cluster;
+  u32 dirent_index = child->dirent_index_in_parent % dirents_per_cluster;
+  auto cluster = this->get_cluster_data(cluster_local_id);
+  if (!cluster)
+    panic("should never fail to find cluster that child must have come from");
+  auto dirents = (fat32_dirent *) cluster->buffer_ptr();
+
+  // this entry is protected by the child's resize lock that they must be holding for us right now
+  fat32_dirent *d = &dirents[dirent_index];
+  assert((uptr) &d->file_size_bytes % sizeof(d->file_size_bytes) == 0); // must be aligned!
+  // no need for a barrier here; nobody's going to read this until next boot!
+  d->file_size_bytes = new_byte_length;
+  cluster->mark_dirty();
 }
 
 bool

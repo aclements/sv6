@@ -109,6 +109,16 @@ class fat32_cluster_cache : public referenced {
 public:
   fat32_cluster_cache(disk *device, u64 max_clusters_used, u64 cluster_size, u64 first_cluster_offset);
 
+  // this is the part of fat32_cluster_cache that might need to stick around after it's been freed to let cluster
+  // references keep reading promised data
+  struct metadata : public referenced {
+    metadata(disk *device, u64 max_clusters_used, u64 cluster_size, u64 first_cluster_offset);
+    disk *const device;
+    const u64 max_clusters_used, cluster_size, first_cluster_offset;
+
+    NEW_DELETE_OPS(metadata);
+  };
+
   // cluster is refcounted, but does not automatically get deallocated when the refcount drops to zero. instead, one ref
   // is implicitly kept in the cached_clusters table; when we need to free an unused cluster, we iterate through the
   // clusters and try decrementing and then re-incrementing each of their reference counts. if we can't re-increment,
@@ -122,22 +132,28 @@ public:
   public:
     u8 *buffer_ptr();
     sref<page_info> page_ref(u32 page);
+    void mark_free_on_delete(sref<class fat32_alloc_table> fat);
+    void mark_dirty();
     // cluster IDs are signed here, because you may need to access a negative cluster ID to reach the FAT itself
-    explicit cluster(s64 cluster_id);
+    explicit cluster(s64 cluster_id, sref<metadata> metadata);
     ~cluster() override;
 
     NEW_DELETE_OPS(cluster);
   private:
-    // force-acquires data_available
-    void claim_buffer_population();
-    // expects data_available to be held; will release it
-    void populate_buffer_ptr(fat32_cluster_cache *outer);
+    void populate_cache_data();
     void onzero() override;
 
+    sref<metadata> cache_metadata;
+
+    // we have to track this in this limited capacity because otherwise it gives us a circular reference between
+    // fat32_alloc_table and fat32_cluster_cache; this way, it is only ever populated after a cluster is evicted, so
+    // it won't cause a circular dependency, but it's still pretty sketchy even as-is.
+    sref<class fat32_alloc_table> free_on_delete_fat;
     bool delete_on_zero = false;
+    bool needs_writeback = false;
     u32 kalloc_pages = 0;
+    sleeplock cluster_data_lock;
     u8 *cluster_data = nullptr; // this counts as a page reference to every page up to kalloc_pages
-    sleeplock data_available;
     s64 cluster_id;
     cluster *next_try_free = nullptr, *prev_try_free = nullptr;
 
@@ -145,11 +161,14 @@ public:
   };
 
   sref<cluster> get_cluster_for_disk_byte_offset(u64 offset, u64 *offset_within_cluster_out);
+  // if there is no cluster in the cache, returns a null reference, otherwise evicts and returns it. no internal
+  // reference will be maintained, so it will be freed as soon as all references drop.
+  sref<cluster> evict_cluster(s64 cluster_id);
   sref<cluster> get_cluster(s64 cluster_id);
   ~fat32_cluster_cache() override;
   u32 devno();
 
-  const u64 max_clusters_used, cluster_size, first_cluster_offset;
+  const sref<metadata> cache_metadata;
 
   NEW_DELETE_OPS(fat32_cluster_cache);
 private:
@@ -157,7 +176,6 @@ private:
   bool evict_unused_cluster();
 
   spinlock alloc;
-  disk *device;
   u64 clusters_used = 0;
   cluster *first_try_free = nullptr;
   chainhash<s64, cluster*> cached_clusters;
@@ -167,13 +185,19 @@ class fat32_alloc_table : public referenced {
 public:
   explicit fat32_alloc_table(sref<fat32_cluster_cache> cluster_cache, u32 offset, u32 sectors);
 
-  u32 next_cluster_id(u32 from_cluster_id);
+  // returns false if there are no subsequent clusters
+  bool get_next_cluster_id(u32 from_cluster_id, u32 *to_cluster_id_out);
+  void set_next_cluster_id(u32 from_cluster_id, u32 to_cluster_id);
+  void mark_cluster_final(u32 cluster_id);
+  void mark_cluster_free(u32 cluster_id);
 
   NEW_DELETE_OPS(fat32_alloc_table);
 private:
+  sref<fat32_cluster_cache::cluster> get_table_entry_ptr(u32 cluster_id, u32 **table_entry_ptr_out);
+
   sref<fat32_cluster_cache> cluster_cache;
   u32 table_base_offset;
-  size_t table_len;
+  u32 table_len;
 };
 
 class vnode_fat32 : public vnode {
@@ -218,6 +242,7 @@ private:
   sref<fat32_cluster_cache::cluster> get_cluster_data(u32 cluster_local_id);
   void validate_cluster_id(fat32_header &hdr, u32 cluster_id);
   void populate_children();
+  void update_child_length_on_disk(vnode_fat32 *child, u32 new_byte_length);
 
   void onzero() override;
 
@@ -230,13 +255,16 @@ private:
   sleeplock structure_lock; // taken while populating children
   bool children_populated = false;
   sref<vnode_fat32> first_child_node;
-  // these two are managed by the PARENT node!
+  // these three are managed by the PARENT node!
   sref<vnode_fat32> next_sibling_node;
   strbuf<FILENAME_MAX> my_filename;
+  u64 dirent_index_in_parent = UINT64_MAX;
 
   sref<fat32_cluster_cache> cluster_cache;
   sref<fat32_alloc_table> fat;
   bool directory;
+
+  spinlock resize_lock; // protects (writing) file_byte_length, and (reading or writing) cluster_ids/cluster_count.
   u32 file_byte_length;
 
   u32 cluster_count;

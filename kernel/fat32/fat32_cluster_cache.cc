@@ -1,9 +1,15 @@
+#include <utility>
+
 #include "types.h"
 #include "fat32.hh"
 
 fat32_cluster_cache::fat32_cluster_cache(disk *device, u64 max_clusters_used, u64 cluster_size, u64 first_cluster_offset)
-  : max_clusters_used(max_clusters_used), cluster_size(cluster_size), first_cluster_offset(first_cluster_offset),
-    device(device), cached_clusters(max_clusters_used)
+  : cache_metadata(make_sref<metadata>(device, max_clusters_used, cluster_size, first_cluster_offset)), cached_clusters(max_clusters_used)
+{
+}
+
+fat32_cluster_cache::metadata::metadata(disk *device, u64 max_clusters_used, u64 cluster_size, u64 first_cluster_offset)
+  : device(device), max_clusters_used(max_clusters_used), cluster_size(cluster_size), first_cluster_offset(first_cluster_offset)
 {
   assert(device);
   assert(max_clusters_used > 0);
@@ -13,36 +19,53 @@ fat32_cluster_cache::fat32_cluster_cache(disk *device, u64 max_clusters_used, u6
 u8 *
 fat32_cluster_cache::cluster::buffer_ptr()
 {
-  if (!cluster_data) {
-    data_available.acquire();
-    if (!cluster_data)
-      panic("once buffer_ptr() acquires data_available, cluster_data must be populated");
-    data_available.release();
-  }
-  u8 *out = cluster_data;
-  assert(out);
-  return out;
+  populate_cache_data();
+  assert(cluster_data);
+  return cluster_data;
 }
 
 sref<page_info>
 fat32_cluster_cache::cluster::page_ref(u32 page)
 {
-  buffer_ptr(); // just so that we wait for data_available
+  populate_cache_data();
+  assert(cluster_data);
   assert(kalloc_pages > 0);
   assert(page < kalloc_pages);
-  assert(cluster_data);
   // this is valid because cluster already has a reference to each of the pages,
   // so creating another reference is just fine.
   return sref<page_info>::newref(page_info::of(cluster_data + PGSIZE * page));
 }
 
-fat32_cluster_cache::cluster::cluster(s64 cluster_id)
-  : cluster_id(cluster_id)
+void
+fat32_cluster_cache::cluster::mark_free_on_delete(sref<class fat32_alloc_table> fat)
 {
+  assert(!free_on_delete_fat);
+  assert(cluster_id >= 0);
+  free_on_delete_fat = fat;
+}
+
+void
+fat32_cluster_cache::cluster::mark_dirty()
+{
+  cprintf("mark cache dirty: cluster_id=%ld +2\n", cluster_id);
+  // TODO: actually do writeback
+  needs_writeback = true;
+}
+
+fat32_cluster_cache::cluster::cluster(s64 cluster_id, sref<metadata> metadata)
+  : cache_metadata(std::move(metadata)), cluster_id(cluster_id)
+{
+  assert(cache_metadata);
 }
 
 fat32_cluster_cache::cluster::~cluster()
 {
+  if (free_on_delete_fat) {
+    // TODO: make this +2 more systematic; currently cluster_cache is shifted off by two from the rest of the cluster_id
+    // values in use.
+    free_on_delete_fat->mark_cluster_free(cluster_id + 2);
+    free_on_delete_fat.reset();
+  }
   if (cluster_data) {
     assert(kalloc_pages > 0);
     for (u32 i = 0; i < kalloc_pages; i++) {
@@ -55,19 +78,17 @@ fat32_cluster_cache::cluster::~cluster()
 }
 
 void
-fat32_cluster_cache::cluster::claim_buffer_population()
+fat32_cluster_cache::cluster::populate_cache_data()
 {
-  if (!data_available.try_acquire())
-    panic("expected to be able to claim buffer population");
-}
-
-void
-fat32_cluster_cache::cluster::populate_buffer_ptr(fat32_cluster_cache *outer)
-{
-  assert(!cluster_data);
-  assert(outer);
-  assert(outer->cluster_size % PGSIZE == 0);
-  kalloc_pages = outer->cluster_size / PGSIZE;
+  if (cluster_data) {
+    barrier();
+    return;
+  }
+  lock_guard<sleeplock> l(&cluster_data_lock);
+  if (cluster_data)
+    return;
+  assert(cache_metadata->cluster_size % PGSIZE == 0);
+  kalloc_pages = cache_metadata->cluster_size / PGSIZE;
   u8 *data = (u8*) kalloc("FAT32 disk cluster", kalloc_pages * PGSIZE);
   if (!data)
     panic("out of memory in FAT32 cluster cache");
@@ -76,23 +97,22 @@ fat32_cluster_cache::cluster::populate_buffer_ptr(fat32_cluster_cache *outer)
     // page up to kalloc_pages.
     new (page_info::of(data + PGSIZE * i)) page_info();
   }
-  s64 offset = (s64) outer->cluster_size * cluster_id + outer->first_cluster_offset;
-  if (offset <= -(s64) outer->cluster_size)
-    panic("offset too far before the start of disk: %ld <= %ld", offset, -outer->cluster_size); // only allow reads that are at least partially in the disk
-  u64 read_len = outer->cluster_size;
+  s64 offset = (s64) cache_metadata->cluster_size * cluster_id + cache_metadata->first_cluster_offset;
+  if (offset <= -(s64) cache_metadata->cluster_size)
+    panic("offset too far before the start of disk: %ld <= %ld", offset, -cache_metadata->cluster_size); // only allow reads that are at least partially in the disk
+  u64 read_len = cache_metadata->cluster_size;
   if (offset < 0) {
     u64 corrective_shift = -offset;
-    assert(corrective_shift < outer->cluster_size);
+    assert(corrective_shift < cache_metadata->cluster_size);
     memset(data, 0, corrective_shift); // fill unavailable bytes with zeroes
     data += corrective_shift;
     read_len -= corrective_shift;
     offset += corrective_shift;
     assert(offset == 0);
   }
-  outer->device->read((char*) data, read_len, offset);
+  cache_metadata->device->read((char*) data, read_len, offset);
   barrier();
   cluster_data = data;
-  data_available.release();
 }
 
 void
@@ -106,22 +126,51 @@ fat32_cluster_cache::cluster::onzero()
 sref<fat32_cluster_cache::cluster>
 fat32_cluster_cache::get_cluster_for_disk_byte_offset(u64 offset, u64 *offset_within_cluster_out)
 {
-  s64 offset_from_base = offset - first_cluster_offset;
+  s64 offset_from_base = offset - cache_metadata->first_cluster_offset;
   // we can't divide offset_from_base directly, because it's signed; we'll need to shift it positive first, if it's negative.
-  u64 positive_shift_clusters = offset_from_base >= 0 ? 0 : ((-offset_from_base + cluster_size - 1) / cluster_size);
-  s64 shifted = offset_from_base + positive_shift_clusters * cluster_size;
+  u64 positive_shift_clusters = offset_from_base >= 0 ? 0 : ((-offset_from_base + cache_metadata->cluster_size - 1) / cache_metadata->cluster_size);
+  s64 shifted = offset_from_base + positive_shift_clusters * cache_metadata->cluster_size;
   assert(shifted >= 0);
-  s64 cluster_id = (shifted) / cluster_size - positive_shift_clusters;
-  *offset_within_cluster_out = shifted % cluster_size;
+  s64 cluster_id = (shifted) / cache_metadata->cluster_size - positive_shift_clusters;
+  *offset_within_cluster_out = shifted % cache_metadata->cluster_size;
   return this->get_cluster(cluster_id);
+}
+
+sref<fat32_cluster_cache::cluster>
+fat32_cluster_cache::evict_cluster(s64 cluster_id)
+{
+  if (!cached_clusters.lookup(cluster_id))
+    return sref<cluster>();
+  lock_guard<spinlock> l(&alloc);
+  cluster *i;
+  if (!cached_clusters.lookup(cluster_id, &i))
+    return sref<cluster>();
+  if (!cached_clusters.remove(cluster_id, i))
+    panic("should never fail to remove from cached_clusters");
+
+  if (i == i->next_try_free) {
+    assert(first_try_free == i);
+    assert(i->prev_try_free == i);
+    first_try_free = nullptr;
+  } else {
+    first_try_free = i->next_try_free;
+    i->next_try_free->prev_try_free = i->prev_try_free;
+    i->prev_try_free->next_try_free = i->next_try_free;
+  }
+  i->next_try_free = i->prev_try_free = nullptr;
+  i->delete_on_zero = true;
+  assert(clusters_used > 0);
+  clusters_used--;
+
+  // we no longer hold a reference to this cluster, so we need to decrement it (which will eventually free it, since
+  // delete_on_zero is set) -- but our caller wants a reference, however short lived it ends up being, so we use
+  // transfer to give them our reference.
+  return sref<cluster>::transfer(i);
 }
 
 sref<fat32_cluster_cache::cluster>
 fat32_cluster_cache::get_cluster(s64 cluster_id)
 {
-  // static u64 cluster_fetches = 0;
-  // cprintf("cache get(%ld) -> %d fetches\n", cluster_id, ++cluster_fetches);
-  sref<cluster> r;
   cluster *i;
   if (cached_clusters.lookup(cluster_id, &i)) {
     assert(i);
@@ -136,14 +185,13 @@ fat32_cluster_cache::get_cluster(s64 cluster_id)
       return sref<cluster>::transfer(i);
     panic("should never fail to increment while we have the lock!");
   }
-  if (clusters_used >= max_clusters_used) {
+  if (clusters_used >= cache_metadata->max_clusters_used) {
     if (!evict_unused_cluster())
       panic("entire FAT32 cluster cache used up by unfreeable clusters");
-    assert(clusters_used < max_clusters_used);
+    assert(clusters_used < cache_metadata->max_clusters_used);
   }
-  i = new cluster(cluster_id);
+  i = new cluster(cluster_id, cache_metadata);
   clusters_used++;
-  // cprintf("cached cluster at %ld; %lu now used\n", cluster_id, clusters_used);
   // this ends up being "least recently allocated" order, which is imperfect but better than some of the other options
   if (first_try_free) {
     i->next_try_free = first_try_free;
@@ -153,14 +201,8 @@ fat32_cluster_cache::get_cluster(s64 cluster_id)
     first_try_free = i;
     i->next_try_free = i->prev_try_free = i;
   }
-  // grab the lock on the cluster buffer, so that anyone who tries to access its data will wait on us
-  i->claim_buffer_population();
   if (!cached_clusters.insert(cluster_id, i))
     panic("should never fail to insert into cached_clusters");
-  // release the lock explicitly so that we can start our potentially-sleeping read
-  l.release();
-  // releases the lock on the cluster buffer once data has been loaded
-  i->populate_buffer_ptr(this);
   // newref because i's placement into cached_clusters is the original implicit ref
   return sref<cluster>::newref(i);
 }
@@ -187,7 +229,7 @@ fat32_cluster_cache::~fat32_cluster_cache()
 u32
 fat32_cluster_cache::devno()
 {
-  return device->devno;
+  return cache_metadata->device->devno;
 }
 
 bool
@@ -220,6 +262,7 @@ fat32_cluster_cache::evict_unused_cluster()
       delete try_free;
       return true;
     }
+    try_free = try_free->next_try_free;
   } while (try_free != first_try_free);
   return false;
 }
