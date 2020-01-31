@@ -87,7 +87,12 @@ OBJS = \
 	vfsadapt.o \
 	vfsnull.o \
 	vfsmount.o \
-	fat32.o \
+	fat32/fat32_alloc_table.o \
+	fat32/fat32_cluster_cache.o \
+	fat32/fat32_dirent.o \
+	fat32/fat32_filesystem.o \
+	fat32/fat32_header.o \
+	fat32/fat32_vnode.o \
 	sharedmem.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
