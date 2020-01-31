@@ -1,6 +1,7 @@
 #include "types.h"
 #include "kernel.hh"
 #include "vfs.hh"
+#include "cmdline.hh"
 
 static sref<virtual_filesystem> mounts;
 
@@ -38,13 +39,14 @@ initvfs()
   if (r)
     panic("nullfs mount failed: %d\n", r);
 
-  auto fat32disk = disk_find("ahci0.0p1");
+
+  auto fat32disk = disk_find(cmdline_params.fat32_disk);
   if (!fat32disk) {
-    cprintf("could not find ahci0.0p1 to scan for a fat32 filesystem\n");
+    cprintf("could not find '%s' to scan for a fat32 filesystem\n", cmdline_params.fat32_disk);
   } else {
     auto fat32fs = vfs_new_fat32(fat32disk);
     if (!fat32fs) {
-      cprintf("could not find a valid fat32 filesystem on ahci0.0p1\n");
+      cprintf("could not find a valid fat32 filesystem on '%s'\n", cmdline_params.fat32_disk);
     } else {
       auto fat32node = mounts->root()->create_dir("fat32");
       r = mounts->mount(fat32node, fat32fs);

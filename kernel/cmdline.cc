@@ -41,6 +41,7 @@ param_metadata_t<u64> uint_params[] = {};
 
 param_metadata_t<const char*> string_params[] = {
   { "root_disk", (const char**) cmdline_params.root_disk, "memide.0", NULL },
+  { "fat32_disk", (const char**) cmdline_params.fat32_disk, "ahci0.0p1", NULL },
 };
 
 static int
