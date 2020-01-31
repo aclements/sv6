@@ -13,6 +13,7 @@ void            kbdintr(void);
 // swtch.S
 struct context;
 void            swtch(struct context**, struct context*);
+void            swtch_and_barrier(struct context**, struct context*);
 void            switch_to_kstack();
 
 // trap.c
