@@ -172,7 +172,7 @@ exit(int status)
     sref<vmap> vmap = std::move(myproc()->vmap);
     // Switch to kernel page table, since we may be just about to
     // destroy the current page table.
-    switchvm(myproc());
+    switchvm(vmap.get(), nullptr);
 
     // Remove user visible state associated with this proc from vmap.
     vmap->remove((uptr)myproc(), PGSIZE);

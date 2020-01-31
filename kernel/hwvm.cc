@@ -483,31 +483,27 @@ safe_read_hw(void *dst, uintptr_t src, size_t n)
 
 // Switch TSS and h/w page table to correspond to process p.
 void
-switchvm(struct proc *p)
+switchvm(vmap* from, vmap* to)
 {
-  scoped_cli cli;
+  if (from != to) {
+    ensure_secrets();
+    scoped_cli cli;
 
-  if (!p->vmap && *cur_page_map_cache) {
-    assert(secrets_mapped);
-
-    // Switch directly to the base kernel page table, using PCID=0.
-    lcr3(v2p(&kpml4));
-    *cur_page_map_cache = nullptr;
-  } else if (p->vmap && &p->vmap->cache != *cur_page_map_cache) {
-    assert(secrets_mapped);
-
-    if (*cur_page_map_cache) {
-      (*cur_page_map_cache)->switch_from();
+    if (from) {
+      from->cache.switch_from();
     }
-    *cur_page_map_cache = &p->vmap->cache;
-    (*cur_page_map_cache)->switch_to();
 
-    if (cpuid::features().spec_ctrl) { // TODO: control via param
-      indirect_branch_prediction_barrier();
+    if (!to) {
+      // Switch directly to the base kernel page table, using PCID=0.
+      lcr3(v2p(&kpml4));
+    } else {
+      to->cache.switch_to();
+
+      if (cpuid::features().spec_ctrl) { // TODO: control via param
+        indirect_branch_prediction_barrier();
+      }
     }
   }
-
-  mycpu()->ts.rsp[0] = (u64) p->kstack + KSTACKSIZE;
 }
 
 // Set up CPU's kernel segment descriptors.

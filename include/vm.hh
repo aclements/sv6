@@ -209,7 +209,7 @@ private:
   uptr unmapped_area(size_t n);
 
   mmu::page_map_cache cache;
-  friend void switchvm(struct proc *);
+  friend void switchvm(struct vmap*, struct vmap*);
 
   // Virtual page frames
   typedef radix_array<vmdesc, USERTOP / PGSIZE, PGSIZE,

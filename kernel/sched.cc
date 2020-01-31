@@ -245,7 +245,9 @@ public:
       mtpause(prev);
     mtign();
 
-    switchvm(next);
+    switchvm(prev->vmap.get(), next->vmap.get());
+    mycpu()->ts.rsp[0] = (u64)next->kstack + KSTACKSIZE;
+
     next->set_state(RUNNING);
     next->tsc = rdtsc();
 

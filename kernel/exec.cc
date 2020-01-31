@@ -170,7 +170,7 @@ exec(const char *path, const char * const *argv)
   }
 
   // Switch to the new address space
-  switchvm(myproc());
+  switchvm(oldvmap.get(), myproc()->vmap.get());
 
   return 0;
 }
