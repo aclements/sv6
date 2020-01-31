@@ -43,6 +43,10 @@ inituser(void)
   p->tf->rip = INIT_START;  // beginning of initcode.S
   p->data_cpuid = myid();
 
+  // TODO: Why does this process need to be pinned to CPU 0?
+  p->cpuid = 0;
+  p->cpu_pin = 1;
+
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd.reset(); // forkret will fix in the process's context
   acquire(&p->lock);
