@@ -163,12 +163,13 @@ private:
   chainhash<s64, cluster*> cached_clusters;
 };
 
-class fat32_alloc_table {
+class fat32_alloc_table : public referenced {
 public:
   explicit fat32_alloc_table(sref<fat32_cluster_cache> cluster_cache, u32 offset, u32 sectors);
 
   u32 next_cluster_id(u32 from_cluster_id);
 
+  NEW_DELETE_OPS(fat32_alloc_table);
 private:
   sref<fat32_cluster_cache> cluster_cache;
   u32 table_base_offset;
@@ -177,7 +178,7 @@ private:
 
 class vnode_fat32 : public vnode {
 public:
-  explicit vnode_fat32(sref<class fat32_filesystem_weaklink> fs, u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size, sref<fat32_cluster_cache> cluster_cache);
+  explicit vnode_fat32(sref<class fat32_filesystem_weaklink> fs, u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size);
   u32 first_cluster_id();
 
   void stat(struct stat *st, enum stat_flags flags) override;
@@ -234,6 +235,7 @@ private:
   strbuf<FILENAME_MAX> my_filename;
 
   sref<fat32_cluster_cache> cluster_cache;
+  sref<fat32_alloc_table> fat;
   bool directory;
   u32 file_byte_length;
 
@@ -252,7 +254,7 @@ public:
   NEW_DELETE_OPS(fat32_filesystem);
 private:
   void onzero() override;
-  fat32_alloc_table fat;
+  sref<fat32_alloc_table> fat;
   fat32_header hdr;
   sref<vnode_fat32> root_node;
   sref<class fat32_filesystem_weaklink> weaklink;

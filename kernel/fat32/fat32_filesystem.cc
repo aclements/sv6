@@ -22,12 +22,11 @@ vfs_new_fat32(disk *device)
 }
 
 fat32_filesystem::fat32_filesystem(const sref<fat32_cluster_cache>& cluster_cache, fat32_header hdr)
-  : fat(cluster_cache, hdr.first_fat_sector(), hdr.sectors_per_fat()), hdr(hdr),
-    weaklink(make_sref<fat32_filesystem_weaklink>(this)), cluster_cache(cluster_cache)
+  : hdr(hdr), weaklink(make_sref<fat32_filesystem_weaklink>(this)), cluster_cache(cluster_cache)
 {
+  fat = make_sref<fat32_alloc_table>(cluster_cache, hdr.first_fat_sector(), hdr.sectors_per_fat());
   u32 cluster = hdr.root_directory_cluster_id;
-  cprintf("root directory cluster: %u\n", cluster);
-  root_node = make_sref<vnode_fat32>(weaklink, cluster, true, sref<vnode_fat32>(), 0, cluster_cache);
+  root_node = make_sref<vnode_fat32>(weaklink, cluster, true, sref<vnode_fat32>(), 0);
 }
 
 sref<vnode>

@@ -2,8 +2,8 @@
 #include "strings.h"
 #include "fat32.hh"
 
-vnode_fat32::vnode_fat32(sref<fat32_filesystem_weaklink> fs, u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size, sref<fat32_cluster_cache> cluster_cache)
-  : filesystem(std::move(fs)), parent_dir(parent_dir), cluster_cache(cluster_cache), directory(is_directory), file_byte_length(file_size)
+vnode_fat32::vnode_fat32(sref<fat32_filesystem_weaklink> fs, u32 first_cluster_id, bool is_directory, sref<vnode_fat32> parent_dir, u32 file_size)
+  : filesystem(std::move(fs)), parent_dir(parent_dir), directory(is_directory), file_byte_length(file_size)
 {
   if (is_directory)
     assert(file_size == 0);
@@ -13,11 +13,15 @@ vnode_fat32::vnode_fat32(sref<fat32_filesystem_weaklink> fs, u32 first_cluster_i
   if (!ref)
     panic("filesystem should not have been freed during a vnode allocation!");
   validate_cluster_id(ref->hdr, first_cluster_id);
+  fat = ref->fat;
+  cluster_cache = ref->cluster_cache;
+  assert(fat);
+  assert(cluster_cache);
 
   // count number of clusters
   u32 count = 1;
   u32 last_cluster_id = first_cluster_id;
-  while ((last_cluster_id = ref->fat.next_cluster_id(last_cluster_id)) < 0x0FFFFFF8)
+  while ((last_cluster_id = fat->next_cluster_id(last_cluster_id)) < 0x0FFFFFF8)
     count++;
 
   cluster_ids = (u32*) kmalloc(sizeof(u32) * count, "vnode_fat32 cluster_ids");
@@ -27,7 +31,7 @@ vnode_fat32::vnode_fat32(sref<fat32_filesystem_weaklink> fs, u32 first_cluster_i
       panic("cluster count changed!");
     validate_cluster_id(ref->hdr, last_cluster_id);
     cluster_ids[i] = last_cluster_id;
-    last_cluster_id = ref->fat.next_cluster_id(last_cluster_id);
+    last_cluster_id = fat->next_cluster_id(last_cluster_id);
   }
   if (last_cluster_id < 0x0FFFFFF8)
     panic("cluster count changed!");
@@ -263,7 +267,7 @@ vnode_fat32::populate_children()
       } else {
         bool isdir = (d->attributes & ATTR_DIRECTORY) != 0;
         u32 file_size = d->file_size_bytes;
-        sref<vnode_fat32> new_child = make_sref<vnode_fat32>(filesystem, d->cluster_id(), isdir, sref<vnode_fat32>::newref(this), file_size, fs->cluster_cache);
+        sref<vnode_fat32> new_child = make_sref<vnode_fat32>(filesystem, d->cluster_id(), isdir, sref<vnode_fat32>::newref(this), file_size);
 
         if (has_long_filename && long_filename_last_index == 1 && long_filename_checksum == d->checksum()) {
           // use long filename entry
