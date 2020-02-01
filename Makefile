@@ -342,6 +342,20 @@ setup-linux:
 	ssh amsterdam.csail.mit.edu \
 	sed -i .bak "'s/^default /#&/;/^# *default localboot/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg
 
+$(O)/writeok:
+	echo >$@
+
+$(O)/example.fat: $(O)/bin/ls README.md $(O)/writeok
+	dd if=/dev/zero of=$@ bs=4096 count=66560
+	mkfs.fat -F 32 -s 8 -S 512 $@
+	mmd -i $@ ::bin
+	mmd -i $@ ::foo
+	mmd -i $@ ::foo/sysl
+	mcopy -i $@ /usr/lib/syslinux/modules/bios/*.c32 ::foo/sysl/
+	mcopy -i $@ $(O)/bin/ls ::bin
+	mcopy -i $@ ./README.md ::
+	mcopy -i $@ $(O)/writeok ::
+
 $(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon syslinux.cfg
 	dd if=/dev/zero of=$@ bs=4096 count=66560
 	mkfs.fat -F 32 -s 8 -S 512 $@

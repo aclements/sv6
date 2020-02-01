@@ -21,6 +21,14 @@ vfs_new_fat32(disk *device)
   return make_sref<fat32_filesystem>(cluster_cache, hdr);
 }
 
+void
+vfs_enable_fat32_writeback(const sref<filesystem> &fs)
+{
+  auto ffs = dynamic_cast<fat32_filesystem *>(fs.get());
+  assert(ffs);
+  ffs->enable_writeback();
+}
+
 fat32_filesystem::fat32_filesystem(const sref<fat32_cluster_cache>& cluster_cache, fat32_header hdr)
   : hdr(hdr), weaklink(make_sref<fat32_filesystem_weaklink>(this)), cluster_cache(cluster_cache)
 {
@@ -45,6 +53,12 @@ sref<vnode>
 fat32_filesystem::resolve_parent(const sref<vnode>& base)
 {
   return base->cast<vnode_fat32>()->ref_parent();
+}
+
+void
+fat32_filesystem::enable_writeback()
+{
+  cluster_cache->enable_writeback();
 }
 
 void

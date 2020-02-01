@@ -52,6 +52,12 @@ initvfs()
       r = mounts->mount(fat32node, fat32fs);
       if (r)
         panic("fat32 mount failed: %d\n", r);
+      if (fat32fs->resolve(sref<vnode>(), "/writeok")) {
+        cprintf("found writeok; setting FAT32 filesystem to write-back\n");
+        vfs_enable_fat32_writeback(fat32fs);
+      } else {
+        cprintf("did not find writeok; setting FAT32 filesystem to memory-only\n");
+      }
     }
   }
 }

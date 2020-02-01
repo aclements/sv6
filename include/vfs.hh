@@ -124,6 +124,7 @@ private:
 sref<filesystem> vfs_new_nullfs();
 sref<filesystem> vfs_get_mfs();
 sref<filesystem> vfs_new_fat32(disk *device);
+void vfs_enable_fat32_writeback(const sref<filesystem> &fs);
 
 void vfs_mount(const sref<filesystem>& fs, const char *path);
 sref<filesystem> vfs_root();

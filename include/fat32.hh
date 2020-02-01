@@ -141,6 +141,8 @@ public:
     NEW_DELETE_OPS(cluster);
   private:
     void populate_cache_data();
+    bool try_writeback();
+    void skip_writeback();
     void onzero() override;
 
     sref<metadata> cache_metadata;
@@ -150,7 +152,7 @@ public:
     // it won't cause a circular dependency, but it's still pretty sketchy even as-is.
     sref<class fat32_alloc_table> free_on_delete_fat;
     bool delete_on_zero = false;
-    bool needs_writeback = false;
+    std::atomic<bool> needs_writeback;
     u32 kalloc_pages = 0;
     sleeplock cluster_data_lock;
     u8 *cluster_data = nullptr; // this counts as a page reference to every page up to kalloc_pages
@@ -163,6 +165,7 @@ public:
   sref<cluster> get_cluster_for_disk_byte_offset(u64 offset, u64 *offset_within_cluster_out);
   // if there is no cluster in the cache, returns a null reference, otherwise evicts and returns it. no internal
   // reference will be maintained, so it will be freed as soon as all references drop.
+  // WARNING: THIS MAY PREVENT CHANGES TO THE CLUSTER FROM BEING WRITTEN BACK!
   sref<cluster> evict_cluster(s64 cluster_id);
   // only returns a cluster if it happens to be present in the cache
   sref<cluster> try_get_cluster(s64 cluster_id);
@@ -170,15 +173,20 @@ public:
   ~fat32_cluster_cache() override;
   u32 devno();
 
+  void enable_writeback();
+
   const sref<metadata> cache_metadata;
 
   NEW_DELETE_OPS(fat32_cluster_cache);
 private:
   // alloc lock must be held
   bool evict_unused_cluster();
+  u32 writeback_all();
+  static void __attribute__((noreturn)) writeback_thread(void *cache_ptr);
 
   spinlock alloc;
   u64 clusters_used = 0;
+  bool allow_writeback = false;
   cluster *first_try_free = nullptr;
   chainhash<s64, cluster*> cached_clusters;
 };
@@ -298,6 +306,8 @@ public:
   sref<vnode> root() override;
   sref<vnode> resolve_child(const sref<vnode>& base, const char *filename) override;
   sref<vnode> resolve_parent(const sref<vnode>& base) override;
+
+  void enable_writeback();
 
   NEW_DELETE_OPS(fat32_filesystem);
 private:
