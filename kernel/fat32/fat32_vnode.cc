@@ -54,10 +54,40 @@ vnode_fat32::validate_cluster_id(fat32_header &hdr, u32 cluster_id)
 }
 
 void
+vnode_fat32::retire_one_cluster(u32 cluster_id)
+{
+  // once we evict this cluster, no one will be able to get a new reference to it until the cluster is re-used,
+  // because the only way for them to do so would be to find it in cluster_ids, from which it is being removed.
+  sref<fat32_cluster_cache::cluster> c = cluster_cache->evict_cluster(cluster_id);
+
+  if (c) {
+    fat->mark_cluster_final(cluster_id);
+    c->mark_free_on_delete(fat);
+  } else {
+    fat->mark_cluster_free(cluster_id);
+  }
+}
+
+// helper function for onzero; should not be used otherwise
+void
+vnode_fat32::retire_clusters()
+{
+  for (u32 i = 0; i < cluster_count; i++)
+    retire_one_cluster(cluster_ids[i]);
+
+  kmfree(cluster_ids, sizeof(u32) * cluster_count);
+  cluster_ids = nullptr;
+  cluster_count = 0;
+}
+
+void
 vnode_fat32::onzero()
 {
   // we assume that, since all references have been dropped, there is no need to take the resize lock
-  kmfree(cluster_ids, sizeof(u32) * cluster_count);
+  if (free_clusters_on_zero)
+    retire_clusters();
+  if (cluster_count > 0)
+    kmfree(cluster_ids, sizeof(u32) * cluster_count);
   delete this;
 }
 
@@ -292,18 +322,9 @@ vnode_fat32::truncate()
 
     fat->mark_cluster_final(cluster_to_preserve);
 
-    for (u32 i = 1; i < cluster_count; i++) {
-      // once we evict this cluster, no one will be able to get a new reference to it until the cluster is re-used,
-      // because the only way for them to do so would be to find it in cluster_ids, from which it is being removed.
-      sref<fat32_cluster_cache::cluster> c = cluster_cache->evict_cluster(cluster_ids[i]);
+    for (u32 i = 1; i < cluster_count; i++)
+      retire_one_cluster(cluster_ids[i]);
 
-      if (c) {
-        fat->mark_cluster_final(cluster_ids[i]);
-        c->mark_free_on_delete(fat);
-      } else {
-        fat->mark_cluster_free(cluster_ids[i]);
-      }
-    }
     kmfree(cluster_ids, sizeof(u32) * cluster_count);
     cluster_count = 1;
     cluster_ids = (u32*) kmalloc(sizeof(u32) * cluster_count, "vnode_fat32 cluster_ids");
@@ -364,16 +385,20 @@ static void warn_invalid_lfn_entry() {
   }
 }
 
-void
+lock_guard<rwlock::read>
 vnode_fat32::populate_children()
 {
-  if (children_populated) {
-    barrier();
-    return;
-  }
-  lock_guard<sleeplock> guard(&structure_lock);
+  assert(directory);
+  auto rl = structure_lock.guard_read();
   if (children_populated)
-    return;
+    return rl;
+  auto wl = structure_lock.upgrade(rl);
+  if (!wl) {
+    // could not upgrade? then someone else must have run populate_children()
+    rl = structure_lock.guard_read();
+    assert(children_populated);
+    return rl;
+  }
   auto fs = filesystem->get();
   if (!fs)
     panic("attempt to populate children when there is no filesystem present"); // TODO: handle this gracefully, make sure it's never a problem, or refactor these references
@@ -465,11 +490,25 @@ vnode_fat32::populate_children()
       }
     }
   }
-  assert(!last_child_created->next_sibling_node);
+  assert(!last_child_created || !last_child_created->next_sibling_node);
   if (has_long_filename)
     warn_invalid_lfn_entry();
-  barrier();
   children_populated = true;
+  return structure_lock.downgrade(wl);
+}
+
+sref<fat32_cluster_cache::cluster>
+vnode_fat32::get_dirent_ref(u32 dirent_index, fat32_dirent **out)
+{
+  u32 dirents_per_cluster = cluster_cache->cache_metadata->cluster_size / sizeof(fat32_dirent);
+  u32 cluster_local_id = dirent_index / dirents_per_cluster;
+  u32 dirent_subindex = dirent_index % dirents_per_cluster;
+  auto cluster = this->get_cluster_data(cluster_local_id);
+  if (!cluster)
+    return sref<fat32_cluster_cache::cluster>();
+  auto dirents = (fat32_dirent *) cluster->buffer_ptr();
+  *out = &dirents[dirent_subindex];
+  return cluster;
 }
 
 void
@@ -479,19 +518,54 @@ vnode_fat32::update_child_length_on_disk(vnode_fat32 *child, u32 new_byte_length
   assert(child->parent_dir == this);
   assert(child->dirent_index_in_parent != UINT64_MAX);
 
-    u32 dirents_per_cluster = cluster_cache->cache_metadata->cluster_size / sizeof(fat32_dirent);
-  u32 cluster_local_id = child->dirent_index_in_parent / dirents_per_cluster;
-  u32 dirent_index = child->dirent_index_in_parent % dirents_per_cluster;
-  auto cluster = this->get_cluster_data(cluster_local_id);
+  fat32_dirent *d = nullptr;
+  auto cluster = this->get_dirent_ref(child->dirent_index_in_parent, &d);
   if (!cluster)
     panic("should never fail to find cluster that child must have come from");
-  auto dirents = (fat32_dirent *) cluster->buffer_ptr();
 
-  // this entry is protected by the child's resize lock that they must be holding for us right now
-  fat32_dirent *d = &dirents[dirent_index];
-  assert((uptr) &d->file_size_bytes % sizeof(d->file_size_bytes) == 0); // must be aligned!
+  // d is protected by the child's resize lock that they must be holding for us right now.
+  assert(d->filename[0] != 0xE5);
   // no need for a barrier here; nobody's going to read this until next boot!
   d->file_size_bytes = new_byte_length;
+  cluster->mark_dirty();
+}
+
+void
+vnode_fat32::remove_child_from_disk(vnode_fat32 *child)
+{
+  assert(children_populated);
+  assert(child->parent_dir == this);
+  assert(child->dirent_index_in_parent != UINT64_MAX);
+
+  fat32_dirent *d = nullptr;
+  auto cluster = this->get_dirent_ref(child->dirent_index_in_parent, &d);
+  if (!cluster)
+    panic("should never fail to find cluster that child must have come from");
+
+  // no need for a barrier here; nobody's going to read this until next boot!
+  assert(d->filename[0] != 0xE5);
+  d->filename[0] = 0xE5; // unused entry
+
+  u64 i = child->dirent_index_in_parent;
+  while (i-- > 0) {
+    auto nc = this->get_dirent_ref(child->dirent_index_in_parent, &d);
+    if (!nc)
+      panic("should never fail to find cluster less than known existent index");
+    if (cluster != nc) {
+      cluster->mark_dirty();
+      cluster = nc;
+    }
+
+    // once we hit the end of the LFN entries, we have to stop clearing, for fear of clobbering another entry's LFN
+    // entries.
+    if (d->filename[0] == 0xE5 || d->filename[0] == '\0' || d->attributes != ATTR_LFN)
+      break;
+
+    // we don't need to check any further properties; if the LFN entries were supposed to belong to another entry, we
+    // should have hit that other entry first and stopped.
+    d->filename[0] = 0xE5;
+  }
+
   cluster->mark_dirty();
 }
 
@@ -514,17 +588,29 @@ vnode_fat32::ref_parent()
 }
 
 sref<vnode_fat32>
-vnode_fat32::ref_child(const char *name)
+vnode_fat32::ref_child_locked(const char *name, sref<vnode_fat32> *prev_out)
 {
   assert(directory);
   assert(strcmp(name, ".") != 0);
   assert(strcmp(name, "..") != 0);
 
-  populate_children();
-  for (sref<vnode_fat32> child = first_child_node; child; child = child->next_sibling_node)
-    if (strcasecmp(child->my_filename.ptr(), name) == 0)
+  sref<vnode_fat32> last;
+  for (sref<vnode_fat32> child = first_child_node; child; child = child->next_sibling_node) {
+    if (strcasecmp(child->my_filename.ptr(), name) == 0) {
+      if (prev_out)
+        *prev_out = last;
       return child;
+    }
+    last = child;
+  }
   return sref<vnode_fat32>();
+}
+
+sref<vnode_fat32>
+vnode_fat32::ref_child(const char *name)
+{
+  auto readlock = populate_children();
+  return ref_child_locked(name, nullptr);
 }
 
 bool
@@ -538,7 +624,7 @@ vnode_fat32::next_dirent(const char *last, strbuf<FILENAME_MAX> *next)
     *next = "..";
     return true;
   } else {
-    populate_children();
+    auto readlock = populate_children();
 
     // TODO: make FAT32 directory scanning not O(n^2) by changing the next_dirent API
     sref<vnode_fat32> v;
@@ -586,8 +672,41 @@ vnode_fat32::rename(const char *newname, sref<vnode> olddir, const char *oldname
 int
 vnode_fat32::remove(const char *name)
 {
-  cprintf("unimplemented: fat32 removal\n"); // fat32 is read-only for now
-  return -1;
+  if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+    return -1;
+
+  lock_guard<rwlock::write> l(&structure_lock.writer);
+
+  sref<vnode_fat32> previous;
+  // we hold structure_lock to make this possible
+  auto child = this->ref_child_locked(name, &previous);
+  if (!child)
+    return -1;
+
+  if (child->is_directory()) {
+    cprintf("unimplemented: directory removal\n");
+    return -1;
+  }
+
+  // steps:
+  //  - remove directory entry
+  //  - remove any long filenames associated with it
+  //  - remove references to vnode
+  //  - free all data blocks on disk once vnode is no longer referenced
+  this->remove_child_from_disk(child.get());
+
+  // protected with structure_lock
+  if (!previous) {
+    assert(child == this->first_child_node);
+    this->first_child_node = child->next_sibling_node;
+  } else {
+    assert(child == previous->next_sibling_node);
+    previous->next_sibling_node = child->next_sibling_node;
+  }
+
+  child->free_clusters_on_zero = true;
+
+  return 0;
 }
 
 sref<vnode>

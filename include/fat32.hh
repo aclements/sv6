@@ -3,6 +3,7 @@
 #include "cpputil.hh"
 #include "vfs.hh"
 #include "sleeplock.hh"
+#include "rwlock.hh"
 
 #define SECTORSIZ 512
 
@@ -254,10 +255,17 @@ public:
 
   NEW_DELETE_OPS(vnode_fat32);
 private:
+  // like ref_child; caller must hold a readlock or better on structure_lock; also happens to give you the previous node in the sibling list
+  sref<vnode_fat32> ref_child_locked(const char *name, sref<vnode_fat32> *prev_out);
+
   sref<fat32_cluster_cache::cluster> get_cluster_data(u32 cluster_local_id);
   void validate_cluster_id(fat32_header &hdr, u32 cluster_id);
-  void populate_children();
+  lock_guard<rwlock::read> populate_children();
+  sref<fat32_cluster_cache::cluster> get_dirent_ref(u32 dirent_index, fat32_dirent **out);
+  // must hold child's resize write lock
   void update_child_length_on_disk(vnode_fat32 *child, u32 new_byte_length);
+  // must hold structure lock
+  void remove_child_from_disk(vnode_fat32 *child);
 
   size_t write_at_nogrow(const char *addr, u64 off, size_t len);
   void zero_range_nogrow(u64 off, size_t len);
@@ -265,6 +273,9 @@ private:
   // must have resize_write_lock acquired during this call
   void expand_to_cluster_count(size_t clusters_needed);
 
+  void retire_one_cluster(u32 cluster_id);
+  // helper function for onzero; should not be used otherwise
+  void retire_clusters();
   void onzero() override;
 
   sref<fat32_filesystem_weaklink> filesystem;
@@ -273,7 +284,7 @@ private:
 
   // these three references form the directory tree structure
   sref<vnode_fat32> parent_dir;
-  sleeplock structure_lock; // taken while populating children
+  rwlock structure_lock; // protects children_populated, first_child_node, next_sibling_node
   bool children_populated = false;
   sref<vnode_fat32> first_child_node;
   // these three are managed by the PARENT node!
@@ -284,6 +295,8 @@ private:
   sref<fat32_cluster_cache> cluster_cache;
   sref<fat32_alloc_table> fat;
   bool directory;
+
+  bool free_clusters_on_zero = false;
 
   // protects reading or writing cluster_ids/cluster_count.
   spinlock resize_lock;

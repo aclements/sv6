@@ -79,6 +79,20 @@ public:
   {
     return !!l_;
   }
+
+  // these two should only be used in specialized circumstances, such as rwlock upgrading
+  void unsafe_transfer_in(Lock *l)
+  {
+    assert(!l_);
+    l_ = l;
+  }
+
+  Lock *unsafe_transfer_out()
+  {
+    auto o = l_;
+    l_ = nullptr;
+    return o;
+  }
 };
 
 #define USE_CODEX_IMPL CODEX
