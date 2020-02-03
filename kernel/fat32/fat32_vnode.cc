@@ -669,11 +669,30 @@ vnode_fat32::rename(const char *newname, sref<vnode> olddir, const char *oldname
   return -1;
 }
 
+bool
+vnode_fat32::kill_directory()
+{
+  // yes, this is acquiring a structure lock while another lock is acquired by the parent code that's running... but
+  // this is okay, because there's a total order on the locks that a parent's lock is never acquired while the thread
+  // holds any of its descendants' locks
+  lock_guard<rwlock::write> l(&structure_lock.writer);
+  assert(!directory_killed);
+  if (first_child_node)
+    return false;
+  // FIXME: actually respect the directory_killed flag
+  directory_killed = true;
+  return true;
+}
+
 int
 vnode_fat32::remove(const char *name)
 {
   if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
     return -1;
+
+  // make sure that the children are actually populated
+  // we don't hold onto the read lock because we need a write lock, and there's no need for an expensive upgrade
+  populate_children().release();
 
   lock_guard<rwlock::write> l(&structure_lock.writer);
 
@@ -684,8 +703,13 @@ vnode_fat32::remove(const char *name)
     return -1;
 
   if (child->is_directory()) {
-    cprintf("unimplemented: directory removal\n");
-    return -1;
+    // the only difference for a directory is that we can only remove it when there are no children
+    // if we were to ever remove it while it had children, we would have to carefully iterate over all of its
+    // descendants ... but this way, we only have to free the clusters storing the directory's entries themselves
+
+    // at the same time, we have to mark the directory as killed, so that nobody else can add files to it later
+    if (!child->kill_directory())
+      return -1;
   }
 
   // steps:

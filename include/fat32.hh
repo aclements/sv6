@@ -273,6 +273,9 @@ private:
   // must have resize_write_lock acquired during this call
   void expand_to_cluster_count(size_t clusters_needed);
 
+  // returns true and prevents file creations if directory is empty; false otherwise
+  bool kill_directory();
+
   void retire_one_cluster(u32 cluster_id);
   // helper function for onzero; should not be used otherwise
   void retire_clusters();
@@ -287,6 +290,7 @@ private:
   rwlock structure_lock; // protects children_populated, first_child_node, next_sibling_node
   bool children_populated = false;
   sref<vnode_fat32> first_child_node;
+  bool directory_killed = false;
   // these three are managed by the PARENT node!
   sref<vnode_fat32> next_sibling_node;
   strbuf<FILENAME_MAX> my_filename;
