@@ -321,7 +321,6 @@ OPTIONAL_OR_NOPS("mds")
 .balign 8
 .globl dblfltentry
 dblfltentry:
-        push $0  // err
         push $8  // trapno
         SAVE_REGISTERS
         subq  $0x10, %rsp
