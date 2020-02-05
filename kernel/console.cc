@@ -277,12 +277,18 @@ void __noret__
 kerneltrap(struct trapframe *tf)
 {
   cli();
-  acquire(&cons.lock);
+
+  // Try to acquire the lock, but give up after a while to prevent deadlock.
+  if (!tryacquire(&cons.lock)) {
+    u64 t = rdtsc() + 1000000000;
+    while(rdtsc() < t && !tryacquire(&cons.lock))
+      ;
+  }
 
   __cprintf("kernel ");
   printtrap(tf, false);
   printtrace(tf->rbp);
-  printbinctx(tf->rip);
+  // printbinctx(tf->rip);
 
   if (readmsr(MSR_INTEL_DEBUGCTL) & 1) {
     __cprintf("\nLast branch before exception: %lx -> %lx\n",
