@@ -49,6 +49,7 @@ struct cpu {
 } __page_align__;
 
 DECLARE_PERCPU(struct cpu, cpus);
+DECLARE_PERCPU(char*, nmistacktop);
 
 // Per-CPU variables, holding pointers to the
 // current cpu and to the current process.

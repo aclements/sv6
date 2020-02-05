@@ -135,17 +135,21 @@ vmap::alloc(void)
   v->qinsert(__qdata_start, __qdata_start, __qdata_end - __qdata_start);
   v->qinsert(__qpercpu_start, __qpercpu_start, __qpercpu_end - __qpercpu_start);
 
-  for(int c = 0; c < ncpu; c++) {
-    void* nmi_stack = (void*)(cpus[c].ts.ist[1] - KSTACKSIZE);
-    void* dblflt_stack = (void*)(cpus[c].ts.ist[2] - KSTACKSIZE);
+  u64 nmi_stacks_size = PGSIZE;
+  while (ncpu * sizeof(nmiframe) > nmi_stacks_size)
+    nmi_stacks_size *= 2;
+  v->nmi_stacks = (nmiframe*)kalloc("nmi_stacks", nmi_stacks_size);
+  v->qinsert(v->nmi_stacks, v->nmi_stacks, nmi_stacks_size);
+  memset(v->nmi_stacks, 0, nmi_stacks_size);
 
-    // TODO(behrensj): This isn't safe! There needs to be separate NMI stacks
-    // per address space per core although it should be fine if they were much
-    // smaller than KSTACKSIZE because NMIs switch stacks almost immediately.
-    v->qinsert(nmi_stack, nmi_stack, KSTACKSIZE); // nmi stack
+  for(int c = 0; c < ncpu; c++) {
+    nmiframe* cpu_nmiframe = (nmiframe*)(nmistacktop[c] - sizeof(nmiframe));
+    v->nmi_stacks[c].stack = cpu_nmiframe->stack;
+    v->nmi_stacks[c].gsbase = cpu_nmiframe->gsbase;
 
     // Any double fault results in a kernel panic, so it is harmless to just
     // share double fault stacks globally.
+    void* dblflt_stack = (void*)(cpus[c].ts.ist[2] - KSTACKSIZE);
     v->qinsert(dblflt_stack, dblflt_stack, KSTACKSIZE);
   }
 

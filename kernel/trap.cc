@@ -25,6 +25,8 @@ struct intdesc idt[256] __attribute__((section (".qdata"), aligned(4096)));
 
 static char fpu_initial_state[FXSAVE_BYTES];
 
+DEFINE_PERCPU(char*, nmistacktop);
+
 // boot.S
 extern u64 trapentry[];
 
@@ -119,76 +121,72 @@ namespace {
   DEFINE_PERCPU(int, nmi_swallow);
 }
 
+extern "C" void
+nmientry_c(struct nmiframe *tf)
+{
+  u64 saved_gsbase = readmsr(MSR_GS_BASE);
+  writemsr(MSR_GS_BASE, tf->gsbase);
+
+  // An NMI can come in after popcli() drops ncli to zero and intena
+  // is 1, but before popcli() checks intena and calls sti.  If the
+  // NMI handler acquires any lock, acquire() will call pushcli(),
+  // which will set intena to 0, and upon return from the NMI, the
+  // preempted popcli will observe intena=0 and fail to sti.
+  int intena_save = mycpu()->intena;
+
+  // The only locks that we can acquire during NMI are ones
+  // we acquire only during NMI.
+
+  // NMIs are tricky.  On the one hand, they're edge triggered,
+  // which means we're not guaranteed to get an NMI interrupt for
+  // every NMI event, so we have to proactively handle all of the
+  // NMI sources we can.  On the other hand, they're also racy,
+  // since an NMI source may successfully queue an NMI behind an
+  // existing NMI, but we may detect that source when handling the
+  // first NMI.  Our solution is to detect back-to-back NMIs and
+  // keep track of how many NMI sources we've handled: as long as
+  // the number of back-to-back NMIs in a row never exceeds the
+  // number of NMI sources we've handled across these back-to-back
+  // NMIs, we're not concerned, even if an individual NMI doesn't
+  // detect any active sources.
+
+  // Is this a back-to-back NMI?  If so, we might have handled all
+  // of the NMI sources already.
+  bool repeat = (*nmi_lastpc == tf->rip);
+  *nmi_lastpc = tf->rip;
+  if (!repeat)
+    *nmi_swallow = 0;
+
+  // Handle NMIs
+  int handled = 0;
+  handled += sampintr(tf);
+
+  // No lapiceoi because only fixed delivery mode interrupts need to
+  // be EOI'd (and fixed mode interrupts can't be programmed to
+  // produce an NMI vector).
+
+  if (handled == 0 && !*nmi_swallow)
+    panic("NMI");
+
+  // This NMI accounts for one handled event, so we can swallow up
+  // to handled - 1 more back-to-back NMIs after this one.
+  *nmi_swallow += handled - 1;
+
+  mycpu()->intena = intena_save;
+
+  writemsr(MSR_GS_BASE, saved_gsbase);
+}
+
+extern "C" void
+dblfltentry_c(struct trapframe *tf)
+{
+  kerneltrap(tf);
+}
+
 // C/C++ entry point for traps; called by assembly trap stub
 extern "C" void
 trap_c(struct trapframe *tf, bool had_secrets)
 {
-  if (tf->trapno == T_NMI) {
-    ensure_secrets();
-
-    // Manually copy the stack
-    proc* p = myproc();
-    if (!had_secrets && p && (tf->cs&3) == 0) {
-      assert(tf->rsp >= (u64)p->kstack);
-      assert(tf->rsp < (u64)p->kstack + KSTACKSIZE);
-      memcpy((char*)tf->rsp, (char*)tf->rsp - (u64)p->kstack + (u64)p->qstack,
-             (u64)p->kstack + KSTACKSIZE - tf->rsp);
-    }
-
-    // An NMI can come in after popcli() drops ncli to zero and intena
-    // is 1, but before popcli() checks intena and calls sti.  If the
-    // NMI handler acquires any lock, acquire() will call pushcli(),
-    // which will set intena to 0, and upon return from the NMI, the
-    // preempted popcli will observe intena=0 and fail to sti.
-    int intena_save = mycpu()->intena;
-
-    // The only locks that we can acquire during NMI are ones
-    // we acquire only during NMI.
-
-    // NMIs are tricky.  On the one hand, they're edge triggered,
-    // which means we're not guaranteed to get an NMI interrupt for
-    // every NMI event, so we have to proactively handle all of the
-    // NMI sources we can.  On the other hand, they're also racy,
-    // since an NMI source may successfully queue an NMI behind an
-    // existing NMI, but we may detect that source when handling the
-    // first NMI.  Our solution is to detect back-to-back NMIs and
-    // keep track of how many NMI sources we've handled: as long as
-    // the number of back-to-back NMIs in a row never exceeds the
-    // number of NMI sources we've handled across these back-to-back
-    // NMIs, we're not concerned, even if an individual NMI doesn't
-    // detect any active sources.
-
-    // Is this a back-to-back NMI?  If so, we might have handled all
-    // of the NMI sources already.
-    bool repeat = (*nmi_lastpc == tf->rip);
-    *nmi_lastpc = tf->rip;
-    if (!repeat)
-      *nmi_swallow = 0;
-
-    // Handle NMIs
-    int handled = 0;
-    handled += sampintr(tf);
-
-    // No lapiceoi because only fixed delivery mode interrupts need to
-    // be EOI'd (and fixed mode interrupts can't be programmed to
-    // produce an NMI vector).
-
-    if (handled == 0 && !*nmi_swallow)
-      panic("NMI");
-
-    // This NMI accounts for one handled event, so we can swallow up
-    // to handled - 1 more back-to-back NMIs after this one.
-    *nmi_swallow += handled - 1;
-
-    mycpu()->intena = intena_save;
-    return;
-  }
-
-  if (tf->trapno == T_DBLFLT) {
-    ensure_secrets();
-    kerneltrap(tf);
-  }
-
 #if MTRACE
   if (myproc()->mtrace_stacks.curr >= 0)
     mtpause(myproc());
@@ -215,6 +213,7 @@ trap(struct trapframe *tf, bool had_secrets)
 #if CODEX
     codex_magic_action_run_async_event(T_IRQ0 + IRQ_TIMER);
 #endif
+
     if (mycpu()->timer_printpc) {
       cprintf("cpu%d: proc %s rip %lx rsp %lx cs %x\n",
               mycpu()->id,
@@ -405,14 +404,8 @@ trap(struct trapframe *tf, bool had_secrets)
 void
 inittrap(void)
 {
-  u64 entry;
-  u8 bits;
-  int i;
-
-  bits = INT_P | SEG_INTR64;  // present, interrupt gate
-  for(i=0; i<256; i++) {
-    entry = trapentry[i];
-    idt[i] = INTDESC(KCSEG, entry, bits);
+  for(int i = 0; i < 256; i++) {
+    idt[i] = INTDESC(KCSEG, trapentry[i], INT_P | SEG_INTR64);
   }
 
   // Conservatively reserve all legacy IRQs.  This might cause us to
@@ -424,6 +417,22 @@ inittrap(void)
   // And reserve interrupt 255 (Intel SDM Vol. 3 suggests this can't
   // be used for MSI).
   irq_info[255 - T_IRQ0].in_use = true;
+
+  // Configure double fault handling
+  for (int c = 0; c < ncpu; c++) {
+    cpus[c].ts.ist[2] = (u64)kalloc("dblfltstack", KSTACKSIZE) + KSTACKSIZE;
+  }
+  idt[T_DBLFLT].ist = 2;
+
+  // Configure NMI handling
+  for (int c = 0; c < ncpu; c++) {
+    nmistacktop[c] = kalloc("nmistack", KSTACKSIZE) + KSTACKSIZE;
+    cpus[c].ts.ist[1] = (u64)nmistacktop[c] - 16;
+    nmiframe* tf = (nmiframe*)(nmistacktop[c] - sizeof(nmiframe));
+    tf->gsbase = (u64)&cpus[c].cpu;
+    tf->stack = (u64)tf;
+  }
+  idt[T_NMI].ist = 1;
 }
 
 void
@@ -497,25 +506,6 @@ initmsr(void)
     // disable these when I set "Hardware prefetcher" to disable, so
     // I'm not convinced the bits are right.
   }
-}
-
-void
-initnmi(void)
-{
-  void *nmistackbase = kalloc("kstack", KSTACKSIZE);
-  mycpu()->ts.ist[1] = (u64) nmistackbase + KSTACKSIZE;
-
-  if (mycpu()->id == 0)
-    idt[T_NMI].ist = 1;
-}
-
-void
-initdblflt(void)
-{
-  void *dfaultstackbase = kalloc("kstack", KSTACKSIZE);
-  mycpu()->ts.ist[2] = (uintptr_t)dfaultstackbase + KSTACKSIZE;
-  if (mycpu()->id == 0)
-    idt[T_DBLFLT].ist = 2;
 }
 
 void

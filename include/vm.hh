@@ -222,6 +222,8 @@ private:
   static_vector<void*, 32> qpage_pool_;
   struct spinlock qpage_pool_lock_;
 
+  nmiframe* nmi_stacks;
+
   enum class access_type
   {
     READ, WRITE

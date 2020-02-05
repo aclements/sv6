@@ -41,7 +41,7 @@ static void enable_nehalem_workaround(void);
 struct selector_state : public perf_selector
 {
   // Called on counter overflow.
-  void (*on_overflow)(int pmc, struct trapframe *tf);
+  void (*on_overflow)(int pmc, struct nmiframe *tf);
 };
 
 // Selector state, indexed by PMC.
@@ -598,7 +598,7 @@ sampstart(void)
 }
 
 int
-sampintr(struct trapframe *tf)
+sampintr(struct nmiframe *tf)
 {
   int r = 0;
 
@@ -630,7 +630,7 @@ sampintr(struct trapframe *tf)
 }
 
 static void
-samplog(int pmc, struct trapframe *tf)
+samplog(int pmc, struct nmiframe *tf)
 {
   struct pmuevent ev{};
   ev.idle = (myproc() == idleproc());
@@ -845,7 +845,7 @@ namespace {
 };
 
 static void
-wdcheck(int pmc, struct trapframe* tf)
+wdcheck(int pmc, struct nmiframe* tf)
 {
   ++*wd_count;
   if (*wd_count == 2 || *wd_count == 10) {

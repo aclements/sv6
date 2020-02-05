@@ -5,6 +5,8 @@
 #define NOEC pushq $0
 #define EC
 
+#define PADDR(x) ((x) - KCODE)
+
 #define _TRAP(x, code) \
         .globl trap ## x; \
         .balign 8; \
@@ -18,6 +20,11 @@
 
 #define TRAP(x) _TRAP(x, NOEC)
 #define TRAPCODE(x) _TRAP(x, EC)
+
+#define TRAPVECTORED(handler) \
+        .data; \
+        .quad handler; \
+        .previous
 
 #define _OPTIONAL(option, value, opcode) \
     .section .rodata; \
@@ -47,6 +54,55 @@
     .quad 0x5, alternative, 91f, 0; \
     .previous; \
     91:
+
+#define SAVE_REGISTERS        \
+        pushq %rdi;           \
+        movq  $0, %rdi;       \
+        pushq %rsi;           \
+        movq  $0, %rsi;       \
+        pushq %rdx;           \
+        movq  $0, %rdx;       \
+        pushq %rcx;           \
+        movq  $0, %rcx;       \
+        pushq %rax;           \
+        movq  $0, %rax;       \
+        pushq %r8;            \
+        movq  $0, %r8;        \
+        pushq %r9;            \
+        movq  $0, %r9;        \
+        pushq %r10;           \
+        movq  $0, %r10;       \
+        pushq %r11;           \
+        movq  $0, %r11;       \
+        pushq %rbx;           \
+        movq  $0, %rbx;       \
+        pushq %rbp;           \
+        movq  $0, %rbp;       \
+        pushq %r12;           \
+        movq  $0, %r12;       \
+        pushq %r13;           \
+        movq  $0, %r13;       \
+        pushq %r14;           \
+        movq  $0, %r14;       \
+        pushq %r15;           \
+        movq  $0, %r15;
+
+#define RESTORE_REGISTERS     \
+        popq %r15;            \
+        popq %r14;            \
+        popq %r13;            \
+        popq %r12;            \
+        popq %rbp;            \
+        popq %rbx;            \
+        popq %r11;            \
+        popq %r10;            \
+        popq %r9;             \
+        popq %r8;             \
+        popq %rax;            \
+        popq %rcx;            \
+        popq %rdx;            \
+        popq %rsi;            \
+        popq %rdi;
 
 .section .rodata
 mds_clear_cpu_buffers_ds:
@@ -173,38 +229,8 @@ OPTIONAL_OR_NOPS("mds")
         sysretq
 
 trapcommon:
-        pushq %rdi
-        movq  $0, %rdi
-        pushq %rsi
-        movq  $0, %rsi
-        pushq %rdx
-        movq  $0, %rdx
-        pushq %rcx
-        movq  $0, %rcx
-        pushq %rax
-        movq  $0, %rax
-        pushq %r8
-        movq  $0, %r8
-        pushq %r9
-        movq  $0, %r9
-        pushq %r10
-        movq  $0, %r10
-        pushq %r11
-        movq  $0, %r11
-        pushq %rbx
-        movq  $0, %rbx
-        pushq %rbp
-        movq  $0, %rbp
-        pushq %r12
-        movq  $0, %r12
-        pushq %r13
-        movq  $0, %r13
-        pushq %r14
-        movq  $0, %r14
-        pushq %r15
-        movq  $0, %r15
+        SAVE_REGISTERS
         subq  $0x10, %rsp
-
 OPTIONAL("kvm_paravirt", "yes")
         // If single-step mode was enabled, re-enable it for us too (for gdb'ing qemu)
         testq $0x100, TF_RFLAGS(%rsp)
@@ -214,17 +240,14 @@ OPTIONAL("kvm_paravirt", "yes")
         popf
 2:
 OPTIONAL_OR_NOPS("kvm_paravirt")
-
         // If this trap came from kernel space then don't switch stacks or page tables.
         cmpw  $KCSEG, TF_CS(%rsp)
         jz 1f
         swapgs
 1:      lfence
-
 OPTIONAL("lazy_barrier", "no")
         call switch_to_kstack
 OPTIONAL_OR_NOPS("lazy_barrier")
-
         movq %rsp, %rdi  // first argument to trap
         movq (secrets_mapped), %rsi  // second argument to trap
 OPTIONAL("fsgsbase", "yes")
@@ -247,24 +270,10 @@ OPTIONAL("fsgsbase", "yes")
         wrfsbase %rax
 OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
         addq $0x10, %rsp
-        popq %r15
-        popq %r14
-        popq %r13
-        popq %r12
-        popq %rbp
-        popq %rbx
-        popq %r11
-        popq %r10
-        popq %r9
-        popq %r8
-        popq %rax
-        popq %rcx
-        popq %rdx
-        popq %rsi
-        popq %rdi
+        RESTORE_REGISTERS
         addq $0x10, %rsp  // trapno, err
 
-        // If we are returning to kernel space, skip to the end of of trapret
+        // If we are returning to kernel space, skip to the end of trapret
         cmpw $KCSEG, 8(%rsp)
         jz 1f
 
@@ -309,6 +318,46 @@ OPTIONAL_OR_NOPS("mds")
 1:      lfence
         iretq
 
+.balign 8
+.globl dblfltentry
+dblfltentry:
+        push $0  // err
+        push $8  // trapno
+        SAVE_REGISTERS
+        subq  $0x10, %rsp
+        cmpw  $KCSEG, TF_CS(%rsp)
+        jz 1f
+        swapgs
+1:      lfence
+        movq $PADDR(kpml4), %rdi
+        movq %rdi, %cr3
+        movq %rsp, %rdi
+        call dblfltentry_c
+
+.balign 8
+.globl nmientry
+nmientry:
+        push $0          // nmiframe.padding3
+        push %rbp        // nmiframe.rbp
+        movq %cr3, %rbp
+        push %rbp        // nmiframe.cr3
+        movq $PADDR(kpml4), %rbp
+        movq %rbp, %cr3
+        movq %rsp, %rbp
+        movq NMI_STACK(%rbp), %rsp
+        push %rbp
+        SAVE_REGISTERS
+        movq 15*8(%rsp), %rdi
+        call nmientry_c
+        RESTORE_REGISTERS
+        pop %rsp
+        pop %rbp
+        movq %rbp, %cr3
+        pop %rbp
+        addq $8, %rsp
+        verw (mds_clear_cpu_buffers_ds)
+        iretq
+
 // This function does the same thing as `wrfsbase %rax`
 .globl emulate_wrfsbase
 emulate_wrfsbase:
@@ -344,13 +393,13 @@ trapentry:
     // See section 6.15 of Vol 3.
     TRAP(0)  // divide error
     TRAP(1)  // debug exception
-    TRAP(2)  // NMI
+    TRAPVECTORED(nmientry)
     TRAP(3)  // breakpoint
     TRAP(4)  // overflow
     TRAP(5)  // bound
     TRAP(6)  // invalid opcode
     TRAP(7)  // device not available
-    TRAPCODE(8)  // double fault - has error code
+    TRAPVECTORED(dblfltentry)
     TRAP(9)  // coprocessor overrun
     TRAPCODE(10)  // invalid TSS
     TRAPCODE(11)  // segment not present
@@ -362,7 +411,6 @@ trapentry:
     TRAPCODE(17)  // alignment check
     TRAP(18)  // machine check
     TRAP(19)  // simd
-    # Edit .+1,|seq 20 255 | sed 's/.*/    TRAP(&)/'
     TRAP(20)
     TRAP(21)
     TRAP(22)

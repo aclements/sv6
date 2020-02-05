@@ -25,8 +25,6 @@ void initconsole(void);
 void initpg(struct cpu *c);
 void cleanuppg(void);
 void inittls(struct cpu *);
-void initnmi(void);
-void initdblflt(void);
 void initcodex(void);
 void inittrap(void);
 void initfpu(void);
@@ -99,8 +97,6 @@ mpboot(void)
   initmsr();
   initsamp();
   initidle();
-  initdblflt();
-  initnmi();
   initwd();                     // Requires initnmi
   bstate.store(1);
   idleloop();
@@ -269,8 +265,6 @@ cmain(u64 mbmagic, u64 mbaddr)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);
 
   inituser();      // first user process
-  initdblflt();    // Requires inittrap
-  initnmi();
 
   // XXX hack until mnodes can load from disk
   extern void mfsload();

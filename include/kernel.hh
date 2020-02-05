@@ -218,7 +218,7 @@ struct proc*    threadpin(void (*fn)(void*), void *arg, const char *name, int cp
 
 // sampler.c
 void            sampstart(void);
-int             sampintr(struct trapframe*);
+int             sampintr(struct nmiframe*);
 void            sampconf(void);
 void            sampidle(bool);
 void            wdpoke(void);

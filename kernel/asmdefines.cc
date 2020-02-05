@@ -18,6 +18,8 @@ asmdefines(void)
   DEFINE(TF_RFLAGS, __offsetof(struct trapframe, rflags));
   DEFINE(TF_CS, __offsetof(struct trapframe, cs));
 
+  DEFINE(NMI_STACK, __offsetof(struct nmiframe, stack));
+
   DEFINE(PROC_KSTACK, __offsetof(struct proc, kstack));
   DEFINE(PROC_QSTACK, __offsetof(struct proc, qstack));
   DEFINE(PROC_UACCESS, __offsetof(struct proc, uaccess_));

@@ -461,3 +461,23 @@ struct trapframe {
   uint16_t ss;
   uint16_t padding0[3];
 } __attribute__((packed, aligned(8)));
+
+struct nmiframe {
+  uint64_t cr3;
+  uint64_t rbp;
+
+  uint64_t padding3;
+
+  // These are defined by amd64 hardware
+  uint64_t rip;
+  uint16_t cs;
+  uint16_t padding1[3];
+  uint64_t rflags;
+  uint64_t rsp;
+  uint16_t ss;
+  uint16_t padding0[3];
+
+  uint64_t gsbase;
+  uint64_t stack;
+} __attribute__((packed, aligned(16)));
+//static_assert(sizeof(nmiframe) == 0x50);

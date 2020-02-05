@@ -496,8 +496,10 @@ switchvm(vmap* from, vmap* to)
     if (!to) {
       // Switch directly to the base kernel page table, using PCID=0.
       lcr3(v2p(&kpml4));
+      mycpu()->ts.ist[1] = (u64)*nmistacktop - 16;
     } else {
       to->cache.switch_to();
+      mycpu()->ts.ist[1] = ((u64)&to->nmi_stacks[mycpu()->id + 1]) - 16;
 
       if (cpuid::features().spec_ctrl) { // TODO: control via param
         indirect_branch_prediction_barrier();
