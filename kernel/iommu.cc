@@ -15,7 +15,7 @@
 
 #include <iterator>
 
-static console_stream verbose(true);
+static console_stream verbose(false);
 
 abstract_iommu *iommu;
 

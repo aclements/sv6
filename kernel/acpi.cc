@@ -18,8 +18,8 @@ extern "C" {
 #include "acpi.h"
 }
 
-static console_stream verbose(true);
-static console_stream verbose2(true);
+static console_stream verbose(false);
+static console_stream verbose2(false);
 
 // ACPI table with a generic subtable layout.  This provides a
 // convenient iterator for traversing the subtables.

@@ -979,8 +979,10 @@ initphysmem()
       auto d = (efi_memory_descriptor*)&multiboot.efi_mmap[multiboot.efi_mmap_descriptor_size*i];
       if (d->type == 0 || d->type == 5 || d->type == 6 || d->type >= 8) {
         mem.remove(d->paddr, d->paddr + PGSIZE * d->npages);
-        cprintf("uefi-mmap reservation: %lx-%lx (type=%d)\n",
-                d->paddr, d->paddr + PGSIZE * d->npages-1, d->type);
+        if (DEBUG) {
+          cprintf("uefi-mmap reservation: %lx-%lx (type=%d)\n",
+                  d->paddr, d->paddr + PGSIZE * d->npages-1, d->type);
+        }
       }
     }
   }
@@ -988,8 +990,10 @@ initphysmem()
   // Consider first 1MB of memory unusable
   mem.remove(0, 0x100000);
 
-  console.println("Scrubbed memory map:");
-  mem.print();
+  if (DEBUG) {
+    console.println("Scrubbed memory map:");
+    mem.print();
+  }
 
   // Reserve kernel ELF image
   mem.remove(0, v2p(end));
