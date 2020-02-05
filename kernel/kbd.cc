@@ -1,6 +1,6 @@
 #include "types.h"
 #include "amd64.h"
-#include "kern_c.h"
+#include "kernel.hh"
 #include "kbd.h"
 
 int
@@ -8,7 +8,7 @@ kbdgetc(void)
 {
   static int shift __mpalign__;
   static u8 *charcode[4] = {
-    normalmap, shiftmap, ctlmap, ctlmap
+    kbd_normal_map, kbd_shift_map, kbd_ctl_map, kbd_ctl_map
   };
   u32 st, data, c;
 
@@ -23,7 +23,7 @@ kbdgetc(void)
   } else if(data & 0x80){
     // Key released
     data = (shift & E0ESC ? data : data & 0x7F);
-    shift &= ~(shiftcode[data] | E0ESC);
+    shift &= ~(kbd_shift_code[data] | E0ESC);
     return 0;
   } else if(shift & E0ESC){
     // Last character was an E0 escape; or with 0x80
@@ -31,8 +31,8 @@ kbdgetc(void)
     shift &= ~E0ESC;
   }
 
-  shift |= shiftcode[data];
-  shift ^= togglecode[data];
+  shift |= kbd_shift_code[data];
+  shift ^= kbd_toggle_code[data];
   c = charcode[shift & (CTL | SHIFT)][data];
   if(shift & CAPSLOCK){
     if('a' <= c && c <= 'z')

@@ -1,7 +1,9 @@
 #pragma once
 
 extern "C" {
-#include "kern_c.h"
+#include "mmu.h"
+#include "types.h"
+#include "lib.h"
 }
 
 #include <atomic>
@@ -26,6 +28,7 @@ static inline void *p2v(uptr a) {
   return (u8 *) a + KBASE;
 }
 
+struct ipcmsg;
 struct trapframe;
 struct spinlock;
 struct condvar;
@@ -81,6 +84,7 @@ void            cgaputc(int c);
 
 // vga.c
 void            vgaputc(int c);
+void            set_vga_status_indicator(cpuid_t cpu, u32 color);
 
 // cmdline.cc
 int             cmdline_view_param(const char *name);
@@ -97,6 +101,7 @@ int             vsnprintf(char *buf, u32 n, const char *fmt, va_list ap);
 int             snprintf(char *buf, u32 n, const char *fmt, ...);
 void            printtrap(struct trapframe *, bool lock = true);
 void            printtrace(u64 rbp);
+void            consoleintr(int(*)(void));
 
 // exec.c
 int             exec(const char*, const char* const*);
@@ -249,14 +254,18 @@ int             fdalloc(sref<file>&& f, int omode);
 sref<file>      getfile(int fd);
 
 // swtch.S
-void            swtch(struct context**, struct context*);
-void            switch_to_kstack();
+extern "C" {
+  void            swtch(struct context**, struct context*);
+  void            swtch_and_barrier(struct context**, struct context*);
+  void            switch_to_kstack();
+}
 
 // trap.c
 extern struct segdesc bootgdt[NSEGS];
 void            pushcli(void);
 void            popcli(void);
 void            getcallerpcs(void*, uptr*, int);
+extern "C" u64  sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num);
 
 // uart.c
 void            uartputc(char c);
@@ -278,8 +287,11 @@ size_t          safe_read_hw(void *dst, uintptr_t src, size_t n);
 size_t          safe_read_vm(void *dst, uintptr_t src, size_t n);
 
 // other exported/imported functions
-void cmain(u64 mbmagic, u64 mbaddr);
-void mpboot(void);
-void trapret(void);
-void threadstub(void);
-void threadhelper(void (*fn)(void *), void *arg);
+extern "C" {
+  void cmain(u64 mbmagic, u64 mbaddr);
+  void mpboot(void);
+  void trapret(void);
+  void threadstub(void);
+  void threadhelper(void (*fn)(void *), void *arg);
+  void sysentry(void);
+}
