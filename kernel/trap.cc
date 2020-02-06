@@ -526,7 +526,14 @@ initseg(struct cpu *c)
   __asm volatile("movl $0, %%eax\n"
                  "movw %%ax, %%es\n"
                  "movw %%ax, %%ss\n"
-                 "movw %%ax, %%ds" : : : "eax");
+                 "movw %%ax, %%ds\n"
+                 "mov %%rsp, %%rax\n"
+                 "push $(0)\n"
+                 "push %%rax\n"
+                 "pushf\n"
+                 "push %0\n"
+                 "push $1f\n"
+                 "iretq; 1:" : : "r"((u64)KCSEG) : "rax");
 
   u64 base = (u64) &c->ts;
   c->gdt[TSSSEG>>3] = (struct segdesc)
