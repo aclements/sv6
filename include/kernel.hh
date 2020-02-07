@@ -84,7 +84,6 @@ void            cgaputc(int c);
 
 // vga.c
 void            vgaputc(int c);
-void            set_vga_status_indicator(cpuid_t cpu, u32 color);
 
 // cmdline.cc
 int             cmdline_view_param(const char *name);
