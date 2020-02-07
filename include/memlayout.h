@@ -8,6 +8,10 @@
 #define KVMALLOC    0xFFFFF00000000000ull
 #define KVMALLOCEND 0xFFFFF10000000000ull  // 1 TB
 
+// UEFI Runtime services memory
+#define KUEFI       0xFFFFF10000000000ull
+#define KUEFIEND    0xFFFFF18000000000ull  // 320GB
+
 // Physical memory is direct-mapped from KBASE to KBASEEND in initpg.
 #define KBASE       0xFFFFFF0000000000ull
 #define KBASEEND    0xFFFFFF5000000000ull  // 320GB

@@ -598,9 +598,6 @@ static phys_map mem;
 static void
 parse_mb_map()
 {
-  if(!(multiboot.flags & (1<<6)))
-    panic("multiboot header has no memory map");
-
   // Print the map
   if (DEBUG) {
     for (int i = 0; i < multiboot.mmap_entries; i++) {
@@ -972,9 +969,13 @@ initphysmem()
   // First address after kernel loaded from ELF file
   extern char end[];
 
-  parse_mb_map();
-
   if (multiboot.flags & MULTIBOOT2_FLAG_EFI_MMAP) {
+    for (int i = 0; i < multiboot.efi_mmap_descriptor_count; i++) {
+      auto d = (efi_memory_descriptor*)&multiboot.efi_mmap[multiboot.efi_mmap_descriptor_size*i];
+      if (d->type == 3 || d->type == 4 || d->type == 7) {
+        mem.add(d->paddr, d->paddr + PGSIZE * d->npages);
+      }
+    }
     for (int i = 0; i < multiboot.efi_mmap_descriptor_count; i++) {
       auto d = (efi_memory_descriptor*)&multiboot.efi_mmap[multiboot.efi_mmap_descriptor_size*i];
       if (d->type == 0 || d->type == 5 || d->type == 6 || d->type >= 8) {
@@ -985,6 +986,10 @@ initphysmem()
         }
       }
     }
+  } else if(multiboot.flags & MULTIBOOT_FLAG_MMAP) {
+    parse_mb_map();
+  } else {
+    panic("multiboot header has no memory map");
   }
 
   // Consider first 1MB of memory unusable

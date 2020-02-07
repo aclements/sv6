@@ -17,6 +17,8 @@
 #include "vmalloc.hh"
 #include "nospec-branch.hh"
 #include "cmdline.hh"
+#include "uefi.hh"
+#include "multiboot.hh"
 
 using namespace std;
 
@@ -412,6 +414,28 @@ initpg(struct cpu *c)
       assert(!it.is_set());
     }
     kvmallocpos = KVMALLOC;
+
+    // Create UEFI area.
+    if (multiboot.flags & MULTIBOOT2_FLAG_EFI_MMAP) {
+      for (int i = 0; i < multiboot.efi_mmap_descriptor_count; i++) {
+        auto d = (efi_memory_descriptor*)&multiboot.efi_mmap[multiboot.efi_mmap_descriptor_size*i];
+        if (!(d->attributes & EFI_MEMORY_RUNTIME))
+          continue;
+
+        u64 perm = PTE_P;
+        if (!(d->attributes & EFI_MEMORY_WB)) {
+          if (d->attributes & EFI_MEMORY_WT) perm |= PTE_PWT;
+          else if (d->attributes & EFI_MEMORY_UC) perm |= PTE_PCD;
+          else panic("No supported cache mode for region");
+        }
+        if (d->attributes & EFI_MEMORY_XP) perm |= PTE_NX;
+        if (!(d->attributes & EFI_MEMORY_WP)) perm |= PTE_W;
+
+        for (int offset = 0; offset < d->npages*PGSIZE; offset += PGSIZE) {
+          *kpml4.find(d->vaddr+offset).create(0) = (d->paddr + offset) | perm;
+        }
+      }
+    }
   }
 
   if (cpuid::features().pcid && !cmdline_params.disable_pcid) {

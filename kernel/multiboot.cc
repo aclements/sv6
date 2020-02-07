@@ -222,7 +222,7 @@ void initmultiboot(u64 mbmagic, u64 mbaddr) {
       } else if (t->type == 11) {
         auto tag = (multiboot2_pointer_tag*)t;
         multiboot.efi_system_table = *(u32*)(&tag->addr);
-        multiboot.flags |= (1 << 30);
+        multiboot.flags |= MULTIBOOT2_FLAG_EFI_SYSTEM_TABLE;
       } else if (t->type == 12) {
         auto tag = (multiboot2_pointer_tag*)t;
         multiboot.efi_system_table = tag->addr;

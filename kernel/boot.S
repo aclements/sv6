@@ -76,6 +76,16 @@ multiboot2_header:
     .long 32                       // depth
     .long 0                        // padding
 
+    .word 7                        // type = boot services tag
+    .word 1
+    .long 8
+
+    .word 9
+    .word 1
+    .long 12
+    .long PADDR(efi_main)
+    .long 0
+
     .word 0                        // type = end
     .word 0                        // flags
     .long 8                        // size
@@ -126,6 +136,12 @@ start64:
     movq $0, %rbp
     call cmain
 1:  jmp 1b
+
+efi_main:
+    movl %eax, %edi
+    movl %ebx, %esi
+    movq $PADDR(stack+STACK), %rsp
+    call efi_cmain
 
 .code32
 .globl apstart

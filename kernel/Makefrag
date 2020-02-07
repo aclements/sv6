@@ -94,6 +94,7 @@ OBJS = \
 	fat32/fat32_header.o \
 	fat32/fat32_vnode.o \
 	sharedmem.o \
+	uefi.o \
 
 OBJS := $(addprefix $(O)/kernel/, $(OBJS))
 
