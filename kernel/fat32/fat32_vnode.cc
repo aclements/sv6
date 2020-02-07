@@ -377,6 +377,14 @@ lowercase(char *buf)
       *buf += 'a' - 'A';
 }
 
+static void
+uppercase(char *buf)
+{
+  for (; *buf; buf++)
+    if (*buf >= 'a' && *buf <= 'z')
+      *buf += 'A' - 'a';
+}
+
 static void warn_invalid_lfn_entry() {
   static bool warned_invalid_entry = false;
   if (!warned_invalid_entry) {
@@ -569,6 +577,76 @@ vnode_fat32::remove_child_from_disk(vnode_fat32 *child)
   cluster->mark_dirty();
 }
 
+// must hold structure lock; returns the LAST of the free entries found, not the first
+u32
+vnode_fat32::find_consecutive_free_dirents(u32 count_needed)
+{
+  assert(count_needed >= 1);
+  assert(directory);
+
+  u32 dirents_per_cluster = cluster_cache->cache_metadata->cluster_size / sizeof(fat32_dirent);
+
+  bool has_free_sequence = false;
+  u32 first_free_in_sequence = 0;
+  for (u32 cluster_local_id = 0;; cluster_local_id++) {
+    sref<fat32_cluster_cache::cluster> cluster = this->get_cluster_data(cluster_local_id);
+    if (!cluster) {
+      // this cluster doesn't exist; so it has as many directory entries free as we could need
+      if (!has_free_sequence)
+        first_free_in_sequence = cluster_local_id * dirents_per_cluster;
+      return first_free_in_sequence + count_needed - 1;
+    }
+    auto dirents = (fat32_dirent *) cluster->buffer_ptr();
+    for (u32 i = 0; i < dirents_per_cluster; i++) {
+      fat32_dirent *d = &dirents[i];
+      u32 dirent_offset = i + cluster_local_id * dirents_per_cluster;
+
+      if (d->filename[0] == '\0') {
+        // no more entries in this cluster (at least)
+        if (!has_free_sequence) {
+          has_free_sequence = true;
+          first_free_in_sequence = dirent_offset;
+        }
+        if ((i + 1) * dirents_per_cluster - first_free_in_sequence >= count_needed)
+          return first_free_in_sequence + count_needed - 1;
+        break;
+      } else if (d->filename[0] == 0xE5) {
+        // unused entry
+        if (!has_free_sequence) {
+          has_free_sequence = true;
+          first_free_in_sequence = dirent_offset;
+        }
+        if (1 + dirent_offset - first_free_in_sequence >= count_needed)
+          return first_free_in_sequence + count_needed - 1;
+        continue;
+      } else {
+        // entry used
+        has_free_sequence = false;
+      }
+    }
+  }
+}
+
+// must hold structure lock; dirent must be free; will expand cluster list if necessary
+void
+vnode_fat32::assign_dirent(u32 offset, fat32_dirent entry)
+{
+  assert(directory);
+
+  u32 dirents_per_cluster = cluster_cache->cache_metadata->cluster_size / sizeof(fat32_dirent);
+
+  fat32_dirent *d = nullptr;
+  auto cluster = this->get_dirent_ref(offset, &d);
+  if (!cluster) {
+    assert(offset / dirents_per_cluster == cluster_count);
+    expand_to_cluster_count(cluster_count + 1);
+    cluster = this->get_dirent_ref(offset, &d);
+    assert(cluster);
+  }
+  assert(d->filename[0] == 0xE5 || d->filename[0] == '\0');
+  *d = entry;
+}
+
 bool
 vnode_fat32::child_exists(const char *name)
 {
@@ -716,7 +794,7 @@ vnode_fat32::remove(const char *name)
   //  - remove directory entry
   //  - remove any long filenames associated with it
   //  - remove references to vnode
-  //  - free all data blocks on disk once vnode is no longer referenced
+  //  - free all data clusters on disk once vnode is no longer referenced
   this->remove_child_from_disk(child.get());
 
   // protected with structure_lock
@@ -736,14 +814,60 @@ vnode_fat32::remove(const char *name)
 sref<vnode>
 vnode_fat32::create_file(const char *name, bool excl)
 {
-  auto child = ref_child(name);
+  lock_guard<rwlock::write> l(&structure_lock.writer);
+  auto child = ref_child_locked(name, nullptr);
   if (child) {
     if (excl || !child->is_regular_file())
       return sref<vnode>();
     return child;
   }
-  cprintf("unimplemented: fat32 file creation\n"); // fat32 is read-only for now
-  return sref<vnode>();
+  if (directory_killed)
+    return sref<vnode>(); // directory in the process of being deleted; don't create any new files
+  // steps:
+  //  - allocate initial cluster on disk
+  //  - add directory entry & long filenames
+  //  - insert into linked list
+
+  u32 cluster = 0;
+  if (!fat->requisition_free_cluster(&cluster))
+    return sref<vnode>(); // can't allocate data for file...
+  assert(cluster >= 2);
+
+  strbuf<FILENAME_MAX> filename;
+  if (!filename.loadok(name))
+    return sref<vnode>(); // filename too long
+  uppercase(filename.buf_);
+  u32 dirent_count = fat32_dirent::count_filename_entries(filename.ptr()); // 1 if short filename, >1 if LFN entries needed
+  if (dirent_count == 0)
+    return sref<vnode>(); // filename too long or too short
+  u32 dirent_offset = this->find_consecutive_free_dirents(dirent_count); // returns LAST of the dirent_count free entries
+  fat32_dirent primary_entry = {};
+  if (dirent_count == 1) {
+    primary_entry = fat32_dirent::short_filename(filename.ptr());
+  } else {
+    primary_entry = fat32_dirent::guard_filename(filename.ptr());
+    for (u32 i = 0; i < dirent_count - 1; i++) {
+      fat32_dirent fragment = fat32_dirent_lfn::filename_fragment(filename.ptr(), i, primary_entry.checksum());
+      this->assign_dirent(dirent_offset - 1 - i, fragment);
+    }
+  }
+  primary_entry.attributes = 0;
+  primary_entry.file_size_bytes = 0;
+  primary_entry.set_cluster_id(cluster);
+  this->assign_dirent(dirent_offset, primary_entry);
+
+  sref<vnode_fat32> new_child = make_sref<vnode_fat32>(filesystem, cluster, false, sref<vnode_fat32>::newref(this), 0);
+  lowercase(filename.buf_);
+  new_child->my_filename = filename;
+
+  // FIXME: insert file at the correct location in the directory
+  new_child->next_sibling_node = first_child_node;
+  first_child_node = new_child;
+
+  assert(new_child->dirent_index_in_parent == UINT64_MAX);
+  new_child->dirent_index_in_parent = dirent_offset + dirent_count - 1;
+
+  return new_child;
 }
 
 sref<vnode>

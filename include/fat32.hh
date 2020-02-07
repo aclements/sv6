@@ -74,8 +74,16 @@ struct fat32_dirent {
   u32 file_size_bytes;
 
   u32 cluster_id();
+  void set_cluster_id(u32 cluster_id);
   strbuf<12> extract_filename();
   u8 checksum();
+
+  // 0 if filename too long; 1 if needs just a short filename; 2+ if needs a guard and some number of LFN entries
+  static u32 count_filename_entries(const char *name);
+  // directory entry for a filename that only needs a short filename
+  static fat32_dirent short_filename(const char *name);
+  // directory entry for a guard filename
+  static fat32_dirent guard_filename(const char *name);
 } __attribute__((__packed__));
 
 static_assert(sizeof(fat32_dirent) == 32, "expected fat32 directory entry to be 32 bytes long");
@@ -95,9 +103,12 @@ struct fat32_dirent_lfn {
   bool is_continuation();
   bool validate();
   strbuf<13> extract_name_segment();
+
+  static fat32_dirent filename_fragment(const char *name, u32 index, u8 checksum);
 private:
   // does not support non-ASCII characters
   static u8 convert_char(u16 ucs_2);
+  static u16 unconvert_char(u8 ucs_2);
 } __attribute__((__packed__));
 
 static_assert(sizeof(fat32_dirent_lfn) == 32, "expected fat32 directory entry to be 32 bytes long");
@@ -266,6 +277,10 @@ private:
   void update_child_length_on_disk(vnode_fat32 *child, u32 new_byte_length);
   // must hold structure lock
   void remove_child_from_disk(vnode_fat32 *child);
+  // must hold structure lock; returns the LAST of the free entries found, not the first
+  u32 find_consecutive_free_dirents(u32 count_needed);
+  // must hold structure lock; dirent must be free
+  void assign_dirent(u32 offset, fat32_dirent entry);
 
   size_t write_at_nogrow(const char *addr, u64 off, size_t len);
   void zero_range_nogrow(u64 off, size_t len);
