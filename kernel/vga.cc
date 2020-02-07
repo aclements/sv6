@@ -227,12 +227,16 @@ void vgaputc(int c) {
 
   if (back_buffer) {
     if (full_redraw) {
-      memcpy(front_buffer, back_buffer, screen_width * screen_height * 4);
+      u64* back = (u64*)back_buffer;
+      volatile u64* front = (volatile u64*)front_buffer;
+      for (size_t i = 0; i < screen_width * screen_height / 2; i++)
+        front[i] = back[i];
     } else {
       for (int y = cursor_y; y < cursor_y + height; y++){
-        memcpy(&front_buffer[cursor_x + y * screen_width],
-               &back_buffer[cursor_x + y * screen_width],
-               width * 4);
+        auto front = (volatile u64*)&front_buffer[cursor_x + y * screen_width];
+        auto back = (u64*)&back_buffer[cursor_x + y * screen_width];
+        for (size_t i = 0; i < width / 2; i++)
+          front[i] = back[i];
       }
     }
   }
