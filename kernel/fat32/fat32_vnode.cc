@@ -873,7 +873,7 @@ vnode_fat32::create_file(const char *name, bool excl)
   first_child_node = new_child;
 
   assert(new_child->dirent_index_in_parent == UINT64_MAX);
-  new_child->dirent_index_in_parent = dirent_offset + dirent_count - 1;
+  new_child->dirent_index_in_parent = dirent_offset;
 
   return new_child;
 }
