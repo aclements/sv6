@@ -34,7 +34,7 @@ void* worker0(void* x)
   // setaffinity(id);
 
   while (go == 0)
-    yield();
+    sched_yield();
 
   if (id & 0x1) {
     for (u64 i = 0; i < iters; i++) {

@@ -1909,7 +1909,7 @@ float_thr(void *arg)
     for (int j = 0; j < 20; ++j) {
       x *= 2;
       y *= 2;
-      yield();
+      sched_yield();
     }
 
     assert(x == y);

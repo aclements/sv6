@@ -491,7 +491,7 @@ sys_readdir(int dirfd, const userptr<char> prevptr, userptr<char> nameptr)
 
 //SYSCALL {"uargs":["const char *upath", "char * const uargv[]", "const void *actions", "size_t actions_len"]}
 int
-sys_sys_spawn(userptr_str upath, userptr<userptr_str> uargv,
+sys_spawn(userptr_str upath, userptr<userptr_str> uargv,
               const userptr<void> uactions, size_t actions_len)
 {
   sref<filetable> newftable;

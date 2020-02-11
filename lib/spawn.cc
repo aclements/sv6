@@ -113,7 +113,7 @@ int posix_spawn(
     die("posix_spawn: attrp not implemented");
   if (envp)
     die("posix_spawn: envp not implemented");
-  int res = sys_spawn(path, argv, file_actions ? file_actions->base : nullptr,
+  int res = spawn(path, argv, file_actions ? file_actions->base : nullptr,
                       file_actions ? file_actions->pos : 0);
   if (res < 0)
     return -res;

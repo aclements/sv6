@@ -293,7 +293,7 @@ sys_futex(const u32* addr, int op, u32 val, u64 timer)
 
 //SYSCALL
 long
-sys_yield(void)
+sys_sched_yield(void)
 {
   yield();
   return 0;
