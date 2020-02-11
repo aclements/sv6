@@ -22,19 +22,17 @@ struct param_metadata_t {
   void (*on_change)(void);
 };
 
-void dummy() {
-  cprintf("im a %s\n", cmdline_params.disable_pcid ? "dummy" : "smarty");
-  u64 now = nsectime();
-  while (nsectime() < now + 5 * 1e9);
-}
+extern void initvga();
 
 param_metadata_t<bool> binary_params[] = {
-  { "disable_pcid",    &cmdline_params.disable_pcid,    false, dummy },
+  { "disable_pcid",    &cmdline_params.disable_pcid,    false, refresh_pcid_mask },
   { "keep_retpolines", &cmdline_params.keep_retpolines, false, apply_hotpatches },
   { "lazy_barrier",    &cmdline_params.lazy_barrier,    true,  apply_hotpatches },
-  { "use_vga",         &cmdline_params.use_vga,         true,  NULL },
-  { "use_cga",         &cmdline_params.use_cga,         false,  NULL },
-  { "mitigate_mds",    &cmdline_params.mds,             true,  apply_hotpatches },
+  { "use_vga",         &cmdline_params.use_vga,         true,  initvga },
+  { "use_cga",         &cmdline_params.use_cga,         false, NULL },
+  { "spectre_v2",      &cmdline_params.spectre_v2,      true,  apply_hotpatches },
+  { "kpti",            &cmdline_params.kpti,            true,  apply_hotpatches },
+  { "mds",             &cmdline_params.mds,             true,  apply_hotpatches },
 };
 
 param_metadata_t<u64> uint_params[] = {};

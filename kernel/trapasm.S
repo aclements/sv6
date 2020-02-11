@@ -213,12 +213,14 @@ OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
         cmpb $0, (secrets_mapped)
         jz 1f
 
+OPTIONAL("kpti", "yes")
         movq    %rax, %gs:GS_SCRATCH
         movq    %cr3, %rax
         orq     $(0x1001), %rax
         andq    %gs:GS_CR3_MASK, %rax
         movq    %rax, %cr3  // swap page table back
         movq    %gs:GS_SCRATCH, %rax
+OPTIONAL_OR_NOPS("kpti")
 
 OPTIONAL("mds", "yes")
         verw (mds_clear_cpu_buffers_ds)
@@ -281,6 +283,7 @@ OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
         cmpb $0, (secrets_mapped)
         jz 2f
 
+OPTIONAL("kpti", "yes")
         // At this point there are 40 bytes on the stack and we are returning to
         // userspace with secrets currently mapped. We need to apply mitigations
         // and move those items to the qstack.
@@ -309,6 +312,7 @@ OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
         movq %rbx, %cr3  // swap page table back
         popq %rax
         popq %rbx
+OPTIONAL_OR_NOPS("kpti")
 
 OPTIONAL("mds", "yes")
         verw (mds_clear_cpu_buffers_ds)

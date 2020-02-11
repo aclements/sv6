@@ -35,7 +35,7 @@ struct patch {
   patch patch_##symbol                         \
     __attribute__((section (".hotpatch"))) = { \
     .segment_mask = PATCH_SEGMENT_QTEXT,       \
-    .option = "keep_retpolines",               \
+    .option = "retpolines",                    \
     .value = "no",                             \
     .start = (u64)&symbol,                     \
     .opcode = PATCH_OPCODE_OR_STRING,          \
@@ -100,7 +100,7 @@ void remove_range(char* text_base, u64 start, u64 end)
   }
 }
 
-bool patch_needed(patch* p) {
+bool patch_needed(patch* p, bool ktext) {
   bool value;
 
   if(strcmp(p->value, "yes") == 0) {
@@ -118,10 +118,12 @@ bool patch_needed(patch* p) {
     cmdline_value = cmdline_params.mds;
   } else if(strcmp(p->option, "fsgsbase") == 0) {
     cmdline_value = cpuid::features().fsgsbase;
-  } else if(strcmp(p->option, "keep_retpolines") == 0) {
-    cmdline_value = cmdline_params.keep_retpolines;
+  } else if(strcmp(p->option, "retpolines") == 0) {
+    cmdline_value = ktext ? cmdline_params.spectre_v2 : cmdline_params.keep_retpolines;
   } else if(strcmp(p->option, "kvm_paravirt") == 0) {
     cmdline_value = (strcmp(cpuid::features().hypervisor_id, "KVMKVMKVM") == 0);
+  } else if(strcmp(p->option, "kpti") == 0) {
+    cmdline_value = cmdline_params.kpti;
   } else {
     return false;
   }
@@ -145,7 +147,7 @@ void apply_hotpatches()
       if(!(p->segment_mask & (1<<i)))
         continue;
 
-      if(patch_needed(p)) {
+      if(patch_needed(p, (1<<i) == PATCH_SEGMENT_KTEXT)) {
         switch(p->opcode) {
         case PATCH_OPCODE_OR_NOPS:
           remove_range(text_bases[i], p->start, p->end);

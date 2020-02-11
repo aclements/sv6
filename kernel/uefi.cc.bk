@@ -1,0 +1,174 @@
+#include "string.h"
+#include "amd64.h"
+#include "kernel.hh"
+#include "uefi.hh"
+#include "multiboot.hh"
+#include "cmdline.hh"
+
+void initvga(void);
+void initmultiboot(u64 mbmagic, u64 mbaddr);
+
+extern "C" u64 efi_cmain (u64 mbmagic, u64 mbaddr)
+{
+  // Copy lowest PTE from uefi page table to kpml4, then switch to it. This
+  // creates an identity mapping for the first 512 GB of memory.
+  extern u64 kpml4[];
+  u64* kpml4_cr3 = (u64*)v2p(kpml4);
+  u64* uefi_cr3 = (u64*)rcr3();
+  u64 kpml4_pte = kpml4_cr3[0];
+  kpml4_cr3[0] = uefi_cr3[0];
+  kpml4_cr3[(KUEFI >> 39) % 512] = kpml4_cr3[0];
+  lcr3((u64)kpml4_cr3);
+
+  initmultiboot(mbmagic, mbaddr);
+  cmdline_params.use_vga = true;
+  initvga();
+
+  cprintf("Booting in UEFI mode...\n");
+
+  auto system_table = (efi_system_table*)p2v(multiboot.efi_system_table);
+  auto boot_services = (efi_boot_services*)p2v((u64)system_table->boot_services);
+  EFI_GET_MEMORY_MAP get_memory_map = boot_services->get_memory_map;
+  EFI_EXIT_BOOT_SERVICES exit_boot_services = boot_services->exit_boot_services;
+
+  efi_guid gop_guid = {0x9042a9de,0x23dc,0x4a38, {0x96,0xfb,0x7a,0xde,0xd0,0x80,0x51,0x6a}};
+  efi_guid edid_discovered_guid = {0x1c0c34f6,0xd380,0x41fa, {0xa0,0x49,0x8a,0xd0,0x6c,0x1a,0x66,0xaa}};
+
+  void* gop_handles[32];
+  u64 gop_handles_size = 32;
+  if(!(boot_services->locate_handle)(ByProtocol, &gop_guid, NULL, &gop_handles_size, gop_handles)) {
+    cprintf("gop_handles_size = %ld\n", gop_handles_size);
+    for(int i = 0; i < gop_handles_size; i++) {
+      if (!gop_handles[i])
+        continue;
+      efi_graphics_output_protocol* gop_prot;
+      if(!(boot_services->handle_protocol)(gop_handles[i], &gop_guid, (void**)&gop_prot)) {
+        cprintf("[%d] gop_prot: paddr=%lx size=%luK resolution=%ux%u fmt=%u scanline=%u mode=%u\n", i,
+                gop_prot->mode->frame_buffer_base_paddr,
+                gop_prot->mode->frame_buffer_size >> 10,
+                gop_prot->mode->info->hres, gop_prot->mode->info->vres,
+                (u32)gop_prot->mode->info->pixel_format,
+                gop_prot->mode->info->pixels_per_scanline,
+                gop_prot->mode->mode
+          );
+        int max_mode = gop_prot->mode->max_mode;
+        for (u32 j = 0; j < max_mode; j++) {
+          u64 size_of_info;
+          efi_graphics_output_mode_info* info;
+          if(!(gop_prot->QueryMode)(gop_prot, j, &size_of_info, &info)) {
+            cprintf("[%d][%d] resolution=%ux%u fmt=%u scanline=%u\n", i, j,
+                    info->hres, info->vres, (u32)info->pixel_format, info->pixels_per_scanline);
+          }
+        }
+      }
+
+      struct edid_data {
+        u32 size;
+        u8* data;
+      } *buf;
+      if(!(boot_services->handle_protocol)(gop_handles[i], &edid_discovered_guid, (void**)&buf)) {
+        cprintf(" edid: size=%u, %x %x %x %x %x %x %x %x\n", buf->size,
+                (u32)buf->data[0], (u32)buf->data[1], (u32)buf->data[2], (u32)buf->data[3],
+                (u32)buf->data[4], (u32)buf->data[5], (u32)buf->data[6], (u32)buf->data[7]);
+      }
+    }
+  }
+
+  // efi_graphics_output_protocol* gop_prot;
+  // if(!(boot_services->locate_protocol)(&gop_guid, NULL, &gop_prot)) {
+  //   cprintf("gop_prot.mode = %p\n", gop_prot->mode);
+  //   cprintf("gop_prot.mode.frame_buffer_base_paddr = %lx\n", gop_prot->mode->frame_buffer_base_paddr);
+  //   cprintf("gop_prot.mode.{hres, vres} = {%d, %d}\n", gop_prot->mode->info->hres, gop_prot.mode->info->vres);
+  // }
+
+  cprintf("\nMTRRCAP = %lx\n\n", readmsr(0xFE)); // IA32_MTRRCAP
+  for (int i = 0; i < 8; i++)
+    cprintf("PHYSBASE%d = %lx PHYSMASK%d = %lx\n", i, readmsr(0x200+2*i), i, readmsr(0x201+2*i));
+
+  cprintf("\nFIX64K = %lx\n", readmsr(0x250));
+  cprintf("FIX16K = %lx FIX16K = %lx\n\n", readmsr(0x258), readmsr(259));
+
+  u64 map = v2p(multiboot.efi_mmap);
+  u64 map_size = sizeof(multiboot.efi_mmap);
+  u64 key, ret;
+  while (ret) {
+    ret = get_memory_map(&map_size, (efi_memory_descriptor*)map, &key,
+                         &multiboot.efi_mmap_descriptor_size,
+                         &multiboot.efi_mmap_descriptor_version);
+    if (ret) {
+      cprintf("ERROR: get_memory_map returned %lx\n", ret);
+      continue;
+    }
+
+    multiboot.efi_mmap_descriptor_count = map_size / multiboot.efi_mmap_descriptor_size;
+    multiboot.flags |= MULTIBOOT2_FLAG_EFI_MMAP;
+
+    ret = exit_boot_services((void*)multiboot.efi_image_handle, key);
+    if (ret) {
+      cprintf("ERROR: exit_boot_services returned %lx\n", ret);
+    }
+    multiboot.flags |= MULTIBOOT2_FLAG_EFI_IMAGE_HANDLE;
+
+    break;
+  }
+
+  cprintf("Exited boot services\n");
+
+  for (int i = 0; i < multiboot.efi_mmap_descriptor_count; i++) {
+    auto d = (efi_memory_descriptor*)&multiboot.efi_mmap[multiboot.efi_mmap_descriptor_size*i];
+
+    // Create memory map entries for each runtime section. If possible we place
+    // the section in the direct map, but if it won't be possible, reserve a special section for it.
+    if (d->attributes & EFI_MEMORY_RUNTIME) {
+      cprintf("map[%d] type=%d paddr=%lx size=%ldK attr=%lx WB=%lx\n", i,
+              d->type, d->paddr,
+              (d->npages*PGSIZE)/1024,
+              d->attributes & 0xfffff,
+              d->attributes & EFI_MEMORY_WB);
+      // if (d->type != 5 &&
+      //     d->attributes & EFI_MEMORY_XP &&
+      //     d->attributes & EFI_MEMORY_WB) {
+        d->vaddr = d->paddr + KUEFI;
+      // } else {
+      //   d->vaddr = vaddr;
+      //   vaddr += d->npages * PGSIZE;
+      //   assert(vaddr < KUEFIEND);
+      // }
+    } else {
+      d->vaddr = 0;
+    }
+  }
+
+  cprintf("system_table->runtime_services = %p\n", system_table->runtime_services);
+  auto runtime_services = (efi_runtime_services*)p2v((u64)system_table->runtime_services);
+  EFI_SET_VIRTUAL_ADDRESS_MAP set_virtual_address_map = runtime_services->set_virtual_address_map;
+  ret = set_virtual_address_map(map_size, multiboot.efi_mmap_descriptor_size,
+                                multiboot.efi_mmap_descriptor_version, (efi_memory_descriptor*)map);
+  cprintf("Set virtual address map (ret = %ld)\n", ret);
+  cprintf("system_table->runtime_services = %p\n", system_table->runtime_services);
+
+  // Restore kpml4 so other code doesn't get confused.
+  kpml4_cr3[0] = kpml4_pte;
+  kpml4_cr3[(KUEFI >> 39) % 512] = 0;
+  lcr3((u64)kpml4_cr3);
+
+  cprintf("Loading gdt\n");
+  volatile struct desctr dtr;
+  dtr.limit = sizeof(bootgdt) - 1;
+  dtr.base = (u64)bootgdt;
+  lgdt((void *)&dtr.limit);
+
+  // These both normally happen in init32e, but that doesn't run in EFI mode.
+  cprintf("Initializing IA32_EFER and CR4\n");
+  writemsr(0xc0000080, readmsr(0xc0000080) | (1<<0) | (1<<11));
+  lcr4(rcr4() | 0x630);  // Set CR4.PAE = CR4.PSE = CR4.OSFXSR = CR4.OSXMMEXCPT = 1.
+
+  cprintf("Switching to high addresses\n");
+  __asm volatile("add %0, %%rsp; movabs $1f, %%rax; jmp *%%rax; 1:" :: "r"(KBASE) : "rax", "memory");
+
+  cprintf("About to call cmain(%lx, %lx)\n", mbmagic, mbaddr);
+  cmain(mbmagic, mbaddr);
+  panic("cmain should not return?");
+
+  return 1;
+}

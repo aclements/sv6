@@ -25,6 +25,10 @@ struct cmdline_params_t
   char fat32_disk[CMDLINE_VALUE+1];
   bool use_vga;
   bool use_cga;
+
+  // mitigations
+  bool spectre_v2;
+  bool kpti;
   bool mds;
 };
 

@@ -286,6 +286,9 @@ void            qfree(vmap* vmap, void* page);
 size_t          safe_read_hw(void *dst, uintptr_t src, size_t n);
 size_t          safe_read_vm(void *dst, uintptr_t src, size_t n);
 
+// hwvm.cc
+void            refresh_pcid_mask(void);
+
 // other exported/imported functions
 extern "C" {
   void cmain(u64 mbmagic, u64 mbaddr);

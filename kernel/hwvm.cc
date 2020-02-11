@@ -374,6 +374,27 @@ static_assert(sizeof(pgmap) == PGSIZE, "!(sizeof(pgmap) == PGSIZE)");
 extern pgmap kpml4;
 static atomic<uintptr_t> kvmallocpos;
 
+
+void
+set_cr3_mask(struct cpu *c) {
+  if (cpuid::features().pcid && !cmdline_params.disable_pcid) {
+    c->cr3_mask = 0xffffffff'ffffffff;
+    lcr4(rcr4() | CR4_PCIDE);
+  } else {
+    c->cr3_mask = 0x7fffffff'fffff000;
+    if (c->id == 0 && !cmdline_params.disable_pcid) {
+      cprintf("WARN: PCIDs unsupported\n");
+    }
+  }
+}
+
+void
+refresh_pcid_mask(void) {
+  for (int c = 0; c < ncpu; c++) {
+    set_cr3_mask(&cpus[c]);
+  }
+}
+
 // Create a direct mapping starting at PA 0 to VA KBASE up to
 // KBASEEND.  This augments the KCODE mapping created by the
 // bootloader.  Perform per-core control register set up.
@@ -455,15 +476,7 @@ initpg(struct cpu *c)
     }
   }
 
-  if (cpuid::features().pcid && !cmdline_params.disable_pcid) {
-    c->cr3_mask = 0xffffffff'ffffffff;
-    lcr4(rcr4() | CR4_PCIDE);
-  } else {
-    c->cr3_mask = 0x7fffffff'fffff000;
-    if (c->id == 0 && !cmdline_params.disable_pcid) {
-      cprintf("WARN: PCIDs unsupported\n");
-    }
-  }
+  set_cr3_mask(c);
 
   if (!cpuid::features().fsgsbase) {
     cprintf("WARN: wrfsbase instructions unsupported\n");
