@@ -110,6 +110,7 @@ UPROGS_NATIVE := \
 	tee \
 	vmimbalbench \
 	anon \
+	getpid \
 
 ifeq ($(HAVE_TESTGEN),y)
 UPROGS_BIN    += fstest
