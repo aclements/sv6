@@ -195,9 +195,9 @@ fat32_dirent_lfn::filename_fragment(const char *name, u32 index, u8 checksum)
   assert(len_of_my_part >= 1);
   bool last_entry = (total_len <= (index + 1) * 13);
 
-  assert(index <= 0x1Fu);
+  assert(index < 0x1Fu);
   fat32_dirent_lfn l = {};
-  l.sequence_number = (u8) ((last_entry ? 0x40u : 0x00u) | (index & 0x1Fu));
+  l.sequence_number = (u8) ((last_entry ? 0x40u : 0x00u) | ((index + 1) & 0x1Fu));
   l.checksum = checksum;
   l.attributes = ATTR_LFN;
   l.vfat_type = 0;

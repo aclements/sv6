@@ -385,11 +385,19 @@ uppercase(char *buf)
       *buf += 'A' - 'a';
 }
 
-static void warn_invalid_lfn_entry() {
+static void warn_invalid_lfn_entry(const char *fmt, ...) {
   static bool warned_invalid_entry = false;
-  if (!warned_invalid_entry) {
+  if (!warned_invalid_entry || true) {
     warned_invalid_entry = true;
-    cprintf("warning: hit invalid long filename entry in FAT32 directory [not reporting future detections]\n");
+    cprintf("warning: hit invalid long filename entry in FAT32 directory [not reporting future detections]\nproblem: ");
+
+    va_list ap;
+
+    va_start(ap, fmt);
+    vcprintf(fmt, ap);
+    va_end(ap);
+
+    cprintf("\n");
   }
 }
 
@@ -438,13 +446,13 @@ vnode_fat32::populate_children()
       if (d->attributes == ATTR_LFN) {
         auto l = (fat32_dirent_lfn *) d;
         if (!l->validate()) {
-          warn_invalid_lfn_entry();
+          warn_invalid_lfn_entry("invalid lfn entry");
           continue;
         }
         assert(long_filename_last_index >= 1);
         if (l->is_continuation() && (!has_long_filename || long_filename_checksum != l->checksum || long_filename_last_index == 1 || long_filename_last_index - 1 != l->index())) {
           // we were supposed to find a continuation, but instead we found a mismatch, so we've gotta throw it away
-          warn_invalid_lfn_entry();
+          warn_invalid_lfn_entry("found mismatch instead of continuation");
           // wipe away what we have so far
           has_long_filename = false;
           continue;
@@ -452,7 +460,7 @@ vnode_fat32::populate_children()
         if (!l->is_continuation()) {
           if (has_long_filename)
             // found a new long filename without using the last one; start over
-            warn_invalid_lfn_entry();
+            warn_invalid_lfn_entry("new filename without using the last one");
           else
             // start a new long filename
             has_long_filename = true;
@@ -479,7 +487,7 @@ vnode_fat32::populate_children()
           new_child->my_filename = &long_filename_buffer[long_filename_offset];
         } else {
           if (has_long_filename)
-            warn_invalid_lfn_entry();
+            warn_invalid_lfn_entry("long filename did not get down to index 1 or did not match checksum");
           // use short filename entry
           new_child->my_filename = strbuf<FILENAME_MAX>(d->extract_filename());
         }
@@ -500,7 +508,7 @@ vnode_fat32::populate_children()
   }
   assert(!last_child_created || !last_child_created->next_sibling_node);
   if (has_long_filename)
-    warn_invalid_lfn_entry();
+    warn_invalid_lfn_entry("long filename never used");
   children_populated = true;
   return structure_lock.downgrade(wl);
 }
