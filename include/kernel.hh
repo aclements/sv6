@@ -84,6 +84,7 @@ void            cgaputc(int c);
 
 // vga.c
 void            vgaputc(int c);
+bool            get_framebuffer(paddr* out_address, u64* out_size);
 
 // cmdline.cc
 int             cmdline_view_param(const char *name);

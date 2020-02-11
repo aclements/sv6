@@ -26,6 +26,8 @@
 #define PTE_COW         0x800   // xv6: copy-on-write
 #define PTE_NX		0x8000000000000000ull // No-execute enable
 
+#define PTE_WC      0x18    // Write Combining
+
 #define PGROUNDUP(a)  ((__typeof__(a))((((uintptr_t)a)+PGSIZE-1) & ~(PGSIZE-1)))
 #define PGROUNDDOWN(a) ((__typeof__(a))((((uintptr_t)(a)) & ~(PGSIZE-1))))
 #define PGOFFSET(a) ((a) & ((1<<PGSHIFT)-1))

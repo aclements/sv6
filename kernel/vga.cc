@@ -176,6 +176,16 @@ void initdoublebuffer() {
   }
 }
 
+bool get_framebuffer(paddr* out_address, u64* out_size) {
+  if (front_buffer) {
+    *out_address = v2p(front_buffer);
+    *out_size = 4 * screen_width * screen_height;
+    return true;
+  }
+  return false;
+}
+
+
 void vgaputc(int c) {
   u32* buffer = back_buffer ? back_buffer : front_buffer;
   if (!buffer)

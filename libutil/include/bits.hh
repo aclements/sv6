@@ -103,6 +103,8 @@
 #define MSR_INTEL_LER_FROM_LIP   0x1dd
 #define MSR_INTEL_LER_TO_LIP     0x1de
 
+#define MSR_INTEL_PAT            0x277
+
 // Common event-select bits
 #define PERF_SEL_USR        (1ULL << 16)
 #define PERF_SEL_OS         (1ULL << 17)

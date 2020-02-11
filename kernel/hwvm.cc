@@ -253,7 +253,7 @@ public:
           atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
           pme_t entry = entryp->load(memory_order_relaxed);
         retry:
-          if (entry & PTE_P) {
+          if ((entry & PTE_P) && !(entry & PTE_PS)) {
             cur = (pgmap*) p2v(PTE_ADDR(entry));
           } else {
             // XXX(Austin) Could use zalloc except during really early
@@ -289,7 +289,7 @@ public:
           atomic<pme_t> *entryp = &cur->e[PX(reached, va)];
           pme_t entry = entryp->load(memory_order_relaxed);
         retry:
-          if (entry & PTE_P) {
+          if ((entry & PTE_P) && !(entry & PTE_PS)) {
             cur = (pgmap*) p2v(PTE_ADDR(entry));
           } else {
             bool used_qalloc = true;
@@ -398,12 +398,29 @@ initpg(struct cpu *c)
     lcr3(rcr3());
 
     // Create direct map region
-    for (auto it = kpml4.find(KBASE, level); it.index() < KBASEEND;
-         it += it.span()) {
-      paddr pa = it.index() - KBASE;
-      *it.create(0) = pa | PTE_W | PTE_P | PTE_PS | PTE_NX;
+    for (auto it = kpml4.find(KBASE, level); it.index() < KBASEEND; it += it.span()) {
+      *it.create(0) = (it.index() - KBASE) | PTE_W | PTE_P | PTE_PS | PTE_NX;
     }
     assert(!kpml4.find(KBASEEND, level).is_set());
+
+    // Memory mapped I/O region might have MTRRs to set its caching mode, so we
+    // can't use 1GB pages. This also lets us set the framebuffer with write
+    // combining mappings.
+    for (auto it = kpml4.find(KBASE+0xc0000000UL, pgmap::L_2M); it.index() < KBASE+0x100000000UL;
+         it += it.span()) {
+      *it.create(0) = (it.index() - KBASE) | PTE_W | PTE_P | PTE_PS | PTE_NX;
+    }
+
+    // Write combining mappings for the framebuffer make screen updates
+    // considerably faster.
+    paddr framebuffer;
+    u64 framebuffer_size;
+    if(get_framebuffer(&framebuffer, &framebuffer_size)) {
+      for (auto it = kpml4.find(KBASE+framebuffer, pgmap::L_2M); it.index() < KBASE+framebuffer+framebuffer_size;
+           it += it.span()) {
+        *it |= PTE_WC;
+      }
+    }
 
     // Create KVMALLOC area.  This doesn't map anything at this point;
     // it only fills in PML4 entries that can later be shared with all
@@ -463,6 +480,11 @@ initpg(struct cpu *c)
 
   // Enable recording of last branch records (if supported).
   writemsr(MSR_INTEL_DEBUGCTL, 0x1);
+
+  // Configure Page Attributes Table so 7 = Write Combining instead of uncached,
+  // and everything else is left at default.
+  // cprintf("%d: MSR_INTEL_PAT = %lx\n", (int)mycpu()->id, readmsr(MSR_INTEL_PAT));
+  writemsr(MSR_INTEL_PAT, 0x0007040601070406llu);
 
   // Enable global pages. This has to happen on every core.
   lcr4(rcr4() | CR4_PGE);
