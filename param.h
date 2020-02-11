@@ -8,7 +8,7 @@
 #define NINODE     5000  // maximum number of active i-nodes
 #define NDEV         16  // maximum major device number
 #define MAXARG       32  // max exec arguments
-#define MAXARGLEN    64  // max exec argument length
+#define MAXARGLEN   256  // max exec argument length
 #define MAXNAME      16  // max string names
 #define UNIX_PATH_MAX 128
 #define NEPOCH        4
