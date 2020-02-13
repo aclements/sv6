@@ -28,7 +28,7 @@ O           = o.$(HW)
 
 ifeq ($(HW),linux)
 PLATFORM   := native
-TOOLPREFIX := 
+TOOLPREFIX :=
 else
 ifeq ($(HW),linuxmtrace)
 # Build the user space for mtrace'ing under Linux.  This builds an
@@ -36,7 +36,7 @@ ifeq ($(HW),linuxmtrace)
 # Make targets like qemu and mtrace.out are supported if the user
 # provides KERN=path/to/Linux/bzImage to make.
 PLATFORM   := native
-TOOLPREFIX := 
+TOOLPREFIX :=
 else
 PLATFORM   := xv6
 endif
@@ -50,10 +50,10 @@ endif
 
 ifdef USE_CLANG
 CC  = $(TOOLPREFIX)clang
-CXX = $(TOOLPREFIX)clang++ 
+CXX = $(TOOLPREFIX)clang++
 CXXFLAGS = -Wno-delete-non-virtual-dtor -Wno-gnu-designator -Wno-tautological-compare -Wno-unused-private-field
 CFLAGS   = -no-integrated-as
-ASFLAGS  = 
+ASFLAGS  =
 else
 CC  ?= $(TOOLPREFIX)gcc
 CXX ?= $(TOOLPREFIX)g++
@@ -109,7 +109,7 @@ endif
 
 HAVE_TESTGEN = $(shell (test -e libutil/testgen.c && echo y) || echo n)
 
-ALL := 
+ALL :=
 all:
 
 define SYSCALLGEN
