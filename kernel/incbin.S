@@ -10,6 +10,13 @@
   _##name##_size:; \
     .quad _##name##_end - _##name##_start
 
+.section .ksyms, "a", @progbits
+.globl ksyms_start
+ksyms_start:
+.skip 0x60000, 0
+.globl ksysms_end
+ksyms_end:
+
 .section .init_rodata, "a", @progbits
 include_bin(kernel/initcode,initcode)
 include_bin(kernel/bootother,bootother)

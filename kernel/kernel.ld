@@ -33,12 +33,17 @@ SECTIONS
         PROVIDE_HIDDEN(__percpuinit_array_end = .);
     }
 
+	.ksyms : {
+        *(.ksyms)
+	}
+
     /* Binary blobs from kernel/incbin.S */
     .init_rodata : {
         *(.init_rodata)
 
         /* Pad section to end of hugepage */
         . = ALIGN(0x200000);
+        ASSERT((. <= 0xFFFFFFFFC0400000), "RO sections > 2MB");
     }
 
     .data : {
