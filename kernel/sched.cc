@@ -13,6 +13,7 @@
 #include "rnd.hh"
 #include "lb.hh"
 #include "ilist.hh"
+#include "dequeue.hh"
 #include "kstream.hh"
 #include "file.hh"
 
@@ -37,7 +38,7 @@ private:
   void sanity(void);
 
   struct spinlock lock_ __mpalign__;
-  ilist<proc, &proc::sched_link> proc_;
+  dequeue<proc> proc_;
   volatile bool cansteal_ __mpalign__;
   __padout__;
 };
@@ -75,12 +76,12 @@ schedule::balance_move_to(schedule* target)
     return;
 
   for (auto it = proc_.begin(); it != proc_.end(); ++it) {
-    if ((*it).cansteal(true)) {
+    if (it->cansteal(true)) {
       proc_.erase(it);
       if (--ncansteal_ == 0)
         cansteal_ = false;
       sanity();
-      victim = &(*it);
+      victim = *it;
     }
   }
   release(&lock_);
@@ -124,14 +125,14 @@ schedule::deq(void)
   scoped_acquire x(&lock_);
   if (proc_.empty())
     return nullptr;
-  proc &p = proc_.front();
+  proc* p = proc_.front();
   proc_.pop_front();
-  if (p.cansteal(true))
+  if (p->cansteal(true))
     if (--ncansteal_ == 0)
       cansteal_ = false;
   sanity();
   stats_.deqs++;
-  return &p;
+  return p;
 }
 
 void
