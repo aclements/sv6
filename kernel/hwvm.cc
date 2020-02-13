@@ -148,8 +148,9 @@ public:
     memset(&pair.kernel->e[0], 0, 8*k);
     memmove(&pair.kernel->e[k], &e[k], 8*(512-k));
 
-    k = PX(L_PML4, KGLOBAL);
+    size_t p = PX(L_PML4, KPUBLIC);
     memset(&pair.user->e[0], 0, PGSIZE);
+    pair.user->e[p].store(e[p]);
 
     return pair;
   }
@@ -453,6 +454,13 @@ initpg(struct cpu *c)
     }
     kvmallocpos = KVMALLOC;
 
+    // Create public area
+    for (auto it = kpml4.find(KPUBLIC, pgmap::L_PDPT); it.index() < KPUBLICEND;
+         it += it.span()) {
+      it.create(0);
+      assert(!it.is_set());
+    }
+
     // Create UEFI area.
     if (multiboot.flags & MULTIBOOT2_FLAG_EFI_MMAP) {
       for (int i = 0; i < multiboot.efi_mmap_descriptor_count; i++) {
@@ -634,6 +642,27 @@ vmalloc_free(void *ptr)
   // XXX Should release unused page table pages.  This requires a
   // global TLB shootdown, so we should only do it in large-ish
   // batches.
+}
+
+void
+register_public_pages(void** pages, size_t count)
+{
+  for (size_t i = 0; i < count; i++) {
+    *kpml4.find((uintptr_t)pages[i], pgmap::L_4K).create(0) =
+      ((u64)pages[i] - KPUBLIC) | PTE_W | PTE_P | PTE_NX;
+  }
+}
+
+void
+unregister_public_pages(void** pages, size_t count)
+{
+  for (size_t i = 0; i < count; i++) {
+    *kpml4.find((uintptr_t)pages[i], pgmap::L_4K).create(0) = 0;
+  }
+
+  run_on_all_cpus([]() {
+      lcr3(rcr3());
+  });
 }
 
 void

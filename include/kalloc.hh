@@ -215,3 +215,60 @@ public:
 private:
   vmap* vmap_;
 };
+
+// Standard allocator that uses the kernel's public page allocator.  This
+// satisfies both the standard Allocator requirement as well as the ZAllocator
+// requirement.
+template<class T>
+class palloc_allocator : public allocator_base<T>
+{
+public:
+  template <class U> struct rebind { typedef palloc_allocator<U> other; };
+
+  palloc_allocator() = default;
+  palloc_allocator(const palloc_allocator&) = default;
+  template<class U> palloc_allocator(const palloc_allocator<U>&) noexcept { }
+
+  T*
+  allocate(std::size_t n, const void *hint = 0)
+  {
+    if (n * sizeof(T) != PGSIZE)
+      panic("%s cannot allocate %zu bytes", __PRETTY_FUNCTION__, n * sizeof(T));
+    return (T*)palloc(typeid(T).name());
+  }
+
+  void
+  deallocate(T* p, std::size_t n)
+  {
+    if (n * sizeof(T) != PGSIZE)
+      panic("%s cannot deallocate %zu bytes", __PRETTY_FUNCTION__,
+            n * sizeof(T));
+    pfree(p);
+  }
+
+  std::size_t
+  max_size() const noexcept
+  {
+    return PGSIZE;
+  }
+
+  // ZAllocator methods
+
+  T*
+  default_allocate()
+  {
+    if (sizeof(T) != PGSIZE)
+      panic("%s cannot allocate %zu bytes", __PRETTY_FUNCTION__, sizeof(T));
+
+    T *p = allocate(1);
+    try {
+      // Unqualified lookup doesn't find declarations in dependent
+      // bases.  Hence "this->".
+      this->construct(p);
+    } catch (...) {
+      deallocate(p, 1);
+      throw;
+    }
+    return p;
+  }
+};

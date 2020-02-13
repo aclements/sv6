@@ -167,6 +167,8 @@ void            kminit(void);
 void            kmemprint(print_stream *s);
 char*           zalloc(const char* name);
 void            zfree(void* p);
+char*           palloc(const char* name);
+void            pfree(void* p);
 
 // kbd.c
 void            kbdintr(void);
@@ -288,6 +290,8 @@ size_t          safe_read_vm(void *dst, uintptr_t src, size_t n);
 
 // hwvm.cc
 void            refresh_pcid_mask(void);
+void            register_public_pages(void** pages, size_t count);
+void            unregister_public_pages(void** pages, size_t count);
 
 // other exported/imported functions
 extern "C" {

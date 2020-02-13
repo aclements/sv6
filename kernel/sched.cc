@@ -38,7 +38,7 @@ private:
   void sanity(void);
 
   struct spinlock lock_ __mpalign__;
-  dequeue<proc> proc_;
+  dequeue<proc, palloc_allocator<proc>> proc_;
   volatile bool cansteal_ __mpalign__;
   __padout__;
 };

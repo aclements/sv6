@@ -39,6 +39,7 @@ static console_stream verbose(false);
 #define MAX_BUDDIES (NCPU + 16)
 
 #define KALLOC_ZERO_PAGES 64
+#define KALLOC_PUBLIC_PAGES 256
 
 struct locked_buddy
 {
@@ -278,7 +279,7 @@ size_t page_info_map_add __attribute__((section (".qdata"))),
   page_info_map_shift __attribute__((section (".qdata")));
 page_info_map_entry *page_info_map_end __attribute__((section (".qdata")));
 
-struct alignas(PGSIZE) cpu_mem
+struct cpu_mem
 {
   steal_order steal;
   int mempool;   // XXX cache align?
@@ -288,12 +289,9 @@ struct alignas(PGSIZE) cpu_mem
   size_t nhot;
   void *zero_pages[KALLOC_ZERO_PAGES];
   size_t nzero;
-
-  __page_pad__;
+  void *public_pages[KALLOC_PUBLIC_PAGES];
+  size_t npublic;
 };
-
-static_assert(alignof(cpu_mem) == PGSIZE);
-static_assert(sizeof(cpu_mem) == PGSIZE);
 
 // Prefer mycpu()->mem for local access to this.  This is NOINIT since
 // we set up the cpu_mems during CPU 0 boot.
@@ -1102,6 +1100,7 @@ initkalloc(void)
       cpu->mem->steal.add(node_low, node_low + node_buddies);
       cpu->mem->nhot = 0;
       cpu->mem->nzero = 0;
+      cpu->mem->npublic = 0;
       cpu->mem->mempool = node_low;
       ++cpu_index;
     }
@@ -1263,4 +1262,37 @@ void zfree(void* page) {
   } else {
     kfree(page);
   }
+}
+
+char* palloc(const char* name) {
+  scoped_cli cli;
+  auto mem = mycpu()->mem;
+  if (mem->npublic == 0) {
+    while (mem->npublic < KALLOC_PUBLIC_PAGES / 16) {
+      void *page = (void*)((u64)zalloc("palloc") - KBASE + KPUBLIC);
+      if (!page) {
+        break;
+      } else {
+        mem->public_pages[mem->npublic++] = page;
+      }
+    }
+
+    if (mem->npublic) {
+      register_public_pages(mem->public_pages, mem->npublic);
+    }
+  }
+
+  return mem->npublic ? (char*)mem->public_pages[--mem->npublic] : NULL;
+
+}
+void pfree(void* page) {
+  scoped_cli cli;
+  auto mem = mycpu()->mem;
+  if (mem->npublic == KALLOC_PUBLIC_PAGES) {
+    unregister_public_pages(&mem->public_pages[KALLOC_PUBLIC_PAGES/2], KALLOC_PUBLIC_PAGES/2);
+    while(mem->npublic > KALLOC_PUBLIC_PAGES/2)
+      kfree((void*)((u64)mem->public_pages[--mem->npublic] - KPUBLIC + KBASE));
+  }
+
+  mem->public_pages[mem->npublic++] = page;
 }

@@ -48,3 +48,18 @@ void run_on_cpus(const bitset<NCPU> &cpu_set, CB cb)
   ipi_call_callable<CB> call(cb);
   call.run_on(cpu_set);
 }
+
+// Invoke @c cb ASAP on all CPUs.  @c cb will be called
+// from the IPI interrupt handler with interrupts disabled, so it
+// should be lightweight.
+template<class CB>
+void run_on_all_cpus(CB cb)
+{
+  ipi_call_callable<CB> call(cb);
+
+  bitset<NCPU> cpu_set;
+  for (cpuid_t i = 0; i < ncpu; i++)
+    cpu_set.set(i);
+
+  call.run_on(cpu_set);
+}
