@@ -118,3 +118,26 @@ snprintf(char *buf, u32 n, const char *fmt, ...)
   vsnprintf(buf, n, fmt, ap);
   va_end(ap);
 }
+
+// These are needed to make GCC happy, but aren't written to actually perform well.
+
+extern "C" void sprintf(char *buf, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, (u32)-1, fmt, ap);
+  va_end(ap);
+}
+extern "C" int fputs(const char* str, FILE *stream) {
+  fprintf(stream, "%s", str);
+  return 0;
+}
+extern "C" int fputc(char c, FILE *stream) {
+  char str[2] = {c, '\0'};
+  fputs(str, stream);
+  return c;
+}
+extern "C" size_t fwrite(const void *buffer, size_t size, size_t count, FILE* stream) {
+  for(int i = 0; i < count * size; i++) {
+    fputc(((char*)buffer)[i], stream);
+  }
+}

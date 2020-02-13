@@ -13,6 +13,9 @@
 
 const std::nothrow_t std::nothrow;
 
+void* stdout = nullptr;
+void* stderr = nullptr;
+
 void*
 operator new(std::size_t nbytes)
 {
@@ -237,6 +240,13 @@ free(void* vp)
   kmfree(p-1, p[-1]+8);
 }
 
+extern "C" void* realloc(void*, size_t);
+void*
+realloc(void* vp, size_t newsize) {
+  free(vp);
+  return malloc(newsize);
+}
+
 extern "C" int dl_iterate_phdr(void);
 int
 dl_iterate_phdr(void)
@@ -322,4 +332,24 @@ initcpprt(void)
 
   panic("no catch");
 #endif
+}
+
+extern "C" void sprintf(char *buf, const char *fmt, ...);
+void sprintf(char *buf, const char *fmt, ...) {
+  panic("sprintf");
+}
+
+extern "C" int fputs(const char* str, void*stream);
+int fputs(const char* str, void*stream) {
+  panic("fputs");
+}
+
+extern "C" int fputc(char c, void *stream);
+int fputc(char c, void *stream) {
+  panic("fputc");
+}
+
+extern "C" size_t fwrite(const void *buffer, size_t size, size_t count, void* stream);
+size_t fwrite(const void *buffer, size_t size, size_t count, void* stream) {
+  panic("fwrite");
 }
