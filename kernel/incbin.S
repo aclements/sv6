@@ -14,7 +14,7 @@
 .globl ksyms_start
 ksyms_start:
 .skip 0x60000, 0
-.globl ksysms_end
+.globl ksyms_end
 ksyms_end:
 
 .section .init_rodata, "a", @progbits
