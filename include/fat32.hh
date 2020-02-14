@@ -281,6 +281,9 @@ private:
   u32 find_consecutive_free_dirents(u32 count_needed);
   // must hold structure lock; dirent must be free
   void assign_dirent(u32 offset, fat32_dirent entry);
+  // must hold structure lock; returns false on failure
+  bool create_and_insert_file(const char *name, u32 attributes, u32 *cluster_out, u32 *dirent_offset_out);
+  void populate_dot_files();
 
   size_t write_at_nogrow(const char *addr, u64 off, size_t len);
   void zero_range_nogrow(u64 off, size_t len);

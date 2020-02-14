@@ -410,10 +410,10 @@ vnode_fat32::populate_children()
     return rl;
   auto wl = structure_lock.upgrade(rl);
   if (!wl) {
-    // could not upgrade? then someone else must have run populate_children()
-    rl = structure_lock.guard_read();
-    assert(children_populated);
-    return rl;
+    // could not upgrade? try to acquire normally
+    wl = structure_lock.guard_write();
+    if (children_populated)
+      return structure_lock.downgrade(wl);
   }
   auto fs = filesystem->get();
   if (!fs)
@@ -650,9 +650,12 @@ vnode_fat32::assign_dirent(u32 offset, fat32_dirent entry)
     expand_to_cluster_count(cluster_count + 1);
     cluster = this->get_dirent_ref(offset, &d);
     assert(cluster);
+    // zero out new cluster
+    memset(cluster->buffer_ptr(), 0, cluster_cache->cache_metadata->cluster_size);
   }
   assert(d->filename[0] == 0xE5 || d->filename[0] == '\0');
   *d = entry;
+  cluster->mark_dirty();
 }
 
 bool
@@ -819,6 +822,47 @@ vnode_fat32::remove(const char *name)
   return 0;
 }
 
+bool
+vnode_fat32::create_and_insert_file(const char *name, u32 attributes, u32 *cluster_out, u32 *dirent_offset_out)
+{
+  // steps done here:
+  //  - allocate initial cluster on disk
+  //  - add directory entry & long filenames
+
+  u32 cluster = 0;
+  if (!fat->requisition_free_cluster(&cluster))
+    return false; // can't allocate data for file...
+  assert(cluster >= 2);
+
+  strbuf<FILENAME_MAX> filename;
+  if (!filename.loadok(name))
+    return false; // filename too long
+  uppercase(filename.buf_);
+  u32 dirent_count = fat32_dirent::count_filename_entries(filename.ptr()); // 1 if short filename, >1 if LFN entries needed
+  if (dirent_count == 0)
+    return false; // filename too long or too short
+  u32 dirent_offset = this->find_consecutive_free_dirents(dirent_count); // returns LAST of the dirent_count free entries
+  fat32_dirent primary_entry = {};
+  if (dirent_count == 1) {
+    primary_entry = fat32_dirent::short_filename(filename.ptr());
+  } else {
+    primary_entry = fat32_dirent::guard_filename(filename.ptr());
+    for (u32 i = 0; i < dirent_count - 1; i++) {
+      fat32_dirent fragment = fat32_dirent_lfn::filename_fragment(filename.ptr(), i, primary_entry.checksum());
+      this->assign_dirent(dirent_offset - 1 - i, fragment);
+    }
+  }
+  primary_entry.attributes = attributes;
+  primary_entry.file_size_bytes = 0;
+  primary_entry.set_cluster_id(cluster);
+  this->assign_dirent(dirent_offset, primary_entry);
+
+  *dirent_offset_out = dirent_offset;
+  *cluster_out = cluster;
+
+  return true;
+}
+
 sref<vnode>
 vnode_fat32::create_file(const char *name, bool excl)
 {
@@ -831,44 +875,20 @@ vnode_fat32::create_file(const char *name, bool excl)
   }
   if (directory_killed)
     return sref<vnode>(); // directory in the process of being deleted; don't create any new files
+
   // steps:
   //  - allocate initial cluster on disk
   //  - add directory entry & long filenames
   //  - insert into linked list
 
-  u32 cluster = 0;
-  if (!fat->requisition_free_cluster(&cluster))
-    return sref<vnode>(); // can't allocate data for file...
-  assert(cluster >= 2);
-
-  strbuf<FILENAME_MAX> filename;
-  if (!filename.loadok(name))
-    return sref<vnode>(); // filename too long
-  uppercase(filename.buf_);
-  u32 dirent_count = fat32_dirent::count_filename_entries(filename.ptr()); // 1 if short filename, >1 if LFN entries needed
-  if (dirent_count == 0)
-    return sref<vnode>(); // filename too long or too short
-  u32 dirent_offset = this->find_consecutive_free_dirents(dirent_count); // returns LAST of the dirent_count free entries
-  fat32_dirent primary_entry = {};
-  if (dirent_count == 1) {
-    primary_entry = fat32_dirent::short_filename(filename.ptr());
-  } else {
-    primary_entry = fat32_dirent::guard_filename(filename.ptr());
-    for (u32 i = 0; i < dirent_count - 1; i++) {
-      fat32_dirent fragment = fat32_dirent_lfn::filename_fragment(filename.ptr(), i, primary_entry.checksum());
-      this->assign_dirent(dirent_offset - 1 - i, fragment);
-    }
-  }
-  primary_entry.attributes = 0;
-  primary_entry.file_size_bytes = 0;
-  primary_entry.set_cluster_id(cluster);
-  this->assign_dirent(dirent_offset, primary_entry);
-
+  u32 cluster = 0, dirent_offset = 0;
+  if (!create_and_insert_file(name, 0, &cluster, &dirent_offset))
+    return sref<vnode>();
   sref<vnode_fat32> new_child = make_sref<vnode_fat32>(filesystem, cluster, false, sref<vnode_fat32>::newref(this), 0);
-  lowercase(filename.buf_);
-  new_child->my_filename = filename;
+  new_child->my_filename = name;
+  lowercase(new_child->my_filename.buf_);
 
-  // FIXME: insert file at the correct location in the directory
+  // FIXME: insert file at the correct location in the directory relative to other files
   new_child->next_sibling_node = first_child_node;
   first_child_node = new_child;
 
@@ -878,11 +898,68 @@ vnode_fat32::create_file(const char *name, bool excl)
   return new_child;
 }
 
+void
+vnode_fat32::populate_dot_files()
+{
+  // in addition to the basic requirements for creating a file, we also need to initialize the contents of the directory
+  // with an appropriate set of . and .. entries
+  //     ------- filename -------  --ext-- attr nt  ------- times ------ highcl -- mtimes -- lowcl  -- size ---
+  // .:  2E 20 20 20  20 20 20 20  20 20 20 10  00 00 32 9F  3F 50 3F 50  00 00 32 9F  3F 50 03 00  00 00 00 00
+  // ..: 2E 2E 20 20  20 20 20 20  20 20 20 10  00 00 32 9F  3F 50 3F 50  00 00 32 9F  3F 50 00 00  00 00 00 00
+
+  fat32_dirent dotentry = {
+    .filename = {'.', ' ', ' ', ' ', ' ', ' ', ' ', ' '},
+    .extension = {' ', ' ', ' '},
+    .attributes = ATTR_DIRECTORY,
+  };
+  dotentry.set_cluster_id(cluster_ids[0]);
+  assign_dirent(0, dotentry);
+
+  fat32_dirent dotdotentry = {
+    .filename = {'.', '.', ' ', ' ', ' ', ' ', ' ', ' '},
+    .extension = {' ', ' ', ' '},
+    .attributes = ATTR_DIRECTORY,
+  };
+  dotdotentry.set_cluster_id(0);
+  assign_dirent(1, dotdotentry);
+}
+
 sref<vnode>
 vnode_fat32::create_dir(const char *name)
 {
-  cprintf("unimplemented: fat32 directory creation\n"); // fat32 is read-only for now
-  return sref<vnode>();
+  lock_guard<rwlock::write> l(&structure_lock.writer);
+  auto child = ref_child_locked(name, nullptr);
+  if (child)
+    return sref<vnode>();
+  if (directory_killed)
+    return sref<vnode>(); // directory in the process of being deleted; don't create any new files
+  // steps:
+  //  - allocate initial cluster on disk
+  //  - zero out cluster
+  //  - add directory entry & long filenames
+  //  - populate initial dot files
+  //  - insert into linked list
+
+  u32 cluster = 0, dirent_offset = 0;
+  if (!create_and_insert_file(name, ATTR_DIRECTORY, &cluster, &dirent_offset))
+    return sref<vnode>();
+  // zero out new cluster
+  auto cluster_ref = cluster_cache->get_cluster(cluster);
+  memset(cluster_ref->buffer_ptr(), 0, cluster_cache->cache_metadata->cluster_size);
+
+  sref<vnode_fat32> new_child = make_sref<vnode_fat32>(filesystem, cluster, true, sref<vnode_fat32>::newref(this), 0);
+  new_child->my_filename = name;
+  lowercase(new_child->my_filename.buf_);
+  new_child->populate_dot_files();
+
+  // FIXME: insert file at the correct location in the directory relative to other files
+  new_child->next_sibling_node = first_child_node;
+  first_child_node = new_child;
+
+  assert(new_child->dirent_index_in_parent == UINT64_MAX);
+  new_child->dirent_index_in_parent = dirent_offset;
+
+  return new_child;
 }
 
 sref<vnode>
