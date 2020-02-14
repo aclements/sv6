@@ -33,15 +33,14 @@ enum { sched_debug = 0 };
 
 proc::proc(int npid) :
   kstack(0), qstack(0), killed(0), tf(0), uaccess_(0), user_fs_(0), pid(npid),
-  unmapped_hint(0), parent(0), context(0), tsc(0), curcycles(0), cpuid(0),
-  fpu_state(nullptr), cpu_pin(0), oncv(0), cv_wakeup(0),
-  futex_lock("proc::futex_lock", LOCKSTAT_PROC), unmap_tlbreq_(0),
-  data_cpuid(-1), in_exec_(0), yield_(false), upath(nullptr), uargv(nullptr),
-  exception_inuse(0), magic(PROC_MAGIC), state_(EMBRYO)
+  unmapped_hint(0), cv(nullptr), yield_(false), oncv(0), cv_wakeup(0), curcycles(0),
+  tsc(0), cpuid(0), cpu_pin(0), context(nullptr), on_qstack(false), state_(EMBRYO),
+  parent(0), fpu_state(nullptr), unmap_tlbreq_(0), data_cpuid(-1), in_exec_(0),
+  upath(nullptr), uargv(nullptr), exception_inuse(0), magic(PROC_MAGIC)
 {
   snprintf(lockname, sizeof(lockname), "cv:proc:%d", pid);
   lock = spinlock(lockname+3, LOCKSTAT_PROC);
-  cv = new condvar(lockname);
+
   gc = new gc_handle();
   memset(__cxa_eh_global, 0, sizeof(__cxa_eh_global));
   memset(sig, 0, sizeof(sig));
@@ -272,9 +271,9 @@ proc::alloc(void)
   sp -= 8;
   *(u64*)sp = (u64)trapret;
 
-  sp -= sizeof *p->context;
+  sp -= sizeof(struct context);
   p->context = (struct context*)sp;
-  memset(p->context, 0, sizeof *p->context);
+  memset(p->context, 0, sizeof(struct context));
   p->context->rip = (uptr)forkret;
 
   return p;
@@ -284,6 +283,10 @@ void proc::init_vmap()
 {
   vmap->qinsert(this);
   vmap->qinsert(kstack, qstack, KSTACKSIZE);
+
+  // Ideally this would be part of the same allocation as the current proc.
+  cv = (condvar*)vmap->qalloc("proc::cv");
+  new (cv) condvar();
 }
 
 void

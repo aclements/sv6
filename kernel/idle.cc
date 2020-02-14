@@ -20,7 +20,7 @@ struct idle {
 };
 
 namespace {
-  DEFINE_PERCPU(idle, idlem);
+  DEFINE_QPERCPU(idle, idlem);
 };
 
 void idleloop(void);

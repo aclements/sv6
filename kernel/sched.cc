@@ -162,8 +162,9 @@ private:
   percpu<schedule*> schedule_;
 public:
   sched_dir() : b_(this) {
+    static_assert(sizeof(schedule) <= PGSIZE);
     for (int i = 0; i < NCPU; i++) {
-      schedule_[i] = new schedule();
+      schedule_[i] = new ((schedule*)palloc("schedule")) schedule;
     }
   };
   ~sched_dir() {};
@@ -237,17 +238,12 @@ public:
       panic("non-RUNNABLE next %s %u", next->name, next->get_state());
 
     prev = myproc();
-    mycpu()->proc = next;
-    mycpu()->prev = prev;
 
     if (prev->get_state() == ZOMBIE)
       mtstop(prev);
     else
       mtpause(prev);
     mtign();
-
-    switchvm(prev->vmap.get(), next->vmap.get());
-    mycpu()->ts.rsp[0] = (u64)next->kstack + KSTACKSIZE;
 
     next->set_state(RUNNING);
     next->tsc = rdtsc();
@@ -265,7 +261,32 @@ public:
     if (cr0 != ncr0)
       lcr0(ncr0);
 
-    swtch(&prev->context, next->context);
+    switchvm(prev->vmap.get(), next->vmap.get());
+    mycpu()->ts.rsp[0] = (u64) next->kstack + KSTACKSIZE;
+
+    prev->on_qstack = !secrets_mapped;
+    if (!prev->on_qstack && next->on_qstack) {
+      u64 rsp = (u64)next->context;
+      assert(rsp >= (u64)next->kstack);
+      assert(rsp < (u64)next->kstack + KSTACKSIZE);
+      memcpy((char*)rsp,
+             (char*)rsp - (u64)next->kstack + (u64)next->qstack,
+             (u64)next->kstack + KSTACKSIZE - rsp);
+      next->on_qstack = false;
+    }
+
+    mycpu()->proc = next;
+    mycpu()->prev = prev;
+
+    // Make sure no world barriers have triggered since we set prev->on_qstack.
+    assert(prev->on_qstack == !secrets_mapped);
+
+    if (prev->on_qstack && !next->on_qstack) {
+      swtch_and_barrier(&prev->context, next->context);
+    } else {
+      swtch(&prev->context, next->context);
+    }
+
     mycpu()->intena = intena;
     post_swtch();
   }
@@ -282,7 +303,7 @@ public:
 
 };
 
-sched_dir thesched_dir __mpalign__;
+sched_dir thesched_dir __mpalign__ __attribute__((section (".qdata")));
 
 void
 post_swtch(void)

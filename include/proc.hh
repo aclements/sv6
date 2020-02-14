@@ -72,44 +72,47 @@ struct proc {
   volatile int pid;            // Process ID
   sref<vmap> vmap;             // va -> vma
   uptr unmapped_hint;
+  struct condvar *cv;          // for waiting till children exit
 
   ilink<proc> futex_link;
   futexkey_t futex_key;
 
+  bool yield_;                 // yield cpu up when returning to user space
+  struct spinlock lock;
+  struct condvar *oncv;        // Where it is sleeping, for kill()
+  u64 cv_wakeup;               // Wakeup time for this process
+  u64 curcycles;
+  u64 tsc;
+  unsigned cpuid;
+  int cpu_pin;
+  ilink<proc> cv_waiters;      // Linked list of processes waiting for oncv
+  ilink<proc> cv_sleep;        // Linked list of processes sleeping on a cv
+  context* context;            // swtch() here to run process
+  bool on_qstack;              // Only valid when proc is *not* running
+
+private:
+  procstate_t state_;          // Process state
+public:
   __page_pad__;
 
   vmalloc_ptr<char[]> kstack_vm; // vmalloc'd kstack, if using vmalloc
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status
-  struct context *context;     // swtch() here to run process
   sref<filetable> ftable;      // File descriptor table
   sref<vnode> cwd;             // Current directory
   char name[16];               // Process name (debugging)
-  u64 tsc;
-  u64 curcycles;
-  unsigned cpuid;
   void *fpu_state;             // FXSAVE state, lazily allocated
-  struct spinlock lock;
   ilink<proc> child_next;
   ilist<proc,&proc::child_next> childq;
-  ilink<proc> sched_link;
-  struct condvar *cv;          // for waiting till children exit
   struct gc_handle *gc;
   char lockname[16];
-  int cpu_pin;
 #if MTRACE
   struct mtrace_stacks mtrace_stacks;
 #endif
-  struct condvar *oncv;        // Where it is sleeping, for kill()
-  u64 cv_wakeup;               // Wakeup time for this process
-  ilink<proc> cv_waiters;      // Linked list of processes waiting for oncv
-  ilink<proc> cv_sleep;        // Linked list of processes sleeping on a cv
-  struct spinlock futex_lock;
   u64 unmap_tlbreq_;
   int data_cpuid;              // Where vmap and kstack is likely to be cached
   int run_cpuid_;
   int in_exec_;
-  bool yield_;                 // yield cpu up when returning to user space
 
   userptr_str upath;
   userptr<userptr_str> uargv;
@@ -134,7 +137,6 @@ struct proc {
           curcycles != 0 && curcycles > VICTIMAGE);
   };
 
-
   static u64   hash(const u32& p);
 
   bool deliver_signal(int signo);
@@ -146,8 +148,6 @@ private:
   proc(int npid);
   proc& operator=(const proc&);
   proc(const proc& x);
-
-  procstate_t state_;       // Process state
 } __page_align__;
 
 class kill_exception : public std::runtime_error {
