@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ilist.hh"
-#include "radix_array.hh"
+#include "kalloc.hh"
 
 #include <cstddef>
 #include <initializer_list>
@@ -103,6 +103,17 @@ public:
       push_back(*it);
   }
 
+  dequeue(dequeue&& other) : size_(other.size_), pages_(std::move(other.pages_)) {
+    other.size = 0;
+  }
+
+  dequeue& operator=(dequeue&& other) {
+    size_ = other.size_;
+    pages_ = std::move(other.pages_);
+    other.size_ = 0;
+    return *this;
+  }
+
   ~dequeue() {
     clear();
   }
@@ -147,16 +158,16 @@ public:
     size_++;
     if (!pages_.empty()) {
       page& p = pages_.front();
-      if (p.begin_index_ > 0) {
-        p.entries[--p.begin_index_] = x;
+      if (p.begin_index > 0) {
+        p.entries[--p.begin_index] = x;
         return;
       }
     }
 
     auto p = alloc_.allocate(1);
-    p->begin_index_ = NENTRIES - 1;
-    p->end_index_ = p->begin_index_ + 1;
-    p->entries[p->begin_index_] = x;
+    p->begin_index = NENTRIES - 1;
+    p->end_index = p->begin_index + 1;
+    p->entries[p->begin_index] = x;
     pages_.push_front(p);
   }
 
@@ -225,5 +236,12 @@ public:
       alloc_.deallocate(&p, 1);
 
     pages_.clear();
+  }
+
+  iterator iterator_to(T* t) {
+    auto it = begin();
+    while (*it != t && it != end())
+      it++;
+    return it;
   }
 };
