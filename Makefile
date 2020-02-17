@@ -351,7 +351,7 @@ $(O)/example.fat: $(O)/bin/ls README.md $(O)/writeok
 	mmd -i $@ ::bin
 	mmd -i $@ ::foo
 	mmd -i $@ ::foo/sysl
-	mcopy -i $@ /usr/lib/syslinux/modules/bios/*.c32 ::foo/sysl/
+	mcopy -i $@ syslinux/bios/*.c32 ::foo/sysl/
 	mcopy -i $@ $(O)/bin/ls ::bin
 	mcopy -i $@ ./README.md ::
 	mcopy -i $@ $(O)/writeok ::
@@ -362,7 +362,7 @@ $(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon syslinux.cfg
 	mmd -i $@ ::boot
 	mmd -i $@ ::boot/syslinux
 	mmd -i $@ ::bin
-	mcopy -i $@ /usr/lib/syslinux/modules/bios/*.c32 ::boot/syslinux/
+	mcopy -i $@ syslinux/bios/*.c32 ::boot/syslinux/
 	mcopy -i $@ $(O)/kernel.elf ::boot/sv6
 	mcopy -i $@ $(O)/bin/anon ::bin
 	mcopy -i $@ ./syslinux.cfg ::
@@ -372,7 +372,7 @@ $(O)/boot.img: $(O)/boot.fat $(O)/fs.part
 	dd if=$(O)/fs.part of=$@ conv=sparse obs=512 seek=143360
 	truncate -s "101M" $@
 	parted -s --align optimal $@ mklabel msdos mkpart primary 1MiB 70MiB set 1 boot on mkpart primary 70MiB 100MiB
-	dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/mbr/mbr.bin of=$@
+	dd bs=440 count=1 conv=notrunc if=syslinux/mbr/mbr.bin of=$@
 $(O)/boot.vhdx: $(O)/boot.img
 	qemu-img convert -f raw -O vhdx $< $@
 $(O)/boot.vdi: $(O)/boot.img
