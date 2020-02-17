@@ -42,7 +42,6 @@ fn main() {
         )
         .get_matches();
 
-    // Write the contents of rust-lang.org to stdout
     let hostname = matches.value_of("hostname").unwrap();
     let port = matches.value_of("port").unwrap();
     let kernel = matches.value_of("kernel").unwrap();
