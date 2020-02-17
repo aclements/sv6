@@ -135,6 +135,11 @@ static const char* unifont[] = {
   "0000000000000000000073D04A104BD04A1073DE000000000000000000000000",
 };
 
+static const char* erase[] = {
+  "00000000000000000000000000000000",
+  "0000000000000000000000000000000000000000000000000000000000000000",
+};
+
 const u16 BORDER = 4;
 
 u32* front_buffer = nullptr;
@@ -144,6 +149,9 @@ u16 screen_height;
 
 u16 cursor_x = BORDER;
 u16 cursor_y = BORDER;
+
+int line[512];
+int line_end = 0;
 
 void initvga() {
   if (!cmdline_params.use_vga) {
@@ -185,7 +193,6 @@ bool get_framebuffer(paddr* out_address, u64* out_size) {
   return false;
 }
 
-
 void vgaputc(int c) {
   u32* buffer = back_buffer ? back_buffer : front_buffer;
   if (!buffer)
@@ -194,22 +201,43 @@ void vgaputc(int c) {
   if (c == '\n') {
     cursor_x = BORDER;
     cursor_y += 16;
+    line_end = 0;
     return;
   }
   if (c == '\r') {
     cursor_x = BORDER;
+    line_end = 0;
     return;
   }
 
   const char* bitmap = unifont[c & 0x7f];
   int width = bitmap[32] == '\0' ? 8 : 16;
-  int height = 16;
 
+  if (c == 0x100) { // BACKSPACE
+    if (line_end == 0)
+      return;
+
+    if ((unifont[line[line_end - 1]])[32] == '\0') {
+      cursor_x -= 8;
+      bitmap = erase[0];
+      width = 8;
+    } else {
+      cursor_x -= 16;
+      bitmap = erase[1];
+      width = 16;
+    }
+  } else {
+    assert(line_end < 512);
+    line[line_end++] = c;
+  }
+
+  int height = 16;
   bool full_redraw = false;
 
   if (cursor_x + width + BORDER > screen_width) {
     cursor_x = 0;
     cursor_y += 16;
+    line_end = 0;
   }
   while (cursor_y + height + BORDER > screen_height) {
     memmove(buffer,
@@ -219,6 +247,7 @@ void vgaputc(int c) {
            16 * screen_width * 4);
     cursor_y -= 16;
     full_redraw = true;
+    line_end = 0;
   }
 
   for (int i = 0; bitmap[i]; i++) {
@@ -251,5 +280,7 @@ void vgaputc(int c) {
     }
   }
 
-  cursor_x += width;
+  if (c != 0x100) { // BACKSPACE
+    cursor_x += width;
+  }
 }
