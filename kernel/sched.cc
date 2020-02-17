@@ -158,13 +158,14 @@ schedule::sanity(void)
 
 struct sched_dir {
 private:
+  friend void initsched();
+
   balancer<sched_dir, schedule> b_;
   percpu<schedule*> schedule_;
 public:
   sched_dir() : b_(this) {
-    static_assert(sizeof(schedule) <= PGSIZE);
     for (int i = 0; i < NCPU; i++) {
-      schedule_[i] = new ((schedule*)palloc("schedule")) schedule;
+      schedule_[i] = nullptr;
     }
   };
   ~sched_dir() {};
@@ -343,5 +344,10 @@ steal(void)
 void
 initsched(void)
 {
+  static_assert(sizeof(schedule) <= PGSIZE);
+  for (int i = 0; i < NCPU; i++) {
+    thesched_dir.schedule_[i] = new ((schedule*)palloc("schedule")) schedule;
+  }
+
   devsw[MAJ_STAT].pread = statread;
 }
