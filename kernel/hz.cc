@@ -15,7 +15,7 @@
 #define TIMER_STAT      0xe0    // read status mode
 #define TIMER_STAT0     (TIMER_STAT | 0x2)  // status mode counter 0
 
-u64 cpuhz;
+u64 cpuhz __attribute__((section (".qdata")));
 
 void
 microdelay(u64 delay)
