@@ -72,6 +72,7 @@ UPROGS_BIN= \
 	update_ucode \
 	sharedtest \
 	param \
+	smallfile \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
@@ -111,6 +112,7 @@ UPROGS_NATIVE := \
 	vmimbalbench \
 	anon \
 	getpid \
+	smallfile \
 
 ifeq ($(HAVE_TESTGEN),y)
 UPROGS_BIN    += fstest
