@@ -362,6 +362,8 @@ $(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon syslinux.cfg
 	mmd -i $@ ::boot
 	mmd -i $@ ::boot/syslinux
 	mmd -i $@ ::bin
+	mmd -i $@ ::EFI
+	mmd -i $@ ::EFI/BOOT
 	mcopy -i $@ syslinux/bios/*.c32 ::boot/syslinux/
 	mcopy -i $@ $(O)/kernel.elf ::boot/sv6
 	mcopy -i $@ $(O)/bin/anon ::bin
@@ -371,8 +373,8 @@ $(O)/boot.img: $(O)/boot.fat $(O)/fs.part
 	dd if=$< of=$@ conv=sparse obs=512 seek=2048
 	dd if=$(O)/fs.part of=$@ conv=sparse obs=512 seek=143360
 	truncate -s "101M" $@
-	parted -s --align optimal $@ mklabel msdos mkpart primary 1MiB 70MiB set 1 boot on mkpart primary 70MiB 100MiB
-	dd bs=440 count=1 conv=notrunc if=syslinux/mbr/mbr.bin of=$@
+	parted -s --align optimal $@ mklabel gpt mkpart primary 1MiB 70MiB set 1 legacy_boot on set 1 esp on mkpart primary 70MiB 100MiB
+	dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/bios/gptmbr.bin of=$@
 $(O)/boot.vhdx: $(O)/boot.img
 	qemu-img convert -f raw -O vhdx $< $@
 $(O)/boot.vdi: $(O)/boot.img
