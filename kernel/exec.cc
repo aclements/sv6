@@ -103,12 +103,20 @@ dostack(vmap* vmp, const char* const * argv, const char* path)
   uptr sp;
 
   // User stack should be:
-  //   char argv[argc-1]
-  //   char argv[argc-2]
-  //   ...
-  //   char argv[0]
-  //   char *argv[argc+1]
-  //   u64 argc
+  //   parameter strings:
+  //     char argv[argc-1]
+  //     char argv[argc-2]
+  //     ...
+  //     char argv[0]
+  //   stub auxv pointer:
+  //     u32 auxv_union_ignored = 0
+  //     u32 auxv_type = 0
+  //   stub env pointer:
+  //     char *envp[1] = {NULL}
+  //   argv pointers:
+  //     char *argv[argc+1]
+  //   argument count:
+  //     u64 argc
 
   // Allocate a stack at the top of the (user) address space
   if (vmp->insert(vmdesc::anon_desc(), USERTOP - (USTACKPAGES*PGSIZE),
@@ -129,6 +137,16 @@ dostack(vmap* vmp, const char* const * argv, const char* path)
     argstck[i] = sp;
   }
   argstck[argc] = 0;
+
+  sp -= sizeof(u32) * 2;
+  u32 zero_auxv[2] = {0, 0};
+  if(vmp->copyout(sp, zero_auxv, sizeof(u32) * 2) < 0)
+    return -1;
+
+  sp -= sizeof(u64);
+  uptr zero_envp = 0;
+  if(vmp->copyout(sp, &zero_envp, sizeof(u64)) < 0)
+    return -1;
 
   sp -= (argc+1) * 8;
   if(vmp->copyout(sp, argstck, (argc+1)*8) < 0)
