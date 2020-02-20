@@ -179,6 +179,7 @@ struct vmap : public referenced {
   // when vmap is not the current page table.
   int copyout(uptr va, const void *p, u64 len);
   int sbrk(ssize_t n, uptr *addr);
+  uptr brk(uptr newaddr);
 
   // Print this vmap to the console
   void dump();
@@ -235,4 +236,7 @@ private:
   // allocated and cannot be.
   paddr ensure_page(const vpf_array::iterator &it, access_type type,
                     bool *allocated = nullptr);
+
+  // helper function for sbrk and brk; expects lock to be acquired
+  int sbrk_update(ssize_t n);
 };

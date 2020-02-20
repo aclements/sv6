@@ -629,6 +629,23 @@ vmap::set_write_permission(uptr start, uptr len, bool is_readonly, bool is_cow)
   return 0;
 }
 
+uptr
+vmap::brk(uptr newaddr)
+{
+  if (SDEBUG)
+    sdebug.println("vm: brk(", newaddr, ") pid ", myproc()->pid);
+
+  scoped_acquire xlock(&brklock_);
+
+  sptr relative = newaddr - brk_;
+
+  // don't need to care about the return value; either it succeeded (and brk_ got
+  // changed) or it failed (and it didn't), which is all the caller cares about
+  (void) sbrk_update(relative);
+
+  return brk_;
+}
+
 int
 vmap::sbrk(ssize_t n, uptr *addr)
 {
@@ -636,8 +653,16 @@ vmap::sbrk(ssize_t n, uptr *addr)
     sdebug.println("vm: sbrk(", n, ") pid ", myproc()->pid);
 
   scoped_acquire xlock(&brklock_);
+
+  *addr = brk_;
+
+  return sbrk_update(n);
+}
+
+int
+vmap::sbrk_update(ssize_t n)
+{
   auto curbrk = brk_;
-  *addr = curbrk;
 
   if (n == 0)
     return 0;

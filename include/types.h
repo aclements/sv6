@@ -17,6 +17,7 @@ typedef unsigned __int128 u128;
 typedef __int128        s128;
 #endif
 typedef uintptr_t       uptr;
+typedef intptr_t        sptr;
 typedef uptr            paddr;
 
 // Page Map Entry (refers to any entry in any level)

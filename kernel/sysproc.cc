@@ -72,13 +72,20 @@ sys_getpid(void)
 
 //SYSCALL
 char*
-sys_sbrk(int n)
+sys_sbrk(intptr_t n)
 {
   uptr addr;
 
   if(myproc()->vmap->sbrk(n, &addr) < 0)
     return (char*)-1;
   return (char*)addr;
+}
+
+//SYSCALL
+char*
+sys_brk(char *ptr)
+{
+  return (char *) myproc()->vmap->brk((uptr) ptr);
 }
 
 //SYSCALL
