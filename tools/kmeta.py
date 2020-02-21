@@ -4,7 +4,10 @@ kmeta.py: takes in nm output on stdin, produces packed binary-searchable symbol 
 
 The output takes the following format:
 
- - header (4 bytes): length of # of entries
+ - header (12 bytes):
+    - number (4 bytes): # of entries
+    - string offset (4 bytes): date
+    - string offset (4 bytes): git description
  - search table (N x 12 bytes): one entry per symbol:
     - symbol address (8 bytes): address of the symbol represented here
     - string offset (4 bytes): offset of the string in the string table
@@ -17,9 +20,13 @@ import struct
 import subprocess
 import sys
 
+symbol_file = sys.argv[1]
+date_string = sys.argv[2]
+git_string = sys.argv[3]
+
 records = {}
 
-for line in sys.stdin:
+for line in open(symbol_file):
     if not line.strip(): continue
     addr, kind, name = line.split()
     # kind is unused; we don't need it in the kernel
@@ -30,10 +37,7 @@ for line in sys.stdin:
 
 addresses, names = zip(*sorted(records.items()))
 names = [exp for exp in subprocess.check_output(["c++filt", "--"] + list(names)).decode().split("\n") if exp]
-
-output = [
-    struct.pack("<I", len(records)),
-]
+names += [date_string, git_string]
 
 offsets = {}
 cur_offset = 0
@@ -45,8 +49,8 @@ for name in names:
     offsets[name] = cur_offset
     cur_offset += len(enc_name)
 
+output = [struct.pack("<III", len(records), offsets[date_string], offsets[git_string])]
 output += [struct.pack("<QI", address, offsets[name]) for address, name in zip(addresses, names)]
-
 output += string_table
 
 sys.stdout.buffer.write(b"".join(output))

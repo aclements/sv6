@@ -14,6 +14,7 @@
 #include "ipi.hh"
 #include "cpuid.hh"
 #include "cmdline.hh"
+#include "kmeta.hh"
 
 #include <uk/mman.h>
 #include <uk/utsname.h>
@@ -324,8 +325,8 @@ sys_uname(userptr<struct utsname> buf)
   };
   static bool initialized;
   if (!initialized) {
-    strncpy(uts.version, xv6_version_string, sizeof(uts.version) - 1);
-    strncpy(uts.release, xv6_release_string, sizeof(uts.release) - 1);
+    strncpy(uts.version, kmeta::version_string(), sizeof(uts.version) - 1);
+    strncpy(uts.release, kmeta::release_string(), sizeof(uts.release) - 1);
     initialized = true;
   }
   if (!buf.store(&uts))
