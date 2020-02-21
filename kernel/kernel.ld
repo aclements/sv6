@@ -11,36 +11,27 @@ SECTIONS
     }
     .rodata : {
         *(.rodata .rodata.* .gnu.linkonce.r.* .sflag)
-    }
-    . = ALIGN(0x1000);
-    .hotpatch : {
+
+        . = ALIGN(0x1000);
         PROVIDE(__hotpatch_start = .);
         *(.hotpatch)
         PROVIDE(__hotpatch_end = .);
-    }
-    . = ALIGN(0x1000);
-    .init_array : {
+
+        . = ALIGN(0x1000);
         PROVIDE_HIDDEN(__init_array_start = .);
         KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
         KEEP(*(.init_array))
         KEEP(*(.ctors));
         PROVIDE_HIDDEN(__init_array_end = .);
-    }
 
-    .percpuinit_array : {
         PROVIDE_HIDDEN(__percpuinit_array_start = .);
         KEEP(*(.percpuinit_array))
         PROVIDE_HIDDEN(__percpuinit_array_end = .);
+        *(.init_rodata)
     }
 
-	.ksyms : {
-        *(.ksyms)
-	}
-
-    /* Binary blobs from kernel/incbin.S */
-    .init_rodata : {
-        *(.init_rodata)
-
+    .kmeta : {
+        *(.kmeta)
         /* Pad section to end of hugepage */
         . = ALIGN(0x200000);
         ASSERT((. <= 0xFFFFFFFFC0400000), "RO sections > 2MB");
@@ -63,10 +54,7 @@ SECTIONS
     PROVIDE(edata = .);
     .bss : {
         *(.bss .bss.* .gnu.linkonce.b.*)
-    }
-
-    . = ALIGN(0x1000);
-    .percpu : {
+        . = ALIGN(0x1000);
         PROVIDE(__percpu_start = .);
         PROVIDE(__qpercpu_start = .);
         *(.qpercpu)

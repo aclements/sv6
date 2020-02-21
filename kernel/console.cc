@@ -234,8 +234,8 @@ struct ksyms {
   }
 
   static ksyms *kernel_symbols() {
-    extern struct ksyms ksyms_start;
-    return &ksyms_start;
+    extern struct ksyms kmeta_start;
+    return &kmeta_start;
   }
 
   static const char *lookup(void *address, u32 *offset_out) {

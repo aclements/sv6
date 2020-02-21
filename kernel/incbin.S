@@ -10,18 +10,17 @@
   _##name##_size:; \
     .quad _##name##_end - _##name##_start
 
-.section .ksyms, "a", @progbits
-.globl ksyms_start
-ksyms_start:
-.skip 0x60000, 0
-.globl ksyms_end
-ksyms_end:
+.section .kmeta, "a", @progbits
+.globl kmeta_start
+kmeta_start:
+.quad 0
 
 .section .init_rodata, "a", @progbits
 include_bin(kernel/initcode,initcode)
 include_bin(kernel/bootother,bootother)
 
 #if MEMIDE
+.section .data
 include_bin(fs.part,fs_img)
 #else
 .globl _fs_img_start

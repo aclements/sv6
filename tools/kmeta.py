@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ksyms.py: takes in nm output on stdin, produces packed binary-searchable symbol list
+kmeta.py: takes in nm output on stdin, produces packed binary-searchable symbol list
 
 The output takes the following format:
 
