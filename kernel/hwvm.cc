@@ -661,7 +661,7 @@ unregister_public_pages(void** pages, size_t count)
   }
 
   run_on_all_cpus([]() {
-      lcr3(rcr3());
+      invpcid(0, 0, INVPCID_ALL);
   });
 }
 
