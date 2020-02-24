@@ -139,8 +139,9 @@ void            remove_fsgsbase(void);
 void            apply_hotpatches(void);
 
 // hz.c
-void            microdelay(u64);
-void            inithz(void);
+//void            inithz(void);
+//condvar.cc
+void microdelay(u64 delay);
 
 // ide.c
 void            ideintr(void);

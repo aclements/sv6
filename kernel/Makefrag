@@ -22,7 +22,6 @@ OBJS = \
 	ioapic.o \
 	hotpatch.o \
 	hwvm.o \
-	hz.o \
 	kalloc.o \
 	kmalloc.o \
 	kbd.o \
