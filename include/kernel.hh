@@ -139,7 +139,7 @@ void            remove_fsgsbase(void);
 void            apply_hotpatches(void);
 
 //condvar.cc
-void microdelay(u64 delay);
+void            microdelay(u64 delay);
 
 // ide.c
 void            ideintr(void);

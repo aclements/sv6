@@ -9,7 +9,6 @@
 #include "hpet.hh"
 
 #define TSC_PERIOD_SCALE 0x10000
-u64 cpuhz;
 
 // Intel 8253/8254/82C54 Programmable Interval Timer (PIT).
 // http://en.wikipedia.org/wiki/Intel_8253
@@ -24,6 +23,7 @@ u64 cpuhz;
 #define TIMER_STAT      0xe0    // read status mode
 #define TIMER_STAT0     (TIMER_STAT | 0x2)  // status mode counter 0
 
+u64 cpuhz;
 static u64 ticks __mpalign__;
 
 ilist<proc,&proc::cv_sleep> sleepers  __mpalign__;   // XXX one per core?
