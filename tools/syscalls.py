@@ -351,6 +351,8 @@ linux_syscall_numbers = {
     'clone3': 435,
 }
 
+linux_syscall_names = {num: name for name, num in linux_syscall_numbers.items()}
+
 def main():
     parser = OptionParser(usage="usage: %prog [options] source...")
     parser.add_option("--kvectors", action="store_true",
@@ -403,10 +405,17 @@ def main():
 
         print 'const char* syscall_names[] = {'
         for num in range(max(bynum.keys()) + 1):
-            if num not in bynum:
+            syscallname = None
+            if num in bynum:
+                syscallname = bynum[num].kname
+            elif num in linux_syscall_names:
+                syscallname = linux_syscall_names[num]
+            else:
+                pass # raise Exception("could not find num: %d" % num)
+            if syscallname is None:
                 print '  nullptr,'
             else:
-                print '  "%s",' % bynum[num].kname
+                print '  "%s",' % syscallname
         print '};'
         print
 

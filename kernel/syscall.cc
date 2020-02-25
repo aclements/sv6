@@ -140,8 +140,12 @@ syscall(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 num)
           return r;
         }
       }
-      cprintf("%d %s: unknown sys call %ld\n",
-              myproc()->pid, myproc()->name, num);
+      if (num < nsyscalls && syscall_names[num])
+        cprintf("%d %s: unknown sys call %s [%ld]\n",
+                myproc()->pid, myproc()->name, syscall_names[num], num);
+      else
+        cprintf("%d %s: unknown sys call %ld\n",
+                myproc()->pid, myproc()->name, num);
       return -1;
 #if EXCEPTIONS
     } catch (std::bad_alloc& e) {
