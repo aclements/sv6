@@ -105,6 +105,9 @@
         popq %rdi;
 
 .section .rodata
+.globl cr3_mask_noflush
+cr3_mask_noflush:
+.quad 0x8000000000000000
 mds_clear_cpu_buffers_ds:
 .long KDSEG
 .text
@@ -133,10 +136,11 @@ sysentry:
 
 OPTIONAL("lazy_barrier", "no")
         lfence
-		movq %cr3, %rsp
-	    andq $(~0x1001), %rsp
-	    andq %gs:GS_CR3_MASK, %rsp
-	    movq %rsp, %cr3
+        movq %cr3, %rsp
+        orq cr3_mask_noflush, %rsp
+        andq $(~0x1001), %rsp
+        andq %gs:GS_CR3_MASK, %rsp
+        movq %rsp, %cr3
 OPTIONAL_OR_NOPS("lazy_barrier")
 
         // %rsp and set it to point to the kstack
@@ -216,6 +220,7 @@ OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
 OPTIONAL("kpti", "yes")
         movq    %rax, %gs:GS_SCRATCH
         movq    %cr3, %rax
+        orq     cr3_mask_noflush, %rax
         orq     $(0x1001), %rax
         andq    %gs:GS_CR3_MASK, %rax
         movq    %rax, %cr3  // swap page table back
@@ -307,6 +312,7 @@ OPTIONAL("kpti", "yes")
         movq 48(%rsp), %rbx
         movq %rbx, 48(%rax)
         movq %cr3, %rbx
+        orq cr3_mask_noflush, %rax
         orq $(0x1001), %rbx
         andq %gs:GS_CR3_MASK, %rbx
         movq %rbx, %cr3  // swap page table back

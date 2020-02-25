@@ -39,6 +39,7 @@ swtch_and_barrier:
         movq %rsp, (%rdi)
 
         movq %cr3, %rbx
+        orq cr3_mask_noflush, %rax
         andq $(~0x1001), %rbx
         andq %gs:GS_CR3_MASK, %rbx
         movq %rbx, %cr3
@@ -69,6 +70,7 @@ switch_to_kstack:
 
         // Install kernel page tables
         movq %cr3, %rax
+        orq cr3_mask_noflush, %rax
         andq $(~0x1001), %rax
         andq %gs:GS_CR3_MASK, %rax
         movq %rax, %cr3
