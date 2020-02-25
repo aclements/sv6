@@ -61,40 +61,38 @@ threadstub:
 // Switch to executing on the current proc's kstack.
 //
 // Preconditions:
-//  	1. Kernel GS in use
-//      2. User page tables
+//      1. Kernel GS in use
 .globl switch_to_kstack
 switch_to_kstack:
-		cmpb $0, (secrets_mapped)
-		jne 1f
+        cmpb $0, (secrets_mapped)
+        jne 1f
 
-		// Install kernel page tables
-		movq %cr3, %rax
-	    andq $(~0x1001), %rax
-	    andq %gs:GS_CR3_MASK, %rax
-	    movq %rax, %cr3
+        // Install kernel page tables
+        movq %cr3, %rax
+        andq $(~0x1001), %rax
+        andq %gs:GS_CR3_MASK, %rax
+        movq %rax, %cr3
 
-		// Load pointers to the top of the kstack and qstack.
-		movq %gs:GS_PROC, %rax
-		movq PROC_KSTACK(%rax), %rdi
-		movq PROC_QSTACK(%rax), %rsi
-		addq $(KSTACKSIZE), %rdi
-		addq $(KSTACKSIZE), %rsi
+        // Load pointers to the top of the kstack and qstack.
+        movq %gs:GS_PROC, %rax
+        movq PROC_KSTACK(%rax), %rdi
+        movq PROC_QSTACK(%rax), %rsi
+        addq $(KSTACKSIZE), %rdi
+        addq $(KSTACKSIZE), %rsi
 
-		// Compute how much has been pushed onto the stack.
-		movq %rdi, %rdx
-		subq %rsp, %rdx
+        // Compute how much has been pushed onto the stack.
+        movq %rdi, %rdx
+        subq %rsp, %rdx
 
-		// Jump to return if we are on the double-fault stack or NMI stack.
-		// TODO: Shouldn't we still copy the stack for a NMI? Perhaps we need to copy the *entire* stack.
-		cmpq $(KSTACKSIZE), %rdx
-		ja 1f
+        // Jump to return if we are on the double-fault stack or NMI stack.
+        cmpq $(KSTACKSIZE), %rdx
+        ja 1f
 
-		// Point both pointers to current position on the stack.
-		subq %rdx, %rdi
-		subq %rdx, %rsi
+        // Point both pointers to current position on the stack.
+        subq %rdx, %rdi
+        subq %rdx, %rsi
 
-		call memcpy  // memcpy(dest=rdi, src=rsi, size=rdx);
+        call memcpy  // memcpy(dest=rdi, src=rsi, size=rdx);
 
-1:		ret
+1:      ret
 
