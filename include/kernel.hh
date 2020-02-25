@@ -82,13 +82,12 @@ void            bwrite(buf*);
 // cga.c
 void            cgaputc(int c);
 
-// vga.c
-void            vgaputc(int c);
-bool            get_framebuffer(paddr* out_address, u64* out_size);
-
 // cmdline.cc
 int             cmdline_view_param(const char *name);
 int             cmdline_change_param(const char *name, const char *value);
+
+// condvar.cc
+void            microdelay(u64 delay);
 
 // console.c
 void            cprintf(const char*, ...) __attribute__((format(printf, 1, 2)));
@@ -138,8 +137,10 @@ extern u8       secrets_mapped;
 void            remove_fsgsbase(void);
 void            apply_hotpatches(void);
 
-//condvar.cc
-void            microdelay(u64 delay);
+// hwvm.cc
+void            refresh_pcid_mask(void);
+void            register_public_pages(void** pages, size_t count);
+void            unregister_public_pages(void** pages, size_t count);
 
 // ide.c
 void            ideintr(void);
@@ -237,6 +238,13 @@ void            scheddump(void);
 int             steal(void);
 void            addrun(struct proc*);
 
+// swtch.S
+extern "C" {
+  void            swtch(struct context**, struct context*);
+  void            swtch_and_barrier(struct context**, struct context*);
+  void            switch_to_kstack();
+}
+
 // syscall.c
 int             fetchint64(uptr, u64*);
 int             fetchstr(char*, const char*, u64);
@@ -254,13 +262,6 @@ int             doexec(userptr_str upath,
 int             fdalloc(sref<file>&& f, int omode);
 sref<file>      getfile(int fd);
 
-// swtch.S
-extern "C" {
-  void            swtch(struct context**, struct context*);
-  void            swtch_and_barrier(struct context**, struct context*);
-  void            switch_to_kstack();
-}
-
 // trap.c
 extern struct segdesc bootgdt[NSEGS];
 void            pushcli(void);
@@ -271,6 +272,10 @@ extern "C" u64  sysentry_c(u64 a0, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 n
 // uart.c
 void            uartputc(char c);
 void            uartintr(void);
+
+// vga.c
+void            vgaputc(int c);
+bool            get_framebuffer(paddr* out_address, u64* out_size);
 
 // vm.c
 void            switchvm(struct vmap*, struct vmap*);
@@ -286,11 +291,6 @@ void            qfree(vmap* vmap, void* page);
 // safe_read_hw above USERTOP).
 size_t          safe_read_hw(void *dst, uintptr_t src, size_t n);
 size_t          safe_read_vm(void *dst, uintptr_t src, size_t n);
-
-// hwvm.cc
-void            refresh_pcid_mask(void);
-void            register_public_pages(void** pages, size_t count);
-void            unregister_public_pages(void** pages, size_t count);
 
 // other exported/imported functions
 extern "C" {
