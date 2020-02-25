@@ -91,10 +91,10 @@ void remove_range(char* text_base, u64 start, u64 end)
   while (current != end) {
     u64 len = end - current;
     if (len >= 9) {
-      strcpy((char*)&text_base[current-KTEXT], NOP[9]);
+      memcpy((char*)&text_base[current-KTEXT], NOP[9], 9);
       current += 9;
     } else {
-      strcpy((char*)&text_base[current-KTEXT], NOP[len]);
+      memcpy((char*)&text_base[current-KTEXT], NOP[len], len);
       current += len;
     }
   }
