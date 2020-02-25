@@ -163,7 +163,7 @@ puts(const char *s)
 
 }
 
-static void
+__attribute__((unused)) static void
 printbinctx(u64 rip)
 {
   __cprintf("memory dump around [rip]=%016lx:\n", rip);
