@@ -217,9 +217,7 @@ void
 inittsc(void)
 {
   cpuhz  = gethzfromPIT();
-  cprintf("HPET PIT: %lu\n", cpuhz);
   if (the_hpet) {
-    cprintf("USING HPET\n");
     u64 hpet_start = the_hpet->read_nsec();
     u64 tsc_start = rdtsc();
 
@@ -227,14 +225,11 @@ inittsc(void)
     do {
       nop_pause();
       hpet_end = the_hpet->read_nsec();
-    } while(hpet_end < hpet_start + 50000);
+    } while(hpet_end < hpet_start + 50000000);
     u64 tsc_end = rdtsc();
-    mycpu()->tsc_period = ((tsc_end - tsc_start) * TSC_PERIOD_SCALE
-      / (hpet_end - hpet_start)) ;
-    cprintf("HPET TSC: %lu\n", mycpu()->tsc_period);
-    cprintf("PIT TSC: %lu\n", (cpuhz*TSC_PERIOD_SCALE)/1000000000);
+    mycpu()->tsc_period = (tsc_end - tsc_start) * TSC_PERIOD_SCALE
+      / (hpet_end - hpet_start);
   } else {
-    mycpu()->tsc_period = (cpuhz*TSC_PERIOD_SCALE/1000000000);
-    cprintf("PIT TSC: %lu\n", mycpu()->tsc_period);
+    mycpu()->tsc_period = (cpuhz * TSC_PERIOD_SCALE) / 1000000000;
   }
 }

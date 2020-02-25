@@ -178,6 +178,7 @@ void
 cmain(u64 mbmagic, u64 mbaddr)
 {
   extern u64 cpuhz;
+
   // Make cpus[0] work.  CPU 0's percpu data is pre-allocated directly
   // in the image.  *cpu and such won't work until we inittls.
   percpu_offsets[0] = __percpu_start;
@@ -193,7 +194,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   initvga();               // Requires initmultiboot, initcmdline
   initphysmem();           // Requires initmultiboot
   initpg(&cpus[0]);        // Requires initphysmem
-  //inithz();                // CPU Hz, microdelay
   initseg(&cpus[0]);
   inittls(&cpus[0]);       // Requires initseg
   initdoublebuffer();      // Requires initpg
@@ -260,8 +260,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initinode();     // inode cache
   initmfs();
 
-//  if (VERBOSE)
-  cprintf("tsc_period: %lu\n", mycpu()->tsc_period);
+  if (VERBOSE)
     cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);
 
   inituser();      // first user process

@@ -138,8 +138,6 @@ extern u8       secrets_mapped;
 void            remove_fsgsbase(void);
 void            apply_hotpatches(void);
 
-// hz.c
-//void            inithz(void);
 //condvar.cc
 void microdelay(u64 delay);
 
