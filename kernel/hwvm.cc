@@ -668,12 +668,11 @@ unregister_public_pages(void** pages, size_t count)
 void
 core_tracking_shootdown::on_ipi()
 {
+  u64 cr3 = rcr3();
+  lcr3(cr3);
+
   if (pcids_enabled()) {
-    u64 pcid = rcr3() & 0xfff;
-    invpcid(pcid, 0, INVPCID_ONE_PCID);
-    invpcid(pcid ^ 0x1, 0, INVPCID_ONE_PCID);
-  } else {
-    lcr3(rcr3());
+    invpcid((cr3 & 0xfff) ^ 0x1, 0, INVPCID_ONE_PCID);
   }
 }
 
