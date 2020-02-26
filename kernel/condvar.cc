@@ -225,7 +225,7 @@ inittsc(void)
     do {
       nop_pause();
       hpet_end = the_hpet->read_nsec();
-    } while(hpet_end < hpet_start + 50000000);
+    } while(hpet_end < hpet_start + 10000000);
     u64 tsc_end = rdtsc();
     mycpu()->tsc_period = (tsc_end - tsc_start) * TSC_PERIOD_SCALE
       / (hpet_end - hpet_start);
