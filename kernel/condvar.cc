@@ -216,7 +216,7 @@ gethzfromPIT(void)
 void
 inittsc(void)
 {
-  cpuhz  = gethzfromPIT();
+  cpuhz = gethzfromPIT();
   if (the_hpet) {
     u64 hpet_start = the_hpet->read_nsec();
     u64 tsc_start = rdtsc();

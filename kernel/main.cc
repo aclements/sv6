@@ -93,6 +93,7 @@ mpboot(void)
   writemsr(MSR_FS_BASE, (u64)&text);
 
   initlapic();
+  inittsc();
   initfpu();
   initmsr();
   initsamp();
@@ -230,7 +231,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   inithotpatch();
   inittrap();              // Requires inithotpatch
   inithpet();              // Requires initacpitables
-  inittsc();
+  inittsc();               // Requires inithpet
   initfpu();               // Requires nothing
   initmsr();               // Requires nothing
   initkalloc();            // Requires initpageinfo
