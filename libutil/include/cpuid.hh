@@ -179,6 +179,7 @@ public:
 
     // 7.EBX
     bool fsgsbase : 1;
+    bool invpcid : 1;
     bool intel_pt : 1;
 
     // 7.EDX
