@@ -160,7 +160,6 @@ puts(const char *s)
 
   for (; p < ep; p++)
     writecons(*p, nullptr);
-
 }
 
 __attribute__((unused)) static void
