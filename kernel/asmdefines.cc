@@ -31,4 +31,5 @@ asmdefines(void)
   DEFINE(GS_MEM, __offsetof(struct cpu, mem) - __offsetof(struct cpu, cpu));
   DEFINE(GS_SCRATCH, __offsetof(struct cpu, scratch) - __offsetof(struct cpu, cpu));
   DEFINE(GS_CR3_MASK, __offsetof(struct cpu, cr3_mask) - __offsetof(struct cpu, cpu));
+  DEFINE(GS_CR3_NOFLUSH, __offsetof(struct cpu, cr3_noflush) - __offsetof(struct cpu, cpu));
 }

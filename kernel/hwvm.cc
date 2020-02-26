@@ -47,6 +47,9 @@ struct tlb_state {
 
   // The index of the next context that will be used.
   u8 next_context;
+
+  // Whether to flush the TLB when switching to kpml4.
+  bool flush_pcid0;
 };
 percpu<tlb_state> tlb_states;
 
@@ -54,12 +57,26 @@ atomic<u64> next_asid = 1;
 
 DEFINE_PERCPU(const MMU_SCHEME::page_map_cache*, cur_page_map_cache);
 
+static bool use_invpcid __attribute__((section (".qdata"))) = true;
+
 static const char *levelnames[] = {
   "PT", "PD", "PDP", "PML4"
 };
 
 static bool pcids_enabled() {
   return (mycpu()->cr3_mask & 0xfff) != 0;
+}
+
+static u64 reload_cr3() {
+  u64 cr3 = rcr3();
+  lcr3(cr3);
+  return cr3;
+}
+static u64 flush_tlb_context() {
+  // TODO: use invpcid instead of switching page tables via ensure_secrets.
+  ensure_secrets();
+  mycpu()->cr3_noflush = 0;
+  return reload_cr3();
 }
 
 // One level in an x86-64 page table, typically the top level.  Many
@@ -417,7 +434,7 @@ initpg(struct cpu *c)
 
     // Make the text and rodata segments read only
     *kpml4.find(KTEXT, pgmap::L_2M).create(0) = v2p((void*)KTEXT) | PTE_P | PTE_PS;
-    lcr3(rcr3());
+    reload_cr3();
 
     // Create direct map region
     for (auto it = kpml4.find(KBASE, level); it.index() < KBASEEND; it += it.span()) {
@@ -482,9 +499,15 @@ initpg(struct cpu *c)
         }
       }
     }
+
+    if (!cpuid::features().invpcid) {
+      use_invpcid = false;
+      cprintf("WARN: invpcid instructions unsupported\n");
+    }
   }
 
   set_cr3_mask(c);
+  c->cr3_noflush = 0;
 
   if (!cpuid::features().fsgsbase) {
     cprintf("WARN: wrfsbase instructions unsupported\n");
@@ -520,7 +543,7 @@ cleanuppg(void)
 {
   // Remove 1GB identity mapping
   *kpml4.find(0, pgmap::L_PML4) = 0;
-  lcr3(rcr3());
+  reload_cr3();
 }
 
 size_t
@@ -562,8 +585,13 @@ switchvm(vmap* from, vmap* to)
 
     if (!to) {
       // Switch directly to the base kernel page table, using PCID=0.
-      lcr3(v2p(&kpml4));
+      u64 cr3 = v2p(&kpml4);
+      if (!tlb_states->flush_pcid0) {
+        cr3 |= CR3_NOFLUSH;
+      }
+      lcr3(cr3);
       mycpu()->ts.ist[1] = (u64)*nmistacktop - 16;
+      tlb_states->flush_pcid0 = false;
     } else {
       to->cache.switch_to();
       mycpu()->ts.ist[1] = ((u64)&to->nmi_stacks[mycpu()->id + 1]) - 16;
@@ -660,20 +688,26 @@ unregister_public_pages(void** pages, size_t count)
     *kpml4.find((uintptr_t)pages[i], pgmap::L_4K).create(0) = 0;
   }
 
-  run_on_all_cpus([]() {
-      invpcid(0, 0, INVPCID_ALL);
+  run_on_all_cpus([]()
+  {
+    if (pcids_enabled()) {
+      for (int i = 0; i < NUM_TLB_CONTEXTS; i++)
+        tlb_states->contexts[i].asid = 0;
+      if((flush_tlb_context() & 0xfff) != 0)
+        tlb_states->flush_pcid0 = true;
+    } else {
+      reload_cr3();
+    }
   });
 }
 
 void
 core_tracking_shootdown::on_ipi()
 {
-  u64 cr3 = rcr3();
-  lcr3(cr3);
-
-  if (pcids_enabled()) {
-    invpcid((cr3 & 0xfff) ^ 0x1, 0, INVPCID_ONE_PCID);
-  }
+  if (pcids_enabled())
+    flush_tlb_context();
+  else
+    reload_cr3();
 }
 
 void
@@ -690,20 +724,16 @@ core_tracking_shootdown::perform() const
   {
     scoped_cli cli;
     if (targets[myid()]) {
-      if (pcids_enabled()) {
+      if (!pcids_enabled()) {
+        reload_cr3();
+      } else if (end_ > start_ && end_ - start_ <= 4 * PGSIZE && use_invpcid) {
         u64 pcid = rcr3() & 0xfff;
-        if (end_ > start_ && end_ - start_ > 4 * PGSIZE) {
-          invpcid(pcid, 0, INVPCID_ONE_PCID);
-          invpcid(pcid ^ 0x1, 0, INVPCID_ONE_PCID);
-        } else {
-          for (uintptr_t va = start_; va < end_; va += PGSIZE) {
-            invpcid(pcid, va, INVPCID_ONE_ADDR);
-            invpcid(pcid ^ 0x1, va, INVPCID_ONE_ADDR);
-          }
+        for (uintptr_t va = start_; va < end_; va += PGSIZE) {
+          invpcid(pcid, va, INVPCID_ONE_ADDR);
+          invpcid(pcid ^ 0x1, va, INVPCID_ONE_ADDR);
         }
       } else {
-        // If we aren't using PCIDs, just do a full TLB flush.
-        lcr3(rcr3());
+        flush_tlb_context();
       }
       targets.reset(myid());
     }
@@ -805,17 +835,16 @@ namespace mmu_shared_page_table {
       tlb_states->next_context = (new_context + 1) % NUM_TLB_CONTEXTS;
       flush_tlb = true;
     }
-
     tlb_states->contexts[new_context].asid = asid_;
     tlb_states->contexts[new_context].tlb_gen = new_tlb_gen;
 
     u64 cr3 = v2p(pml4s.kernel)
       | (new_context * 2 + 2)
-      | (flush_tlb ? 0 : ((u64)1<<63));
+      | (flush_tlb ? 0 : CR3_NOFLUSH);
     cr3 &= mycpu()->cr3_mask;
 
     if (pcids_enabled() && flush_tlb) {
-      invpcid((cr3 & 0xfff) ^ 0x1, 0, INVPCID_ONE_PCID);
+      mycpu()->cr3_noflush = 0;
     }
 
     lcr3(cr3);

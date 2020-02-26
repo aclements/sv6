@@ -45,6 +45,8 @@ struct cpu {
 
   u64 scratch;                 // scratch space to use during page table swap
   u64 cr3_mask;                // masks out PCID bits if they aren't supported
+  u64 cr3_noflush;             // set to CR3_NOFLUSH if return to user space
+                               // should skip a TLB flush or zero otherwise
   __page_pad__;
 } __page_align__;
 
