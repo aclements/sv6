@@ -23,6 +23,7 @@ void initvga(void);
 void initdoublebuffer(void);
 void initconsole(void);
 void initpg(struct cpu *c);
+void inithz(void);
 void cleanuppg(void);
 void inittls(struct cpu *);
 void initcodex(void);
@@ -199,8 +200,9 @@ cmain(u64 mbmagic, u64 mbaddr)
   inittls(&cpus[0]);       // Requires initseg
   initdoublebuffer();      // Requires initpg
 
+  inithz();
   initacpitables();        // Requires initpg, inittls
-  initlapic();             // Requires initpg
+  initlapic();             // Requires initpg, inithz
   initnuma();              // Requires initacpitables, initlapic
   initpercpu();            // Requires initnuma
   initcpus();              // Requires initnuma, initpercpu,

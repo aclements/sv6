@@ -23,7 +23,7 @@
 #define TIMER_STAT      0xe0    // read status mode
 #define TIMER_STAT0     (TIMER_STAT | 0x2)  // status mode counter 0
 
-u64 cpuhz;
+u64 cpuhz = 0;
 static u64 ticks __mpalign__;
 
 ilist<proc,&proc::cv_sleep> sleepers  __mpalign__;   // XXX one per core?
@@ -184,6 +184,7 @@ condvar::wake_all(int yield, proc *callerproc)
 void
 microdelay(u64 delay)
 {
+  assert(cpuhz != 0);
   u64 tscdelay = (cpuhz * delay) / 1000000;
   u64 s = rdtsc();
   while (rdtsc() - s < tscdelay)
@@ -214,9 +215,14 @@ gethzfromPIT(void)
 }
 
 void
-inittsc(void)
+inithz()
 {
   cpuhz = gethzfromPIT();
+}
+
+void
+inittsc(void)
+{
   if (the_hpet) {
     u64 hpet_start = the_hpet->read_nsec();
     u64 tsc_start = rdtsc();
