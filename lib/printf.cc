@@ -140,4 +140,5 @@ extern "C" size_t fwrite(const void *buffer, size_t size, size_t count, FILE* st
   for(int i = 0; i < count * size; i++) {
     fputc(((char*)buffer)[i], stream);
   }
+  return count;
 }
