@@ -172,7 +172,7 @@ exec(const char *path, const char * const *argv)
   sref<vmap> oldvmap;
   int r = load_image(myproc(), path, argv, &oldvmap);
   if (r < 0) {
-    cprintf("exec failed\n");
+    cprintf("kernel: exec failed; could not load image\n");
     return r;
   }
 
@@ -204,8 +204,10 @@ load_image(proc *p, const char *path, const char * const *argv,
            sref<vmap> *oldvmap_out)
 {
   sref<vnode> ip = vfs_root()->resolve(p->cwd, path);
-  if (!ip)
+  if (!ip) {
+    cprintf("kernel: load_image: could not resolve file \"%s\"\n", path);
     return -1;
+  }
 
   scoped_gc_epoch rcu;
 
@@ -213,8 +215,10 @@ load_image(proc *p, const char *path, const char * const *argv,
   char buf[1024];
 
   ssize_t sz = ip->read_at(buf, 0, sizeof(buf));
-  if (sz < 0)
+  if (sz < 0) {
+    cprintf("kernel: load_image: could not read ELF header\n");
     return -1;
+  }
 
   // Script?
   if (strncmp(buf, "#!", 2) == 0) {
@@ -225,8 +229,10 @@ load_image(proc *p, const char *path, const char * const *argv,
         break;
       }
     }
-    if (i == sz)
+    if (i == sz) {
+      cprintf("kernel: load_image: invalid #! line\n");
       return -1;
+    }
     const char *argv[] = {&buf[2], path, NULL};
     return load_image(p, argv[0], argv, oldvmap_out);
   }
@@ -234,40 +240,54 @@ load_image(proc *p, const char *path, const char * const *argv,
   // ELF?
   struct elfhdr *elf = reinterpret_cast<elfhdr*>(&buf);
   static_assert(sizeof(elf) <= sizeof(buf), "buf too small for ELF header");
-  if (sz < sizeof(elf))
+  if (sz < sizeof(elf)) {
+    cprintf("kernel: load_image: invalid ELF header size\n");
     return -1;
-  if(elf->magic != ELF_MAGIC)
+  }
+  if(elf->magic != ELF_MAGIC) {
+    cprintf("kernel: load_image: ELF magic number mismatch: %x instead of %x\n", elf->magic, ELF_MAGIC);
     return -1;
+  }
 
   sref<vmap> vmp = vmap::alloc();
-  if (!vmp)
+  if (!vmp) {
+    cprintf("kernel: load_image: could not allocate vmap\n");
     return -1;
+  }
 
   u64 load_addr = -1;
   for (size_t i=0, off=elf->phoff; i<elf->phnum; i++, off+=sizeof(proghdr)){
     Elf64_Word type;
     if(ip->read_at((char *) &type,
                    off + __offsetof(struct proghdr, type),
-                   sizeof(type)) != sizeof(type))
+                   sizeof(type)) != sizeof(type)) {
+      cprintf("kernel: load_image: could not read program header type\n");
       return -1;
+    }
 
     switch (type) {
     case ELF_PROG_LOAD:
-      if (dosegment(ip, vmp.get(), off, &load_addr) < 0)
+      if (dosegment(ip, vmp.get(), off, &load_addr) < 0) {
+        cprintf("kernel: load_image: could not perform segment load\n");
         return -1;
+      }
       break;
     default:
       continue;
     }
   }
 
-  if (doheap(vmp.get()) < 0)
+  if (doheap(vmp.get()) < 0) {
+    cprintf("kernel: load_image: could not set up heap\n");
     return -1;
+  }
 
   // dostack reads from the user vm space. 
   long sp = dostack(vmp.get(), argv, path);
-  if (sp < 0)
+  if (sp < 0) {
+    cprintf("kernel: load_image: could not set up stack\n");
     return -1;
+  }
 
   // for usetup
   uintptr_t phdr = 0;
