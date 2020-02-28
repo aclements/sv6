@@ -12,7 +12,7 @@
 #define IO_RTC  0x70
 
 // The UNIX epoch time, in nanoseconds, when nsectime() was 0.
-static uint64_t rtc_nsec0;
+static uint64_t rtc_nsec0 __attribute__ ((section(".qdata")));
 
 static uint8_t
 rtcread1(uint8_t reg, bool bcd = false, bool twelvehour = false)
