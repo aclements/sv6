@@ -89,6 +89,8 @@ struct proc {
   ilink<proc> cv_sleep;        // Linked list of processes sleeping on a cv
   context* context;            // swtch() here to run process
   bool on_qstack;              // Only valid when proc is *not* running
+  sref<vnode> cwd;             // Current directory
+  sref<filetable> ftable;      // File descriptor table
 
 private:
   procstate_t state_;          // Process state
@@ -98,8 +100,6 @@ public:
   vmalloc_ptr<char[]> kstack_vm; // vmalloc'd kstack, if using vmalloc
   struct proc *parent;         // Parent process
   int status;                  // exit's returns status
-  sref<filetable> ftable;      // File descriptor table
-  sref<vnode> cwd;             // Current directory
   char name[16];               // Process name (debugging)
   void *fpu_state;             // FXSAVE state, lazily allocated
   ilink<proc> child_next;
