@@ -8,6 +8,7 @@ SECTIONS
     PROVIDE(text = .);
     .text : AT(0x200000) {
         *(.text .stub .text.* .gnu.linkonce.t.*)
+        . = ALIGN(0x1000);
     }
     .rodata : {
         *(.rodata .rodata.* .gnu.linkonce.r.* .sflag)
@@ -28,8 +29,11 @@ SECTIONS
         KEEP(*(.percpuinit_array))
         PROVIDE_HIDDEN(__percpuinit_array_end = .);
         *(.init_rodata)
+        . = ALIGN(0x1000);
     }
 
+    /* .stapsdt.base section might be added here, so force page alignment for kmeta */
+    . = ALIGN(0x1000);
     .kmeta : {
         *(.kmeta)
         /* Pad section to end of hugepage */

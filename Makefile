@@ -154,6 +154,10 @@ $(O)/%.o: $(O)/%.S
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(ASFLAGS) -c -o $@ $<
 
+$(O)/bootx64.efi: $(O)/kernel.elf
+	objcopy --set-section-alignment *=4096 -j .text -j .rodata -j .stapsdt.base -j .kmeta -j .data -j .bss \
+		-O pei-x86-64 $< $@
+
 # Construct an alternate "system include root" by copying headers from
 # the host that are part of C++'s freestanding implementation.  These
 # headers are distributed across several directories, so we reproduce
