@@ -147,8 +147,8 @@ schedule::sanity(void)
 #if DEBUG
   u64 n = 0;
 
-  for (auto &p : proc_)
-    if (p.cansteal(true))
+  for (auto p : proc_)
+    if (p->cansteal(true))
       n++;
 
   if (n != ncansteal_)
