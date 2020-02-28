@@ -164,11 +164,11 @@ public:
     if ((child = fork1()) == 0) {
       savefd::preexec();
       execv(argstrs[0], const_cast<char * const *>(argstrs.data()));
-      edie("exec %s failed", argstrs[0]);
+      edie("sh: exec %s failed", argstrs[0]);
     }
     int status;
     if (waitpid(child, &status, 0) < 0)
-      edie("wait failed");
+      edie("sh: wait failed");
     return status;
   }
 };
@@ -188,7 +188,7 @@ public:
     vector<string> files;
     file_->eval(&files);
     if (files.size() != 1) {
-      fprintf(stderr, "redirection requires exactly one file name");
+      fprintf(stderr, "sh: redirection requires exactly one file name");
       return 1;
     }
 
@@ -214,7 +214,7 @@ public:
   {
     int p[2];
     if (pipe(p) < 0)
-      edie("pipe");
+      edie("sh: pipe");
 
     int child;
     if ((child = fork1()) == 0) {
@@ -232,7 +232,7 @@ public:
     close(p[1]);
     int res = right_->run();
     if (waitpid(child, NULL, 0) < 0)
-      edie("wait failed");
+      edie("sh: wait failed");
     return res;
   }
 };
@@ -780,7 +780,7 @@ class parser
       } else if (tryget("}")) {
         throw syntax_error("unexpected '}'");
       } else {
-        die("unexpected token type in expression context");
+        die("sh: unexpected token type in expression context");
       }
       if (!res)
         res = move(word);
@@ -858,7 +858,7 @@ main(int argc, char** argv)
     interactive = false;
     close(0);
     if (open(argv[1], O_RDONLY) < 0) {
-      fprintf(stderr, "cannot open %s\n", argv[1]);
+      fprintf(stderr, "sh: cannot open %s\n", argv[1]);
       return -1;
     }
   }
@@ -893,6 +893,6 @@ fork1(void)
   
   pid = fork();
   if (pid == -1)
-    die("fork");
+    die("sh: fork");
   return pid;
 }
