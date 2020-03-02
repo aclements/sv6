@@ -1,6 +1,7 @@
 #pragma once
 
 #define CLOCK_REALTIME 0
+#define CLOCK_MONOTONIC 0
 
 typedef int time_t;
 typedef int clockid_t;
