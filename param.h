@@ -99,7 +99,6 @@
 // Linux user-space targets (no kernel, so most options aren't set)
 //
 #elif defined(HW_linux)
-#define NCPU          256
 #define MTRACE        0
 #elif defined(HW_linuxmtrace)
 #define NCPU          256
