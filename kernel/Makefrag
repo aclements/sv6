@@ -108,6 +108,13 @@ ALL += $(KERN)
 $(O)/kernel/%.o: CFLAGS+=-mcmodel=kernel -DXV6_KERNEL -mno-sse
 $(O)/kernel/%.o: CXXFLAGS+=-mcmodel=kernel -DXV6_KERNEL -mno-sse
 
+UNAME := $(shell uname)
+ifeq ($(UNAME), Darwin)
+DDSTATUS :=
+else
+DDSTATUS := status=none
+endif
+
 $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
@@ -117,7 +124,7 @@ $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	$(Q)$(OBJCOPY) --dump-section .kmeta=$(O)/kernel/kmeta.bin $@
 	$(Q)tools/kmeta.py $(O)/kernel/system.map \
 		"$$(date)" "$$(git describe --all --long --dirty=+)" \
-		| dd status=none conv=notrunc of=$(O)/kernel/kmeta.bin
+		| dd $(DDSTATUS) conv=notrunc of=$(O)/kernel/kmeta.bin
 	$(Q)$(OBJCOPY) --update-section .kmeta=$(O)/kernel/kmeta.bin $@
 	$(Q)tools/check-stack $@
 

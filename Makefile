@@ -9,6 +9,7 @@ TOOLPREFIX ?=
 QEMU       ?= qemu-system-x86_64
 # Number of CPUs to emulate
 QEMUSMP    ?= 8
+
 # RAM to simulate (in MB)
 QEMUMEM    ?= 512
 # Default hardware build target.  See param.h for others.
@@ -55,13 +56,14 @@ CXXFLAGS = -Wno-delete-non-virtual-dtor -Wno-gnu-designator -Wno-tautological-co
 CFLAGS   = -no-integrated-as
 ASFLAGS  =
 else
-CC  ?= $(TOOLPREFIX)gcc
-CXX ?= $(TOOLPREFIX)g++
+CC  = $(TOOLPREFIX)gcc
+CXX = $(TOOLPREFIX)g++
 CXXFLAGS = -Wno-delete-non-virtual-dtor  -fno-pie -fno-pic
 CFLAGS   = -fno-pie -fno-pic
 ASFLAGS  = -Wa,--divide -fno-pie -fno-pic
 endif
 
+AR = $(TOOLPREFIX)ar
 LD = $(TOOLPREFIX)ld
 NM = $(TOOLPREFIX)nm
 OBJCOPY = $(TOOLPREFIX)objcopy
@@ -97,7 +99,7 @@ ifeq ($(EXCEPTIONS),y)
   # getting "multiple definition" and "undefined reference" errors,
   # there's probably a new ABI symbol we need to define ourselves.
   CXXRUNTIME = $(shell $(CC) -print-file-name=libgcc_eh.a) \
-	  $(shell $(CC) -print-file-name=libsupc++.a)
+               $(shell $(CC) -print-file-name=libsupc++.a)
   CXXFLAGS += -DEXCEPTIONS=1
   ifndef USE_CLANG
     CXXFLAGS += -fnothrow-opt -Wnoexcept
@@ -182,7 +184,9 @@ $(O)/fs.part: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS) intel-ucode/*
 $(O)/fs.img: $(O)/fs.part
 	dd if=$< of=$@ conv=sparse obs=512 seek=2048
 	truncate -s "51M" $@
-	parted -s --align optimal $@ mklabel gpt mkpart sv6filesystem 1MiB 50MiB
+	@if [ $(shell uname) != "Darwin" ]; then\
+		parted -s --align optimal $@ mklabel gpt mkpart sv6filesystem 1MiB 50MiB;\
+	fi # TODO: find alternative to parted on OSX since this build step does not work without it
 
 .PRECIOUS: $(O)/%.o
 .PHONY: clean qemu gdb rsync codex
@@ -216,7 +220,14 @@ else
 QEMUNUMA := node node
 endif
 
-QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) -enable-kvm -cpu Haswell,+pcid,+fsgsbase,+md-clear,+spec-ctrl \
+UNAME := $(shell uname)
+ifeq ($(UNAME), Darwin)
+QEMUVIRT := -accel hvf
+else
+QEMUVIRT := -enable-kvm
+endif
+
+QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) $(QEMUVIRT) -cpu Haswell,+pcid,+fsgsbase,+md-clear,+spec-ctrl \
 	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
 	-device sga \
 	$(foreach x,$(QEMUNUMA),-numa $(x)) \

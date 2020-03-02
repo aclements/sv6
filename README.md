@@ -28,6 +28,18 @@ our multicore machines also has a `HW` target (like `josmp` and
 `ben`), and other interesting `HW` targets are mentioned below.
 Builds go to `o.$HW`.
 
+### OSX
+To run Ward on OSX, there are some additional steps that need to be taken:
+1. [Install homebrew](https://brew.sh/)
+1. Install qemu: `brew install qemu`
+1. Install truncate: `brew install truncate`
+1. [Install macports](https://www.macports.org/install.php)
+1. Install x86 binaries: `sudo port install x86_64-elf-binutils`, `sudo port install x86_64-elf-gcc`
+1. Add `TOOLPREFIX = x86_64-elf-` to `config.mk`
+1. Build: `make -j`
+    * If you get the error `x86_64-elf-ar: libgcc_eh.a: No such file or directory`, you may need to find copies of `libgcc_eh.a` (and/or `libsupc++.a`) elsewhere and copy them to your `x86_64-elf-gcc` directory
+1. Run: `make qemu`
+    * If you get the error `cannot identify root disk with bus location "ahci0.0p1"`, try `make QEMUAPPEND="root_disk=memide.0" qemu`
 
 Running sv6 on real hardware
 ----------------------------
