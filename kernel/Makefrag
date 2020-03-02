@@ -111,7 +111,7 @@ $(O)/kernel/%.o: CXXFLAGS+=-mcmodel=kernel -DXV6_KERNEL -mno-sse
 $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)$(LD) $(LDFLAGS) -T kernel/kernel.ld -z max-page-size=4096 -e start \
+	$(Q)$(LD) $(LDFLAGS) -T kernel/kernel.ld -z max-page-size=4096 -e efi_main \
 		-o $@ $(O)/kernel/boot.o $(OBJS) -L$(O) $(LFLAGS)
 	$(Q)$(NM) $@ > $(O)/kernel/system.map
 	$(Q)$(OBJCOPY) --dump-section .kmeta=$(O)/kernel/kmeta.bin $@
@@ -162,7 +162,7 @@ $(O)/kernel/%: kernel/%.S $(O)/sysroot
 	@echo "  CC     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(CC) $(CFLAGS) -nostdinc -I. -c $< -o $@.o
-	$(Q)$(LD) $(LDFLAGS) -N -e start -Ttext $(TTEXT) -o $@.out $@.o $(LDEXTRA)
+	$(Q)$(LD) $(LDFLAGS) -N -e efi_main -Ttext $(TTEXT) -o $@.out $@.o $(LDEXTRA)
 	$(Q)$(OBJCOPY) -S -O binary $@.out $@
 
 $(O)/kernel/asmdefines.S: kernel/asmdefines.cc $(O)/sysroot

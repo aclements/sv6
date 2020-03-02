@@ -137,6 +137,7 @@ start64:
     call cmain
 1:  jmp 1b
 
+.globl efi_main
 efi_main:
     movl %eax, %edi
     movl %ebx, %esi
