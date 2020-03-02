@@ -436,6 +436,20 @@ SYS_%(uname)s = %(num)d
   syscall
   ret
 """ % syscall.__dict__
+        print
+        print """\
+.globl syscall
+syscall:
+        movq %rdi, %rax /* Syscall number -> rax.  */
+        movq %rsi, %rdi /* shift arg1 - arg5.  */
+        movq %rdx, %rsi
+        movq %rcx, %rdx
+        movq %r8, %r10
+        movq %r9, %r8
+        movq 8(%rsp),%r9 /* arg6 is on the stack.  */
+        syscall
+        ret
+"""
 
     if options.udecls:
         print "#include \"types.h\""
@@ -452,6 +466,10 @@ SYS_%(uname)s = %(num)d
                 extra = " __attribute__((noreturn))"
             print "%s %s(%s)%s;" % (syscall.rettype, syscall.uname,
                                     ", ".join(syscall.uargs), extra)
+        print "u64 syscall(u64, ...);"
+        print
+        for syscall in syscalls:
+            print "#define SYS_%s %s" % (syscall.uname, syscall.num)
         print
         print "END_DECLS"
 
