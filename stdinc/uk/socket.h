@@ -3,7 +3,7 @@
 #ifdef LWIP
 #include "lwip/sockets.h"
 // Oddly, LWIP doesn't define sa_family_t
-typedef __typeof__(((sockaddr*)0)->sa_family) sa_family_t;
+typedef __typeof__(((struct sockaddr*)0)->sa_family) sa_family_t;
 #else
 // Stub definitions and enough for local sockets
 #include <stdint.h>

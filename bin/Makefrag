@@ -73,6 +73,7 @@ UPROGS_BIN= \
 	sharedtest \
 	param \
 	smallfile \
+	lebench \
 
 ifeq ($(HAVE_LWIP),y)
 UPROGS_BIN += \
