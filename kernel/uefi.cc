@@ -8,7 +8,7 @@
 void initvga(void);
 void initmultiboot(u64 mbmagic, u64 mbaddr);
 
-extern "C" u64 efi_cmain (u64 mbmagic, u64 mbaddr)
+extern "C" u64 efi_cmain (u64 mbmagic, u64 mbaddr, void* boot_system_table, void* boot_image_table)
 {
   // Copy lowest PTE from uefi page table to kpml4, then switch to it. This
   // creates an identity mapping for the first 512 GB of memory.
