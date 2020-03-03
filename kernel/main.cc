@@ -179,7 +179,6 @@ bootothers(void)
 void
 cmain(u64 mbmagic, u64 mbaddr)
 {
-  extern u64 cpuhz;
 
   // Make cpus[0] work.  CPU 0's percpu data is pre-allocated directly
   // in the image.  *cpu and such won't work until we inittls.
@@ -264,7 +263,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initmfs();
 
   if (VERBOSE)
-    cprintf("ncpu %d %lu MHz\n", ncpu, cpuhz / 1000000);
+    cprintf("ncpu %d %lu MHz\n", ncpu, ((mycpu()->tsc_period * 1000000000) / TSC_PERIOD_SCALE) / 1000000);
 
   inituser();      // first user process
 

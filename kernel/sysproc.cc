@@ -253,8 +253,7 @@ sys_reboot(void)
 long
 sys_cpuhz(void)
 {
-  extern u64 cpuhz;
-  return cpuhz;
+  return (mycpu()->tsc_period * 1000000000) / TSC_PERIOD_SCALE;
 }
 
 //SYSCALL

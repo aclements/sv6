@@ -8,7 +8,6 @@
 #include "cpu.hh"
 #include "hpet.hh"
 
-#define TSC_PERIOD_SCALE 0x10000
 
 // Intel 8253/8254/82C54 Programmable Interval Timer (PIT).
 // http://en.wikipedia.org/wiki/Intel_8253

@@ -874,7 +874,6 @@ initwd(void)
   // bootstrapping.
   static bool configured;
   if (!configured) {
-    extern uint64_t cpuhz;
     configured = true;
     if (dynamic_cast<intel_pmu*>(pmu)) {
       wd_selector.selector =
@@ -886,7 +885,7 @@ initwd(void)
       return;
     }
     wd_selector.enable = true;
-    wd_selector.period = cpuhz;
+    wd_selector.period = (mycpu()->tsc_period * 1000000000) / TSC_PERIOD_SCALE;
     wd_selector.on_overflow = wdcheck;
     console.println("wd: Enabled");
   } else if (!wd_selector.enable) {
