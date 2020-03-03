@@ -262,9 +262,6 @@ cmain(u64 mbmagic, u64 mbaddr)
   initinode();     // inode cache
   initmfs();
 
-  if (VERBOSE)
-    cprintf("ncpu %d %lu MHz\n", ncpu, ((mycpu()->tsc_period * 1000000000) / TSC_PERIOD_SCALE) / 1000000);
-
   inituser();      // first user process
 
   // XXX hack until mnodes can load from disk
