@@ -155,7 +155,7 @@ public:
   explicit page_info_ref(page_info* ptr) : p((u64)ptr | UNIQUE_BIT) {
     assert(((u64)ptr & UNIQUE_BIT) == 0);
   }
-  page_info_ref(const sref<page_info>& o) : s(o) {
+  explicit page_info_ref(const sref<page_info>& o) : s(o) {
     if (!o) p = 0;
     assert(!is_unique());
   }
