@@ -86,7 +86,7 @@ INCLUDES := -include param.h -iquote libutil/include -I$(MTRACESRC)
 COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 endif
-COMFLAGS += -g -MD -MP -O3 -Wall -DHW_$(HW) $(INCLUDES) -fno-stack-protector  -mindirect-branch=thunk
+COMFLAGS += -g -MD -MP -O3 -Wall -DHW_$(HW) $(INCLUDES) -fno-stack-protector  -mindirect-branch=thunk -fcf-protection=none
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++17 -Wno-sign-compare -faligned-new $(CXXFLAGS)
 ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
