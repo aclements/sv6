@@ -151,8 +151,10 @@ mfile::get_page(u64 pageidx)
 {
   auto it = pages_.find(pageidx);
   if (!it.is_set()) {
+    // cprintf("WARN: attempted to get page beyond end of file\n");
     if (pageidx < PGROUNDUP(size_) / PGSIZE) {
       // XXX read from disk
+      cprintf("WARN: disk read needed?!\n");
     }
 
     return mfile::page_state();
