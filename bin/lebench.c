@@ -313,7 +313,7 @@ void one_line_test_v2(FILE *fp, FILE *copy, void (*f)(struct timespec*, int, int
   struct timespec testStart, testEnd;
   clock_gettime(CLOCK_MONOTONIC,&testStart);
 
-  /* printf("Performing test %s.\n", info->name); */
+  printf("Performing test %s.\n", info->name);
 
   int runs = info->iter;
   /* printf("Total test iteration %d.\n", runs); */
@@ -379,7 +379,7 @@ void one_line_test_v2(FILE *fp, FILE *copy, void (*f)(struct timespec*, int, int
 void two_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*,struct timespec*), testInfo *info){
   struct timespec testStart, testEnd;
   clock_gettime(CLOCK_MONOTONIC,&testStart);
-  /* printf("Performing test %s.\n", info->name); */
+  printf("Performing test %s.\n", info->name);
 
   int runs = info->iter;
   /* printf("Total test iteration %d.\n", runs); */
