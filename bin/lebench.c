@@ -32,6 +32,8 @@
 #include "sockutil.h"
 #include "sysstubs.h"
 
+#pragma GCC optimize ("O0")
+
 int counter=3;
 bool  isFirstIteration = false;
 /* const char *home; */
