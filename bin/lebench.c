@@ -662,6 +662,7 @@ void munmap_test(struct timespec *diffTime) {
   char* p = malloc(file_size);
   memset(p, 0, file_size);
   write(fd, p, file_size);
+  free(p);
 
   void *addr = (void *)syscall(SYS_mmap, NULL, file_size, PROT_WRITE, MAP_PRIVATE, fd, 0);
   for (int i = 0; i < file_size; i++) {
