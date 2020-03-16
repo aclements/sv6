@@ -446,6 +446,8 @@ finishproc(struct proc *p)
 #if !KSTACK_DEBUG
   if (p->kstack)
     kfree(p->kstack, KSTACKSIZE);
+  if (p->qstack)
+    kfree(p->qstack, KSTACKSIZE);
 #endif
 
   p->pid = 0;
