@@ -11,7 +11,6 @@
 #include "vmalloc.hh"
 #include "bitset.hh"
 
-struct pgmap;
 struct gc_handle;
 class filetable;
 class vnode;

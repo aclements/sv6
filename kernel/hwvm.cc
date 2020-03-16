@@ -103,20 +103,6 @@ struct pgmap {
 private:
   std::atomic<pme_t> e[PGSIZE / sizeof(pme_t)];
 
-  void free(int level, int end = 512, bool release = true)
-  {
-    if (level != 0) {
-      for (int i = 0; i < end; i++) {
-        pme_t entry = e[i].load(memory_order_relaxed);
-        if (entry & PTE_P)
-          ((pgmap*) p2v(PTE_ADDR(entry)))->free(level - 1);
-      }
-    }
-
-    if (release)
-      kfree(this);
-  }
-
   u64 internal_pages(int level, int end = 512) const
   {
     u64 count = 1;
@@ -133,22 +119,6 @@ private:
   }
 
 public:
-  ~pgmap()
-  {
-    // Don't free kernel portion of the pml4 and don't kfree this
-    // page, since operator delete will do that.
-    free(L_PML4, PX(L_PML4, KGLOBAL), false);
-  }
-
-  // Delete'ing a ::pgmap also frees all sub-pgmaps (except those
-  // shared with kpml4), but does not free any non-page structure
-  // pages pointed to by the page table.  Note that there is no
-  // operator new; the only way to get a new ::pgmap is kclone().
-  static void operator delete(void *p)
-  {
-    kfree(p);
-  }
-
   // Allocate and return a new pgmap the clones the kernel part of this pgmap,
   // and populates the quasi user-visible part.
   pgmap_pair kclone_pair() const
@@ -170,6 +140,20 @@ public:
     pair.user->e[p].store(e[p]);
 
     return pair;
+  }
+
+  void free(int level, int begin, int end, bool release)
+  {
+    if (level != L_4K) {
+      for (int i = begin; i < end; i++) {
+        pme_t entry = e[i].load(memory_order_relaxed);
+        if ((entry & PTE_P) && !(entry & PTE_PS))
+          ((pgmap*) p2v(PTE_ADDR(entry)))->free(level - 1, 0, 512, true);
+      }
+    }
+
+    if (release)
+      kfree(this);
   }
 
   u64 internal_pages() const
@@ -761,6 +745,11 @@ namespace mmu_shared_page_table {
   }
   page_map_cache::~page_map_cache()
   {
+    pml4s.kernel->free(pgmap::L_PML4, 0, PX(pgmap::L_PML4, KGLOBAL), false);
+
+    pml4s.user->free(pgmap::L_PML4, 0, PX(pgmap::L_PML4, KGLOBAL), false);
+    pml4s.user->free(pgmap::L_PML4, PX(pgmap::L_PML4, KBASE), 512, false);
+
     kfree(pml4s.kernel, PGSIZE * 2);
   }
 

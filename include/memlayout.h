@@ -10,16 +10,16 @@
 
 // UEFI Runtime services memory
 #define KUEFI       0xFFFFF10000000000ull
-#define KUEFIEND    0xFFFFF15000000000ull  // 320GB
+#define KUEFIEND    0xFFFFF18000000000ull  // 512GB
 
 // Public memory are direct mapped at a page granularity in the kernel portion
 // of all page tables.
 #define KPUBLIC     0xFFFFF18000000000ull
-#define KPUBLICEND  0xFFFFF20000000000ull  // 320GB
+#define KPUBLICEND  0xFFFFF20000000000ull  // 512GB
 
 // Physical memory is direct-mapped from KBASE to KBASEEND in initpg.
 #define KBASE       0xFFFFFF0000000000ull
-#define KBASEEND    0xFFFFFF5000000000ull  // 320GB
+#define KBASEEND    0xFFFFFF8000000000ull  // 512GB
 
 // The kernel is linked to run from virtual address KCODE+2MB.  boot.S
 // sets up a direct mapping at KCODE to KCODE+1GB.  This is necessary
