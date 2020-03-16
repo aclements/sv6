@@ -777,9 +777,9 @@ kalloc(const char *name, size_t size)
     if (KERNEL_HEAP_PROFILE) {
       auto alloc_rip = __builtin_return_address(0);
       if (heap_profile_update(HEAP_PROFILE_KALLOC, alloc_rip, size))
-        adi->set_kalloc_rip(alloc_rip);
+        adi->set_alloc_rip(HEAP_PROFILE_KALLOC, alloc_rip);
       else
-        adi->set_kalloc_rip(nullptr);
+        adi->set_alloc_rip(HEAP_PROFILE_KALLOC, nullptr);
     }
 
     mtlabel(mtrace_label_block, res, size, name, strlen(name));
@@ -1151,7 +1151,7 @@ kfree(void *v, size_t size)
   // Update debug_info
   alloc_debug_info *adi = alloc_debug_info::of(v, size);
   if (KERNEL_HEAP_PROFILE) {
-    auto alloc_rip = adi->kalloc_rip();
+    auto alloc_rip = adi->alloc_rip(HEAP_PROFILE_KALLOC);
     if (alloc_rip)
       heap_profile_update(HEAP_PROFILE_KALLOC, alloc_rip, -size);
   }
@@ -1250,12 +1250,31 @@ char* zalloc(const char* name) {
     }
   }
 
-  return mem->nzero ? (char*)mem->zero_pages[--mem->nzero] : NULL;
+  char* page = mem->nzero ? (char*)mem->zero_pages[--mem->nzero] : NULL;
+
+  if (KERNEL_HEAP_PROFILE && page) {
+    alloc_debug_info *adi = alloc_debug_info::of(page, PGSIZE);
+    auto alloc_rip = __builtin_return_address(0);
+    if (heap_profile_update(HEAP_PROFILE_ZALLOC, alloc_rip, PGSIZE))
+      adi->set_alloc_rip(HEAP_PROFILE_ZALLOC, alloc_rip);
+    else
+      adi->set_alloc_rip(HEAP_PROFILE_ZALLOC, nullptr);
+  }
+
+  return page;
 }
 
 // Free a page that is known to be zero
 void zfree(void* page) {
   scoped_cli cli;
+
+  if (KERNEL_HEAP_PROFILE) {
+    alloc_debug_info *adi = alloc_debug_info::of(page, PGSIZE);
+    auto alloc_rip = adi->alloc_rip(HEAP_PROFILE_ZALLOC);
+    if (alloc_rip)
+      heap_profile_update(HEAP_PROFILE_ZALLOC, alloc_rip, -PGSIZE);
+  }
+
   auto mem = mycpu()->mem;
   if (mem->nzero < KALLOC_ZERO_PAGES) {
     mem->zero_pages[mem->nzero++] = page;

@@ -16,6 +16,7 @@
 #include "page_info.hh"
 #include <algorithm>
 #include "kstats.hh"
+#include "heapprof.hh"
 
 extern char __qdata_start[], __qdata_end[];
 extern char __qpercpu_start[], __qpercpu_end[];
@@ -843,26 +844,38 @@ void*
 vmap::qalloc(const char* name, bool cached_only)
 {
   void* new_pages[QALLOC_BATCH_SIZE];
-
+  bool need_qinsert = false;
   {
     scoped_acquire l(&qpage_pool_lock_);
     if (!qpage_pool_.empty()) {
       void* page = qpage_pool_.back();
       qpage_pool_.pop_back();
-      return page;
+      new_pages[0] = page;
     } else if (cached_only) {
       return nullptr;
-    }
-
-    new_pages[0] = zalloc("qalloc");
-    for (auto i = 1; i < QALLOC_BATCH_SIZE; i++) {
-      new_pages[i] = zalloc("qalloc");
-      qpage_pool_.push_back(new_pages[i]);
+    } else {
+      need_qinsert = true;
+      new_pages[0] = zalloc("qalloc");
+      for (auto i = 1; i < QALLOC_BATCH_SIZE; i++) {
+        new_pages[i] = zalloc("qalloc");
+        qpage_pool_.push_back(new_pages[i]);
+      }
     }
   }
 
-  for (auto p : new_pages) {
-    qinsert(p);
+  if(need_qinsert) {
+    for (auto p : new_pages) {
+      qinsert(p);
+    }
+  }
+
+  if (KERNEL_HEAP_PROFILE && new_pages[0]) {
+    alloc_debug_info *adi = alloc_debug_info::of(new_pages[0], PGSIZE);
+    auto alloc_rip = __builtin_return_address(0);
+    if (heap_profile_update(HEAP_PROFILE_QALLOC, alloc_rip, PGSIZE))
+      adi->set_alloc_rip(HEAP_PROFILE_QALLOC, alloc_rip);
+    else
+      adi->set_alloc_rip(HEAP_PROFILE_QALLOC, nullptr);
   }
 
   return new_pages[0];
@@ -871,6 +884,14 @@ vmap::qalloc(const char* name, bool cached_only)
 void
 vmap::qfree(void* page)
 {
+  if (KERNEL_HEAP_PROFILE) {
+    alloc_debug_info *adi = alloc_debug_info::of(page, PGSIZE);
+    auto alloc_rip = adi->alloc_rip(HEAP_PROFILE_QALLOC);
+    if (alloc_rip)
+      heap_profile_update(HEAP_PROFILE_QALLOC, alloc_rip, -PGSIZE);
+  }
+
+
   void* unneeded_pages[QFREE_BATCH_SIZE];
 
   {

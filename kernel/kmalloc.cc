@@ -147,9 +147,9 @@ kmalloc(u64 nbytes, const char *name)
   if (KERNEL_HEAP_PROFILE) {
     auto alloc_rip = __builtin_return_address(0);
     if (heap_profile_update(HEAP_PROFILE_KMALLOC, alloc_rip, nbytes))
-      adi->set_kmalloc_rip(alloc_rip);
+      adi->set_alloc_rip(HEAP_PROFILE_KMALLOC, alloc_rip);
     else
-      adi->set_kmalloc_rip(nullptr);
+      adi->set_alloc_rip(HEAP_PROFILE_KMALLOC, nullptr);
   }
 
   mtlabel(mtrace_label_heap, (void*) h, nbytes, name, strlen(name));
@@ -166,7 +166,7 @@ kmfree(void *ap, u64 nbytes)
   // Update debug_info
   alloc_debug_info *adi = alloc_debug_info::of(ap, nbytes);
   if (KERNEL_HEAP_PROFILE) {
-    auto alloc_rip = adi->kmalloc_rip();
+    auto alloc_rip = adi->alloc_rip(HEAP_PROFILE_KMALLOC);
     if (alloc_rip)
       heap_profile_update(HEAP_PROFILE_KMALLOC, alloc_rip, -nbytes);
   }

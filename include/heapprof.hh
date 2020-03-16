@@ -4,7 +4,9 @@
 
 enum heap_profile_arena {
   HEAP_PROFILE_KALLOC,
-  HEAP_PROFILE_KMALLOC
+  HEAP_PROFILE_ZALLOC,
+  HEAP_PROFILE_QALLOC,
+  HEAP_PROFILE_KMALLOC,
 };
 
 class print_stream;

@@ -70,7 +70,7 @@ struct heap_profile
 struct heap_profile_array
 {
 #if KERNEL_HEAP_PROFILE
-  heap_profile arena[2];
+  heap_profile arena[4];
 #else
   heap_profile arena[0];
 #endif
@@ -164,6 +164,10 @@ heap_profile_print(print_stream *s)
 
     s->println("Top 10 kalloc allocations:");
     heap_profile_print1(s, 10, HEAP_PROFILE_KALLOC);
+    s->println("Top 10 zalloc allocations:");
+    heap_profile_print1(s, 10, HEAP_PROFILE_ZALLOC);
+    s->println("Top 10 qalloc allocations:");
+    heap_profile_print1(s, 10, HEAP_PROFILE_QALLOC);
     s->println("Top 10 kmalloc allocations:");
     heap_profile_print1(s, 10, HEAP_PROFILE_KMALLOC);
   } else {
