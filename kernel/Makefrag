@@ -119,14 +119,15 @@ $(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(LD) $(LDFLAGS) -T kernel/kernel.ld -z max-page-size=4096 -e efi_main \
-		-o $@ $(O)/kernel/boot.o $(OBJS) -L$(O) $(LFLAGS)
-	$(Q)$(NM) $@ > $(O)/kernel/system.map
-	$(Q)$(OBJCOPY) --dump-section .kmeta=$(O)/kernel/kmeta.bin $@
+		-o $@.tmp $(O)/kernel/boot.o $(OBJS) -L$(O) $(LFLAGS)
+	$(Q)$(NM) $@.tmp > $(O)/kernel/system.map
+	$(Q)$(OBJCOPY) --dump-section .kmeta=$(O)/kernel/kmeta.bin $@.tmp
 	$(Q)tools/kmeta.py $(O)/kernel/system.map \
 		"$$(date)" "$$(git describe --all --long --dirty=+)" \
 		| dd $(DDSTATUS) conv=notrunc of=$(O)/kernel/kmeta.bin
-	$(Q)$(OBJCOPY) --update-section .kmeta=$(O)/kernel/kmeta.bin $@
-	$(Q)tools/check-stack $@
+	$(Q)$(OBJCOPY) --update-section .kmeta=$(O)/kernel/kmeta.bin $@.tmp
+	$(Q)tools/check-stack $@.tmp
+	@mv $@.tmp $@
 
 $(O)/kernel/%.o: lib/%.cc $(O)/sysroot
 	@echo "  CXX    $@"
@@ -200,8 +201,6 @@ $(O)/kernel/kconfig.cc: param.h
 	echo ";" \
 	) > $@.tmp
 	$(Q)cmp -s $@.tmp $@ || mv $@.tmp $@
-
-.PHONY: always
 
 .PRECIOUS: $(O)/kernel/%.o
 -include $(O)/kernel/*.d
