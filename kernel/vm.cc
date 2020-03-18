@@ -33,6 +33,13 @@ enum {
   QFREE_BATCH_SIZE = 17,
 };
 
+static u64 nmi_stacks_size() {
+  u64 size = PGSIZE;
+  while (ncpu * sizeof(nmiframe) > size)
+    size *= 2;
+  return size;
+}
+
 /*
  * vmdesc
  */
@@ -136,12 +143,10 @@ vmap::alloc(void)
   v->qinsert(__qdata_start, __qdata_start, __qdata_end - __qdata_start);
   v->qinsert(__qpercpu_start, __qpercpu_start, __qpercpu_end - __qpercpu_start);
 
-  u64 nmi_stacks_size = PGSIZE;
-  while (ncpu * sizeof(nmiframe) > nmi_stacks_size)
-    nmi_stacks_size *= 2;
-  v->nmi_stacks = (nmiframe*)kalloc("nmi_stacks", nmi_stacks_size);
-  v->qinsert(v->nmi_stacks, v->nmi_stacks, nmi_stacks_size);
-  memset(v->nmi_stacks, 0, nmi_stacks_size);
+  u64 size = nmi_stacks_size();
+  v->nmi_stacks = (nmiframe*)kalloc("nmi_stacks", size);
+  v->qinsert(v->nmi_stacks, v->nmi_stacks, size);
+  memset(v->nmi_stacks, 0, size);
 
   for(int c = 0; c < ncpu; c++) {
     nmiframe* cpu_nmiframe = (nmiframe*)(nmistacktop[c] - sizeof(nmiframe));
@@ -166,6 +171,8 @@ vmap::~vmap()
 {
   for (auto p : qpage_pool_)
     kfree(p);
+
+  kfree(nmi_stacks, nmi_stacks_size());
 }
 
 sref<vmap>
@@ -848,9 +855,8 @@ vmap::qalloc(const char* name, bool cached_only)
   {
     scoped_acquire l(&qpage_pool_lock_);
     if (!qpage_pool_.empty()) {
-      void* page = qpage_pool_.back();
+      new_pages[0] = qpage_pool_.back();
       qpage_pool_.pop_back();
-      new_pages[0] = page;
     } else if (cached_only) {
       return nullptr;
     } else {
