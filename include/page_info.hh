@@ -5,6 +5,7 @@
 #include "snzi.hh"
 #include "gc.hh"
 #include "types.h"
+#include "heapprof.hh"
 
 #include <cstddef>
 
@@ -13,12 +14,12 @@ struct alloc_debug_info
 {
 #if KERNEL_HEAP_PROFILE
   // Instruction pointer of allocation
-  const void *alloc_rip_[4];
+  const void *alloc_rip_[HEAP_PROFILE_ARENAS];
   void set_alloc_rip(int arena, const void *kalloc_rip) { alloc_rip_[arena] = kalloc_rip; }
   const void *alloc_rip(int arena) const { return alloc_rip_[arena]; }
 #else
-  void set_alloc_rip(const void *kalloc_rip) { }
-  const void *alloc_rip() const { return nullptr; }
+  void set_alloc_rip(int arena, const void *kalloc_rip) { }
+  const void *alloc_rip(int arena) const { return nullptr; }
 #endif
 
   static size_t expand_size(size_t size);

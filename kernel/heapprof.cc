@@ -70,7 +70,7 @@ struct heap_profile
 struct heap_profile_array
 {
 #if KERNEL_HEAP_PROFILE
-  heap_profile arena[4];
+  heap_profile arena[HEAP_PROFILE_ARENAS];
 #else
   heap_profile arena[0];
 #endif
@@ -141,8 +141,12 @@ heap_profile_print1(print_stream *s, int limit, heap_profile_arena arena)
   for (auto &loc : sorted) {
     if (limit-- == 0)
       break;
-    s->println(loc.rip, " ", loc.prbytes, " bytes in ", loc.count,
-               " allocations");
+    if (loc.prbytes >= (1<<20))
+      s->println(loc.rip, " ", loc.prbytes>>20, " MiB in ", loc.count, " allocations");
+    else if (loc.prbytes >= (1<<10))
+      s->println(loc.rip, " ", loc.prbytes>>10, " KiB in ", loc.count, " allocations");
+    else
+      s->println(loc.rip, " ", loc.prbytes, " B in ", loc.count, " allocations");
   }
 
   // Total
@@ -151,7 +155,12 @@ heap_profile_print1(print_stream *s, int limit, heap_profile_arena arena)
     total_bytes += loc.prbytes;
     total_count += loc.count;
   }
-  s->println("Total: ", total_bytes, " bytes in ", total_count, " allocations");
+  if (total_bytes >= (1<<20))
+    s->println("Total: ", total_bytes>>20, " MiB in ", total_count, " allocations");
+  else if (total_bytes >= (1<<10))
+    s->println("Total: ", total_bytes>>10, " KiB in ", total_count, " allocations");
+  else
+    s->println("Total: ", total_bytes, " B in ", total_count, " allocations");
 }
 
 void
@@ -164,8 +173,6 @@ heap_profile_print(print_stream *s)
 
     s->println("Top 10 kalloc allocations:");
     heap_profile_print1(s, 10, HEAP_PROFILE_KALLOC);
-    s->println("Top 10 zalloc allocations:");
-    heap_profile_print1(s, 10, HEAP_PROFILE_ZALLOC);
     s->println("Top 10 qalloc allocations:");
     heap_profile_print1(s, 10, HEAP_PROFILE_QALLOC);
     s->println("Top 10 kmalloc allocations:");

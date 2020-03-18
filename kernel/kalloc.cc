@@ -1254,11 +1254,16 @@ char* zalloc(const char* name) {
 
   if (KERNEL_HEAP_PROFILE && page) {
     alloc_debug_info *adi = alloc_debug_info::of(page, PGSIZE);
+
+    auto old_rip = adi->alloc_rip(HEAP_PROFILE_KALLOC);
+    if (old_rip)
+      heap_profile_update(HEAP_PROFILE_KALLOC, old_rip, -PGSIZE);
+
     auto alloc_rip = __builtin_return_address(0);
-    if (heap_profile_update(HEAP_PROFILE_ZALLOC, alloc_rip, PGSIZE))
-      adi->set_alloc_rip(HEAP_PROFILE_ZALLOC, alloc_rip);
+    if (heap_profile_update(HEAP_PROFILE_KALLOC, alloc_rip, PGSIZE))
+      adi->set_alloc_rip(HEAP_PROFILE_KALLOC, alloc_rip);
     else
-      adi->set_alloc_rip(HEAP_PROFILE_ZALLOC, nullptr);
+      adi->set_alloc_rip(HEAP_PROFILE_KALLOC, nullptr);
   }
 
   return page;
@@ -1270,9 +1275,11 @@ void zfree(void* page) {
 
   if (KERNEL_HEAP_PROFILE) {
     alloc_debug_info *adi = alloc_debug_info::of(page, PGSIZE);
-    auto alloc_rip = adi->alloc_rip(HEAP_PROFILE_ZALLOC);
-    if (alloc_rip)
-      heap_profile_update(HEAP_PROFILE_ZALLOC, alloc_rip, -PGSIZE);
+    auto alloc_rip = adi->alloc_rip(HEAP_PROFILE_KALLOC);
+    if (alloc_rip) {
+      heap_profile_update(HEAP_PROFILE_KALLOC, alloc_rip, -PGSIZE);
+      adi->set_alloc_rip(HEAP_PROFILE_KALLOC, (void*)&zfree);
+    }
   }
 
   auto mem = mycpu()->mem;
