@@ -176,6 +176,11 @@ exit(int status)
     // Remove user visible state associated with this proc from vmap.
     vmap->remove((uptr)myproc(), PGSIZE);
     vmap->remove((uptr)myproc()->kstack, KSTACKSIZE);
+
+    if (myproc()->cv) {
+      vmap->qfree(myproc()->cv);
+      myproc()->cv = nullptr;
+    }
   }
 
   // Lock the parent first, since otherwise we might deadlock.
