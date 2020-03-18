@@ -206,8 +206,11 @@ private:
   vmap(const vmap&);
   vmap& operator=(const vmap&);
   ~vmap();
-  NEW_DELETE_OPS(vmap)
   uptr unmapped_area(size_t n);
+
+  static void operator delete(void* ptr, std::size_t sz) {
+    kfree(ptr);
+  }
 
   mmu::page_map_cache cache;
   friend void switchvm(struct vmap*, struct vmap*);
