@@ -24,36 +24,6 @@ struct patch {
 #define PATCH_OPCODE_OR_CALL 5
 #define PATCH_OPCODE_OR_STRING 6
 
-#define PATCH_RETPOLINE(symbol, replacement)   \
-  extern u64 symbol;                           \
-  patch patch_##symbol                         \
-    __attribute__((section (".hotpatch"))) = { \
-    .segment_mask = 3,                         \
-    .option = "retpolines",                    \
-    .value = "yes",                            \
-    .start = (u64)&symbol,                     \
-    .opcode = PATCH_OPCODE_OR_STRING,          \
-    .alternative = (u64)replacement,           \
-    .end = (u64)&symbol+sizeof(replacement)-1  \
-  };
-
-PATCH_RETPOLINE(__x86_indirect_thunk_rax, "\xff\xe0");
-PATCH_RETPOLINE(__x86_indirect_thunk_rcx, "\xff\xe1");
-PATCH_RETPOLINE(__x86_indirect_thunk_rdx, "\xff\xe2");
-PATCH_RETPOLINE(__x86_indirect_thunk_rbx, "\xff\xe3");
-PATCH_RETPOLINE(__x86_indirect_thunk_rsp, "\xff\xe4");
-PATCH_RETPOLINE(__x86_indirect_thunk_rbp, "\xff\xe5");
-PATCH_RETPOLINE(__x86_indirect_thunk_rsi, "\xff\xe6");
-PATCH_RETPOLINE(__x86_indirect_thunk_rdi, "\xff\xe7");
-PATCH_RETPOLINE(__x86_indirect_thunk_r8, "\x41\xff\xe0");
-PATCH_RETPOLINE(__x86_indirect_thunk_r9, "\x41\xff\xe1");
-PATCH_RETPOLINE(__x86_indirect_thunk_r10, "\x41\xff\xe2");
-PATCH_RETPOLINE(__x86_indirect_thunk_r11, "\x41\xff\xe3");
-PATCH_RETPOLINE(__x86_indirect_thunk_r12, "\x41\xff\xe4");
-PATCH_RETPOLINE(__x86_indirect_thunk_r13, "\x41\xff\xe5");
-PATCH_RETPOLINE(__x86_indirect_thunk_r14, "\x41\xff\xe6");
-PATCH_RETPOLINE(__x86_indirect_thunk_r15, "\x41\xff\xe7");
-
 char* qtext, *original_text;
 u8 secrets_mapped __attribute__((section (".sflag"))) = 1;
 extern u64 __hotpatch_start, __hotpatch_end;

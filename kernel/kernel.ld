@@ -71,28 +71,4 @@ SECTIONS
     /* 2MByte align, because we set NX on 2MByte super pages. */
     . = ALIGN(0x200000);
     PROVIDE(end = .);
-
-    /*
-     * Different versions of GCC seem to provide different sets of retpoline
-     * thunks. Since the code itself can't detect whether a symbol exists, we
-     * instead define any missing ones as having address zero. (The PROVIDE
-     * function only defines a symbol if there is no definition of it in any
-     * input file.)
-     */
-    PROVIDE(__x86_indirect_thunk_rax = 0);
-    PROVIDE(__x86_indirect_thunk_rcx = 0);
-    PROVIDE(__x86_indirect_thunk_rdx = 0);
-    PROVIDE(__x86_indirect_thunk_rbx = 0);
-    PROVIDE(__x86_indirect_thunk_rsp = 0);
-    PROVIDE(__x86_indirect_thunk_rbp = 0);
-    PROVIDE(__x86_indirect_thunk_rsi = 0);
-    PROVIDE(__x86_indirect_thunk_rdi = 0);
-    PROVIDE(__x86_indirect_thunk_r8 = 0);
-    PROVIDE(__x86_indirect_thunk_r9 = 0);
-    PROVIDE(__x86_indirect_thunk_r10 = 0);
-    PROVIDE(__x86_indirect_thunk_r11 = 0);
-    PROVIDE(__x86_indirect_thunk_r12 = 0);
-    PROVIDE(__x86_indirect_thunk_r13 = 0);
-    PROVIDE(__x86_indirect_thunk_r14 = 0);
-    PROVIDE(__x86_indirect_thunk_r15 = 0);
 }
