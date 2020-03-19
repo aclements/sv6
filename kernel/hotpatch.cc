@@ -34,9 +34,9 @@ struct patch {
   extern u64 symbol;                           \
   patch patch_##symbol                         \
     __attribute__((section (".hotpatch"))) = { \
-    .segment_mask = PATCH_SEGMENT_QTEXT,       \
+    .segment_mask = 3,                         \
     .option = "retpolines",                    \
-    .value = "no",                             \
+    .value = "yes",                            \
     .start = (u64)&symbol,                     \
     .opcode = PATCH_OPCODE_OR_STRING,          \
     .alternative = (u64)replacement,           \
