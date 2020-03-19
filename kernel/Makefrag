@@ -115,19 +115,20 @@ else
 DDSTATUS := status=none
 endif
 
-$(KERN): $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
+$(KERN): tools/kmeta.py $(O)/kernel/boot.o $(OBJS) $(LDEPS) kernel/kernel.ld
 	@echo "  LD     $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)$(LD) $(LDFLAGS) -T kernel/kernel.ld -z max-page-size=4096 -e efi_main \
 		-o $@.tmp $(O)/kernel/boot.o $(OBJS) -L$(O) $(LFLAGS)
-	$(Q)$(NM) $@.tmp > $(O)/kernel/system.map
+	$(Q)$(NM) $@.tmp > $(O)/kernel/kernel.nm
+	$(Q)$(OBJDUMP) -d $@.tmp > $(O)/kernel/kernel.objdump
 	$(Q)$(OBJCOPY) --dump-section .kmeta=$(O)/kernel/kmeta.bin $@.tmp
-	$(Q)tools/kmeta.py $(O)/kernel/system.map \
+	$(Q)tools/kmeta.py $(O)/kernel/kernel.nm $(O)/kernel/kernel.objdump \
 		"$$(date)" "$$(git describe --all --long --dirty=+)" \
 		| dd $(DDSTATUS) conv=notrunc of=$(O)/kernel/kmeta.bin
 	$(Q)$(OBJCOPY) --update-section .kmeta=$(O)/kernel/kmeta.bin $@.tmp
 	$(Q)tools/check-stack $@.tmp
-	@mv $@.tmp $@
+	$(Q)mv $@.tmp $@
 
 $(O)/kernel/%.o: lib/%.cc $(O)/sysroot
 	@echo "  CXX    $@"

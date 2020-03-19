@@ -66,6 +66,7 @@ endif
 AR = $(TOOLPREFIX)ar
 LD = $(TOOLPREFIX)ld
 NM = $(TOOLPREFIX)nm
+OBJDUMP = $(TOOLPREFIX)objdump
 OBJCOPY = $(TOOLPREFIX)objcopy
 STRIP = $(TOOLPREFIX)strip
 

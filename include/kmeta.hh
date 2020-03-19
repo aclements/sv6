@@ -6,21 +6,22 @@ class kmeta {
     u32 string_offset;
   } __attribute__((__packed__));
 
-  u32 count;
+  u32 magic;
+  u32 branch_table_offset;
+  u32 string_table_offset;
   u32 date_string;
   u32 git_string;
-  entry entries[];
-
-  const char *string_table() {
-    return (const char*) &entries[count];
-  }
+  char data[];
 
   const char *string_at_offset(u32 offset) {
-    return string_table() + offset;
+    return &data[string_table_offset + offset];
   }
 
   // returns the last entry before the given address
   bool binary_search(void *address, entry *out) {
+    u32 count = branch_table_offset / sizeof(entry);
+    entry* entries = (entry*)&data[0];
+
     if (count == 0 || entries[0].address > address)
       return false;
     u32 low_inclusive = 0;
@@ -59,13 +60,6 @@ class kmeta {
     return string_at_offset(e.string_offset);
   }
 
-  const char *get_version_string() {
-    return string_at_offset(date_string);
-  }
-  const char *get_release_string() {
-    return string_at_offset(git_string);
-  }
-
   static kmeta *kernel_symbols() {
     extern struct kmeta kmeta_start;
     return &kmeta_start;
@@ -75,10 +69,16 @@ public:
   static const char *lookup(void *address, u32 *offset_out) {
     return kernel_symbols()->lookup_symbol(address, offset_out);
   }
+  static const u32 num_indirect_branches() {
+    return (kernel_symbols()->string_table_offset - kernel_symbols()->branch_table_offset) / sizeof(u32);
+  }
+  static const u32* indirect_branches() {
+    return (u32*)&kernel_symbols()->data[kernel_symbols()->branch_table_offset];
+  }
   static const char *version_string() {
-    return kernel_symbols()->get_version_string();
+    return kernel_symbols()->string_at_offset(kernel_symbols()->date_string);
   }
   static const char *release_string() {
-    return kernel_symbols()->get_release_string();
+    return kernel_symbols()->string_at_offset(kernel_symbols()->git_string);
   }
 } __attribute__((__packed__));
