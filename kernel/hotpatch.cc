@@ -24,13 +24,6 @@ struct patch {
 #define PATCH_OPCODE_OR_CALL 5
 #define PATCH_OPCODE_OR_STRING 6
 
-// Since we can't detect whether a symbol exists, we instead have kernel.ld
-// add non-present symbols with a value of zero.
-#define REPLACE(text_base, symbol, replacement)  \
-  extern u64 symbol;                             \
-  if ((volatile void*)&symbol != NULL)           \
-    replace(text_base, (u64)&symbol, replacement);
-
 #define PATCH_RETPOLINE(symbol, replacement)   \
   extern u64 symbol;                           \
   patch patch_##symbol                         \
