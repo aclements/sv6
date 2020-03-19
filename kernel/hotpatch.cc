@@ -77,16 +77,14 @@ const char* NOP[] = {
   "\x66\x0f\x1f\x84\x00\x00\x00\x00\x00",
 };
 
-// Replace the 5 bytes at location with a call instruction to func
-void insert_call_instruction(char* text_base, u64 location, u64 func)
-{
+// Replace the 5 bytes at location with a call instruction to func.
+void insert_call_instruction(char* text_base, u64 location, u64 func) {
   text_base[location-KTEXT] = 0xe8;
   *(u32*)&text_base[location-KTEXT+1] = (u32)((char*)func - (char*)location - 5);
 }
 
 // Replace the range [start, end) with NOPs.
-void remove_range(char* text_base, u64 start, u64 end)
-{
+void remove_range(char* text_base, u64 start, u64 end) {
   u64 current = start;
   while (current != end) {
     u64 len = end - current;
@@ -144,7 +142,7 @@ void apply_hotpatches()
     assert(p->segment_mask == 1 || p->segment_mask == 2 || p->segment_mask == 3);
 
     for (int i = 0; i < 2; i++) {
-      if(!(p->segment_mask & (1<<i)))
+      if(!(p->segment_mask & (1<<i)) || !p->start)
         continue;
 
       if(patch_needed(p, (1<<i) == PATCH_SEGMENT_KTEXT)) {
