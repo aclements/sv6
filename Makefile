@@ -372,29 +372,54 @@ $(O)/example.fat: $(O)/bin/ls README.md $(O)/writeok
 	mcopy -i $@ ./README.md ::
 	mcopy -i $@ $(O)/writeok ::
 
-$(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon syslinux.cfg
-	dd if=/dev/zero of=$@ bs=4096 count=66560
-	mkfs.fat -F 32 -s 8 -S 512 $@
-	mmd -i $@ ::boot
-	mmd -i $@ ::boot/syslinux
-	mmd -i $@ ::bin
-	mmd -i $@ ::EFI
-	mmd -i $@ ::EFI/BOOT
-	mcopy -i $@ syslinux/bios/*.c32 ::boot/syslinux/
-	mcopy -i $@ $(O)/kernel.elf ::boot/sv6
-	mcopy -i $@ $(O)/bin/anon ::bin
-	mcopy -i $@ ./syslinux.cfg ::
-	syslinux --directory boot/syslinux -i $@
-$(O)/boot.img: $(O)/boot.fat $(O)/fs.part
-	dd if=$< of=$@ conv=sparse obs=512 seek=2048
-	dd if=$(O)/fs.part of=$@ conv=sparse obs=512 seek=143360
-	truncate -s "101M" $@
-	parted -s --align optimal $@ mklabel gpt mkpart primary 1MiB 70MiB set 1 legacy_boot on set 1 esp on mkpart primary 70MiB 100MiB
-	dd bs=440 count=1 conv=notrunc if=/usr/lib/syslinux/bios/gptmbr.bin of=$@
+$(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon grub/grub.cfg grub/grub.efi
+	@echo "  GEN    $@"
+	$(Q)dd if=/dev/zero of=$@ bs=4096 count=66560 2> /dev/null
+	$(Q)mkfs.fat -F 32 -s 8 -S 512 $@ > /dev/null
+	$(Q)mmd -i $@ ::boot
+	$(Q)mmd -i $@ ::bin
+	$(Q)mmd -i $@ ::EFI
+	$(Q)mmd -i $@ ::EFI/BOOT
+	$(Q)mcopy -i $@ grub/grub.efi ::EFI/BOOT/BOOTX64.EFI
+	$(Q)mcopy -i $@ grub/grub.cfg ::boot/grub.cfg
+	$(Q)mcopy -i $@ $(O)/kernel.elf ::boot/ward
+	$(Q)mcopy -i $@ $(O)/bin/anon ::bin
+$(O)/boot.img: $(O)/boot.fat $(O)/fs.part grub/boot.img grub/core.img
+	@echo "  GEN    $@"
+	$(Q)truncate -s "101M" $@
+	$(Q)parted -s --align minimal $@ mklabel gpt \
+		mkpart primary 32KiB 1MiB \
+		mkpart primary 1MiB 70MiB set 1 legacy_boot on set 1 esp on \
+		mkpart primary 70MiB 100MiB
+	$(Q)dd if=$< of=$@ conv=sparse obs=512 seek=2048 2> /dev/null
+	$(Q)dd if=$(O)/fs.part of=$@ conv=sparse obs=512 seek=143360 2> /dev/null
+	$(Q)dd bs=440 count=1 conv=notrunc if=grub/boot.img of=$@ 2> /dev/null
+	$(Q)dd bs=512 seek=64 conv=notrunc if=grub/core.img of=$@ 2> /dev/null
 $(O)/boot.vhdx: $(O)/boot.img
-	qemu-img convert -f raw -O vhdx $< $@
+	@echo "  GEN    $@"
+	$(Q)qemu-img convert -f raw -O vhdx $< $@
 $(O)/boot.vdi: $(O)/boot.img
-	qemu-img convert -f raw -O vdi $< $@
+	@echo "  GEN    $@"
+	$(Q)qemu-img convert -f raw -O vdi $< $@
+
+grub/boot.img:
+	@echo "  GEN    $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)cp /usr/lib/grub/i386-pc/boot.img $@.tmp
+	$(Q)python -c "print '\x40'" | dd of=$@.tmp bs=1 seek=92 count=1 conv=notrunc 2> /dev/null
+	$(Q)mv $@.tmp $@
+grub/core.img:
+	@echo "  GEN    $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)grub-mkimage -O i386-pc -o $@.tmp -p '(hd0,gpt2)/boot/' \
+		biosdisk normal search part_msdos part_gpt fat multiboot multiboot2 gfxmenu echo
+	$(Q)python -c "print '\x41'" | dd of=$@.tmp bs=1 seek=500 count=1 conv=notrunc 2> /dev/null
+	$(Q)mv $@.tmp $@
+grub/grub.efi:
+	@echo "  GEN    $@"
+	$(Q)mkdir -p $(@D)
+	$(Q)grub-mkimage -O x86_64-efi -o $@ -p '(hd0,gpt2)/boot/' \
+		normal search part_msdos part_gpt fat multiboot multiboot2 gfxmenu echo video
 
 bench:
 	/bin/echo -ne "xv6\\nbench\\nexit\\n" | nc $(HW).csail.mit.edu 23
