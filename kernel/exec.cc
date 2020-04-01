@@ -13,10 +13,8 @@
 #include "kmtrace.hh"
 #include "filetable.hh"
 
-#define BRK (USERTOP >> 1)
-
 static int
-dosegment(sref<vnode> ip, vmap* vmp, u64 off, u64 *load_addr)
+dosegment(sref<vnode> ip, vmap* vmp, u64 off, u64 *load_addr, u64 *max_va)
 {
   struct proghdr ph;
   if(ip->read_at((char *) &ph, off, sizeof(ph)) != sizeof(ph))
@@ -35,6 +33,9 @@ dosegment(sref<vnode> ip, vmap* vmp, u64 off, u64 *load_addr)
   uptr mapped_end = PGROUNDDOWN(ph.vaddr + ph.filesz);
   uptr backed_end = PGROUNDUP(ph.vaddr + ph.filesz);
   uptr va_end = PGROUNDUP(ph.vaddr + ph.memsz);
+
+  if (*max_va < va_end)
+    *max_va = va_end;
 
   if (ph.filesz == ph.memsz) {
     // There's no zero fill after this segment, so we can map the
@@ -159,13 +160,6 @@ dostack(vmap* vmp, const char* const * argv, const char* path)
   return sp;
 }
 
-static int
-doheap(vmap* vmp)
-{
-  vmp->brk_ = BRK;
-  return 0;
-}
-
 int
 exec(const char *path, const char * const *argv)
 {
@@ -255,6 +249,7 @@ load_image(proc *p, const char *path, const char * const *argv,
     return -1;
   }
 
+  u64 max_va = 0;
   u64 load_addr = -1;
   for (size_t i=0, off=elf->phoff; i<elf->phnum; i++, off+=sizeof(proghdr)){
     Elf64_Word type;
@@ -267,7 +262,7 @@ load_image(proc *p, const char *path, const char * const *argv,
 
     switch (type) {
     case ELF_PROG_LOAD:
-      if (dosegment(ip, vmp.get(), off, &load_addr) < 0) {
+      if (dosegment(ip, vmp.get(), off, &load_addr, &max_va) < 0) {
         cprintf("kernel: load_image: could not perform segment load\n");
         return -1;
       }
@@ -277,12 +272,9 @@ load_image(proc *p, const char *path, const char * const *argv,
     }
   }
 
-  if (doheap(vmp.get()) < 0) {
-    cprintf("kernel: load_image: could not set up heap\n");
-    return -1;
-  }
+  vmp->brk_ = max_va;
 
-  // dostack reads from the user vm space. 
+  // dostack reads from the user vm space.
   long sp = dostack(vmp.get(), argv, path);
   if (sp < 0) {
     cprintf("kernel: load_image: could not set up stack\n");
