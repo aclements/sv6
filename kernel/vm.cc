@@ -724,7 +724,7 @@ vmap::sbrk_update(ssize_t n)
 uptr
 vmap::unmapped_area(size_t npages)
 {
-  uptr start = std::max(myproc()->unmapped_hint, 16UL * 1024 * 1024 / PGSIZE);
+  uptr start = std::max(myproc()->unmapped_hint, (uptr)0x400000000ull / PGSIZE); // 16 GB
   auto it = vpfs_.find(start), end = vpfs_.find(USERTOP / PGSIZE);
 
   for (; it < end; it += it.span()) {
