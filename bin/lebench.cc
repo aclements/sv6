@@ -1,38 +1,35 @@
-#define _GNU_SOURCE
-#define LWIP_TIMEVAL_PRIVATE 0
 
-#include <sched.h>
-#include <time.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <time.h>
-#include <string.h>
-//#include <arpa/inet.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <signal.h>
-/* #include <sys/syscall.h> */
-#include <sys/types.h>
 #include <fcntl.h>
-#include <sys/stat.h>
-/* #include <sys/poll.h> */
-/* #include <sys/epoll.h> */
-/* #include <sys/resource.h> */
-#include <sys/time.h>
-#include <sys/un.h>
-
+#include <pthread.h>
+#include <sched.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <time.h>
+#include <unistd.h>
 
-#include "libutil.h"
-#include "sockutil.h"
-#include "sysstubs.h"
+#ifdef HW_linux
+  #pragma GCC optimize ("O1") // should be O0, but hits glibc bugs
+  #include <sys/syscall.h>
+#else /* HW_linux */
+  #pragma GCC optimize ("O0")
+  #define LWIP_TIMEVAL_PRIVATE 0
+  #include "libutil.h"
+  #include "sockutil.h"
+  #include "sysstubs.h"
+#endif /* HW_linux */
 
-#pragma GCC optimize ("O0")
 
 int counter=3;
 bool  isFirstIteration = false;
@@ -64,11 +61,17 @@ bool  isFirstIteration = false;
 #define OUTPUT_FILE_PATH	""
 #define OUTPUT_FN		OUTPUT_FILE_PATH "output_file.csv"
 #define NEW_OUTPUT_FN	OUTPUT_FILE_PATH "new_output_file.csv"
-#undef DEBUG
-#define DEBUG false
-#define BASE_ITER 20 // Must be >= 20
+// #undef DEBUG
+// #define DEBUG false
+#define BASE_ITER 100 // Must be >= 20
 
 #define PAGE_SIZE 4096
+
+#ifndef HW_linux
+const int SIGINT = 0;
+int kill(int pid, int sig) {
+  return kill(pid);
+}
 
 void assert(bool b) {
   if(!b) {
@@ -76,6 +79,7 @@ void assert(bool b) {
     exit(-1);
   }
 }
+#endif
 
 void add_diff_to_sum(struct timespec *result,struct timespec a, struct timespec b)
 {
@@ -211,11 +215,11 @@ struct timespec *calc_k_closest(struct timespec *timeArray, int size)
   for (int i = 1; i < size; i ++) 
   {
     struct timespec *curr = &timeArray[i];
-    if(DEBUG) printf("curr %d.%09ld\n",curr->tv_sec, curr->tv_nsec); 
+    if(DEBUG) printf("curr %d.%09ld\n",(int)curr->tv_sec, curr->tv_nsec); 
     if (curr->tv_sec != 0 || prev->tv_sec != 0) {
       if(DEBUG) printf("[warn] test run greater than 1 second: ");
-      if(DEBUG) printf("prev %d.%09ld, ",prev->tv_sec, prev->tv_nsec); 
-      if(DEBUG) printf("curr %d.%09ld\n",curr->tv_sec, curr->tv_nsec); 
+      if(DEBUG) printf("prev %d.%09ld, ",(int)prev->tv_sec, prev->tv_nsec); 
+      if(DEBUG) printf("curr %d.%09ld\n",(int)curr->tv_sec, curr->tv_nsec); 
       j = 0;
     } else {
       double diff = curr->tv_nsec - prev->tv_nsec;
@@ -239,7 +243,7 @@ struct timespec *calc_k_closest(struct timespec *timeArray, int size)
   }
   if (DEBUG && j != K) printf("only found the %d closest\n", j);
   struct timespec* result = k_closest[0];
-  if(DEBUG) printf("result %d.%09ld\n", result->tv_sec, result->tv_nsec); 
+  if(DEBUG) printf("result %d.%09ld\n", (int)result->tv_sec, result->tv_nsec); 
   free(k_closest);
   return result;
 
@@ -277,7 +281,7 @@ void one_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*), testInfo *
     fprintf(fp, " %10s          kbest:,", info->name);
   /* } */
     if (kbest)
-      fprintf(fp,"%d.%09ld,\n",kbest->tv_sec, kbest->tv_nsec);
+      fprintf(fp,"%d.%09ld,\n",(int)kbest->tv_sec, kbest->tv_nsec);
     else
       fprintf(fp,"???.???,\n");
 
@@ -293,7 +297,7 @@ void one_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*), testInfo *
   /* } else { */
     fprintf(fp, " %10s        average:,", info->name);
   /* } */
-  fprintf(fp,"%d.%09ld,\n",average->tv_sec, average->tv_nsec); 
+  fprintf(fp,"%d.%09ld,\n", (int)average->tv_sec, average->tv_nsec); 
 
   free(sum);
   free(average);
@@ -346,7 +350,7 @@ void one_line_test_v2(FILE *fp, FILE *copy, void (*f)(struct timespec*, int, int
   /* } else { */
     fprintf(fp, " %10s          kbest:,", info->name);
   /* } */
-  fprintf(fp,"%d.%09ld,\n",kbest->tv_sec, kbest->tv_nsec); 
+  fprintf(fp,"%d.%09ld,\n", (int)kbest->tv_sec, kbest->tv_nsec); 
 
   /* if (!isFirstIteration) */
   /* { */
@@ -361,7 +365,7 @@ void one_line_test_v2(FILE *fp, FILE *copy, void (*f)(struct timespec*, int, int
     fprintf(fp, "%10s", info->name);
     fprintf(fp, "        average:,");
   /* } */
-  fprintf(fp,"%d.%09ld,\n",average->tv_sec, average->tv_nsec); 
+    fprintf(fp,"%d.%09ld,\n", (int)average->tv_sec, average->tv_nsec); 
 
   free(sum);
   free(average);
@@ -435,14 +439,14 @@ void two_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*,struct times
   /* else */
   /* { */
     fprintf(fp, " %10s", info->name);
-    fprintf(fp,"          kbest:,%d.%09ld,\n",kbests[0]->tv_sec, kbests[0]->tv_nsec); 
+    fprintf(fp,"          kbest:,%d.%09ld,\n", (int)kbests[0]->tv_sec, kbests[0]->tv_nsec); 
     fprintf(fp, " %10s", info->name);
-    fprintf(fp,"       average:,%d.%09ld,\n",averages[0]->tv_sec, averages[0]->tv_nsec); 
+    fprintf(fp,"       average:,%d.%09ld,\n", (int)averages[0]->tv_sec, averages[0]->tv_nsec); 
 
     fprintf(fp, " %10s", info->name);
-    fprintf(fp,"    Child kbest:,%d.%09ld,\n",kbests[1]->tv_sec, kbests[1]->tv_nsec); 
+    fprintf(fp,"    Child kbest:,%d.%09ld,\n", (int)kbests[1]->tv_sec, kbests[1]->tv_nsec); 
     fprintf(fp, " %10s", info->name);
-    fprintf(fp," Child average:,%d.%09ld,\n",averages[1]->tv_sec, averages[1]->tv_nsec); 
+    fprintf(fp," Child average:,%d.%09ld,\n", (int)averages[1]->tv_sec, averages[1]->tv_nsec); 
   /* } */
   free(timeArrayChild);
   free(timeArrayParent);
@@ -464,14 +468,14 @@ void forkTest(struct timespec *childTime, struct timespec *parentTime)
 {
   struct timespec timeA;
   struct timespec timeC;
-  timeB = mmap(NULL, sizeof(struct timespec), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  timeB = (timespec*)mmap(NULL, sizeof(struct timespec), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
   int status;
   clock_gettime(CLOCK_MONOTONIC,&timeA);
 
   int forkId = fork();
   if (forkId == 0){
     clock_gettime(CLOCK_MONOTONIC, timeB);
-    kill(getpid()/*,SIGINT*/);
+    kill(getpid(),SIGINT);
 	printf("[error] unable to kill child process\n");
 	return;
   } else if (forkId > 0){
@@ -529,7 +533,7 @@ void read_test(struct timespec *diffTime) {
   struct timespec startTime, endTime;
   char *buf_in = (char *) malloc (sizeof(char) * file_size);
 
-  int fd =open("test_file.txt", O_RDONLY);
+  int fd = open("test_file.txt", O_RDONLY);
   if (fd < 0) printf("invalid fd in read: %d\n", fd);
   clock_gettime(CLOCK_MONOTONIC, &startTime);
   syscall(SYS_read, fd, buf_in, file_size);
@@ -549,7 +553,7 @@ void read_warmup() {
     buf_out[i] = 'a';
   }
 
-  int fd = open("test_file.txt", O_CREAT | O_WRONLY);
+  int fd = open("test_file.txt", O_CREAT | O_WRONLY, 0777);
   if (fd < 0) printf("invalid fd in write: %d\n", fd);
 
   syscall(SYS_write, fd, buf_out, file_size);
@@ -577,7 +581,7 @@ void write_test(struct timespec *diffTime) {
   for (int i = 0; i < file_size; i++) {
     buf[i] = 'a';
   }
-  int fd = open("test_file.txt", O_CREAT | O_WRONLY);
+  int fd = open("test_file.txt", O_CREAT | O_WRONLY, 0777);
   if (fd < 0) printf("invalid fd in write: %d\n", fd);
 
   clock_gettime(CLOCK_MONOTONIC, &startTime);
@@ -617,9 +621,10 @@ void page_fault_test(struct timespec *diffTime) {
   void *addr = (void *)syscall(SYS_mmap, NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
 
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  char a = *((char *)addr);
+  char a = *((volatile char *)addr);
   clock_gettime(CLOCK_MONOTONIC,&endTime);
-	
+
+  (void)a;
   /* printf("read: %c\n", a); */
   syscall(SYS_munmap, addr, file_size);
   close(fd);
@@ -659,7 +664,7 @@ void munmap_test(struct timespec *diffTime) {
   if (fd < 0) printf("invalid fd%d\n", fd);
   lseek(fd, file_size-1, SEEK_SET);
 
-  char* p = malloc(file_size);
+  char* p = (char*)malloc(file_size);
   memset(p, 0, file_size);
   write(fd, p, file_size);
   free(p);
@@ -846,7 +851,7 @@ void context_switch_test(struct timespec *diffTime) {
     /* retval = setpriority(PRIO_PROCESS, 0, -20);  */
     /* if (retval == -1) printf("[error] failed to set process priority.\n"); */
 
-    read(fds2[0], &r, 1); 		
+    read(fds2[0], &r, 1);
 
     clock_gettime(CLOCK_MONOTONIC, &startTime);
     for (int i = 0; i < iter; i++) {
@@ -882,7 +887,7 @@ void context_switch_test(struct timespec *diffTime) {
       write(fds2[1], &w, 1);		
     }
 			
-    kill(getpid()/*, SIGINT*/);
+    kill(getpid(), SIGINT);
     printf("[error] unable to kill child process\n");
     return;
   } else {
@@ -1130,8 +1135,8 @@ int main(int argc, char *argv[])
 
   struct timespec startTime, endTime;
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  char *iteration;
-  char *str_os_name;
+  const char *iteration;
+  const char *str_os_name;
 
   if (argc == 3) {
     iteration = argv[1];
@@ -1420,7 +1425,7 @@ int main(int argc, char *argv[])
   /* int ret = rename(new_output_fn,name); */
   clock_gettime(CLOCK_MONOTONIC, &endTime);
   struct timespec *diffTime = calc_diff(&startTime, &endTime);
-  printf("Test took: %d.%09ld seconds\n",diffTime->tv_sec, diffTime->tv_nsec); 
+  printf("Test took: %d.%09ld seconds\n", (int)diffTime->tv_sec, diffTime->tv_nsec); 
   free(diffTime);
   return(0);
 }

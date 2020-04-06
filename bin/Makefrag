@@ -114,6 +114,7 @@ UPROGS_NATIVE := \
 	anon \
 	getpid \
 	smallfile \
+	lebench \
 
 ifeq ($(HAVE_TESTGEN),y)
 UPROGS_BIN    += fstest
