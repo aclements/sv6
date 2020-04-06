@@ -91,8 +91,6 @@ do_pagefault(struct trapframe *tf, bool had_secrets)
       if(pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
         return 0;
       }
-      console.println("pagefault accessing user address from kernel (addr ",
-                      (void*)addr, " rip ", (void*)tf->rip, ")");
     }
 
     tf->rax = -1;
@@ -103,8 +101,6 @@ do_pagefault(struct trapframe *tf, bool had_secrets)
       if(addr < USERTOP && pagefault(myproc()->vmap.get(), addr, tf->err) >= 0){
         return 0;
       }
-      uerr.println("pagefault from user for ", shex(addr),
-                   " err ", (int)tf->err);
       cli();
   }
   return -1;
