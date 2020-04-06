@@ -694,11 +694,7 @@ vmap::sbrk_update(ssize_t n)
                    " newend ", shex(newend));
 
   if (newend < newstart) {
-    // Adjust break down by freeing pages
-    auto begin = vpfs_.find(newend / PGSIZE),
-      end = vpfs_.find(newstart / PGSIZE);
-    auto rlock = vpfs_.acquire(begin, end);
-    vpfs_.unset(begin, end);
+    remove(newend, newstart-newend);
   } else if (newstart < newend) {
     // Adjust break up by mapping pages
     auto begin = vpfs_.find(newstart / PGSIZE),
@@ -708,8 +704,7 @@ vmap::sbrk_update(ssize_t n)
     // Make sure we're not about to overwrite an existing mapping
     for (auto it = begin; it < end; it += it.span()) {
       if (it.is_set()) {
-        uerr.println("sbrk: overlap with existing mapping; "
-                     "brk ", shex(curbrk), " n ", n);
+        uerr.println("sbrk: overlap with existing mapping at ", shex(it.index() * PGSIZE));
         return -1;
       }
     }
