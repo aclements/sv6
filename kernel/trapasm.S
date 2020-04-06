@@ -176,6 +176,7 @@ OPTIONAL_OR_NOPS("lazy_barrier")
         pushq   0x30(%rsp)  // User RBP
         mov     %rsp, %rbp
 
+        subq    $8, %rsp
         pushq   %rax // syscall#
 
         movq $text, %rax
@@ -188,6 +189,7 @@ OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
         call    sysentry_c
         cli
 
+	addq    $8, %rsp
         push    %rax
         movq    %gs:GS_PROC, %rax
         movq    PROC_USER_FS(%rax), %rax
@@ -263,7 +265,9 @@ OPTIONAL_OR_CALL("fsgsbase", emulate_rdfsbase)
 OPTIONAL("fsgsbase", "yes")
         wrfsbase %rax
 OPTIONAL_OR_CALL("fsgsbase", emulate_wrfsbase)
-        call trap_c
+        subq $8, %rsp
+    	call trap_c
+        addq $8, %rsp
         popq %rax
         // Fall through to trapret
 
