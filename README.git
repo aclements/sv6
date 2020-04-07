@@ -1,0 +1,10 @@
+To build static Git:
+
+ $ git clone https://github.com/git/git
+ $ cd git
+ $ make configure
+ $ ./configure --prefix=$PWD/git-static CFLAGS="${CFLAGS} -static"
+ $ make -j8 EXTLIBS="-ldl -lz"
+ $ make install
+
+Then rebuild Ward, and bin/Makefrag will pull in the git binary.

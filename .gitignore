@@ -30,3 +30,4 @@ mscan.*.out
 cscope.*
 /libutil/testgen.c
 /libutil/testgen.*.c
+/git
