@@ -19,6 +19,9 @@
 #include <time.h>
 #include <unistd.h>
 
+#define BASE_ITER 100 // Must be >= 20
+#define PAGE_SIZE 4096
+
 #ifdef HW_linux
   #pragma GCC optimize ("O1") // should be O0, but hits glibc bugs
   #include <sys/syscall.h>
@@ -27,57 +30,19 @@
   #include "libutil.h"
   #include "sockutil.h"
   #include "sysstubs.h"
-#endif /* HW_linux */
 
-
-int counter=3;
-/* const char *home; */
-/* char *output_fn = NULL; */
-/* char *new_output_fn = NULL; */
-#define setup 		(struct timespec *fp)       \
-  {struct timespec timeA ;                      \
-  struct timespec timeC;                        \
-  clock_gettime(CLOCK_MONOTONIC,&timeA);
-
-#define setup_2_a	(struct timespec *fp)       \
-  {struct timespec timeA;                       \
-  struct timespec timeC;
-
-#define setup_2_b	clock_gettime(CLOCK_MONOTONIC,&timeA);
-
-#define ending		clock_gettime(CLOCK_MONOTONIC,&timeC);  \
-  add_diff_to_sum(fp,timeC,timeA);                          \
-  return;}
-
-#define end1	clock_gettime(CLOCK_MONOTONIC,&timeC);
-
-#define end2	add_diff_to_sum(fp,timeC,timeA);    \
-  return;}
-
-#define final_formula ",=\"AVERAGE(B%d:INDIRECT(SUBSTITUTE(ADDRESS(1,COLUMN()-1,4),\"1\",\"%d\")))\",=\"STDEV.P(B%d:INDIRECT(SUBSTITUTE(ADDRESS(1,COLUMN()-2,4),\"1\",\"%d\")))\"\n",counter,counter,counter,counter
-
-#define OUTPUT_FILE_PATH	""
-#define OUTPUT_FN		OUTPUT_FILE_PATH "output_file.csv"
-#define NEW_OUTPUT_FN	OUTPUT_FILE_PATH "new_output_file.csv"
-// #undef DEBUG
-// #define DEBUG false
-#define BASE_ITER 100 // Must be >= 20
-
-#define PAGE_SIZE 4096
-
-#ifndef HW_linux
-const int SIGINT = 0;
-int kill(int pid, int sig) {
-  return kill(pid);
-}
-
-void assert(bool b) {
-  if(!b) {
-    printf("Assertion failed!\n");
-    exit(-1);
+  const int SIGINT = 0;
+  int kill(int pid, int sig) {
+    return kill(pid);
   }
-}
-#endif
+
+  void assert(bool b) {
+    if(!b) {
+      printf("Assertion failed!\n");
+      exit(-1);
+    }
+  }
+#endif /* HW_linux */
 
 void add_diff_to_sum(struct timespec *result,struct timespec a, struct timespec b)
 {
@@ -106,7 +71,7 @@ struct timespec *calc_diff(struct timespec *smaller, struct timespec *bigger)
     diff->tv_nsec = 1000000000 + bigger->tv_nsec - smaller->tv_nsec;
     diff->tv_sec = bigger->tv_sec - 1 - smaller->tv_sec;
   }
-  else 
+  else
   {
     diff->tv_nsec = bigger->tv_nsec - smaller->tv_nsec;
     diff->tv_sec = bigger->tv_sec - smaller->tv_sec;
@@ -118,8 +83,7 @@ struct timespec *calc_diff(struct timespec *smaller, struct timespec *bigger)
 struct timespec *timeB;
 struct timespec *timeD;
 
-struct timespec* calc_average(struct timespec *sum, int size)
-{
+struct timespec* calc_average(struct timespec *sum, int size) {
   struct timespec *average = (struct timespec *)malloc(sizeof(struct timespec));
   average->tv_sec = 0;
   average->tv_nsec = 0;
@@ -130,53 +94,43 @@ struct timespec* calc_average(struct timespec *sum, int size)
   return average;
 }
 
-struct timespec *calc_sum(struct timespec ** array, int size)
-{
-	
+struct timespec *calc_sum(struct timespec ** array, int size) {
   struct timespec *sum = (struct timespec *)malloc(sizeof(struct timespec));
   sum->tv_sec = 0;
   sum->tv_nsec = 0;
-  for (int i = 0; i < size; i ++)
-  {
-    if (array[i]->tv_nsec >= (1000000000 - sum->tv_nsec)) 
-    {
+  for (int i = 0; i < size; i ++) {
+    if (array[i]->tv_nsec >= (1000000000 - sum->tv_nsec)) {
       sum->tv_sec = sum->tv_sec +1;
       sum->tv_nsec = array[i]->tv_nsec - (1000000000 - sum->tv_nsec);
       sum->tv_sec = sum->tv_sec + array[i]->tv_sec;
     } else {
-		
       sum->tv_nsec = sum->tv_nsec + array[i]->tv_nsec;
       sum->tv_sec = sum->tv_sec + array[i]->tv_sec;
     }
-  }	
+  }
   return sum;
 }
 
-struct timespec *calc_sum2(struct timespec * array, int size)
-{
-	
+struct timespec *calc_sum2(struct timespec * array, int size) {
   struct timespec *sum = (struct timespec *)malloc(sizeof(struct timespec));
   sum->tv_sec = 0;
   sum->tv_nsec = 0;
   for (int i = 0; i < size; i ++)
   {
-    if (array[i].tv_nsec >= (1000000000 - sum->tv_nsec)) 
-    {
+    if (array[i].tv_nsec >= (1000000000 - sum->tv_nsec)) {
       sum->tv_sec = sum->tv_sec +1;
       sum->tv_nsec = array[i].tv_nsec - (1000000000 - sum->tv_nsec);
       sum->tv_sec = sum->tv_sec + array[i].tv_sec;
     } else {
-		
       sum->tv_nsec = sum->tv_nsec + array[i].tv_nsec;
       sum->tv_sec = sum->tv_sec + array[i].tv_sec;
     }
-  }	
+  }
   return sum;
 }
 
 
-int comp(const void *ele1, const void *ele2) 
-{
+int comp(const void *ele1, const void *ele2) {
   struct timespec t1 = *((struct timespec *)ele1);
   struct timespec t2 = *((struct timespec *)ele2);
   if (t1.tv_sec > t2.tv_sec) {
@@ -186,7 +140,7 @@ int comp(const void *ele1, const void *ele2)
     if (t1.tv_nsec > t2.tv_nsec) return 1;
     else if (t1.tv_nsec == t2.tv_nsec) return 0;
     else return -1;
-  } 
+  }
   else {
     return -1;
   }
@@ -199,35 +153,35 @@ struct timespec *calc_k_closest(struct timespec *timeArray, int size)
   if(DEBUG) printf("in calc_k_closest\n");
   qsort(timeArray, size, sizeof(struct timespec), comp);
   struct timespec **k_closest = (struct timespec **) malloc (sizeof(struct timespec*) * K);
-  for (int ii = 0; ii < K; ii++) 
+  for (int ii = 0; ii < K; ii++)
     k_closest[ii] = NULL;
   struct timespec *prev = &timeArray[0];
   int j = 0;
   k_closest[j] = prev;
   j ++;
-  for (int i = 1; i < size; i ++) 
+  for (int i = 1; i < size; i ++)
   {
     struct timespec *curr = &timeArray[i];
-    if(DEBUG) printf("curr %d.%09ld\n",(int)curr->tv_sec, curr->tv_nsec); 
+    if(DEBUG) printf("curr %d.%09ld\n",(int)curr->tv_sec, curr->tv_nsec);
     if (curr->tv_sec != 0 || prev->tv_sec != 0) {
       if(DEBUG) printf("[warn] test run greater than 1 second: ");
-      if(DEBUG) printf("prev %d.%09ld, ",(int)prev->tv_sec, prev->tv_nsec); 
-      if(DEBUG) printf("curr %d.%09ld\n",(int)curr->tv_sec, curr->tv_nsec); 
+      if(DEBUG) printf("prev %d.%09ld, ",(int)prev->tv_sec, prev->tv_nsec);
+      if(DEBUG) printf("curr %d.%09ld\n",(int)curr->tv_sec, curr->tv_nsec);
       j = 0;
     } else {
       double diff = curr->tv_nsec - prev->tv_nsec;
       double ratioDiff = diff/(double)prev->tv_nsec;
       if(DEBUG) printf("diff: %lf\n", ratioDiff);
       if (ratioDiff > INPRECISION)
-      {	
+      {
         j = 0;
-        for (int ii = 0; ii < K; ii++) 
+        for (int ii = 0; ii < K; ii++)
           k_closest[ii] = NULL;
       }
-      else 
+      else
       {
         k_closest[j] = curr;
-        j ++;	
+        j ++;
 
       }
     }
@@ -236,7 +190,7 @@ struct timespec *calc_k_closest(struct timespec *timeArray, int size)
   }
   if (DEBUG && j != K) printf("only found the %d closest\n", j);
   struct timespec* result = k_closest[0];
-  if(DEBUG) printf("result %d.%09ld\n", (int)result->tv_sec, result->tv_nsec); 
+  if(DEBUG) printf("result %d.%09ld\n", (int)result->tv_sec, result->tv_nsec);
   free(k_closest);
   return result;
 
@@ -266,44 +220,6 @@ void one_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*), int iter, 
   else
     fprintf(fp,"???.???, ");
 
-  fprintf(fp,"%d.%09ld,\n", (int)average->tv_sec, average->tv_nsec);
-
-  free(sum);
-  free(average);
-  free(timeArray);
-
-  clock_gettime(CLOCK_MONOTONIC,&testEnd);
-  struct timespec *diffTime = calc_diff(&testStart, &testEnd);
-  free(diffTime);
-
-  return;
-}
-
-
-void one_line_test_v2(FILE *fp, FILE *copy, void (*f)(struct timespec*, int, int *), int iter, const char* name){
-  struct timespec testStart, testEnd;
-  clock_gettime(CLOCK_MONOTONIC,&testStart);
-
-  printf("%s,", name);
-  for(int i = 0; i < 20-strlen(name); i++)
-    fprintf(fp, " ");
-
-  struct timespec* timeArray = (struct timespec *)malloc(sizeof(struct timespec) * iter);
-
-  for (int i = 0; i < iter; i++) {
-    timeArray[i].tv_sec = 0;
-    timeArray[i].tv_nsec = 0;
-  }
-
-  for (int i = 0; i < iter; ) {
-    (*f)(timeArray, iter, &i);
-  }
-
-  struct timespec *sum = calc_sum2(timeArray, iter);
-  struct timespec *average = calc_average(sum, iter);
-  struct timespec *kbest = calc_k_closest(timeArray, iter);
-
-  fprintf(fp,"%d.%09ld, ", (int)kbest->tv_sec, kbest->tv_nsec);
   fprintf(fp,"%d.%09ld,\n", (int)average->tv_sec, average->tv_nsec);
 
   free(sum);
@@ -375,7 +291,7 @@ void two_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*,struct times
   return;
 }
 
-void forkTest(struct timespec *childTime, struct timespec *parentTime) 
+void forkTest(struct timespec *childTime, struct timespec *parentTime)
 {
   struct timespec timeA;
   struct timespec timeC;
@@ -421,7 +337,7 @@ void threadTest(struct timespec *childTime, struct timespec *parentTime)
 
   add_diff_to_sum(parentTime,timeC,*timeD);
   add_diff_to_sum(childTime,*timeB,*timeD);
-	
+
   free(timeB);
   timeB = NULL;
   free(timeD);
@@ -450,7 +366,7 @@ void read_test(struct timespec *diffTime) {
   syscall(SYS_read, fd, buf_in, file_size);
   clock_gettime(CLOCK_MONOTONIC, &endTime);
   close(fd);
-	
+
   add_diff_to_sum(diffTime, endTime, startTime);
   free(buf_in);
   return;
@@ -458,7 +374,6 @@ void read_test(struct timespec *diffTime) {
 }
 
 void read_warmup() {
-
   char *buf_out = (char *) malloc (sizeof(char) * file_size);
   for (int i = 0; i < file_size; i++) {
     buf_out[i] = 'a';
@@ -468,13 +383,13 @@ void read_warmup() {
   if (fd < 0) printf("invalid fd in write: %d\n", fd);
 
   syscall(SYS_write, fd, buf_out, file_size);
-  close(fd);	
+  close(fd);
 
   char *buf_in = (char *) malloc (sizeof(char) * file_size);
 
   fd =open("test_file.txt", O_RDONLY);
   if (fd < 0) printf("invalid fd in read: %d\n", fd);
-	
+
   for (int i = 0; i < 1000; i ++) {
     syscall(SYS_read, fd, buf_in, file_size);
   }
@@ -498,9 +413,9 @@ void write_test(struct timespec *diffTime) {
   clock_gettime(CLOCK_MONOTONIC, &startTime);
   syscall(SYS_write, fd, buf, file_size);
   clock_gettime(CLOCK_MONOTONIC,&endTime);
-	
+
   close(fd);
-		
+
   add_diff_to_sum(diffTime, endTime, startTime);
   free(buf);
   return;
@@ -1059,15 +974,15 @@ int main(int argc, char *argv[])
   // curr_iter_limit = 50;
   // printf("msg size: %d.\n", msg_size);
   // printf("curr iter limit: %d.\n", curr_iter_limit);
-  // one_line_test_v2(fp, copy, send_test, BASE_ITER * 10, "send");
-  // one_line_test_v2(fp, copy, recv_test, BASE_ITER * 10, "recv");
+  // one_line_test(fp, copy, send_test, BASE_ITER * 10, "send");
+  // one_line_test(fp, copy, recv_test, BASE_ITER * 10, "recv");
 
   // msg_size = 96000;	// This size 96000 would cause blocking on older kernels!
   // curr_iter_limit = 1;
   // printf("msg size: %d.\n", msg_size);
   // printf("curr iter limit: %d.\n", curr_iter_limit);
-  // one_line_test_v2(fp, copy, send_test, BASE_ITER, "big send");
-  // one_line_test_v2(fp, copy, recv_test, BASE_ITER, "big recv");
+  // one_line_test(fp, copy, send_test, BASE_ITER, "big send");
+  // one_line_test(fp, copy, recv_test, BASE_ITER, "big recv");
 
 
   /*****************************************/
