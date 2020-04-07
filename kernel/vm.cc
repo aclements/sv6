@@ -169,8 +169,11 @@ vmap::vmap() :
 
 vmap::~vmap()
 {
-  for (auto p : qpage_pool_)
+  while (!qpage_pool_.empty()) {
+    auto p = qpage_pool_.back();
+    qpage_pool_.pop_back();
     kfree(p);
+  }
 
   kfree(nmi_stacks, nmi_stacks_size());
 }
