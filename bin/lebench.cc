@@ -1,3 +1,4 @@
+#define LWIP_TIMEVAL_PRIVATE 0
 
 #include <fcntl.h>
 #include <pthread.h>
@@ -16,7 +17,6 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 #include <time.h>
-#include <time.h>
 #include <unistd.h>
 
 #ifdef HW_linux
@@ -24,7 +24,6 @@
   #include <sys/syscall.h>
 #else /* HW_linux */
   #pragma GCC optimize ("O0")
-  #define LWIP_TIMEVAL_PRIVATE 0
   #include "libutil.h"
   #include "sockutil.h"
   #include "sysstubs.h"
