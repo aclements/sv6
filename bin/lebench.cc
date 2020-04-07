@@ -252,7 +252,9 @@ void one_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*), testInfo *
   struct timespec testStart, testEnd;
   clock_gettime(CLOCK_MONOTONIC,&testStart);
 
-  printf("Performing test %s.\n", info->name);
+  printf("%s,", info->name);
+  for(int i = 0; i < 20-strlen(info->name); i++)
+    fprintf(fp, " ");
 
   int runs = info->iter;
   /* printf("Total test iteration %d.\n", runs); */
@@ -277,12 +279,12 @@ void one_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*), testInfo *
   /*     fputc(ch,fp); */
   /*   } */
   /* } else { */
-    fprintf(fp, " %10s          kbest:,", info->name);
+    // fprintf(fp, " %10s          kbest:,", info->name);
   /* } */
     if (kbest)
-      fprintf(fp,"%d.%09ld,\n",(int)kbest->tv_sec, kbest->tv_nsec);
+      fprintf(fp,"%d.%09ld, ",(int)kbest->tv_sec, kbest->tv_nsec);
     else
-      fprintf(fp,"???.???,\n");
+      fprintf(fp,"???.???, ");
 
   /* if (!isFirstIteration) */
   /* { */
@@ -294,7 +296,7 @@ void one_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*), testInfo *
   /*     fputc(ch,fp); */
   /*   } */
   /* } else { */
-    fprintf(fp, " %10s        average:,", info->name);
+    // fprintf(fp, " %10s        average:,", info->name);
   /* } */
   fprintf(fp,"%d.%09ld,\n", (int)average->tv_sec, average->tv_nsec); 
 
@@ -316,7 +318,9 @@ void one_line_test_v2(FILE *fp, FILE *copy, void (*f)(struct timespec*, int, int
   struct timespec testStart, testEnd;
   clock_gettime(CLOCK_MONOTONIC,&testStart);
 
-  printf("Performing test %s.\n", info->name);
+  printf("%s,", info->name);
+  for(int i = 0; i < 20-strlen(info->name); i++)
+    fprintf(fp, " ");
 
   int runs = info->iter;
   /* printf("Total test iteration %d.\n", runs); */
@@ -347,9 +351,9 @@ void one_line_test_v2(FILE *fp, FILE *copy, void (*f)(struct timespec*, int, int
   /*     fputc(ch,fp); */
   /*   } */
   /* } else { */
-    fprintf(fp, " %10s          kbest:,", info->name);
+    // fprintf(fp, " %10s          kbest:,", info->name);
   /* } */
-  fprintf(fp,"%d.%09ld,\n", (int)kbest->tv_sec, kbest->tv_nsec); 
+  fprintf(fp,"%d.%09ld, ", (int)kbest->tv_sec, kbest->tv_nsec); 
 
   /* if (!isFirstIteration) */
   /* { */
@@ -361,8 +365,8 @@ void one_line_test_v2(FILE *fp, FILE *copy, void (*f)(struct timespec*, int, int
   /*     fputc(ch,fp); */
   /*   } */
   /* } else { */
-    fprintf(fp, "%10s", info->name);
-    fprintf(fp, "        average:,");
+    // fprintf(fp, "%10s", info->name);
+    // fprintf(fp, "        average:,");
   /* } */
     fprintf(fp,"%d.%09ld,\n", (int)average->tv_sec, average->tv_nsec); 
 
@@ -382,7 +386,10 @@ void one_line_test_v2(FILE *fp, FILE *copy, void (*f)(struct timespec*, int, int
 void two_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*,struct timespec*), testInfo *info){
   struct timespec testStart, testEnd;
   clock_gettime(CLOCK_MONOTONIC,&testStart);
-  printf("Performing test %s.\n", info->name);
+
+  printf("%s,", info->name);
+  for(int i = 0; i < 20-strlen(info->name); i++)
+    fprintf(fp, " ");
 
   int runs = info->iter;
   /* printf("Total test iteration %d.\n", runs); */
@@ -437,15 +444,17 @@ void two_line_test(FILE *fp, FILE *copy, void (*f)(struct timespec*,struct times
   /* } */
   /* else */
   /* { */
-    fprintf(fp, " %10s", info->name);
-    fprintf(fp,"          kbest:,%d.%09ld,\n", (int)kbests[0]->tv_sec, kbests[0]->tv_nsec); 
-    fprintf(fp, " %10s", info->name);
-    fprintf(fp,"       average:,%d.%09ld,\n", (int)averages[0]->tv_sec, averages[0]->tv_nsec); 
+  // fprintf(fp, " %10s", info->name);
+  fprintf(fp,"%d.%09ld, ", (int)kbests[0]->tv_sec, kbests[0]->tv_nsec);
+  // fprintf(fp, " %10s", info->name);
+  fprintf(fp,"%d.%09ld,\n", (int)averages[0]->tv_sec, averages[0]->tv_nsec);
 
-    fprintf(fp, " %10s", info->name);
-    fprintf(fp,"    Child kbest:,%d.%09ld,\n", (int)kbests[1]->tv_sec, kbests[1]->tv_nsec); 
-    fprintf(fp, " %10s", info->name);
-    fprintf(fp," Child average:,%d.%09ld,\n", (int)averages[1]->tv_sec, averages[1]->tv_nsec); 
+  printf("%s-child,", info->name);
+  for(int i = 0; i < 14-strlen(info->name); i++)
+    fprintf(fp, " ");
+
+  fprintf(fp, "%d.%09ld, ", (int)kbests[1]->tv_sec, kbests[1]->tv_nsec);
+  fprintf(fp, "%d.%09ld,\n", (int)averages[1]->tv_sec, averages[1]->tv_nsec);
   /* } */
   free(timeArrayChild);
   free(timeArrayParent);
@@ -1180,13 +1189,13 @@ int main(int argc, char *argv[])
   /*               GETPID                  */
   /*****************************************/
 
-  info.iter = BASE_ITER * 100;
-  info.name = "ref";
-  one_line_test(fp, copy, ref_test, &info);
+  // info.iter = BASE_ITER * 100;
+  // info.name = "ref";
+  // one_line_test(fp, copy, ref_test, &info);
 
-  info.iter = 100;
-  info.name = "cpu";
-  one_line_test(fp, copy, cpu_test, &info);
+  // info.iter = 100;
+  // info.name = "cpu";
+  // one_line_test(fp, copy, cpu_test, &info);
 
 
   info.iter = BASE_ITER * 100;
