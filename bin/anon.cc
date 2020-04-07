@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 #include <time.h>
 
-#define ITERATIONS 100000UL
+#define ITERATIONS 1000000UL
 #define PGSIZE 4096
 
 int
