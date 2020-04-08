@@ -33,6 +33,7 @@ UPROGS_BIN= \
 	sleep \
 	dirbench \
 	usertests \
+	usertestsv1 \
 	lockstat \
 	cp \
 	perf \
