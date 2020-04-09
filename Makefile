@@ -387,7 +387,7 @@ $(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon grub/grub.cfg grub/grub.efi
 $(O)/boot.img: $(O)/boot.fat $(O)/fs.part grub/boot.img grub/core.img
 	@echo "  GEN    $@"
 	$(Q)truncate -s "101M" $@
-	$(Q)parted -s --align minimal $@ mklabel gpt \
+	$(Q)PARTED_GPT_APPLE=0 parted -s --align minimal $@ mklabel gpt \
 		mkpart primary 32KiB 1MiB \
 		mkpart primary 1MiB 70MiB set 1 legacy_boot on set 1 esp on \
 		mkpart primary 70MiB 100MiB
