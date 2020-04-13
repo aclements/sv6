@@ -45,6 +45,7 @@ void disk_register(disk *d);
 u32 disk_find_root();
 disk *disk_find(const char *description);
 disk *disk_by_devno(u32 devno);
+u32 disk_count();
 void disk_read(u32 dev, char* data, u64 count, u64 offset);
 void disk_write(u32 dev, const char* data, u64 count, u64 offset);
 

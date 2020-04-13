@@ -119,6 +119,11 @@ disk_by_devno(u32 dev)
   return disks[dev];
 }
 
+u32 disk_count()
+{
+  return disks.size();
+}
+
 // compat for a single IDE disk..
 void
 disk_read(u32 dev, char* data, u64 count, u64 offset)

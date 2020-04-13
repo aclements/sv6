@@ -39,24 +39,23 @@ initvfs()
   if (r)
     panic("nullfs mount failed: %d\n", r);
 
-
-  auto fat32disk = disk_find(cmdline_params.fat32_disk);
-  if (!fat32disk) {
-    cprintf("could not find '%s' to scan for a fat32 filesystem\n", cmdline_params.fat32_disk);
-  } else {
-    auto fat32fs = vfs_new_fat32(fat32disk);
+  auto mnt = mounts->root()->create_dir("mnt");
+  for (auto i = 0; i < disk_count(); i++) {
+    auto disk = disk_by_devno(i);
+    auto fat32fs = vfs_new_fat32(disk);
     if (!fat32fs) {
-      cprintf("could not find a valid fat32 filesystem on '%s'\n", cmdline_params.fat32_disk);
+      cprintf("mnt: No valid fat32 filesystem on '%s'\n", disk->dk_busloc);
     } else {
-      auto fat32node = mounts->root()->create_dir("fat32");
+      cprintf("mnt: Found fat32 filesystem on '%s'\n", disk->dk_busloc);
+      auto fat32node = mounts->root()->create_dir(disk->dk_busloc);
       r = mounts->mount(fat32node, fat32fs);
-      if (r)
-        panic("fat32 mount failed: %d\n", r);
-      if (fat32fs->resolve(sref<vnode>(), "/writeok")) {
-        cprintf("found writeok; setting FAT32 filesystem to write-back\n");
+      if (r) {
+        cprintf("mnt: fat32 mount failed: %d\n", r);
+      } else if (fat32fs->resolve(sref<vnode>(), "/writeok")) {
+        cprintf("mnt: found writeok; setting FAT32 filesystem to write-back\n");
         vfs_enable_fat32_writeback(fat32fs);
       } else {
-        cprintf("did not find writeok; setting FAT32 filesystem to memory-only\n");
+        cprintf("mnt: did not find writeok; setting FAT32 filesystem to memory-only\n");
       }
     }
   }
