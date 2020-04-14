@@ -413,7 +413,7 @@ grub/grub.efi: grub/grub-early.cfg
 	@echo "  GEN    $@"
 	$(Q)mkdir -p $(@D)
 	$(Q)grub-mkimage -O x86_64-efi -o $@ -p '/' -c grub/grub-early.cfg \
-		normal search part_msdos part_gpt fat multiboot multiboot2 gfxmenu echo video
+		normal search part_msdos part_gpt fat multiboot multiboot2 gfxmenu echo video probe
 
 bench:
 	/bin/echo -ne "xv6\\nbench\\nexit\\n" | nc $(HW).csail.mit.edu 23
