@@ -38,6 +38,13 @@ struct multiboot2_mmap_entry {
   u64 length;
   u32 type;
 };
+struct multiboot2_boot_device_tag {
+  u32 type;
+  u32 size;
+  u32 biosdev;
+  u32 partition;
+  u32 sub_partition;
+};
 
 struct multiboot2_framebuffer_tag {
   u32 type;
@@ -124,8 +131,9 @@ void initmultiboot(u64 mbmagic, u64 mbaddr) {
     multiboot.mem_upper = info->mem_upper;
     multiboot.boot_device = info->boot_device;
 
-    if (info->flags & MULTIBOOT_FLAG_CMDLINE)
+    if (info->flags & MULTIBOOT_FLAG_CMDLINE) {
       safestrcpy(multiboot.cmdline, (const char*)p2v(info->cmdline), sizeof(multiboot.cmdline));
+    }
     if (info->flags & MULTIBOOT_FLAG_BOOT_LOADER_NAME) {
       safestrcpy(multiboot.boot_loader_name, (const char*)p2v(info->boot_loader_name),
                  sizeof(multiboot.boot_loader_name));
@@ -191,6 +199,11 @@ void initmultiboot(u64 mbmagic, u64 mbaddr) {
         safestrcpy(multiboot.boot_loader_name, tag->string,
                    MIN(sizeof(multiboot.boot_loader_name), tag->size - 8));
         multiboot.flags |= MULTIBOOT_FLAG_BOOT_LOADER_NAME;
+      } else if (t->type == 5) {
+        auto tag = (multiboot2_boot_device_tag*)t;
+        multiboot.boot_device = (tag->biosdev & 0xFF) << 24 | (tag->partition & 0xFF) << 16 |
+          (tag->sub_partition & 0xFF) << 8 | 0xFF;
+        multiboot.flags |= MULTIBOOT_FLAG_BOOT_DEV;
       } else if (t->type == 6) {
         auto tag = (multiboot2_mmap_tag*)t;
         u8 *p = tag->entries;
@@ -219,6 +232,8 @@ void initmultiboot(u64 mbmagic, u64 mbaddr) {
         multiboot.framebuffer_blue_field_position = tag->framebuffer_blue_field_position;
         multiboot.framebuffer_blue_mask_size = tag->framebuffer_blue_mask_size;
         multiboot.flags |= MULTIBOOT_FLAG_FRAMEBUFFER;
+      } else if (t->type == 9) {
+        multiboot.flags |= (1<<5);
       } else if (t->type == 11) {
         auto tag = (multiboot2_pointer_tag*)t;
         multiboot.efi_system_table = *(u32*)(&tag->addr);
