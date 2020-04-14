@@ -71,7 +71,6 @@
 #if defined(HW_qemu)
 #define MEMIDE        1
 #define AHCIIDE       1
-#define PORTIDE       0
 #elif defined(HW_mtrace)
 #define MTRACE        1
 #define QUANTUM       100
@@ -138,7 +137,4 @@
 #endif
 #ifndef AHCIIDE
 #define AHCIIDE 0
-#endif
-#ifndef PORTIDE
-#define PORTIDE 0
 #endif

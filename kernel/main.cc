@@ -254,9 +254,7 @@ cmain(u64 mbmagic, u64 mbaddr)
   initnet();
   initrtc();               // Requires inithpet
   initdev();               // Misc /dev nodes
-#if PORTIDE
   initide();      // IDE driver
-#endif
   initmemide();
   initpartition();
   initinode();     // inode cache
