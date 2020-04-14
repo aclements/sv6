@@ -363,7 +363,12 @@ void read_test(struct timespec *diffTime) {
   int fd = open("test_file.txt", O_RDONLY);
   if (fd < 0) printf("invalid fd in read: %d\n", fd);
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syscall(SYS_read, fd, buf_in, file_size);
+
+  int bytes_left = file_size;
+  while (bytes_left > 0) {
+    bytes_left -= syscall(SYS_read, fd, buf_in + file_size - bytes_left, bytes_left);
+  }
+
   clock_gettime(CLOCK_MONOTONIC, &endTime);
   close(fd);
 
@@ -382,7 +387,10 @@ void read_warmup() {
   int fd = open("test_file.txt", O_CREAT | O_WRONLY, 0777);
   if (fd < 0) printf("invalid fd in write: %d\n", fd);
 
-  syscall(SYS_write, fd, buf_out, file_size);
+  int bytes_left = file_size;
+  while (bytes_left > 0) {
+    bytes_left -= syscall(SYS_write, fd, buf_out, bytes_left);
+  }
   close(fd);
 
   char *buf_in = (char *) malloc (sizeof(char) * file_size);
@@ -411,7 +419,10 @@ void write_test(struct timespec *diffTime) {
   if (fd < 0) printf("invalid fd in write: %d\n", fd);
 
   clock_gettime(CLOCK_MONOTONIC, &startTime);
-  syscall(SYS_write, fd, buf, file_size);
+  int bytes_left = file_size;
+  while (bytes_left > 0) {
+    bytes_left -= syscall(SYS_write, fd, buf + file_size - bytes_left, bytes_left);
+  }
   clock_gettime(CLOCK_MONOTONIC,&endTime);
 
   close(fd);
@@ -955,11 +966,10 @@ int main(int argc, char *argv[])
   FILE *fp = stdout;
   FILE *copy = stdout;
 
-  fprintf(fp, "OS Benchmark experiment\nTest Name:,");
 #ifdef HW_linux
-  fprintf(fp,"linux,\n");
+  fprintf(fp,"Benchmark (linux),   Best (s),    Average (s),\n");
 #else
-  fprintf(fp, "ward,\n");
+  fprintf(fp, "Benchmark (ward),    Best (s),    Average (s),\n");
 #endif
 
   // one_line_test(fp, copy, cpu_test, 100, "cpu");
@@ -1039,6 +1049,7 @@ int main(int argc, char *argv[])
 
   /****** BIG ******/
   file_size = PAGE_SIZE * 1000;
+  read_warmup();
 
   one_line_test(fp, copy, read_test, BASE_ITER, "big read");
   one_line_test(fp, copy, write_test, BASE_ITER / 2, "big write");
@@ -1048,6 +1059,7 @@ int main(int argc, char *argv[])
 
   /****** HUGE ******/
   file_size = PAGE_SIZE * 10000;
+  read_warmup();
 
   one_line_test(fp, copy, read_test, BASE_ITER, "huge read");
   one_line_test(fp, copy, write_test, BASE_ITER / 4, "huge write");
