@@ -11,11 +11,13 @@
 #define IDE_BSY       0x80
 #define IDE_DRDY      0x40
 #define IDE_DF        0x20
+#define IDE_DRQ       0x08
 #define IDE_ERR       0x01
 
-#define IDE_CMD_READ  0x20
-#define IDE_CMD_WRITE 0x30
-#define IDE_CMD_FLUSH 0xE7
+#define IDE_CMD_READ     0x20
+#define IDE_CMD_WRITE    0x30
+#define IDE_CMD_FLUSH    0xE7
+#define IDE_CMD_IDENTIFY 0xEC
 
 #define BUS_PRIMARY 0x1f0
 #define BUS_SECONDARY 0x170
@@ -62,7 +64,7 @@ public:
   void select_drive_and_position(ide_select drive, u64 count, u64 offset);
 
   // high-level operations
-  bool has_drive(ide_select drive);
+  bool identify(ide_select drive, u16* output);
 
 private:
   ide_select previously_selected = SELECT_UNKNOWN;
@@ -89,7 +91,7 @@ private:
 class ide_disk : public disk
 {
 public:
-  ide_disk(ide_port_guard *port, ide_select drive, const char *name);
+  ide_disk(ide_port_guard *port, ide_select drive, const char *name, u16* identity);
 
   void readv(kiovec *iov, int iov_cnt, u64 off) override;
   void writev(kiovec *iov, int iov_cnt, u64 off) override;
@@ -186,23 +188,55 @@ ide_port::select_drive_and_position(ide_select drive, u64 count, u64 offset)
 }
 
 bool
-ide_port::has_drive(ide_select drive)
+ide_port::identify(ide_select drive, u16* output)
 {
   this->select_drive(drive);
-  // if there's no drive, we'll get a zero. otherwise, there should be a drive.
-  return this->reg_read(REG_STATUS_CMD) != 0;
+  this->reg_write(REG_SECTOR_NUMBER, 0);
+  this->reg_write(REG_CYLINDER_LOW, 0);
+  this->reg_write(REG_CYLINDER_HIGH, 0);
+  this->reg_write(REG_STATUS_CMD, IDE_CMD_IDENTIFY);
+
+  // if there's no drive, we'll get a zero.
+  if (!this->reg_read(REG_STATUS_CMD))
+    return false;
+
+  u8 r;
+  while((r = this->reg_read(REG_STATUS_CMD)) & IDE_BSY)
+    ;
+
+  if (this->reg_read(REG_CYLINDER_LOW) || this->reg_read(REG_CYLINDER_HIGH))
+    return false; // Not ATA
+
+  while(((r = this->reg_read(REG_STATUS_CMD)) & (IDE_DRQ|IDE_ERR)) == 0)
+    ;
+
+  if (r & IDE_ERR)
+    return false; // Got an error
+
+  for(int i = 0; i < 256; i++)
+    output[i] = inw(this->portbase + REG_DATA);
+
+  if((output[0] & 0x8000) != 0)
+    return false; // Not ATA
+
+  return true;
 }
 
 void
 ide_port_guard::register_disks(const char *name_master, const char *name_slave)
 {
+  u16 identity[256];
   auto p = this->acquire();
-  if (p->has_drive(SELECT_MASTER)) {
-    disk_register(new ide_disk(this, SELECT_MASTER, name_master));
-  }
-  if (p->has_drive(SELECT_SLAVE)) {
-    disk_register(new ide_disk(this, SELECT_SLAVE, name_slave));
-  }
+  if (p->identify(SELECT_MASTER, identity)) {
+    cprintf("ide: %s is IDE\n", name_master);
+    disk_register(new ide_disk(this, SELECT_MASTER, name_master, identity));
+  } else
+    cprintf("ide: %s is not IDE\n", name_master);
+  if (p->identify(SELECT_SLAVE, identity)) {
+    cprintf("ide: %s is IDE\n", name_slave);
+    disk_register(new ide_disk(this, SELECT_SLAVE, name_slave, identity));
+  } else
+    cprintf("ide: %s is not IDE\n", name_slave);
   this->release();
 }
 
@@ -229,11 +263,10 @@ initide()
   secondary->register_disks("ide1.0", "ide1.1");
 }
 
-ide_disk::ide_disk(ide_port_guard *port, ide_select drive, const char *name)
+ide_disk::ide_disk(ide_port_guard *port, ide_select drive, const char *name, u16* identity)
   : port(port), drive(drive)
 {
-  // TODO: identify device, maybe?
-  dk_nbytes = 0;
+  dk_nbytes = ((u64)identity[60] | ((u64)identity[61] << 16)) * 512;
   snprintf(dk_model, sizeof(dk_model), "IDE DISK");
   snprintf(dk_serial, sizeof(dk_serial), "%16p", this);
   snprintf(dk_firmware, sizeof(dk_firmware), "n/a");
