@@ -186,7 +186,7 @@ $(O)/fs.img: $(O)/fs.part
 	dd if=$< of=$@ conv=sparse obs=512 seek=2048
 	truncate -s "51M" $@
 	@if [ $(shell uname) != "Darwin" ]; then\
-		parted -s --align optimal $@ mklabel gpt mkpart sv6filesystem 1MiB 50MiB;\
+		PARTED_GPT_APPLE=0 parted -s --align optimal $@ mklabel gpt mkpart sv6filesystem 1MiB 50MiB;\
 	fi # TODO: find alternative to parted on OSX since this build step does not work without it
 
 .PRECIOUS: $(O)/%.o
