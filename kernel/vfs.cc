@@ -34,28 +34,24 @@ initvfs()
   assert(!mounts);
   mounts = make_sref<virtual_filesystem>(vfs_get_mfs());
 
-  auto nullfsnode = mounts->root()->create_dir("nullfs");
-  int r = mounts->mount(nullfsnode, vfs_new_nullfs());
-  if (r)
-    panic("nullfs mount failed: %d\n", r);
-
   auto mnt = mounts->root()->create_dir("mnt");
+
+  int r = mounts->mount(mnt->create_dir("nullfs"), vfs_new_nullfs());
+  if (r)
+    panic("mnt: nullfs mount failed: %d\n", r);
+
   for (auto i = 0; i < disk_count(); i++) {
     auto disk = disk_by_devno(i);
     auto fat32fs = vfs_new_fat32(disk);
-    if (!fat32fs) {
-      cprintf("mnt: No valid fat32 filesystem on '%s'\n", disk->dk_busloc);
-    } else {
-      cprintf("mnt: Found fat32 filesystem on '%s'\n", disk->dk_busloc);
-      auto fat32node = mounts->root()->create_dir(disk->dk_busloc);
-      r = mounts->mount(fat32node, fat32fs);
+    if (fat32fs) {
+      r = mounts->mount(mnt->create_dir(disk->dk_busloc), fat32fs);
       if (r) {
-        cprintf("mnt: fat32 mount failed: %d\n", r);
+        cprintf("mnt: Mounting %s FAT32 filesystem failed: %d\n", disk->dk_busloc, r);
       } else if (fat32fs->resolve(sref<vnode>(), "/writeok")) {
-        cprintf("mnt: found writeok; setting FAT32 filesystem to write-back\n");
+        cprintf("mnt: Found  FAT32 filesystem on '%s' (read write)\n", disk->dk_busloc);
         vfs_enable_fat32_writeback(fat32fs);
       } else {
-        cprintf("mnt: did not find writeok; setting FAT32 filesystem to memory-only\n");
+        cprintf("mnt: Found  FAT32 filesystem on '%s' (read only)\n", disk->dk_busloc);
       }
     }
   }
