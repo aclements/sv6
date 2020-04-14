@@ -269,12 +269,9 @@ endif
 endif
 
 ifneq ($(IDE0),)
-# FIXME: this currently doesn't work, because the IDE driver can't detect that
-# no CDROM is actually inserted in the CDROM drive that QEMU attaches by default
-# FIXME: this also breaks FSDISK=no
 QEMUOPTS += -drive file=$(IDE0),index=0,media=disk,format=raw
-## QEMUOPTS += -drive if=none,file=$(IDE0),format=raw,id=drive-ide0-0 \
-## 	    -device ide-drive,bus=ide.0,drive=drive-ide0-0,id=ide0-0
+qemu: $(IDE0)
+gdb: $(IDE0)
 endif
 ifneq ($(SATA0)$(SATA1),)
 QEMUOPTS += -device ahci,id=ahci0
@@ -374,16 +371,13 @@ $(O)/example.fat: $(O)/bin/ls README.md $(O)/writeok
 
 $(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon grub/grub.cfg grub/grub.efi
 	@echo "  GEN    $@"
-	$(Q)dd if=/dev/zero of=$@ bs=4096 count=66560 2> /dev/null
+	$(Q)dd if=/dev/zero of=$@ bs=4069 count=66560 2> /dev/null
 	$(Q)mkfs.fat -F 32 -s 8 -S 512 $@ > /dev/null
-	$(Q)mmd -i $@ ::boot
-	$(Q)mmd -i $@ ::bin
 	$(Q)mmd -i $@ ::EFI
 	$(Q)mmd -i $@ ::EFI/BOOT
 	$(Q)mcopy -i $@ grub/grub.efi ::EFI/BOOT/BOOTX64.EFI
-	$(Q)mcopy -i $@ grub/grub.cfg ::boot/grub.cfg
-	$(Q)mcopy -i $@ $(O)/kernel.elf ::boot/ward
-	$(Q)mcopy -i $@ $(O)/bin/anon ::bin
+	$(Q)mcopy -i $@ grub/grub.cfg ::grub.cfg
+	$(Q)mcopy -i $@ $(O)/kernel.elf ::ward
 $(O)/boot.img: $(O)/boot.fat $(O)/fs.part grub/boot.img grub/core.img
 	@echo "  GEN    $@"
 	$(Q)truncate -s "101M" $@
@@ -391,7 +385,7 @@ $(O)/boot.img: $(O)/boot.fat $(O)/fs.part grub/boot.img grub/core.img
 		mkpart primary 32KiB 1MiB \
 		mkpart primary 1MiB 70MiB set 1 legacy_boot on set 1 esp on \
 		mkpart primary 70MiB 100MiB
-	$(Q)dd if=$< of=$@ conv=sparse obs=512 seek=2048 2> /dev/null
+	$(Q)dd if=$(O)/boot.fat of=$@ conv=sparse obs=512 seek=2048 2> /dev/null
 	$(Q)dd if=$(O)/fs.part of=$@ conv=sparse obs=512 seek=143360 2> /dev/null
 	$(Q)dd bs=440 count=1 conv=notrunc if=grub/boot.img of=$@ 2> /dev/null
 	$(Q)dd bs=512 seek=64 conv=notrunc if=grub/core.img of=$@ 2> /dev/null
@@ -408,17 +402,17 @@ grub/boot.img:
 	$(Q)cp /usr/lib/grub/i386-pc/boot.img $@.tmp
 	$(Q)python -c "print '\x40'" | dd of=$@.tmp bs=1 seek=92 count=1 conv=notrunc 2> /dev/null
 	$(Q)mv $@.tmp $@
-grub/core.img:
+grub/core.img: grub/grub-early.cfg
 	@echo "  GEN    $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)grub-mkimage -O i386-pc -o $@.tmp -p '(hd0,gpt2)/boot/' \
-		biosdisk normal search part_msdos part_gpt fat multiboot multiboot2 gfxmenu echo
+	$(Q)grub-mkimage -O i386-pc -o $@.tmp -p '/' -c grub/grub-early.cfg \
+		biosdisk normal search part_msdos part_gpt fat multiboot multiboot2 gfxmenu echo probe
 	$(Q)python -c "print '\x41'" | dd of=$@.tmp bs=1 seek=500 count=1 conv=notrunc 2> /dev/null
 	$(Q)mv $@.tmp $@
-grub/grub.efi:
+grub/grub.efi: grub/grub-early.cfg
 	@echo "  GEN    $@"
 	$(Q)mkdir -p $(@D)
-	$(Q)grub-mkimage -O x86_64-efi -o $@ -p '(hd0,gpt2)/boot/' \
+	$(Q)grub-mkimage -O x86_64-efi -o $@ -p '/' -c grub/grub-early.cfg \
 		normal search part_msdos part_gpt fat multiboot multiboot2 gfxmenu echo video
 
 bench:

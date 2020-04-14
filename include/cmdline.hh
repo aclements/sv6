@@ -22,7 +22,7 @@ struct cmdline_params_t
   bool keep_retpolines;
   bool lazy_barrier;
   char root_disk[CMDLINE_VALUE+1];
-  char fat32_disk[CMDLINE_VALUE+1];
+  char boot_uuid[CMDLINE_VALUE+1];
   bool use_vga;
   bool use_cga;
 
