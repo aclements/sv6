@@ -175,6 +175,7 @@ void            kbdintr(void);
 
 // main.c
 void            halt(void) __attribute__((noreturn));
+void            paravirtual_exit(int exit_code) __attribute__((noreturn));
 
 // mp.c
 extern int      ncpu;

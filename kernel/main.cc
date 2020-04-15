@@ -11,6 +11,7 @@
 #include "apic.hh"
 #include "codex.hh"
 #include "mfs.hh"
+#include "cpuid.hh"
 
 void initmultiboot(u64 mbmagic, u64 mbaddr);
 void debugmultiboot(u64 mbmagic, u64 mbaddr);
@@ -286,4 +287,21 @@ halt(void)
   acpi_power_off();
 
   for (;;);
+}
+
+void
+paravirtual_exit(int exit_code)
+{
+  if(exit_code != 0) {
+    assert((exit_code & 1) == 1);
+    if ((strcmp(cpuid::features().hypervisor_id, "KVMKVMKVM") == 0) ||
+        (strcmp(cpuid::features().hypervisor_id, "TCGTCGTCGTCG") == 0)) {
+      outw(0x501, exit_code >> 1);
+    } else {
+      cprintf("NOTE: paravirtual_exit(%d) but QEMU paravirtualization not detected\n", exit_code);
+    }
+  }
+
+  acpi_power_off();
+  while(1);
 }

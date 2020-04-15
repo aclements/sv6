@@ -234,9 +234,9 @@ sys_pt_pages(void)
 
 //SYSCALL {"noret":true}
 void
-sys_halt(void)
+sys_halt(int code)
 {
-  halt();
+  paravirtual_exit(code);
   panic("halt returned");
 }
 

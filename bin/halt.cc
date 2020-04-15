@@ -11,7 +11,7 @@ int
 main(int argc, char *argv[])
 {
 #ifdef XV6_USER
-  halt();
+  halt(0);
 #else
   reboot(LINUX_REBOOT_CMD_POWER_OFF);
   perror("reboot failed");
