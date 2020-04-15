@@ -1,0 +1,29 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build kernel.elf
+      run: make -j
+    - name: Upload kernel.elf
+      uses: actions/upload-artifact@v1
+      with:
+        name: kernel.elf
+        path: o.qemu/kernel.elf
+    - name: Install dependencies
+      run: sudo apt-get install -y mtools
+    - name: Build boot.img
+      run: make -j o.qemu/boot.img
+    - name: Upload boot.img
+      uses: actions/upload-artifact@v1
+      with:
+        name: boot.img
+        path: o.qemu/boot.img

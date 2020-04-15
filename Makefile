@@ -60,7 +60,7 @@ CC  = $(TOOLPREFIX)gcc
 CXX = $(TOOLPREFIX)g++
 CXXFLAGS = -Wno-delete-non-virtual-dtor  -fno-pie -fno-pic
 CFLAGS   = -fno-pie -fno-pic
-ASFLAGS  = -Wa,--divide -fno-pie -fno-pic
+ASFLAGS  = -fno-pie -fno-pic
 endif
 
 AR = $(TOOLPREFIX)ar
@@ -79,7 +79,6 @@ INCLUDES  = --sysroot=$(O)/sysroot \
 COMFLAGS  = -static -DXV6_HW=$(HW) -DXV6 \
 	    -fno-builtin -fno-strict-aliasing -fno-omit-frame-pointer -fms-extensions \
 	    -mno-red-zone
-COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 COMFLAGS  += -Wl,-m,elf_x86_64 -nostdlib -ffreestanding
 LDFLAGS   = -m elf_x86_64
 else
@@ -87,7 +86,10 @@ INCLUDES := -include param.h -iquote libutil/include -I$(MTRACESRC)
 COMFLAGS := -pthread -Wno-unused-result
 LDFLAGS := -pthread
 endif
-COMFLAGS += -g -MD -MP -O3 -Wall -DHW_$(HW) $(INCLUDES) -fno-stack-protector  -mindirect-branch=thunk -fcf-protection=none
+
+COMFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+COMFLAGS += $(shell $(CC) -fcf-protection=none -E -x c /dev/null >/dev/null 2>&1 && echo -fcf-protection=none)
+COMFLAGS += -g -MD -MP -O3 -Wall -DHW_$(HW) $(INCLUDES) -mindirect-branch=thunk
 CFLAGS   := $(COMFLAGS) -std=c99 $(CFLAGS)
 CXXFLAGS := $(COMFLAGS) -std=c++17 -Wno-sign-compare -faligned-new $(CXXFLAGS)
 ASFLAGS  := $(ASFLAGS) -Iinclude -I$(O)/include -m64 -gdwarf-2 -MD -MP -DHW_$(HW) -include param.h
@@ -369,15 +371,16 @@ $(O)/example.fat: $(O)/bin/ls README.md $(O)/writeok
 	mcopy -i $@ ./README.md ::
 	mcopy -i $@ $(O)/writeok ::
 
-$(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon grub/grub.cfg grub/grub.efi
+$(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon grub/grub.cfg grub/grub.efi $(O)/writeok
 	@echo "  GEN    $@"
-	$(Q)dd if=/dev/zero of=$@ bs=4069 count=66560 2> /dev/null
+	$(Q)dd if=/dev/zero of=$@ bs=4096 count=66560 2> /dev/null
 	$(Q)mkfs.fat -F 32 -s 8 -S 512 $@ > /dev/null
 	$(Q)mmd -i $@ ::EFI
 	$(Q)mmd -i $@ ::EFI/BOOT
 	$(Q)mcopy -i $@ grub/grub.efi ::EFI/BOOT/BOOTX64.EFI
 	$(Q)mcopy -i $@ grub/grub.cfg ::grub.cfg
 	$(Q)mcopy -i $@ $(O)/kernel.elf ::ward
+	$(Q)mcopy -i $@ $(O)/writeok ::writeok
 $(O)/boot.img: $(O)/boot.fat $(O)/fs.part grub/boot.img grub/core.img
 	@echo "  GEN    $@"
 	$(Q)truncate -s "101M" $@
