@@ -55,20 +55,20 @@ struct multiboot_mod
 
 struct multiboot_saved
 {
-  u32 flags = 0;
+  u32 flags;
   u32 mem_lower;        // flag 0
   u32 mem_upper;        // flag 0
   u32 boot_device;      // flag 1
 
   // flag 2
-  char cmdline[512] = { 0 };
+  char cmdline[512];
 
   // flag 6
-  u32 mmap_entries = 0;
+  u32 mmap_entries;
   multiboot_mem mmap[32];
 
   // flag 9
-  char boot_loader_name[128] = { 0 };
+  char boot_loader_name[128];
 
   // flag 12
   u32* framebuffer;
@@ -87,13 +87,13 @@ struct multiboot_saved
   u64 efi_image_handle;
 
   // Only ever provided by multiboot2. Available if MULTIBOOT2_FLAG_EFI_MMAP is set.
-  u64 efi_mmap_descriptor_size = 0;
-  u32 efi_mmap_descriptor_version = 0;
-  u64 efi_mmap_descriptor_count = 0;
+  u64 efi_mmap_descriptor_size;
+  u32 efi_mmap_descriptor_version;
+  u64 efi_mmap_descriptor_count;
   u8 efi_mmap[0x2000];
 
   // Only ever provided by multiboot2. Available if MULTIBOOT2_FLAG_EFI_SYSTEM_TABLE is set.
-  u64 efi_system_table = 0;
+  u64 efi_system_table;
 };
 extern multiboot_saved multiboot;
 
