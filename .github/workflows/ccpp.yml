@@ -18,7 +18,7 @@ jobs:
       with:
         name: kernel.elf
         path: o.qemu/kernel.elf
-    - name: Install dependencies
+    - name: Install mtools
       run: sudo apt-get install -y mtools
     - name: Build boot.img
       run: make -j o.qemu/boot.img
@@ -27,3 +27,7 @@ jobs:
       with:
         name: boot.img
         path: o.qemu/boot.img
+    - name: Install QEMU
+      run: sudo apt-get install -y qemu-system-x86
+    - name: Unit tests
+      run: make QEMUACCEL= qemu-test
