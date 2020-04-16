@@ -192,126 +192,48 @@ $(O)/fs.img: $(O)/fs.part
 	fi # TODO: find alternative to parted on OSX since this build step does not work without it
 
 .PRECIOUS: $(O)/%.o
-.PHONY: clean qemu gdb rsync codex
+.PHONY: clean qemu qemu-gdb qemu-grub qemu-test rsync codex
 
 ##
 ## qemu
 ##
-ifeq ($(PLATFORM),native)
-override QEMUAPPEND += console=ttyS0
-# Exit qemu on panic
-override QEMUAPPEND += panic=-1
-QEMUOPTS += -no-reboot
-endif
-
-## One NUMA node per CPU when mtrace'ing
-ifeq ($(HW),linuxmtrace)
-QEMUSMP := 4
-QEMUMEM := 1024
-else ifeq ($(HW),mtrace)
-QEMUSMP := 4
-QEMUMEM := 1024
-endif
-
-ifneq ($(RUN),)
-override QEMUAPPEND += \$$ $(RUN)
-endif
-
 ifeq ($(QEMUSMP),1)
-QEMUNUMA := node
+QEMUNUMA := -numa node
 else
-QEMUNUMA := node node
+QEMUNUMA := -numa node -numa node
 endif
 
-UNAME := $(shell uname)
-ifeq ($(UNAME), Darwin)
-QEMUVIRT := -accel hvf
+ifeq ($(shell uname), Darwin)
+QEMUACCEL ?= -accel hvf
 else
-QEMUVIRT := -enable-kvm
+QEMUACCEL ?= -enable-kvm
 endif
 
-QEMUOPTS += -smp $(QEMUSMP) -m $(QEMUMEM) $(QEMUVIRT) -cpu Haswell,+pcid,+fsgsbase,+md-clear,+spec-ctrl \
-	$(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio) \
-	-device sga \
-	$(foreach x,$(QEMUNUMA),-numa $(x)) \
-	-net user,hostfwd=tcp::2323-:23,hostfwd=tcp::8080-:80 -net nic,model=e1000 \
+QEMUAPPEND += root_disk=ahci0.0
+QEMUNET := -net user,hostfwd=tcp::2323-:23,hostfwd=tcp::8080-:80 -net nic,model=e1000
+QEMUSERIAL := $(if $(QEMUOUTPUT),-serial file:$(QEMUOUTPUT),-serial mon:stdio)
+QEMUDISK := -drive if=none,file=$(O)/fs.part,format=raw,id=drive-sata0 -device ahci,id=ahci0 \
+		   	-device ide-hd,bus=ahci0.0,drive=drive-sata0,id=sata0
+QEMUCOMMAND = $(QEMU) -cpu Haswell,+pcid,+fsgsbase,+md-clear,+spec-ctrl -nographic -device sga \
+		  	  -smp $(QEMUSMP) -m $(QEMUMEM) $(QEMUACCEL) $(QEMUNUMA) $(QEMUNET) $(QEMUSERIAL) \
+		      $(QEMUDISK) $(QEMUEXTRA) $(QEMUKERNEL) -no-reboot
 
-ifneq ($(GRAPHIC),vga)
-QEMUOPTS += -nographic
-endif
+# We play a Makefile trick here: variables like QEMUCOMMAND which are declared with '=' are only
+# evaluated when they are used. Thus future assignments to QEMUAPPEND and QEMUKERNEL (including this
+# one) will be expanded in QEMUCOMMAND even though they happen after the definition of that
+# variable. This lets us use "$(eval ...)" in build rules to change their values.
+QEMUKERNEL = -kernel $(KERN) -append "$(QEMUAPPEND)"
 
-## One NUMA node per CPU when mtrace'ing
-ifeq ($(HW),linuxmtrace)
-QEMUOPTS += -numa node -numa node
-else ifeq ($(HW),mtrace)
-QEMUOPTS += -numa node -numa node
-endif
-
-ifeq ($(BOOT),syslinux)
-SATA0 := $(O)/boot.img
-# root disk configured in syslinux.cfg
-endif
-
-ifeq ($(PLATFORM),xv6)
-ifeq ($(FSDISK),ide)
-# not fs.img because IDE disks don't support length detection yet
-IDE0 := $(O)/fs.part
-ROOT_DISK := ide0.0
-else
-ifneq ($(FSDISK),no)
-ifeq ($(SATA0),)
-SATA0 := $(O)/fs.img
-ROOT_DISK := ahci0.0p1
-else
-SATA1 := $(O)/fs.img
-ROOT_DISK := ahci0.1p1
-endif
-endif
-endif
-endif
-
-ifneq ($(IDE0),)
-QEMUOPTS += -drive file=$(IDE0),index=0,media=disk,format=raw
-qemu: $(IDE0)
-gdb: $(IDE0)
-endif
-ifneq ($(SATA0)$(SATA1),)
-QEMUOPTS += -device ahci,id=ahci0
-endif
-ifneq ($(SATA0),)
-QEMUOPTS += -drive if=none,file=$(SATA0),format=raw,id=drive-sata0-0-0 \
-	    -device ide-drive,bus=ahci0.0,drive=drive-sata0-0-0,id=sata0-0-0
-qemu: $(SATA0)
-gdb: $(SATA0)
-endif
-ifneq ($(SATA1),)
-QEMUOPTS += -drive if=none,file=$(SATA1),format=raw,id=drive-sata0-1-0 \
-	    -device ide-drive,bus=ahci0.1,drive=drive-sata0-1-0,id=sata0-1-0
-qemu: $(SATA1)
-gdb: $(SATA1)
-endif
-
-ifeq ($(PLATFORM),native)
-QEMUOPTS += -initrd $(O)/initramfs
-endif
-
-ifneq ($(BOOT),syslinux)
-ifeq ($(ROOT_DISK),)
-ROOT_DISK = 0
-endif
-QEMUOPTS += -kernel $(KERN) -append "$(QEMUAPPEND) root_disk=$(ROOT_DISK)"
 qemu: $(KERN)
-gdb: $(KERN)
-endif
-
-
-# User-provided QEMU options
-QEMUOPTS += $(QEMUEXTRA)
-
-qemu:
-	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -no-reboot #-d int,cpu_reset #
-gdb:
-	$(QEMU) $(QEMUOPTS) $(QEMUKVMFLAGS) -s -S
+	$(QEMUCOMMAND)
+qemu-gdb: $(KERN)
+	$(QEMUCOMMAND) -s -S
+qemu-grub: $(O)/boot.img
+	$(eval QEMUKERNEL = )
+	$(QEMUCOMMAND) $<
+qemu-test: $(KERN)
+	$(eval QEMUAPPEND += %unittests.sh)
+	timeout --foreground 5m $(QEMUCOMMAND)
 
 codex: $(KERN)
 
@@ -359,17 +281,6 @@ setup-linux:
 
 $(O)/writeok:
 	echo >$@
-
-$(O)/example.fat: $(O)/bin/ls README.md $(O)/writeok
-	dd if=/dev/zero of=$@ bs=4096 count=66560
-	mkfs.fat -F 32 -s 8 -S 512 $@
-	mmd -i $@ ::bin
-	mmd -i $@ ::foo
-	mmd -i $@ ::foo/sysl
-	mcopy -i $@ syslinux/bios/*.c32 ::foo/sysl/
-	mcopy -i $@ $(O)/bin/ls ::bin
-	mcopy -i $@ ./README.md ::
-	mcopy -i $@ $(O)/writeok ::
 
 $(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon grub/grub.cfg grub/grub.efi $(O)/writeok
 	@echo "  GEN    $@"
