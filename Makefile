@@ -9,7 +9,6 @@ TOOLPREFIX ?=
 QEMU       ?= qemu-system-x86_64
 # Number of CPUs to emulate
 QEMUSMP    ?= 8
-
 # RAM to simulate (in MB)
 QEMUMEM    ?= 512
 # Default hardware build target.  See param.h for others.
@@ -31,16 +30,7 @@ ifeq ($(HW),linux)
 PLATFORM   := native
 TOOLPREFIX :=
 else
-ifeq ($(HW),linuxmtrace)
-# Build the user space for mtrace'ing under Linux.  This builds an
-# initramfs of xv6's user space that can be booted on a Linux kernel.
-# Make targets like qemu and mtrace.out are supported if the user
-# provides KERN=path/to/Linux/bzImage to make.
-PLATFORM   := native
-TOOLPREFIX :=
-else
 PLATFORM   := xv6
-endif
 endif
 
 ifeq ($(HW),codex)
@@ -112,8 +102,6 @@ else
   CXXFLAGS += -fno-exceptions -fno-rtti -DEXCEPTIONS=0
 endif
 
-HAVE_TESTGEN = $(shell (test -e libutil/testgen.c && echo y) || echo n)
-
 ALL :=
 all:
 
@@ -163,36 +151,16 @@ $(O)/bootx64.efi: $(O)/kernel.elf
 	objcopy --set-section-alignment *=4096 -j .text -j .rodata -j .stapsdt.base -j .kmeta -j .data -j .bss \
 		-O pei-x86-64 $< $@
 
-# Construct an alternate "system include root" by copying headers from
-# the host that are part of C++'s freestanding implementation.  These
-# headers are distributed across several directories, so we reproduce
-# that directory tree here and let GCC use its standard (large)
-# include path, but re-rooted at this new directory.
+# Construct an alternate "system include root" by copying headers from the host that are part of
+# C++'s freestanding implementation.  These headers are distributed across several directories, so
+# we reproduce that directory tree here and let GCC use its standard (large) include path, but
+# re-rooted at this new directory.
 $(O)/sysroot: include/host_hdrs.hh
 	rm -rf $@.tmp $@
 	mkdir -p $@.tmp
 	tar c $$($(CXX) -E -H -std=c++0x -ffreestanding $< -o /dev/null 2>&1 \
 		| awk '/^[.]/ {print $$2}') | tar xC $@.tmp
 	mv $@.tmp $@
-
-xv6memfs.img: bootblock kernelmemfs
-	dd if=/dev/zero of=xv6memfs.img count=10000
-	dd if=bootblock of=xv6memfs.img conv=notrunc
-	dd if=kernelmemfs of=xv6memfs.img seek=1 conv=notrunc
-
-$(O)/fs.part: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS) intel-ucode/*
-	@echo "  MKFS   $@"
-	$(Q)$(O)/tools/mkfs $@ $(FSEXTRA) $(UPROGS) intel-ucode/*
-
-$(O)/fs.img: $(O)/fs.part
-	dd if=$< of=$@ conv=sparse obs=512 seek=2048
-	truncate -s "51M" $@
-	@if [ $(shell uname) != "Darwin" ]; then\
-		PARTED_GPT_APPLE=0 parted -s --align optimal $@ mklabel gpt mkpart sv6filesystem 1MiB 50MiB;\
-	fi # TODO: find alternative to parted on OSX since this build step does not work without it
-
-.PRECIOUS: $(O)/%.o
-.PHONY: clean qemu qemu-gdb qemu-grub qemu-test rsync codex
 
 ##
 ## qemu
@@ -238,50 +206,13 @@ qemu-test: $(KERN)
 codex: $(KERN)
 
 ##
-## mtrace
+## disk images
 ##
-MTRACEOUT ?= mtrace.out
-MTRACEOPTS = -rtc clock=vm -mtrace-enable -mtrace-file $(MTRACEOUT) \
-	     -mtrace-calls -snapshot
-$(MTRACEOUT): $(KERN)
-	$(Q)rm -f $(MTRACEOUT)
-	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS) -s
-$(MTRACEOUT)-scripted:
-	$(Q)rm -f $(MTRACEOUT)
-	$(MTRACE) $(QEMUOPTS) $(MTRACEOPTS)
-.PHONY: $(MTRACEOUT) $(MTRACEOUT)-scripted
-
-mscan.out: $(MTRACESRC)/mtrace-tools/mscan $(MTRACEOUT)
-	$(MTRACESRC)/mtrace-tools/mscan --kernel $(KERN) > $@ || (rm -f $@; exit 2)
-
-mscan.sorted: mscan.out $(MTRACESRC)/mtrace-tools/sersec-sort
-	$(MTRACESRC)/mtrace-tools/sersec-sort < $< > $@
-
-rsync: $(KERN)
-	rsync -avP $(KERN) amsterdam.csail.mit.edu:/tftpboot/$(HW)/kernel.xv6
-
-ifneq ($(HW),tom)
-IPMIOPTS = -A MD5 -U ADMIN
-endif
-reboot-xv6: setup-xv6
-	ssh amsterdam.csail.mit.edu \
-	ipmitool -I lanplus $(IPMIOPTS) -H $(HW)adm.csail.mit.edu -f/home/am6/mpdev/.ipmipassword power reset
-
-setup-xv6:
-	ssh amsterdam.csail.mit.edu \
-	sed -i .bak "'s/^default /#&/;/^# *default xv6/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg
-
-reboot-linux: setup-linux
-	ssh amsterdam.csail.mit.edu \
-	ipmitool -I lanplus $(IPMIOPTS) -H $(HW)adm.csail.mit.edu -f/home/am6/mpdev/.ipmipassword power reset
-
-setup-linux:
-	ssh amsterdam.csail.mit.edu \
-	sed -i .bak "'s/^default /#&/;/^# *default localboot/s/^# *//'" /tftpboot/$(HW)/pxelinux.cfg
-
 $(O)/writeok:
-	echo >$@
-
+	$(Q)echo >$@
+$(O)/fs.part: $(O)/tools/mkfs $(FSEXTRA) $(UPROGS) intel-ucode/*
+	@echo "  GEN   $@"
+	$(Q)$(O)/tools/mkfs $@ $(FSEXTRA) $(UPROGS) intel-ucode/*
 $(O)/boot.fat: $(O)/kernel.elf $(O)/bin/anon grub/grub.cfg grub/grub.efi $(O)/writeok
 	@echo "  GEN    $@"
 	$(Q)dd if=/dev/zero of=$@ bs=4096 count=66560 2> /dev/null
@@ -329,11 +260,15 @@ grub/grub.efi: grub/grub-early.cfg
 	$(Q)grub-mkimage -O x86_64-efi -o $@ -p '/' -c grub/grub-early.cfg \
 		normal search part_msdos part_gpt fat multiboot multiboot2 gfxmenu echo video probe
 
-bench:
-	/bin/echo -ne "xv6\\nbench\\nexit\\n" | nc $(HW).csail.mit.edu 23
+##
+## general commands
+##
+
+.PRECIOUS: $(O)/%.o
+.PHONY: clean qemu qemu-gdb qemu-grub qemu-test
 
 clean:
 	rm -fr $(O)
 
-all:	$(ALL)
+all: $(ALL)
 
